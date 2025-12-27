@@ -1,0 +1,795 @@
+/* MyAvailability Page */
+
+.availability-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Page Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-lg);
+}
+
+.page-header-content {
+  flex: 1;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.page-description {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.page-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Save Notification */
+.save-notification {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--status-success-bg);
+  color: var(--status-success);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Summary Cards */
+.availability-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+  border-radius: var(--radius-md);
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.summary-label {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+/* Schedule Card */
+.schedule-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+.schedule-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--accent-primary);
+}
+
+.schedule-card-title h3 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.schedule-legend {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.schedule-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.legend-dot.active {
+  background: var(--status-success);
+}
+
+.legend-dot.off {
+  background: var(--text-tertiary);
+}
+
+/* Schedule Grid */
+.schedule-grid {
+  padding: var(--space-md);
+}
+
+.schedule-grid-header {
+  display: grid;
+  grid-template-columns: 180px 1fr 80px;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+/* Schedule Row */
+.schedule-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 80px;
+  align-items: center;
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  transition: all var(--transition-fast);
+}
+
+.schedule-row:last-child {
+  margin-bottom: 0;
+}
+
+.schedule-row:hover {
+  background: var(--bg-elevated);
+}
+
+.schedule-row.disabled {
+  opacity: 0.7;
+}
+
+.schedule-day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.schedule-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.schedule-toggle:hover {
+  background: var(--bg-elevated);
+}
+
+.schedule-toggle.active {
+  background: var(--status-success);
+  color: var(--bg-primary);
+}
+
+.schedule-day-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.schedule-row.disabled .schedule-day-label {
+  color: var(--text-tertiary);
+}
+
+.schedule-times {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.schedule-time-select {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.schedule-time-select:hover {
+  border-color: rgba(212, 168, 83, 0.2);
+}
+
+.schedule-time-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.schedule-time-separator {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.schedule-day-off {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.hours-copy-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+  margin-left: var(--space-sm);
+}
+
+.hours-copy-btn:hover {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.schedule-hours {
+  text-align: right;
+}
+
+.schedule-hours-count {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.schedule-hours-off {
+  color: var(--text-tertiary);
+}
+
+/* Schedule Footer */
+.schedule-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-lg);
+  border-top: 1px solid rgba(212, 168, 83, 0.08);
+  background: var(--bg-tertiary);
+}
+
+.schedule-total {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.schedule-total strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--accent-primary);
+}
+
+/* Tips */
+.availability-tips {
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+.availability-tips h4 {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.availability-tips ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.availability-tips li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.availability-tips li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent-tertiary);
+  border-radius: var(--radius-full);
+}
+
+/* Buttons */
+.btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Tab Navigation */
+.availability-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.tab-btn.active {
+  color: var(--bg-primary);
+  background: var(--accent-primary);
+}
+
+.tab-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(212, 168, 83, 0.2);
+  color: var(--accent-primary);
+  border-radius: var(--radius-full);
+}
+
+.tab-btn.active .tab-badge {
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--bg-primary);
+}
+
+/* Section Card (for Time-Off and Vacations) */
+.section-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+.section-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--accent-primary);
+}
+
+.section-card-title h3 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Time-Off Section */
+.timeoff-section,
+.vacations-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.timeoff-form,
+.vacation-form {
+  padding: var(--space-lg);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.vacation-form .form-row {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.form-select,
+.form-input {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.form-select:hover,
+.form-input:hover {
+  border-color: rgba(212, 168, 83, 0.2);
+}
+
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* Time-Off List */
+.timeoff-list,
+.vacations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+}
+
+.timeoff-card,
+.vacation-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.timeoff-card:hover,
+.vacation-card:hover {
+  background: var(--bg-elevated);
+}
+
+.timeoff-card-day {
+  flex-shrink: 0;
+}
+
+.timeoff-day-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+  border-radius: var(--radius-sm);
+}
+
+.timeoff-card-time,
+.vacation-card-dates {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.timeoff-card-time svg,
+.vacation-card-dates svg {
+  color: var(--accent-tertiary);
+}
+
+.timeoff-card-reason,
+.vacation-card-reason {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vacation-card-duration {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.vacation-status-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.vacation-status-badge.upcoming {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.vacation-status-badge.past {
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+}
+
+.vacation-card.past {
+  opacity: 0.6;
+}
+
+.timeoff-delete-btn,
+.vacation-delete-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  background: transparent;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.timeoff-delete-btn:hover,
+.vacation-delete-btn:hover {
+  color: var(--status-error);
+  background: var(--status-error-bg);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.empty-state svg {
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.empty-state span {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+/* Small Button Variant */
+.btn-sm {
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8125rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .availability-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .btn {
+    flex: 1;
+  }
+
+  .availability-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .availability-tabs {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    justify-content: center;
+  }
+
+  .schedule-grid-header {
+    display: none;
+  }
+
+  .schedule-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .schedule-day {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .schedule-times {
+    width: 100%;
+    padding-left: 44px;
+  }
+
+  .schedule-hours {
+    text-align: left;
+    padding-left: 44px;
+  }
+
+  .schedule-legend {
+    display: none;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vacation-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .timeoff-card,
+  .vacation-card {
+    flex-wrap: wrap;
+  }
+
+  .timeoff-card-reason,
+  .vacation-card-reason {
+    width: 100%;
+    order: 10;
+    margin-top: var(--space-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .availability-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .schedule-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .timeoff-delete-btn,
+  .vacation-delete-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .tab-btn {
+    min-height: 44px;
+  }
+
+  .form-select,
+  .form-input {
+    min-height: 44px;
+  }
+
+  .summary-card {
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .summary-value {
+    font-size: 1.25rem;
+  }
+}

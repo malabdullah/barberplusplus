@@ -1,0 +1,42 @@
+/* Signup-specific styles */
+.signup-container {
+  max-width: 480px;
+}
+
+.signup-phone-wrapper {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.signup-country-select {
+  width: 140px;
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.signup-country-select:focus {
+  border-color: var(--accent-primary);
+  background: var(--bg-elevated);
+  outline: none;
+}
+
+.signup-phone-input {
+  flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .signup-phone-wrapper {
+    flex-direction: column;
+  }
+
+  .signup-country-select {
+    width: 100%;
+  }
+}

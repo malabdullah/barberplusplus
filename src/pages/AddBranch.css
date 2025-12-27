@@ -1,0 +1,49 @@
+/* Add/Edit Branch Page */
+.add-branch-page,
+.edit-branch-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 800px;
+}
+
+.add-branch-header,
+.edit-branch-header {
+  padding: var(--space-xl);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+.add-branch-header h1,
+.edit-branch-header h1 {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.add-branch-header p,
+.edit-branch-header p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.add-branch-form-container,
+.edit-branch-form-container {
+  padding: var(--space-xl);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .add-branch-header,
+  .edit-branch-header,
+  .add-branch-form-container,
+  .edit-branch-form-container {
+    padding: var(--space-lg);
+  }
+}

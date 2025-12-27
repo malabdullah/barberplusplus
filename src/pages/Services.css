@@ -1,0 +1,193 @@
+/* Services Page */
+.services-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Toolbar */
+.services-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-md);
+  flex: 1;
+  max-width: 320px;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--accent-primary);
+  background: var(--bg-tertiary);
+}
+
+.search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.services-count {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+/* Services Grid */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+/* Service Card - SCOPED to .services-page to prevent CSS conflicts */
+.services-page .service-card {
+  display: block;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.services-page .service-card:hover {
+  border-color: rgba(212, 168, 83, 0.2);
+  transform: translateY(-2px);
+}
+
+.services-page .service-card-header {
+  display: block;
+  padding: var(--space-lg);
+  background: linear-gradient(135deg, rgba(212, 168, 83, 0.05) 0%, transparent 100%);
+}
+
+.services-page .service-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: var(--radius-lg);
+  color: var(--bg-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.services-page .service-card-content {
+  display: block;
+  padding: var(--space-lg);
+}
+
+.services-page .service-name {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.services-page .service-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.services-page .service-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) 0;
+  border-top: 1px solid rgba(212, 168, 83, 0.06);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.06);
+  margin-bottom: var(--space-md);
+}
+
+.services-page .detail-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.services-page .detail-item svg {
+  color: var(--text-tertiary);
+}
+
+.services-page .detail-item.price {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.services-page .service-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.services-page .service-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.services-page .service-actions .action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.services-page .service-actions .action-btn:hover {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.services-page .service-actions .action-btn.danger:hover {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .services-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-wrapper {
+    max-width: none;
+  }
+
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+}

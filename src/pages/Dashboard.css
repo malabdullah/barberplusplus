@@ -1,0 +1,519 @@
+/* Dashboard Layout */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* Welcome Section */
+.dashboard-welcome {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--space-xl);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-welcome::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: radial-gradient(
+    circle at top right,
+    rgba(212, 168, 83, 0.08) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.dashboard-welcome-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.dashboard-welcome-text {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.dashboard-welcome-date {
+  text-align: right;
+}
+
+.dashboard-date-day {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--accent-primary);
+}
+
+.dashboard-date-full {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+/* Metrics Grid */
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+.metric-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.metric-card:hover {
+  border-color: rgba(212, 168, 83, 0.15);
+  transform: translateY(-2px);
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  opacity: 0.6;
+}
+
+.metric-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.metric-card-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.metric-card-icon.accent {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.metric-card-icon.success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.metric-card-icon.info {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+.metric-card-icon.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.metric-card-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+}
+
+.metric-card-trend.positive {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.metric-card-trend.negative {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+.metric-card-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: var(--space-xs);
+}
+
+.metric-card-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.metric-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: var(--space-xs);
+}
+
+/* Main Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--space-lg);
+}
+
+/* Dashboard Card */
+.dashboard-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dashboard-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+.dashboard-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--accent-primary);
+}
+
+.dashboard-card-title h3 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dashboard-card-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent-primary);
+  transition: color var(--transition-fast);
+}
+
+.dashboard-card-link:hover {
+  color: var(--accent-secondary);
+}
+
+.dashboard-card-content {
+  padding: var(--space-lg);
+}
+
+/* Today's Bookings */
+.today-schedule {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+.today-bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.today-booking-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.today-booking-item:hover {
+  background: var(--bg-elevated);
+}
+
+.today-booking-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  padding-right: var(--space-md);
+  border-right: 1px solid rgba(212, 168, 83, 0.1);
+}
+
+.today-booking-hour {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.today-booking-duration {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+.today-booking-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.today-booking-customer {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.today-booking-service {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+/* Booking Status */
+.booking-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-full);
+}
+
+.status-confirmed {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.status-pending {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.status-progress {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+.status-completed {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.status-cancelled,
+.status-noshow {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+/* Empty State */
+.dashboard-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  color: var(--text-tertiary);
+  text-align: center;
+  gap: var(--space-md);
+}
+
+.dashboard-empty-state p {
+  font-size: 0.9375rem;
+}
+
+/* Quick Actions */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.quick-action-btn:hover {
+  background: var(--bg-elevated);
+  transform: translateY(-2px);
+}
+
+.quick-action-btn:hover .quick-action-icon {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.quick-action-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.quick-action-btn span {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Barbers Overview */
+.barbers-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.barber-mini-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.barber-mini-avatar {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bg-primary);
+}
+
+.barber-mini-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.barber-mini-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.barber-mini-stats {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.barber-mini-status {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.barber-mini-status.active {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+.btn-primary:hover {
+  background: var(--accent-secondary);
+}
+
+.btn-sm {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.8125rem;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-schedule {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-welcome {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .dashboard-welcome-date {
+    text-align: left;
+  }
+
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card-value {
+    font-size: 1.75rem;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
