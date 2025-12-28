@@ -603,7 +603,7 @@ export default function MyAvailability() {
           )}
           <button
             className={`btn btn-primary ${!hasChanges || isSubmitting ? 'disabled' : ''}`}
-            onMouseDown={handleSave}
+            onClick={handleSave}
             disabled={!hasChanges || isSubmitting}
           >
             {isSubmitting ? (
