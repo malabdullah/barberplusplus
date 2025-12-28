@@ -149,8 +149,11 @@ function calculateTotalHours(schedule) {
 function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
+  const today = new Date().toISOString().split('T')[0];
   const [formData, setFormData] = useState({
+    type: 'recurring', // 'recurring' or 'one-time'
     day: 'monday',
+    date: today,
     start: '12:00',
     end: '13:00',
     reason: '',
@@ -161,13 +164,41 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
     return day ? day.label : dayKey;
   };
 
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return format(date, 'MMM d, yyyy');
+  };
+
   const handleSubmit = () => {
     setError('');
 
-    // Check if the selected day is already a day off
-    if (schedule && schedule[formData.day] && !schedule[formData.day].enabled) {
-      setError(`${getDayLabel(formData.day)} is already marked as a day off in your schedule`);
-      return;
+    // Validation for recurring type
+    if (formData.type === 'recurring') {
+      if (schedule && schedule[formData.day] && !schedule[formData.day].enabled) {
+        setError(`${getDayLabel(formData.day)} is already marked as a day off in your schedule`);
+        return;
+      }
+    }
+
+    // Validation for one-time type
+    if (formData.type === 'one-time') {
+      if (!formData.date) {
+        setError('Please select a date');
+        return;
+      }
+      if (formData.date < today) {
+        setError('Cannot add time-off for past dates');
+        return;
+      }
+      // Check if the date falls on a day that's already a day off
+      const selectedDate = new Date(formData.date);
+      const dayIndex = selectedDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayKeys[dayIndex];
+      if (schedule && schedule[dayKey] && !schedule[dayKey].enabled) {
+        setError(`${getDayLabel(dayKey)} is already a day off in your schedule`);
+        return;
+      }
     }
 
     // Check if end time is after start time
@@ -176,11 +207,23 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
       return;
     }
 
-    onAdd({
+    const newTimeOff = {
       id: `timeoff-${Date.now()}`,
-      ...formData,
-    });
-    setFormData({ day: 'monday', start: '12:00', end: '13:00', reason: '' });
+      type: formData.type,
+      start: formData.start,
+      end: formData.end,
+      reason: formData.reason,
+    };
+
+    // Add day or date based on type
+    if (formData.type === 'recurring') {
+      newTimeOff.day = formData.day;
+    } else {
+      newTimeOff.date = formData.date;
+    }
+
+    onAdd(newTimeOff);
+    setFormData({ type: 'recurring', day: 'monday', date: today, start: '12:00', end: '13:00', reason: '' });
     setShowForm(false);
     setError('');
     setHasChanges(true);
@@ -191,13 +234,17 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
     setHasChanges(true);
   };
 
+  // Separate recurring and one-time items
+  const recurringItems = timeOffs.filter(item => !item.type || item.type === 'recurring');
+  const oneTimeItems = timeOffs.filter(item => item.type === 'one-time');
+
   return (
     <div className="timeoff-section animate-fade-in-up">
       <div className="section-card">
         <div className="section-card-header">
           <div className="section-card-title">
             <Coffee size={20} strokeWidth={1.5} />
-            <h3>Recurring Time-Off</h3>
+            <h3>Time-Off</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
@@ -207,21 +254,56 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
 
         {showForm && (
           <div className="timeoff-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Day</label>
-                <select
-                  className="form-select"
-                  value={formData.day}
-                  onChange={(e) => setFormData({ ...formData, day: e.target.value })}
+            {/* Type Toggle */}
+            <div className="form-group">
+              <label className="form-label">Type</label>
+              <div className="toggle-buttons" style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${formData.type === 'recurring' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setFormData({ ...formData, type: 'recurring' })}
                 >
-                  {DAYS_OF_WEEK.map((d) => (
-                    <option key={d.key} value={d.key}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                  Recurring Weekly
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${formData.type === 'one-time' ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setFormData({ ...formData, type: 'one-time' })}
+                >
+                  One-Time Only
+                </button>
               </div>
+            </div>
+
+            <div className="form-row">
+              {/* Day selector for recurring OR Date picker for one-time */}
+              {formData.type === 'recurring' ? (
+                <div className="form-group">
+                  <label className="form-label">Day</label>
+                  <select
+                    className="form-select"
+                    value={formData.day}
+                    onChange={(e) => setFormData({ ...formData, day: e.target.value })}
+                  >
+                    {DAYS_OF_WEEK.map((d) => (
+                      <option key={d.key} value={d.key}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.date}
+                    min={today}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">From</label>
                 <select
@@ -256,7 +338,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g., Lunch break, Personal appointment"
+                placeholder={formData.type === 'recurring' ? 'e.g., Lunch break, Prayer time' : 'e.g., Doctor appointment, Meeting'}
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
@@ -281,27 +363,63 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
           {timeOffs.length === 0 ? (
             <div className="empty-state">
               <Coffee size={32} strokeWidth={1} />
-              <p>No recurring time-off scheduled</p>
-              <span>Add breaks or regular appointments that repeat weekly</span>
+              <p>No time-off scheduled</p>
+              <span>Add recurring breaks or one-time appointments</span>
             </div>
           ) : (
-            timeOffs.map((item) => (
-              <div key={item.id} className="timeoff-card">
-                <div className="timeoff-card-day">
-                  <span className="timeoff-day-badge">{getDayLabel(item.day)}</span>
-                </div>
-                <div className="timeoff-card-time">
-                  <Clock size={14} strokeWidth={2} />
-                  <span>
-                    {item.start} - {item.end}
-                  </span>
-                </div>
-                {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
-                <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
-                  <Trash2 size={16} strokeWidth={2} />
-                </button>
-              </div>
-            ))
+            <>
+              {/* Recurring Items */}
+              {recurringItems.length > 0 && (
+                <>
+                  <div className="timeoff-section-label" style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', marginTop: '8px' }}>
+                    Recurring Weekly
+                  </div>
+                  {recurringItems.map((item) => (
+                    <div key={item.id} className="timeoff-card">
+                      <div className="timeoff-card-day">
+                        <span className="timeoff-day-badge">Every {getDayLabel(item.day)}</span>
+                      </div>
+                      <div className="timeoff-card-time">
+                        <Clock size={14} strokeWidth={2} />
+                        <span>
+                          {item.start} - {item.end}
+                        </span>
+                      </div>
+                      {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
+                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                        <Trash2 size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* One-Time Items */}
+              {oneTimeItems.length > 0 && (
+                <>
+                  <div className="timeoff-section-label" style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', marginTop: recurringItems.length > 0 ? '16px' : '8px' }}>
+                    One-Time
+                  </div>
+                  {oneTimeItems.map((item) => (
+                    <div key={item.id} className="timeoff-card">
+                      <div className="timeoff-card-day">
+                        <span className="timeoff-day-badge" style={{ background: 'var(--accent-secondary)' }}>{formatDate(item.date)}</span>
+                      </div>
+                      <div className="timeoff-card-time">
+                        <Clock size={14} strokeWidth={2} />
+                        <span>
+                          {item.start} - {item.end}
+                        </span>
+                      </div>
+                      {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
+                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                        <Trash2 size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
