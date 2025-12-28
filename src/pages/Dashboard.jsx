@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Calendar,
@@ -17,7 +17,7 @@ import { useApp } from '../context/AppContext';
 import { format, isToday, parseISO } from 'date-fns';
 import './Dashboard.css';
 
-function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
+const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
   return (
     <div className={`metric-card animate-fade-in-up stagger-${delay}`}>
       <div className="metric-card-header">
@@ -36,19 +36,19 @@ function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay })
       {subValue && <div className="metric-card-sub">{subValue}</div>}
     </div>
   );
-}
+});
 
-function BookingStatusBadge({ status }) {
-  const config = {
-    confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
-    pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
-    'in-progress': { icon: Clock, label: 'In Progress', class: 'status-progress' },
-    completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
-    cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
-    'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
-  };
+const STATUS_CONFIG = {
+  confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
+  pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
+  'in-progress': { icon: Clock, label: 'In Progress', class: 'status-progress' },
+  completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
+  cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
+  'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
+};
 
-  const { icon: Icon, label, class: className } = config[status] || config.pending;
+const BookingStatusBadge = memo(function BookingStatusBadge({ status }) {
+  const { icon: Icon, label, class: className } = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
   return (
     <span className={`booking-status ${className}`}>
@@ -56,9 +56,9 @@ function BookingStatusBadge({ status }) {
       {label}
     </span>
   );
-}
+});
 
-function TodayBookingItem({ booking }) {
+const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
   return (
     <div className="today-booking-item">
       <div className="today-booking-time">
@@ -74,18 +74,25 @@ function TodayBookingItem({ booking }) {
       <BookingStatusBadge status={booking.status} />
     </div>
   );
-}
+});
 
 export default function Dashboard() {
   const { metrics, branchBookings, branchBarbers, selectedBranch } = useApp();
 
   const today = new Date().toISOString().split('T')[0];
-  const todayBookings = branchBookings
-    .filter(b => b.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time));
 
-  const upcomingBookings = todayBookings.filter(b =>
-    ['confirmed', 'pending', 'in-progress'].includes(b.status)
+  const todayBookings = useMemo(() =>
+    branchBookings
+      .filter(b => b.date === today)
+      .sort((a, b) => a.time.localeCompare(b.time)),
+    [branchBookings, today]
+  );
+
+  const upcomingBookings = useMemo(() =>
+    todayBookings.filter(b =>
+      ['confirmed', 'pending', 'in-progress'].includes(b.status)
+    ),
+    [todayBookings]
   );
 
   return (

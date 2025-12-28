@@ -46,8 +46,25 @@ export default function Signup() {
       setError('Please enter your phone number');
       return false;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Strong password validation
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError('Password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError('Password must contain at least one number');
+      return false;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      setError('Password must contain at least one special character');
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -196,7 +213,7 @@ export default function Signup() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 chars, uppercase, number, special"
                 autoComplete="new-password"
               />
               <button

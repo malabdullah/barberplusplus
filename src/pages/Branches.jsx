@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -17,15 +17,17 @@ import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import './Branches.css';
 
-function BranchCard({ branch, barberCount, serviceCount, onDelete }) {
+// Utility function moved outside component to prevent recreation
+const formatHours = (hours) => {
+  if (!hours?.open || !hours?.close) return 'Closed';
+  return `${hours.open} - ${hours.close}`;
+};
+
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+const BranchCard = memo(function BranchCard({ branch, barberCount, serviceCount, onDelete }) {
   const navigate = useNavigate();
-
-  const formatHours = (hours) => {
-    if (!hours.open || !hours.close) return 'Closed';
-    return `${hours.open} - ${hours.close}`;
-  };
-
-  const todayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+  const todayKey = DAY_KEYS[new Date().getDay()];
   const todayHours = branch.openingHours?.[todayKey];
 
   return (
@@ -110,22 +112,39 @@ function BranchCard({ branch, barberCount, serviceCount, onDelete }) {
       </div>
     </div>
   );
-}
+});
 
 export default function Branches() {
   const { branches, barbers, services, deleteBranch } = useApp();
   const [deletingBranch, setDeletingBranch] = useState(null);
 
-  const handleDeleteBranch = (branch) => {
-    setDeletingBranch(branch);
-  };
+  // Pre-compute counts per branch to avoid O(n*m) filtering in render loop
+  const barberCountByBranch = useMemo(() => {
+    const map = {};
+    barbers.forEach(b => {
+      map[b.branchId] = (map[b.branchId] || 0) + 1;
+    });
+    return map;
+  }, [barbers]);
 
-  const handleConfirmDelete = () => {
+  const serviceCountByBranch = useMemo(() => {
+    const map = {};
+    services.forEach(s => {
+      map[s.branchId] = (map[s.branchId] || 0) + 1;
+    });
+    return map;
+  }, [services]);
+
+  const handleDeleteBranch = useCallback((branch) => {
+    setDeletingBranch(branch);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
     if (deletingBranch) {
       deleteBranch(deletingBranch.id);
       setDeletingBranch(null);
     }
-  };
+  }, [deletingBranch, deleteBranch]);
 
   return (
     <div className="branches-page">
@@ -144,20 +163,16 @@ export default function Branches() {
 
       {branches.length > 0 ? (
         <div className="branches-grid">
-          {branches.map((branch, index) => {
-            const branchBarbers = barbers.filter(b => b.branchId === branch.id);
-            const branchServices = services.filter(s => s.branchId === branch.id);
-            return (
-              <BranchCard
-                key={branch.id}
-                branch={branch}
-                barberCount={branchBarbers.length}
-                serviceCount={branchServices.length}
-                onDelete={handleDeleteBranch}
-                style={{ animationDelay: `${index * 50}ms` }}
-              />
-            );
-          })}
+          {branches.map((branch, index) => (
+            <BranchCard
+              key={branch.id}
+              branch={branch}
+              barberCount={barberCountByBranch[branch.id] || 0}
+              serviceCount={serviceCountByBranch[branch.id] || 0}
+              onDelete={handleDeleteBranch}
+              style={{ animationDelay: `${index * 50}ms` }}
+            />
+          ))}
 
           {/* Add Branch Card */}
           <Link to="/branches/new" className="add-branch-card animate-fade-in-up">

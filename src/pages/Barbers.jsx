@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -17,7 +17,7 @@ import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import './Barbers.css';
 
-function BarberCard({ barber, todayBookings, onDelete, onResendInvite }) {
+const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, onResendInvite }) {
   const navigate = useNavigate();
   const [isResending, setIsResending] = useState(false);
   const initials = barber.name?.split(' ').map((n) => n[0]).join('') || '??';
@@ -164,7 +164,7 @@ function BarberCard({ barber, todayBookings, onDelete, onResendInvite }) {
       </div>
     </div>
   );
-}
+});
 
 export default function Barbers() {
   const {
@@ -180,35 +180,44 @@ export default function Barbers() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const filteredBarbers = branchBarbers.filter((barber) =>
-    barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    barber.specialties?.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Memoize filtered barbers to prevent recalculation
+  const filteredBarbers = useMemo(() =>
+    branchBarbers.filter((barber) =>
+      barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      barber.specialties?.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+    ),
+    [branchBarbers, searchQuery]
   );
 
-  const getBarberTodayBookings = (barberId) => {
-    return branchBookings.filter(
-      (b) => b.barberId === barberId && b.date === today
-    ).length;
-  };
+  // Pre-compute today's bookings per barber to avoid O(n*m) in render loop
+  const barberTodayBookingsMap = useMemo(() => {
+    const map = {};
+    branchBookings
+      .filter(b => b.date === today)
+      .forEach(b => {
+        map[b.barberId] = (map[b.barberId] || 0) + 1;
+      });
+    return map;
+  }, [branchBookings, today]);
 
-  const handleDelete = (barber) => {
+  const handleDelete = useCallback((barber) => {
     setDeletingBarber(barber);
-  };
+  }, []);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = useCallback(() => {
     if (deletingBarber) {
       deleteBarber(deletingBarber.id);
       setDeletingBarber(null);
     }
-  };
+  }, [deletingBarber, deleteBarber]);
 
-  const handleResendInvite = async (barberId) => {
+  const handleResendInvite = useCallback(async (barberId) => {
     try {
       await resendBarberInvite(barberId);
     } catch (error) {
       console.error('Error resending invite:', error);
     }
-  };
+  }, [resendBarberInvite]);
 
   return (
     <div className="barbers-page">
@@ -249,7 +258,7 @@ export default function Barbers() {
             <BarberCard
               key={barber.id}
               barber={barber}
-              todayBookings={getBarberTodayBookings(barber.id)}
+              todayBookings={barberTodayBookingsMap[barber.id] || 0}
               onDelete={handleDelete}
               onResendInvite={handleResendInvite}
               style={{ animationDelay: `${index * 50}ms` }}

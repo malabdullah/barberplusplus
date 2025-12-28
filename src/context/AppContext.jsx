@@ -98,13 +98,25 @@ export function AppProvider({ children }) {
     };
   }, []);
 
-  // Get current branch
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || branches[0];
+  // Get current branch (memoized)
+  const selectedBranch = useMemo(() =>
+    branches.find(b => b.id === selectedBranchId) || branches[0],
+    [branches, selectedBranchId]
+  );
 
-  // Filter data by selected branch
-  const branchBarbers = barbers.filter(b => b.branchId === selectedBranchId);
-  const branchServices = services.filter(s => s.branchId === selectedBranchId);
-  const branchBookings = bookings.filter(b => b.branchId === selectedBranchId);
+  // Filter data by selected branch (memoized to prevent unnecessary re-renders)
+  const branchBarbers = useMemo(() =>
+    barbers.filter(b => b.branchId === selectedBranchId),
+    [barbers, selectedBranchId]
+  );
+  const branchServices = useMemo(() =>
+    services.filter(s => s.branchId === selectedBranchId),
+    [services, selectedBranchId]
+  );
+  const branchBookings = useMemo(() =>
+    bookings.filter(b => b.branchId === selectedBranchId),
+    [bookings, selectedBranchId]
+  );
 
   // Get dashboard metrics
   const [metrics, setMetrics] = useState({

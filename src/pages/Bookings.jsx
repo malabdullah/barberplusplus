@@ -48,13 +48,24 @@ function BookingForm({ booking, barbers, services, onSubmit, onCancel }) {
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
-  // Detect user's country via IP geolocation
+  // Detect user's country via IP geolocation (HTTPS)
   useEffect(() => {
     if (!booking?.customerCountryCode) {
-      fetch('http://ip-api.com/json/?fields=countryCode')
-        .then(res => res.json())
-        .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.countryCode);
+      // Check localStorage cache first
+      const cached = localStorage.getItem('user-country-code');
+      if (cached) {
+        const country = GCC_COUNTRIES.find(c => c.country === cached);
+        if (country) {
+          setFormData(prev => ({ ...prev, customerCountryCode: country.code }));
+          return;
+        }
+      }
+      // Fetch via secure HTTPS endpoint
+      fetch('https://ipapi.co/country_code/')
+        .then(res => res.text())
+        .then(countryCode => {
+          localStorage.setItem('user-country-code', countryCode);
+          const country = GCC_COUNTRIES.find(c => c.country === countryCode);
           if (country) {
             setFormData(prev => ({ ...prev, customerCountryCode: country.code }));
           }
