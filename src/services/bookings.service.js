@@ -9,6 +9,7 @@ const toFrontend = (booking) => {
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
     customerName: booking.customer_name,
+    customerCountryCode: booking.customer_country_code,
     customerPhone: booking.customer_phone,
     date: booking.date,
     time: booking.time,
@@ -28,6 +29,7 @@ const toDatabase = (data) => {
   if (data.barberId !== undefined) result.barber_id = data.barberId;
   if (data.serviceIds !== undefined) result.service_ids = data.serviceIds;
   if (data.customerName !== undefined) result.customer_name = data.customerName;
+  if (data.customerCountryCode !== undefined) result.customer_country_code = data.customerCountryCode;
   if (data.customerPhone !== undefined) result.customer_phone = data.customerPhone;
   if (data.date !== undefined) result.date = data.date;
   if (data.time !== undefined) result.time = data.time;
