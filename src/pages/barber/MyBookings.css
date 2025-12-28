@@ -77,6 +77,32 @@
   color: var(--text-primary);
 }
 
+.calendar-date-picker {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calendar-date-picker:hover {
+  background: var(--bg-elevated);
+  border-color: rgba(212, 168, 83, 0.2);
+}
+
+.calendar-date-picker:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.calendar-date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
 /* Calendar Grid */
 .calendar-grid {
   background: var(--bg-secondary);
@@ -267,6 +293,118 @@
 
 .legend-dot.error {
   background: var(--status-error);
+}
+
+.legend-dot.vacation {
+  background: var(--status-info);
+}
+
+.legend-dot.time-off {
+  background: var(--slot-vacation, #3D4A5A);
+}
+
+.legend-dot.day-off {
+  background: var(--text-tertiary);
+}
+
+/* Unavailable Day Styles */
+.calendar-day.unavailable {
+  background: rgba(61, 74, 90, 0.05);
+}
+
+.calendar-day-unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+/* Unavailability Block Base */
+.unavailable-block {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.unavailable-block-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.unavailable-block-label {
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unavailable-block-time {
+  font-weight: 600;
+  margin-bottom: 2px;
+  display: block;
+}
+
+/* Day Off Block */
+.unavailable-block.day-off {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  border-left: 3px solid var(--text-tertiary);
+  text-align: center;
+  padding: var(--space-md);
+}
+
+.unavailable-block.day-off .unavailable-block-content {
+  justify-content: center;
+}
+
+/* Vacation Block */
+.unavailable-block.vacation {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+  border-left: 3px solid var(--status-info);
+  text-align: center;
+  padding: var(--space-md);
+}
+
+.unavailable-block.vacation .unavailable-block-content {
+  justify-content: center;
+}
+
+/* Time-Off Block (Recurring) */
+.unavailable-block.time-off.recurring {
+  background: rgba(61, 74, 90, 0.15);
+  color: var(--text-secondary);
+  border-left: 3px solid var(--slot-vacation, #3D4A5A);
+}
+
+.unavailable-block.time-off.recurring .unavailable-block-time {
+  color: var(--slot-vacation, #3D4A5A);
+}
+
+/* Time-Off Block (One-Time) */
+.unavailable-block.time-off.one-time {
+  background: rgba(184, 149, 106, 0.12);
+  color: var(--text-secondary);
+  border-left: 3px solid var(--accent-secondary);
+}
+
+.unavailable-block.time-off.one-time .unavailable-block-time {
+  color: var(--accent-secondary);
+}
+
+/* Responsive for unavailable blocks */
+@media (max-width: 1024px) {
+  .calendar-day-unavailable {
+    margin-bottom: var(--space-md);
+  }
+
+  .unavailable-block.day-off,
+  .unavailable-block.vacation {
+    padding: var(--space-sm);
+  }
 }
 
 /* Booking Sidebar */

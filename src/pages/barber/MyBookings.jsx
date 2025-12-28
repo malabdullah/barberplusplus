@@ -11,6 +11,9 @@ import {
   X,
   Check,
   AlertCircle,
+  Coffee,
+  Umbrella,
+  XCircle,
 } from 'lucide-react';
 import {
   format,
@@ -19,12 +22,63 @@ import {
   addWeeks,
   subWeeks,
   isToday,
+  getDay,
+  isWithinInterval,
+  parseISO,
 } from 'date-fns';
 import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import BookingForm from '../../components/Forms/BookingForm';
 import './MyBookings.css';
+
+// Day index to key mapping (0=Sunday in JS Date.getDay())
+const DAY_INDEX_TO_KEY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Unavailability block component for time-offs, vacations, and days-off
+function UnavailabilityBlock({ block }) {
+  const configs = {
+    'day-off': {
+      icon: XCircle,
+      className: 'unavailable-block day-off',
+      showTime: false,
+    },
+    'vacation': {
+      icon: Umbrella,
+      className: 'unavailable-block vacation',
+      showTime: false,
+    },
+    'time-off-recurring': {
+      icon: Coffee,
+      className: 'unavailable-block time-off recurring',
+      showTime: true,
+    },
+    'time-off-one-time': {
+      icon: Clock,
+      className: 'unavailable-block time-off one-time',
+      showTime: true,
+    },
+  };
+
+  const config = configs[block.type];
+  const Icon = config.icon;
+
+  return (
+    <div className={config.className}>
+      {config.showTime && (
+        <span className="unavailable-block-time">
+          {block.start} - {block.end}
+        </span>
+      )}
+      <div className="unavailable-block-content">
+        <Icon size={12} strokeWidth={2} />
+        <span className="unavailable-block-label">
+          {block.label || block.reason || block.type.replace(/-/g, ' ')}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function BookingCard({ booking, onEdit }) {
   const statusConfig = {
@@ -158,6 +212,106 @@ export default function MyBookings() {
     return map;
   }, [barberBookings]);
 
+  // Enrich bookings with resolved service names
+  const enrichedBookingsByDate = useMemo(() => {
+    const servicesMap = new Map(barberServices.map(s => [s.id, s]));
+    const enriched = {};
+
+    Object.entries(bookingsByDate).forEach(([date, bookings]) => {
+      enriched[date] = bookings.map(booking => {
+        const services = (booking.serviceIds || [])
+          .map(id => servicesMap.get(id))
+          .filter(Boolean);
+
+        return {
+          ...booking,
+          serviceName: services.map(s => s.name).join(', ') || 'No service',
+          duration: booking.duration || services.reduce((sum, s) => sum + s.duration, 0),
+          price: booking.price || services.reduce((sum, s) => sum + s.price, 0),
+        };
+      });
+    });
+
+    return enriched;
+  }, [bookingsByDate, barberServices]);
+
+  // Compute unavailability blocks for each day in the visible week
+  const unavailabilityByDate = useMemo(() => {
+    if (!currentBarber) return {};
+
+    const { availability, timeOffs = [], vacations = [] } = currentBarber;
+    const map = {};
+
+    weekDays.forEach((day) => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const dayKey = DAY_INDEX_TO_KEY[getDay(day)];
+      const blocks = [];
+
+      // 1. Check if it's a day off from weekly schedule
+      if (availability && availability[dayKey] && !availability[dayKey].enabled) {
+        blocks.push({
+          type: 'day-off',
+          fullDay: true,
+          label: 'Day Off',
+        });
+      }
+
+      // 2. Check if date falls within any vacation period
+      vacations.forEach((vacation) => {
+        const startDate = parseISO(vacation.startDate);
+        const endDate = parseISO(vacation.endDate);
+        if (isWithinInterval(day, { start: startDate, end: endDate })) {
+          blocks.push({
+            type: 'vacation',
+            fullDay: true,
+            label: 'Vacation',
+            reason: vacation.reason,
+            id: vacation.id,
+          });
+        }
+      });
+
+      // Only add partial blocks if no full-day block exists
+      const hasFullDayBlock = blocks.some((b) => b.fullDay);
+
+      if (!hasFullDayBlock) {
+        // 3. Check for one-time time-offs on this date
+        timeOffs
+          .filter((t) => t.type === 'one-time' && t.date === dateStr)
+          .forEach((timeOff) => {
+            blocks.push({
+              type: 'time-off-one-time',
+              fullDay: false,
+              start: timeOff.start,
+              end: timeOff.end,
+              reason: timeOff.reason,
+              id: timeOff.id,
+            });
+          });
+
+        // 4. Check for recurring time-offs on this day of week
+        timeOffs
+          .filter((t) => t.type === 'recurring' && t.day === dayKey)
+          .forEach((timeOff) => {
+            blocks.push({
+              type: 'time-off-recurring',
+              fullDay: false,
+              start: timeOff.start,
+              end: timeOff.end,
+              reason: timeOff.reason,
+              id: timeOff.id,
+            });
+          });
+      }
+
+      if (blocks.length > 0) {
+        map[dateStr] = blocks;
+      }
+    });
+
+    return map;
+  }, [currentBarber, weekDays]);
+
   const navigateWeek = (direction) => {
     setCurrentWeek((prev) =>
       direction === 'next' ? addWeeks(prev, 1) : subWeeks(prev, 1)
@@ -231,6 +385,12 @@ export default function MyBookings() {
               <ChevronRight size={20} strokeWidth={1.5} />
             </button>
           </div>
+          <input
+            type="date"
+            className="calendar-date-picker"
+            value={format(currentWeek, 'yyyy-MM-dd')}
+            onChange={(e) => e.target.value && setCurrentWeek(new Date(e.target.value))}
+          />
           <h3 className="calendar-period">
             {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
           </h3>
@@ -256,29 +416,52 @@ export default function MyBookings() {
         <div className="calendar-body">
           {weekDays.map((day) => {
             const dateStr = format(day, 'yyyy-MM-dd');
-            const dayBookings = bookingsByDate[dateStr] || [];
+            const dayBookings = enrichedBookingsByDate[dateStr] || [];
+            const unavailableBlocks = unavailabilityByDate[dateStr] || [];
+
+            // Separate full-day blocks from partial blocks
+            const fullDayBlocks = unavailableBlocks.filter((b) => b.fullDay);
+            const partialBlocks = unavailableBlocks.filter((b) => !b.fullDay);
+
+            // Merge partial time-off blocks with bookings, sorted by time
+            const allItems = [
+              ...partialBlocks.map((b) => ({ ...b, isBlock: true, time: b.start })),
+              ...dayBookings.map((b) => ({ ...b, isBlock: false })),
+            ].sort((a, b) => a.time.localeCompare(b.time));
+
+            const hasFullDayOff = fullDayBlocks.length > 0;
 
             return (
               <div
                 key={day.toISOString()}
                 data-date={format(day, 'EEEE, MMM d')}
-                className={`calendar-day ${isToday(day) ? 'today' : ''}`}
+                className={`calendar-day ${isToday(day) ? 'today' : ''} ${hasFullDayOff ? 'unavailable' : ''}`}
               >
-                {dayBookings.length > 0 ? (
-                  <div className="calendar-day-bookings">
-                    {dayBookings.map((booking) => (
-                      <BookingCard
-                        key={booking.id}
-                        booking={booking}
-                        onEdit={handleEdit}
-                      />
+                {/* Full-day blocks at top */}
+                {fullDayBlocks.length > 0 && (
+                  <div className="calendar-day-unavailable">
+                    {fullDayBlocks.map((block, idx) => (
+                      <UnavailabilityBlock key={block.id || idx} block={block} />
                     ))}
                   </div>
-                ) : (
+                )}
+
+                {/* Bookings and partial time-offs */}
+                {!hasFullDayOff && allItems.length > 0 ? (
+                  <div className="calendar-day-bookings">
+                    {allItems.map((item, idx) =>
+                      item.isBlock ? (
+                        <UnavailabilityBlock key={item.id || `block-${idx}`} block={item} />
+                      ) : (
+                        <BookingCard key={item.id} booking={item} onEdit={handleEdit} />
+                      )
+                    )}
+                  </div>
+                ) : !hasFullDayOff ? (
                   <div className="calendar-day-empty">
                     <span>No bookings</span>
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
@@ -306,6 +489,18 @@ export default function MyBookings() {
         <div className="legend-item">
           <span className="legend-dot error"></span>
           <span>Cancelled</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot vacation"></span>
+          <span>Vacation</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot time-off"></span>
+          <span>Time-Off</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot day-off"></span>
+          <span>Day Off</span>
         </div>
       </div>
 
