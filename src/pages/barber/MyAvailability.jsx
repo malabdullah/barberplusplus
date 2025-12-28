@@ -146,8 +146,9 @@ function calculateTotalHours(schedule) {
 }
 
 // Time-Off Section Component
-function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges }) {
+function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) {
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     day: 'monday',
     start: '12:00',
@@ -155,27 +156,39 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges }) {
     reason: '',
   });
 
+  const getDayLabel = (dayKey) => {
+    const day = DAYS_OF_WEEK.find((d) => d.key === dayKey);
+    return day ? day.label : dayKey;
+  };
+
   const handleSubmit = () => {
-    if (formData.start >= formData.end) {
-      return; // Basic validation
+    setError('');
+
+    // Check if the selected day is already a day off
+    if (schedule && schedule[formData.day] && !schedule[formData.day].enabled) {
+      setError(`${getDayLabel(formData.day)} is already marked as a day off in your schedule`);
+      return;
     }
+
+    // Check if end time is after start time
+    if (formData.start >= formData.end) {
+      setError('End time must be after start time');
+      return;
+    }
+
     onAdd({
       id: `timeoff-${Date.now()}`,
       ...formData,
     });
     setFormData({ day: 'monday', start: '12:00', end: '13:00', reason: '' });
     setShowForm(false);
+    setError('');
     setHasChanges(true);
   };
 
   const handleDelete = (id) => {
     onDelete(id);
     setHasChanges(true);
-  };
-
-  const getDayLabel = (dayKey) => {
-    const day = DAYS_OF_WEEK.find((d) => d.key === dayKey);
-    return day ? day.label : dayKey;
   };
 
   return (
@@ -248,8 +261,13 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges }) {
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
+            {error && (
+              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+                {error}
+              </div>
+            )}
             <div className="form-actions">
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}>
+              <button className="btn btn-ghost" onClick={() => { setShowForm(false); setError(''); }}>
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
@@ -294,6 +312,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges }) {
 // Vacations Section Component
 function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState('');
   const today = new Date().toISOString().split('T')[0];
   const [formData, setFormData] = useState({
     startDate: today,
@@ -302,9 +321,14 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
   });
 
   const handleSubmit = () => {
+    setError('');
+
+    // Check if end date is after start date
     if (formData.startDate > formData.endDate) {
-      return; // Basic validation
+      setError('End date must be on or after start date');
+      return;
     }
+
     onAdd({
       id: `vacation-${Date.now()}`,
       ...formData,
@@ -315,6 +339,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
       reason: '',
     });
     setShowForm(false);
+    setError('');
     setHasChanges(true);
   };
 
@@ -402,8 +427,13 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
+            {error && (
+              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+                {error}
+              </div>
+            )}
             <div className="form-actions">
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}>
+              <button className="btn btn-ghost" onClick={() => { setShowForm(false); setError(''); }}>
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
@@ -458,16 +488,20 @@ export default function MyAvailability() {
   const [vacations, setVacations] = useState([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Only initialize state from currentBarber on first load, not on every change
   useEffect(() => {
-    if (currentBarber) {
+    if (currentBarber && !isInitialized) {
       if (currentBarber.availability) {
         setSchedule(convertAvailabilityFormat(currentBarber.availability));
       }
       setTimeOffs(currentBarber.timeOffs || []);
       setVacations(currentBarber.vacations || []);
+      setIsInitialized(true);
     }
-  }, [currentBarber]);
+  }, [currentBarber, isInitialized]);
 
   const handleDayChange = (dayKey, newSchedule) => {
     setSchedule((prev) => ({
@@ -494,15 +528,25 @@ export default function MyAvailability() {
     setVacations((prev) => prev.filter((v) => v.id !== id));
   };
 
-  const handleSave = () => {
-    updateBarber(currentBarber.id, {
-      availability: schedule,
-      timeOffs: timeOffs,
-      vacations: vacations,
-    });
-    setHasChanges(false);
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus(null), 3000);
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await updateBarber(currentBarber.id, {
+        availability: schedule,
+        timeOffs: timeOffs,
+        vacations: vacations,
+      });
+      setHasChanges(false);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (error) {
+      console.error('Error saving availability:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -558,12 +602,18 @@ export default function MyAvailability() {
             </button>
           )}
           <button
-            className={`btn btn-primary ${!hasChanges ? 'disabled' : ''}`}
-            onClick={handleSave}
-            disabled={!hasChanges}
+            className={`btn btn-primary ${!hasChanges || isSubmitting ? 'disabled' : ''}`}
+            onMouseDown={handleSave}
+            disabled={!hasChanges || isSubmitting}
           >
-            <Save size={18} strokeWidth={2} />
-            Save Changes
+            {isSubmitting ? (
+              'Saving...'
+            ) : (
+              <>
+                <Save size={18} strokeWidth={2} />
+                Save Changes
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -695,6 +745,7 @@ export default function MyAvailability() {
           onAdd={handleAddTimeOff}
           onDelete={handleDeleteTimeOff}
           setHasChanges={setHasChanges}
+          schedule={schedule}
         />
       )}
 

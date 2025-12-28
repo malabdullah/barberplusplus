@@ -18,6 +18,8 @@ const toFrontend = (barber) => {
     avatarUrl: barber.avatar_url,
     services: barber.service_ids || [],
     availability: barber.availability,
+    timeOffs: barber.time_offs || [],
+    vacations: barber.vacations || [],
     createdAt: barber.created_at,
     updatedAt: barber.updated_at,
     inviteStatus: barber.invite_status,
@@ -50,6 +52,8 @@ const toDatabase = (data) => {
   }
   if (data.services !== undefined) result.service_ids = data.services;
   if (data.availability !== undefined) result.availability = data.availability;
+  if (data.timeOffs !== undefined) result.time_offs = data.timeOffs;
+  if (data.vacations !== undefined) result.vacations = data.vacations;
   return result;
 };
 

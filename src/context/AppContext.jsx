@@ -362,12 +362,16 @@ export function AppProvider({ children }) {
       setBarbers(prev =>
         prev.map(b => b.id === barberId ? updated : b)
       );
+      // Also update barberProfile if this is the current barber
+      if (barberProfile?.id === barberId) {
+        setBarberProfile(updated);
+      }
       return updated;
     } catch (error) {
       console.error('Error updating barber:', error);
       throw error;
     }
-  }, [barbers]);
+  }, [barbers, barberProfile]);
 
   const deleteBarber = useCallback(async (barberId) => {
     try {
