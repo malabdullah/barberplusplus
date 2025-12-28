@@ -171,6 +171,30 @@ export default function Bookings() {
     return map;
   }, [branchBookings]);
 
+  // Enrich bookings with barber and service names
+  const enrichedBookingsByDate = useMemo(() => {
+    const barbersMap = new Map(branchBarbers.map(b => [b.id, b]));
+    const servicesMap = new Map(branchServices.map(s => [s.id, s]));
+    const enriched = {};
+
+    Object.entries(bookingsByDate).forEach(([date, bookings]) => {
+      enriched[date] = bookings.map(booking => {
+        const barber = barbersMap.get(booking.barberId);
+        const services = (booking.serviceIds || [])
+          .map(id => servicesMap.get(id))
+          .filter(Boolean);
+
+        return {
+          ...booking,
+          barberName: barber?.name || 'Unknown',
+          serviceName: services.map(s => s.name).join(', ') || 'No service',
+        };
+      });
+    });
+
+    return enriched;
+  }, [bookingsByDate, branchBarbers, branchServices]);
+
   const navigateWeek = (direction) => {
     setCurrentWeek((prev) =>
       direction === 'next' ? addWeeks(prev, 1) : subWeeks(prev, 1)
@@ -295,7 +319,7 @@ export default function Bookings() {
           <div className="calendar-body">
             {weekDays.map((day) => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              const dayBookings = bookingsByDate[dateStr] || [];
+              const dayBookings = enrichedBookingsByDate[dateStr] || [];
 
               return (
                 <div
@@ -334,7 +358,7 @@ export default function Bookings() {
           <div className="day-view-bookings">
             {(() => {
               const dateStr = format(selectedDay, 'yyyy-MM-dd');
-              const dayBookings = bookingsByDate[dateStr] || [];
+              const dayBookings = enrichedBookingsByDate[dateStr] || [];
 
               return dayBookings.length > 0 ? (
                 dayBookings.map((booking) => (

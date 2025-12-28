@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Calendar,
@@ -101,6 +101,7 @@ export default function BarberDashboard() {
   const {
     currentBarber,
     barberBookings,
+    barberServices,
     barberMetrics,
     barberBranch,
     updateBooking,
@@ -119,9 +120,24 @@ export default function BarberDashboard() {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const todayBookings = barberBookings
-    .filter(b => b.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const todayBookings = useMemo(() => {
+    const servicesMap = new Map(barberServices.map(s => [s.id, s]));
+
+    return barberBookings
+      .filter(b => b.date === today)
+      .map(booking => {
+        const services = (booking.serviceIds || [])
+          .map(id => servicesMap.get(id))
+          .filter(Boolean);
+
+        return {
+          ...booking,
+          serviceName: services.map(s => s.name).join(', ') || 'No service',
+        };
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [barberBookings, barberServices, today]);
 
   const upcomingBookings = todayBookings.filter(b =>
     ['confirmed', 'pending', 'in-progress'].includes(b.status)

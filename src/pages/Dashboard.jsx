@@ -77,16 +77,30 @@ const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
 });
 
 export default function Dashboard() {
-  const { metrics, branchBookings, branchBarbers, selectedBranch } = useApp();
+  const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch } = useApp();
 
   const today = new Date().toISOString().split('T')[0];
 
-  const todayBookings = useMemo(() =>
-    branchBookings
+  const todayBookings = useMemo(() => {
+    const barbersMap = new Map(branchBarbers.map(b => [b.id, b]));
+    const servicesMap = new Map(branchServices.map(s => [s.id, s]));
+
+    return branchBookings
       .filter(b => b.date === today)
-      .sort((a, b) => a.time.localeCompare(b.time)),
-    [branchBookings, today]
-  );
+      .map(booking => {
+        const barber = barbersMap.get(booking.barberId);
+        const services = (booking.serviceIds || [])
+          .map(id => servicesMap.get(id))
+          .filter(Boolean);
+
+        return {
+          ...booking,
+          barberName: barber?.name || 'Unknown',
+          serviceName: services.map(s => s.name).join(', ') || 'No service',
+        };
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [branchBookings, branchBarbers, branchServices, today]);
 
   const upcomingBookings = useMemo(() =>
     todayBookings.filter(b =>
