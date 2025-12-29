@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   X,
+  FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import './Sidebar.css';
@@ -19,6 +20,7 @@ const navItems = [
   { path: '/services', icon: Scissors, label: 'Services' },
   { path: '/barbers', icon: Users, label: 'Barbers' },
   { path: '/bookings', icon: Calendar, label: 'Bookings' },
+  { path: '/logs', icon: FileText, label: 'Activity Logs' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 

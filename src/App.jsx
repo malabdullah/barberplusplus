@@ -22,6 +22,8 @@ import BarberDashboard from './pages/barber/BarberDashboard';
 import MyBookings from './pages/barber/MyBookings';
 import MyAvailability from './pages/barber/MyAvailability';
 import MyProfile from './pages/barber/MyProfile';
+import Logs from './pages/Logs';
+import MyLogs from './pages/barber/MyLogs';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -116,6 +118,7 @@ function AppRoutes() {
         <Route path="barbers/new" element={<AddBarber />} />
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
         <Route path="bookings" element={<Bookings />} />
+        <Route path="logs" element={<Logs />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
@@ -132,6 +135,7 @@ function AppRoutes() {
         <Route path="bookings" element={<MyBookings />} />
         <Route path="availability" element={<MyAvailability />} />
         <Route path="profile" element={<MyProfile />} />
+        <Route path="logs" element={<MyLogs />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

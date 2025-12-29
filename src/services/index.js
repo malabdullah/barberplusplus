@@ -5,3 +5,4 @@ export { servicesService } from './services.service';
 export { bookingsService } from './bookings.service';
 export { locationsService } from './locations.service';
 export { storageService } from './storage.service';
+export { loggingService } from './logging.service';

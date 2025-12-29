@@ -6,6 +6,7 @@ import {
   servicesService,
   bookingsService,
   storageService,
+  loggingService,
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
@@ -192,6 +193,20 @@ export function AppProvider({ children }) {
     loadBarberProfile();
   }, [userRole, user]);
 
+  // Set logging context when user/role/branch changes
+  useEffect(() => {
+    if (user && userRole) {
+      loggingService.setContext({
+        userId: user.id,
+        userRole,
+        branchId: selectedBranchId,
+        barberId: barberProfile?.id || null,
+      });
+    } else {
+      loggingService.clearContext();
+    }
+  }, [user, userRole, selectedBranchId, barberProfile]);
+
   // Reload all data
   const reloadData = useCallback(async () => {
     try {
@@ -229,19 +244,23 @@ export function AppProvider({ children }) {
           // Update branch with image URL
           const updatedBranch = await branchesService.update(newBranch.id, { imageUrl });
           setBranches(prev => [...prev, updatedBranch]);
+          loggingService.logAction('create', 'branch', updatedBranch.id, `Created branch: ${branchData.name}`);
           return updatedBranch;
         } catch (uploadError) {
           console.error('Error uploading branch image:', uploadError);
           // Still return the branch without image
           setBranches(prev => [...prev, newBranch]);
+          loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
           return newBranch;
         }
       }
 
       setBranches(prev => [...prev, newBranch]);
+      loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
       return newBranch;
     } catch (error) {
       console.error('Error creating branch:', error);
+      loggingService.logError(error, { entityType: 'branch', action: 'create' });
       throw error;
     }
   }, [user]);
@@ -268,22 +287,27 @@ export function AppProvider({ children }) {
       setBranches(prev =>
         prev.map(b => b.id === branchId ? updated : b)
       );
+      loggingService.logAction('update', 'branch', branchId, `Updated branch: ${updated.name}`);
       return updated;
     } catch (error) {
       console.error('Error updating branch:', error);
+      loggingService.logError(error, { entityType: 'branch', action: 'update', entityId: branchId });
       throw error;
     }
   }, [branches]);
 
   const deleteBranch = useCallback(async (branchId) => {
     try {
+      const branchName = branches.find(b => b.id === branchId)?.name || 'Unknown';
       await branchesService.delete(branchId);
       setBranches(prev => prev.filter(b => b.id !== branchId));
       if (selectedBranchId === branchId && branches.length > 1) {
         setSelectedBranchId(branches.find(b => b.id !== branchId)?.id || null);
       }
+      loggingService.logAction('delete', 'branch', branchId, `Deleted branch: ${branchName}`);
     } catch (error) {
       console.error('Error deleting branch:', error);
+      loggingService.logError(error, { entityType: 'branch', action: 'delete', entityId: branchId });
       throw error;
     }
   }, [selectedBranchId, branches]);
@@ -329,9 +353,11 @@ export function AppProvider({ children }) {
       }
 
       setBarbers(prev => [...prev, newBarber]);
+      loggingService.logAction('create', 'barber', newBarber.id, `Added barber: ${barberData.name}`);
       return newBarber;
     } catch (error) {
       console.error('Error creating barber:', error);
+      loggingService.logError(error, { entityType: 'barber', action: 'create' });
       throw error;
     }
   }, [selectedBranchId]);
@@ -379,22 +405,27 @@ export function AppProvider({ children }) {
       if (barberProfile?.id === barberId) {
         setBarberProfile(updated);
       }
+      loggingService.logAction('update', 'barber', barberId, `Updated barber: ${updated.name}`);
       return updated;
     } catch (error) {
       console.error('Error updating barber:', error);
+      loggingService.logError(error, { entityType: 'barber', action: 'update', entityId: barberId });
       throw error;
     }
   }, [barbers, barberProfile]);
 
   const deleteBarber = useCallback(async (barberId) => {
     try {
+      const barberName = barbers.find(b => b.id === barberId)?.name || 'Unknown';
       await barbersService.delete(barberId);
       setBarbers(prev => prev.filter(b => b.id !== barberId));
+      loggingService.logAction('delete', 'barber', barberId, `Deleted barber: ${barberName}`);
     } catch (error) {
       console.error('Error deleting barber:', error);
+      loggingService.logError(error, { entityType: 'barber', action: 'delete', entityId: barberId });
       throw error;
     }
-  }, []);
+  }, [barbers]);
 
   // Service actions
   const addService = useCallback(async (serviceData) => {
@@ -405,9 +436,11 @@ export function AppProvider({ children }) {
         status: 'active',
       });
       setServices(prev => [...prev, newService]);
+      loggingService.logAction('create', 'service', newService.id, `Added service: ${serviceData.name}`);
       return newService;
     } catch (error) {
       console.error('Error creating service:', error);
+      loggingService.logError(error, { entityType: 'service', action: 'create' });
       throw error;
     }
   }, [selectedBranchId]);
@@ -418,22 +451,27 @@ export function AppProvider({ children }) {
       setServices(prev =>
         prev.map(s => s.id === serviceId ? updated : s)
       );
+      loggingService.logAction('update', 'service', serviceId, `Updated service: ${updated.name}`);
       return updated;
     } catch (error) {
       console.error('Error updating service:', error);
+      loggingService.logError(error, { entityType: 'service', action: 'update', entityId: serviceId });
       throw error;
     }
   }, []);
 
   const deleteService = useCallback(async (serviceId) => {
     try {
+      const serviceName = services.find(s => s.id === serviceId)?.name || 'Unknown';
       await servicesService.delete(serviceId);
       setServices(prev => prev.filter(s => s.id !== serviceId));
+      loggingService.logAction('delete', 'service', serviceId, `Deleted service: ${serviceName}`);
     } catch (error) {
       console.error('Error deleting service:', error);
+      loggingService.logError(error, { entityType: 'service', action: 'delete', entityId: serviceId });
       throw error;
     }
-  }, []);
+  }, [services]);
 
   // Booking actions
   const addBooking = useCallback(async (bookingData) => {
@@ -473,9 +511,11 @@ export function AppProvider({ children }) {
         status: 'confirmed',
       });
       setBookings(prev => [...prev, newBooking]);
+      loggingService.logAction('create', 'booking', newBooking.id, `Created booking for ${bookingData.customerName}`);
       return newBooking;
     } catch (error) {
       console.error('Error creating booking:', error);
+      loggingService.logError(error, { entityType: 'booking', action: 'create' });
       throw error;
     }
   }, [selectedBranchId, services, bookings, barbers]);
@@ -486,9 +526,11 @@ export function AppProvider({ children }) {
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? updated : b)
       );
+      loggingService.logAction('update', 'booking', bookingId, `Updated booking status to ${updated.status}`);
       return updated;
     } catch (error) {
       console.error('Error updating booking:', error);
+      loggingService.logError(error, { entityType: 'booking', action: 'update', entityId: bookingId });
       throw error;
     }
   }, []);
@@ -499,9 +541,11 @@ export function AppProvider({ children }) {
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? cancelled : b)
       );
+      loggingService.logAction('update', 'booking', bookingId, 'Cancelled booking');
       return cancelled;
     } catch (error) {
       console.error('Error cancelling booking:', error);
+      loggingService.logError(error, { entityType: 'booking', action: 'cancel', entityId: bookingId });
       throw error;
     }
   }, []);
@@ -514,12 +558,14 @@ export function AppProvider({ children }) {
         setUser(result.user);
         setUserRole(result.role);
         setIsAuthenticated(true);
+        loggingService.logAuth('login', result.user.id, result.role, true);
         // Branch will be set by the barberProfile loading effect
         return result.role; // Return role for redirect logic
       }
       return null;
     } catch (error) {
       console.error('Login error:', error);
+      loggingService.logAuth('login', null, null, false, error.message);
       return null;
     }
   }, []);
@@ -531,20 +577,26 @@ export function AppProvider({ children }) {
         setUser(result.user);
         setUserRole('manager'); // Signup is only for managers
         setIsAuthenticated(true);
+        loggingService.logAuth('signup', result.user.id, 'manager', true);
       }
       return result;
     } catch (error) {
       console.error('Signup error:', error);
+      loggingService.logAuth('signup', null, null, false, error.message);
       return { success: false, error: error.message };
     }
   }, []);
 
   const logout = useCallback(async () => {
+    const currentUserId = user?.id;
+    const currentRole = userRole;
     try {
       await authService.logout();
+      loggingService.logAuth('logout', currentUserId, currentRole, true);
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      loggingService.clearContext();
       setUser(null);
       setUserRole(null);
       setIsAuthenticated(false);
@@ -555,7 +607,7 @@ export function AppProvider({ children }) {
       setBookings([]);
       setSelectedBranchId(null);
     }
-  }, []);
+  }, [user, userRole]);
 
   // Manager alias for backwards compatibility
   const manager = userRole === 'manager' ? user : null;
