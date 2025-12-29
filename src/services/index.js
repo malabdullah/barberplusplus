@@ -7,3 +7,4 @@ export { locationsService } from './locations.service';
 export { storageService } from './storage.service';
 export { loggingService } from './logging.service';
 export { notificationsService } from './notifications.service';
+export { notificationPreferencesService } from './notificationPreferences.service';

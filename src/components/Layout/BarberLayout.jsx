@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import BarberSidebar from './BarberSidebar';
 import BarberTopBar from './BarberTopBar';
+import NotificationToast from '../UI/NotificationToast';
+import { useApp } from '../../context/AppContext';
 import './Layout.css';
 
 export default function BarberLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toastNotification, hideNotificationToast } = useApp();
 
   const handleMenuToggle = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -24,6 +27,10 @@ export default function BarberLayout() {
           <Outlet />
         </main>
       </div>
+      <NotificationToast
+        notification={toastNotification}
+        onClose={hideNotificationToast}
+      />
     </div>
   );
 }

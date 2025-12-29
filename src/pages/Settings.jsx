@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
+import { notificationPreferencesService } from '../services';
 import './Settings.css';
 
 function SettingsSection({ icon: Icon, title, description, children }) {
@@ -75,7 +76,7 @@ const parsePhone = (fullPhone) => {
 };
 
 export default function Settings() {
-  const { user, userRole, logout, theme, setTheme } = useApp();
+  const { user, userRole, logout, theme, setTheme, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
 
@@ -101,15 +102,6 @@ export default function Settings() {
     }
   }, [user?.user_metadata?.phone]);
 
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    sms: false,
-    bookingReminders: true,
-    dailySummary: true,
-    weeklyReport: false,
-  });
-
   const [language, setLanguage] = useState('en');
 
   const handleProfileChange = (e) => {
@@ -117,8 +109,19 @@ export default function Settings() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNotificationChange = (key) => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleNotificationChange = async (key) => {
+    const newValue = !notificationPreferences?.[key];
+
+    // Optimistic update
+    setNotificationPreferences((prev) => ({ ...prev, [key]: newValue }));
+
+    try {
+      await notificationPreferencesService.updateSingle(key, newValue);
+    } catch (error) {
+      console.error('Error saving notification preference:', error);
+      // Revert on failure
+      setNotificationPreferences((prev) => ({ ...prev, [key]: !newValue }));
+    }
   };
 
   const handleSaveProfile = () => {
@@ -214,69 +217,61 @@ export default function Settings() {
         <SettingsSection
           icon={Bell}
           title="Notifications"
-          description="How you receive updates"
+          description="Control which in-app notifications you receive"
         >
-          <SettingsItem
-            label="Email Notifications"
-            description="Receive updates via email"
-          >
-            <Toggle
-              checked={notifications.email}
-              onChange={() => handleNotificationChange('email')}
-            />
-          </SettingsItem>
+          {notificationsLoading ? (
+            <div className="settings-loading">Loading preferences...</div>
+          ) : (
+            <>
+              {/* Booking Notifications Category */}
+              <div className="settings-category-label">Bookings</div>
 
-          <SettingsItem
-            label="Push Notifications"
-            description="Browser and mobile alerts"
-          >
-            <Toggle
-              checked={notifications.push}
-              onChange={() => handleNotificationChange('push')}
-            />
-          </SettingsItem>
+              <SettingsItem
+                label="New Bookings"
+                description="When a booking is created"
+              >
+                <Toggle
+                  checked={notificationPreferences?.newBookings}
+                  onChange={() => handleNotificationChange('newBookings')}
+                />
+              </SettingsItem>
 
-          <SettingsItem
-            label="SMS Notifications"
-            description="Text message alerts"
-          >
-            <Toggle
-              checked={notifications.sms}
-              onChange={() => handleNotificationChange('sms')}
-            />
-          </SettingsItem>
+              <SettingsItem
+                label="Booking Updates"
+                description="When booking status changes"
+              >
+                <Toggle
+                  checked={notificationPreferences?.bookingUpdates}
+                  onChange={() => handleNotificationChange('bookingUpdates')}
+                />
+              </SettingsItem>
 
-          <div className="settings-divider" />
+              <SettingsItem
+                label="Cancellations"
+                description="When a booking is cancelled"
+              >
+                <Toggle
+                  checked={notificationPreferences?.cancellations}
+                  onChange={() => handleNotificationChange('cancellations')}
+                />
+              </SettingsItem>
 
-          <SettingsItem
-            label="Booking Reminders"
-            description="Get notified before appointments"
-          >
-            <Toggle
-              checked={notifications.bookingReminders}
-              onChange={() => handleNotificationChange('bookingReminders')}
-            />
-          </SettingsItem>
+              <div className="settings-divider" />
 
-          <SettingsItem
-            label="Daily Summary"
-            description="Daily overview of bookings"
-          >
-            <Toggle
-              checked={notifications.dailySummary}
-              onChange={() => handleNotificationChange('dailySummary')}
-            />
-          </SettingsItem>
+              {/* System Category */}
+              <div className="settings-category-label">System</div>
 
-          <SettingsItem
-            label="Weekly Report"
-            description="Weekly performance report"
-          >
-            <Toggle
-              checked={notifications.weeklyReport}
-              onChange={() => handleNotificationChange('weeklyReport')}
-            />
-          </SettingsItem>
+              <SettingsItem
+                label="System Alerts"
+                description="Important system notifications"
+              >
+                <Toggle
+                  checked={notificationPreferences?.systemAlerts}
+                  onChange={() => handleNotificationChange('systemAlerts')}
+                />
+              </SettingsItem>
+            </>
+          )}
         </SettingsSection>
 
         {/* Appearance Section */}

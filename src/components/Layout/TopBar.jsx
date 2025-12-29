@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ChevronDown,
   Bell,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useApp } from '../../context/AppContext';
+import { notificationPreferencesService } from '../../services';
 import './TopBar.css';
 
 export default function TopBar({ onMenuClick }) {
@@ -21,12 +22,26 @@ export default function TopBar({ onMenuClick }) {
     notifications,
     unreadCount,
     notificationsLoading,
+    notificationPreferences,
     markNotificationRead,
     markAllNotificationsRead,
   } = useApp();
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Filter notifications based on user preferences
+  const visibleNotifications = useMemo(() => {
+    if (!notificationPreferences) return notifications;
+    return notifications.filter(n =>
+      notificationPreferencesService.isTypeEnabled(notificationPreferences, n.type, n.createdAt)
+    );
+  }, [notifications, notificationPreferences]);
+
+  // Calculate visible unread count
+  const visibleUnreadCount = useMemo(() => {
+    return visibleNotifications.filter(n => !n.isRead).length;
+  }, [visibleNotifications]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -133,9 +148,9 @@ export default function TopBar({ onMenuClick }) {
             }}
           >
             <Bell size={20} strokeWidth={1.5} />
-            {unreadCount > 0 && (
+            {visibleUnreadCount > 0 && (
               <span className="topbar-notification-badge">
-                {unreadCount > 99 ? '99+' : unreadCount}
+                {visibleUnreadCount > 99 ? '99+' : visibleUnreadCount}
               </span>
             )}
           </button>
@@ -144,7 +159,7 @@ export default function TopBar({ onMenuClick }) {
             <div className="topbar-dropdown topbar-notifications-dropdown animate-scale-in">
               <div className="topbar-dropdown-header">
                 <span>Notifications</span>
-                {unreadCount > 0 && (
+                {visibleUnreadCount > 0 && (
                   <button className="topbar-dropdown-action" onClick={handleMarkAllRead}>
                     <CheckCheck size={14} />
                     Mark all read
@@ -157,13 +172,13 @@ export default function TopBar({ onMenuClick }) {
                     <Loader2 size={20} className="animate-spin" />
                     <span>Loading...</span>
                   </div>
-                ) : notifications.length === 0 ? (
+                ) : visibleNotifications.length === 0 ? (
                   <div className="topbar-notification-empty">
                     <Bell size={24} strokeWidth={1} />
                     <span>No notifications yet</span>
                   </div>
                 ) : (
-                  notifications.slice(0, 10).map((notification) => (
+                  visibleNotifications.slice(0, 10).map((notification) => (
                     <button
                       key={notification.id}
                       className={`topbar-notification-item ${!notification.isRead ? 'unread' : ''}`}
@@ -185,7 +200,7 @@ export default function TopBar({ onMenuClick }) {
                   ))
                 )}
               </div>
-              {notifications.length > 10 && (
+              {visibleNotifications.length > 10 && (
                 <div className="topbar-dropdown-footer">
                   <button>View all notifications</button>
                 </div>

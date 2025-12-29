@@ -8,6 +8,7 @@ import {
   storageService,
   loggingService,
   notificationsService,
+  notificationPreferencesService,
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
@@ -34,6 +35,8 @@ export function AppProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState(null);
+  const [toastNotification, setToastNotification] = useState(null);
 
   // Apply theme to DOM
   const applyTheme = useCallback((newTheme) => {
@@ -222,12 +225,14 @@ export function AppProvider({ children }) {
 
       setNotificationsLoading(true);
       try {
-        const [notifs, count] = await Promise.all([
+        const [notifs, count, prefs] = await Promise.all([
           notificationsService.getAll({ limit: 50 }),
           notificationsService.getUnreadCount(),
+          notificationPreferencesService.get(),
         ]);
         setNotifications(notifs);
         setUnreadCount(count);
+        setNotificationPreferences(prefs);
       } catch (error) {
         console.error('Error loading notifications:', error);
       } finally {
@@ -248,6 +253,8 @@ export function AppProvider({ children }) {
           if (!newNotification.isRead) {
             setUnreadCount(prev => prev + 1);
           }
+          // Show toast preview
+          setToastNotification(newNotification);
         },
         // On notification update
         (updatedNotification) => {
@@ -944,9 +951,13 @@ export function AppProvider({ children }) {
     notifications,
     unreadCount,
     notificationsLoading,
+    notificationPreferences,
+    setNotificationPreferences,
     markNotificationRead,
     markAllNotificationsRead,
     reloadNotifications,
+    toastNotification,
+    hideNotificationToast: () => setToastNotification(null),
 
     // Actions
     setTheme,
