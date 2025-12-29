@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { notificationsService } from '../services';
 import './Login.css';
 
 export default function AcceptInvite() {
@@ -83,6 +84,13 @@ export default function AcceptInvite() {
       // Update barber record to mark invite as accepted
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.user_metadata?.barberId) {
+        // Get barber details for notification
+        const { data: barberData } = await supabase
+          .from('barbers')
+          .select('name, branch_id')
+          .eq('id', user.user_metadata.barberId)
+          .single();
+
         await supabase
           .from('barbers')
           .update({
@@ -90,6 +98,22 @@ export default function AcceptInvite() {
             invite_accepted_at: new Date().toISOString()
           })
           .eq('id', user.user_metadata.barberId);
+
+        // Create notification for manager
+        if (barberData?.branch_id) {
+          notificationsService.create({
+            recipientBranchId: barberData.branch_id,
+            recipientRole: 'manager',
+            type: 'barber_invite_accepted',
+            title: 'New Team Member',
+            message: `${barberData.name || userName || 'A barber'} has accepted your invitation and joined the team`,
+            entityType: 'barber',
+            entityId: user.user_metadata.barberId,
+            metadata: {
+              barberName: barberData.name || userName,
+            },
+          }).catch(err => console.error('Error creating invite accepted notification:', err));
+        }
       }
 
       setIsSuccess(true);

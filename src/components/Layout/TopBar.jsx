@@ -6,12 +6,24 @@ import {
   Building2,
   Check,
   Menu,
+  CheckCheck,
+  Loader2,
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useApp } from '../../context/AppContext';
 import './TopBar.css';
 
 export default function TopBar({ onMenuClick }) {
-  const { branches, selectedBranch, setSelectedBranchId } = useApp();
+  const {
+    branches,
+    selectedBranch,
+    setSelectedBranchId,
+    notifications,
+    unreadCount,
+    notificationsLoading,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useApp();
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -31,6 +43,16 @@ export default function TopBar({ onMenuClick }) {
   const handleBranchSelect = (branchId) => {
     setSelectedBranchId(branchId);
     setBranchDropdownOpen(false);
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      await markNotificationRead(notification.id);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
   };
 
   return (
@@ -111,50 +133,63 @@ export default function TopBar({ onMenuClick }) {
             }}
           >
             <Bell size={20} strokeWidth={1.5} />
-            <span className="topbar-notification-badge">3</span>
+            {unreadCount > 0 && (
+              <span className="topbar-notification-badge">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {notificationsOpen && (
             <div className="topbar-dropdown topbar-notifications-dropdown animate-scale-in">
               <div className="topbar-dropdown-header">
                 <span>Notifications</span>
-                <button className="topbar-dropdown-action">Mark all read</button>
+                {unreadCount > 0 && (
+                  <button className="topbar-dropdown-action" onClick={handleMarkAllRead}>
+                    <CheckCheck size={14} />
+                    Mark all read
+                  </button>
+                )}
               </div>
               <div className="topbar-dropdown-list">
-                <div className="topbar-notification-item unread">
-                  <div className="topbar-notification-dot"></div>
-                  <div className="topbar-notification-content">
-                    <span className="topbar-notification-title">New booking</span>
-                    <span className="topbar-notification-text">
-                      Robert Wilson booked a Classic Haircut for tomorrow at 10:00 AM
-                    </span>
-                    <span className="topbar-notification-time">5 min ago</span>
+                {notificationsLoading ? (
+                  <div className="topbar-notification-empty">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Loading...</span>
                   </div>
-                </div>
-                <div className="topbar-notification-item unread">
-                  <div className="topbar-notification-dot"></div>
-                  <div className="topbar-notification-content">
-                    <span className="topbar-notification-title">Booking cancelled</span>
-                    <span className="topbar-notification-text">
-                      John Anderson cancelled their appointment
-                    </span>
-                    <span className="topbar-notification-time">1 hour ago</span>
+                ) : notifications.length === 0 ? (
+                  <div className="topbar-notification-empty">
+                    <Bell size={24} strokeWidth={1} />
+                    <span>No notifications yet</span>
                   </div>
-                </div>
-                <div className="topbar-notification-item unread">
-                  <div className="topbar-notification-dot"></div>
-                  <div className="topbar-notification-content">
-                    <span className="topbar-notification-title">Barber schedule</span>
-                    <span className="topbar-notification-text">
-                      James Rodriguez updated their availability for next week
-                    </span>
-                    <span className="topbar-notification-time">2 hours ago</span>
-                  </div>
-                </div>
+                ) : (
+                  notifications.slice(0, 10).map((notification) => (
+                    <button
+                      key={notification.id}
+                      className={`topbar-notification-item ${!notification.isRead ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      {!notification.isRead && <div className="topbar-notification-dot" />}
+                      <div className="topbar-notification-content">
+                        <span className="topbar-notification-title">
+                          {notification.title}
+                        </span>
+                        <span className="topbar-notification-text">
+                          {notification.message}
+                        </span>
+                        <span className="topbar-notification-time">
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
-              <div className="topbar-dropdown-footer">
-                <button>View all notifications</button>
-              </div>
+              {notifications.length > 10 && (
+                <div className="topbar-dropdown-footer">
+                  <button>View all notifications</button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -3,19 +3,24 @@ import {
   Bell,
   Search,
   Menu,
-  X,
+  CheckCheck,
+  Loader2,
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useApp } from '../../context/AppContext';
 import './TopBar.css';
 
 export default function BarberTopBar({ onMenuClick }) {
-  const { barberBranch, barberBookings } = useApp();
+  const {
+    barberBranch,
+    notifications,
+    unreadCount,
+    notificationsLoading,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useApp();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  // Get today's bookings for notifications
-  const today = new Date().toISOString().split('T')[0];
-  const todayBookings = barberBookings.filter(b => b.date === today && ['confirmed', 'pending'].includes(b.status));
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -27,6 +32,16 @@ export default function BarberTopBar({ onMenuClick }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      await markNotificationRead(notification.id);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
+  };
 
   return (
     <header className="topbar">
@@ -62,40 +77,61 @@ export default function BarberTopBar({ onMenuClick }) {
             onClick={() => setNotificationsOpen(!notificationsOpen)}
           >
             <Bell size={20} strokeWidth={1.5} />
-            {todayBookings.length > 0 && (
-              <span className="topbar-notification-badge">{todayBookings.length}</span>
+            {unreadCount > 0 && (
+              <span className="topbar-notification-badge">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </button>
 
           {notificationsOpen && (
             <div className="topbar-dropdown topbar-notifications-dropdown animate-scale-in">
               <div className="topbar-dropdown-header">
-                <span>Today's Bookings</span>
-              </div>
-              <div className="topbar-dropdown-list">
-                {todayBookings.length > 0 ? (
-                  todayBookings.slice(0, 5).map((booking) => (
-                    <div key={booking.id} className="topbar-notification-item">
-                      <div className="topbar-notification-dot"></div>
-                      <div className="topbar-notification-content">
-                        <span className="topbar-notification-title">{booking.time}</span>
-                        <span className="topbar-notification-text">
-                          {booking.customerName} - {booking.serviceName}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="topbar-notification-item">
-                    <div className="topbar-notification-content">
-                      <span className="topbar-notification-text">No bookings for today</span>
-                    </div>
-                  </div>
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <button className="topbar-dropdown-action" onClick={handleMarkAllRead}>
+                    <CheckCheck size={14} />
+                    Mark all read
+                  </button>
                 )}
               </div>
-              {todayBookings.length > 5 && (
+              <div className="topbar-dropdown-list">
+                {notificationsLoading ? (
+                  <div className="topbar-notification-empty">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="topbar-notification-empty">
+                    <Bell size={24} strokeWidth={1} />
+                    <span>No notifications yet</span>
+                  </div>
+                ) : (
+                  notifications.slice(0, 10).map((notification) => (
+                    <button
+                      key={notification.id}
+                      className={`topbar-notification-item ${!notification.isRead ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      {!notification.isRead && <div className="topbar-notification-dot" />}
+                      <div className="topbar-notification-content">
+                        <span className="topbar-notification-title">
+                          {notification.title}
+                        </span>
+                        <span className="topbar-notification-text">
+                          {notification.message}
+                        </span>
+                        <span className="topbar-notification-time">
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+              {notifications.length > 10 && (
                 <div className="topbar-dropdown-footer">
-                  <button>View all bookings</button>
+                  <button>View all notifications</button>
                 </div>
               )}
             </div>

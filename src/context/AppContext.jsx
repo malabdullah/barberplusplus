@@ -7,6 +7,7 @@ import {
   bookingsService,
   storageService,
   loggingService,
+  notificationsService,
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
@@ -28,6 +29,11 @@ export function AppProvider({ children }) {
     const saved = localStorage.getItem('barber-theme');
     return saved || 'dark';
   });
+
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   // Apply theme to DOM
   const applyTheme = useCallback((newTheme) => {
@@ -207,6 +213,72 @@ export function AppProvider({ children }) {
     }
   }, [user, userRole, selectedBranchId, barberProfile]);
 
+  // Load notifications and setup realtime subscription
+  useEffect(() => {
+    let notificationChannel = null;
+
+    const loadNotifications = async () => {
+      if (!isAuthenticated || !user) return;
+
+      setNotificationsLoading(true);
+      try {
+        const [notifs, count] = await Promise.all([
+          notificationsService.getAll({ limit: 50 }),
+          notificationsService.getUnreadCount(),
+        ]);
+        setNotifications(notifs);
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    const setupRealtimeSubscription = () => {
+      if (!user) return null;
+
+      // Get branch IDs for manager filtering
+      const branchIds = userRole === 'manager' ? branches.map(b => b.id) : [];
+
+      return notificationsService.subscribe(
+        // On new notification
+        (newNotification) => {
+          setNotifications(prev => [newNotification, ...prev]);
+          if (!newNotification.isRead) {
+            setUnreadCount(prev => prev + 1);
+          }
+        },
+        // On notification update
+        (updatedNotification) => {
+          setNotifications(prev => {
+            const updated = prev.map(n =>
+              n.id === updatedNotification.id ? updatedNotification : n
+            );
+            // Recalculate unread count
+            const newUnread = updated.filter(n => !n.isRead).length;
+            setUnreadCount(newUnread);
+            return updated;
+          });
+        },
+        user.id,
+        branchIds
+      );
+    };
+
+    if (isAuthenticated && user) {
+      loadNotifications();
+      notificationChannel = setupRealtimeSubscription();
+    }
+
+    // Cleanup on unmount or auth change
+    return () => {
+      if (notificationChannel) {
+        notificationChannel.unsubscribe();
+      }
+    };
+  }, [isAuthenticated, user, userRole, branches]);
+
   // Reload all data
   const reloadData = useCallback(async () => {
     try {
@@ -222,6 +294,44 @@ export function AppProvider({ children }) {
       setBookings(bookingsData);
     } catch (error) {
       console.error('Error reloading data:', error);
+    }
+  }, []);
+
+  // Notification actions
+  const markNotificationRead = useCallback(async (notificationId) => {
+    try {
+      const updated = await notificationsService.markRead(notificationId);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? updated : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    try {
+      await notificationsService.markAllRead();
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  }, []);
+
+  const reloadNotifications = useCallback(async () => {
+    try {
+      const [notifs, count] = await Promise.all([
+        notificationsService.getAll({ limit: 50 }),
+        notificationsService.getUnreadCount(),
+      ]);
+      setNotifications(notifs);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error reloading notifications:', error);
     }
   }, []);
 
@@ -406,6 +516,25 @@ export function AppProvider({ children }) {
         setBarberProfile(updated);
       }
       loggingService.logAction('update', 'barber', barberId, `Updated barber: ${updated.name}`);
+
+      // Create notification for manager if barber updated their own profile/availability
+      if (userRole === 'barber' && oldBarber) {
+        const isAvailabilityUpdate = updates.availability !== undefined;
+        notificationsService.create({
+          recipientBranchId: updated.branchId,
+          recipientRole: 'manager',
+          type: isAvailabilityUpdate ? 'barber_availability_updated' : 'barber_profile_updated',
+          title: isAvailabilityUpdate ? 'Availability Updated' : 'Profile Updated',
+          message: `${updated.name} updated their ${isAvailabilityUpdate ? 'availability schedule' : 'profile'}`,
+          entityType: 'barber',
+          entityId: barberId,
+          metadata: {
+            barberName: updated.name,
+            updateType: isAvailabilityUpdate ? 'availability' : 'profile',
+          },
+        }).catch(err => console.error('Error creating barber update notification:', err));
+      }
+
       return updated;
     } catch (error) {
       console.error('Error updating barber:', error);
@@ -512,6 +641,54 @@ export function AppProvider({ children }) {
       });
       setBookings(prev => [...prev, newBooking]);
       loggingService.logAction('create', 'booking', newBooking.id, `Created booking for ${bookingData.customerName}`);
+
+      // Create notifications for new booking
+      const serviceName = selectedServices.length > 0 ? selectedServices[0].name : 'appointment';
+      const notificationsToCreate = [
+        // Notification for manager (branch-level)
+        {
+          recipientBranchId: selectedBranchId,
+          recipientRole: 'manager',
+          type: 'booking_created',
+          title: 'New Booking',
+          message: `${bookingData.customerName} booked ${serviceName} for ${bookingData.date} at ${bookingData.time}`,
+          entityType: 'booking',
+          entityId: newBooking.id,
+          metadata: {
+            customerName: bookingData.customerName,
+            barberName: barber?.name,
+            serviceName,
+            date: bookingData.date,
+            time: bookingData.time,
+          },
+        },
+      ];
+
+      // Notification for assigned barber (if they have a userId)
+      if (barber?.userId) {
+        notificationsToCreate.push({
+          recipientUserId: barber.userId,
+          recipientRole: 'barber',
+          type: 'booking_created',
+          title: 'New Booking Assigned',
+          message: `You have a new booking: ${bookingData.customerName} for ${serviceName} on ${bookingData.date} at ${bookingData.time}`,
+          entityType: 'booking',
+          entityId: newBooking.id,
+          metadata: {
+            customerName: bookingData.customerName,
+            serviceName,
+            date: bookingData.date,
+            time: bookingData.time,
+          },
+        });
+      }
+
+      // Create notifications (don't await to avoid blocking)
+      console.log('[Notifications] Creating booking notifications:', notificationsToCreate);
+      notificationsService.createBatch(notificationsToCreate)
+        .then(created => console.log('[Notifications] Successfully created:', created))
+        .catch(err => console.error('[Notifications] Error creating booking notifications:', err));
+
       return newBooking;
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -522,33 +699,123 @@ export function AppProvider({ children }) {
 
   const updateBooking = useCallback(async (bookingId, updates) => {
     try {
+      const oldBooking = bookings.find(b => b.id === bookingId);
       const updated = await bookingsService.update(bookingId, updates);
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? updated : b)
       );
       loggingService.logAction('update', 'booking', bookingId, `Updated booking status to ${updated.status}`);
+
+      // Create notification if status changed
+      if (oldBooking && updates.status && oldBooking.status !== updates.status) {
+        const barber = barbers.find(b => b.id === updated.barberId);
+        const notificationsToCreate = [];
+
+        // Notification for manager
+        notificationsToCreate.push({
+          recipientBranchId: updated.branchId,
+          recipientRole: 'manager',
+          type: 'booking_status_changed',
+          title: 'Booking Status Updated',
+          message: `${updated.customerName}'s booking changed from ${oldBooking.status} to ${updates.status}`,
+          entityType: 'booking',
+          entityId: bookingId,
+          metadata: {
+            oldStatus: oldBooking.status,
+            newStatus: updates.status,
+            customerName: updated.customerName,
+          },
+        });
+
+        // Notification for barber
+        if (barber?.userId) {
+          notificationsToCreate.push({
+            recipientUserId: barber.userId,
+            recipientRole: 'barber',
+            type: 'booking_status_changed',
+            title: 'Booking Status Updated',
+            message: `${updated.customerName}'s booking is now ${updates.status}`,
+            entityType: 'booking',
+            entityId: bookingId,
+            metadata: {
+              oldStatus: oldBooking.status,
+              newStatus: updates.status,
+              customerName: updated.customerName,
+            },
+          });
+        }
+
+        notificationsService.createBatch(notificationsToCreate).catch(err =>
+          console.error('Error creating status change notifications:', err)
+        );
+      }
+
       return updated;
     } catch (error) {
       console.error('Error updating booking:', error);
       loggingService.logError(error, { entityType: 'booking', action: 'update', entityId: bookingId });
       throw error;
     }
-  }, []);
+  }, [bookings, barbers]);
 
   const cancelBooking = useCallback(async (bookingId) => {
     try {
+      const oldBooking = bookings.find(b => b.id === bookingId);
       const cancelled = await bookingsService.cancel(bookingId);
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? cancelled : b)
       );
       loggingService.logAction('update', 'booking', bookingId, 'Cancelled booking');
+
+      // Create cancellation notifications
+      if (oldBooking) {
+        const barber = barbers.find(b => b.id === oldBooking.barberId);
+        const notificationsToCreate = [
+          {
+            recipientBranchId: oldBooking.branchId,
+            recipientRole: 'manager',
+            type: 'booking_cancelled',
+            title: 'Booking Cancelled',
+            message: `${oldBooking.customerName}'s appointment on ${oldBooking.date} at ${oldBooking.time} has been cancelled`,
+            entityType: 'booking',
+            entityId: bookingId,
+            metadata: {
+              customerName: oldBooking.customerName,
+              date: oldBooking.date,
+              time: oldBooking.time,
+            },
+          },
+        ];
+
+        if (barber?.userId) {
+          notificationsToCreate.push({
+            recipientUserId: barber.userId,
+            recipientRole: 'barber',
+            type: 'booking_cancelled',
+            title: 'Booking Cancelled',
+            message: `${oldBooking.customerName}'s appointment on ${oldBooking.date} at ${oldBooking.time} has been cancelled`,
+            entityType: 'booking',
+            entityId: bookingId,
+            metadata: {
+              customerName: oldBooking.customerName,
+              date: oldBooking.date,
+              time: oldBooking.time,
+            },
+          });
+        }
+
+        notificationsService.createBatch(notificationsToCreate).catch(err =>
+          console.error('Error creating cancellation notifications:', err)
+        );
+      }
+
       return cancelled;
     } catch (error) {
       console.error('Error cancelling booking:', error);
       loggingService.logError(error, { entityType: 'booking', action: 'cancel', entityId: bookingId });
       throw error;
     }
-  }, []);
+  }, [bookings, barbers]);
 
   // Auth actions
   const login = useCallback(async (email, password) => {
@@ -606,6 +873,9 @@ export function AppProvider({ children }) {
       setServices([]);
       setBookings([]);
       setSelectedBranchId(null);
+      // Clear notifications
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [user, userRole]);
 
@@ -669,6 +939,14 @@ export function AppProvider({ children }) {
     barberMetrics,
     barberServices,
     barberBranch,
+
+    // Notifications
+    notifications,
+    unreadCount,
+    notificationsLoading,
+    markNotificationRead,
+    markAllNotificationsRead,
+    reloadNotifications,
 
     // Actions
     setTheme,

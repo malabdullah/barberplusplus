@@ -376,3 +376,79 @@
     right: calc(-1 * var(--space-md));
   }
 }
+
+/* Notification Empty State */
+.topbar-notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--text-tertiary);
+  gap: var(--space-sm);
+}
+
+.topbar-notification-empty svg {
+  opacity: 0.5;
+}
+
+/* Notification Item as Button */
+button.topbar-notification-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+button.topbar-notification-item:hover {
+  background: var(--bg-hover);
+}
+
+/* Mark All Read Button */
+.topbar-dropdown-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.topbar-dropdown-action:hover {
+  opacity: 0.8;
+}
+
+/* Loading Spinner Animation */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Branch Info for Barber */
+.topbar-branch-info {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+}
+
+.topbar-branch-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
