@@ -30,6 +30,7 @@ import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import BookingForm from '../../components/Forms/BookingForm';
+import { BOOKING_STATUSES, getStatusConfig } from '../../constants/bookingStatuses';
 import './MyBookings.css';
 
 // Day index to key mapping (0=Sunday in JS Date.getDay())
@@ -84,7 +85,6 @@ function BookingCard({ booking, onEdit }) {
   const statusConfig = {
     confirmed: { color: 'success', label: 'Confirmed' },
     pending: { color: 'warning', label: 'Pending' },
-    'in-progress': { color: 'info', label: 'In Progress' },
     completed: { color: 'muted', label: 'Completed' },
     cancelled: { color: 'error', label: 'Cancelled' },
     'no-show': { color: 'error', label: 'No Show' },
@@ -104,7 +104,7 @@ function BookingCard({ booking, onEdit }) {
   );
 }
 
-function BookingDetails({ booking, onClose, onCancel, onComplete }) {
+function BookingDetails({ booking, onClose, onStatusChange }) {
   return (
     <div className="booking-details">
       <div className="booking-details-header">
@@ -142,6 +142,15 @@ function BookingDetails({ booking, onClose, onCancel, onComplete }) {
           </div>
         </div>
         <div className="booking-detail-row">
+          <Calendar size={18} strokeWidth={1.5} />
+          <div>
+            <span className="detail-label">Date</span>
+            <span className="detail-value">
+              {format(new Date(booking.date), 'EEEE, MMMM d, yyyy')}
+            </span>
+          </div>
+        </div>
+        <div className="booking-detail-row">
           <Clock size={18} strokeWidth={1.5} />
           <div>
             <span className="detail-label">Time</span>
@@ -164,18 +173,20 @@ function BookingDetails({ booking, onClose, onCancel, onComplete }) {
         </div>
       )}
 
-      {['confirmed', 'pending', 'in-progress'].includes(booking.status) && (
-        <div className="booking-details-actions">
-          <button className="btn btn-ghost" onClick={() => onCancel(booking)}>
-            <X size={16} />
-            Cancel
-          </button>
-          <button className="btn btn-primary" onClick={() => onComplete(booking)}>
-            <Check size={16} />
-            Complete
-          </button>
-        </div>
-      )}
+      <div className="booking-status-change">
+        <span className="status-change-label">Change Status</span>
+        <select
+          className="status-change-select"
+          value={booking.status}
+          onChange={(e) => onStatusChange(booking.id, e.target.value)}
+        >
+          {BOOKING_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {getStatusConfig(status).label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
@@ -479,10 +490,6 @@ export default function MyBookings() {
           <span>Pending</span>
         </div>
         <div className="legend-item">
-          <span className="legend-dot info"></span>
-          <span>In Progress</span>
-        </div>
-        <div className="legend-item">
           <span className="legend-dot muted"></span>
           <span>Completed</span>
         </div>
@@ -515,6 +522,7 @@ export default function MyBookings() {
           booking={editingBooking}
           services={barberServices}
           currentBarber={currentBarber}
+          existingBookings={barberBookings}
           onSubmit={handleFormSubmit}
           onCancel={() => { setIsFormOpen(false); setEditingBooking(null); }}
         />
@@ -527,8 +535,10 @@ export default function MyBookings() {
             <BookingDetails
               booking={selectedBooking}
               onClose={() => setSelectedBooking(null)}
-              onCancel={setCancellingBooking}
-              onComplete={handleComplete}
+              onStatusChange={(id, status) => {
+                updateBooking(id, { status });
+                setSelectedBooking(null);
+              }}
             />
           </div>
         </div>

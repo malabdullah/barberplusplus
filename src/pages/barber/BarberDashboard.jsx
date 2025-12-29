@@ -43,7 +43,6 @@ function BookingStatusBadge({ status }) {
   const config = {
     confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
     pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
-    'in-progress': { icon: Clock, label: 'In Progress', class: 'status-progress' },
     completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
     cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
     'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
@@ -60,7 +59,7 @@ function BookingStatusBadge({ status }) {
 }
 
 function TodayBookingItem({ booking, onComplete, onCancel }) {
-  const canTakeAction = ['confirmed', 'pending', 'in-progress'].includes(booking.status);
+  const canTakeAction = ['confirmed', 'pending'].includes(booking.status);
 
   return (
     <div className="today-booking-item">
@@ -140,7 +139,7 @@ export default function BarberDashboard() {
   }, [barberBookings, barberServices, today]);
 
   const upcomingBookings = todayBookings.filter(b =>
-    ['confirmed', 'pending', 'in-progress'].includes(b.status)
+    ['confirmed', 'pending'].includes(b.status)
   );
 
   const handleComplete = (bookingId) => {

@@ -1,4 +1,4 @@
-import { CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 export const BOOKING_STATUS_CONFIG = {
   confirmed: {
@@ -12,12 +12,6 @@ export const BOOKING_STATUS_CONFIG = {
     label: 'Pending',
     color: 'warning',
     class: 'status-pending'
-  },
-  'in-progress': {
-    icon: Clock,
-    label: 'In Progress',
-    color: 'info',
-    class: 'status-progress'
   },
   completed: {
     icon: CheckCircle,

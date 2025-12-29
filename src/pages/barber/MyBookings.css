@@ -471,11 +471,6 @@
   color: var(--status-warning);
 }
 
-.booking-status-badge.in-progress {
-  background: var(--status-info-bg);
-  color: var(--status-info);
-}
-
 .booking-status-badge.completed {
   background: var(--bg-tertiary);
   color: var(--text-tertiary);
@@ -590,6 +585,56 @@
 
 .booking-details-actions .btn {
   flex: 1;
+}
+
+/* Status Change Dropdown */
+.booking-status-change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(212, 168, 83, 0.1);
+}
+
+.status-change-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.status-change-select {
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1.5px solid var(--accent-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  min-width: 140px;
+  text-align: center;
+  transition: var(--transition-base);
+}
+
+.status-change-select:hover {
+  background: var(--accent-glow);
+  box-shadow: var(--shadow-glow);
+}
+
+.status-change-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.status-change-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 /* Responsive */

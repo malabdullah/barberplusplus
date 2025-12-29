@@ -314,11 +314,6 @@
   color: var(--status-warning);
 }
 
-.status-progress {
-  background: var(--status-info-bg);
-  color: var(--status-info);
-}
-
 .status-completed {
   background: var(--bg-tertiary);
   color: var(--text-tertiary);

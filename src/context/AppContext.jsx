@@ -8,6 +8,7 @@ import {
   storageService,
 } from '../services';
 import { supabase } from '../lib/supabase';
+import { checkBookingConflicts } from '../utils/bookingConflicts';
 
 const AppContext = createContext(null);
 
@@ -443,6 +444,26 @@ export function AppProvider({ children }) {
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
+      // Safety check: verify no conflicts before creating
+      const barberBookings = bookings.filter(b =>
+        b.barberId === bookingData.barberId &&
+        !['cancelled', 'no-show'].includes(b.status)
+      );
+      const barber = barbers.find(b => b.id === bookingData.barberId);
+
+      const conflict = checkBookingConflicts({
+        barberId: bookingData.barberId,
+        date: bookingData.date,
+        time: bookingData.time,
+        duration: totalDuration || 30,
+        existingBookings: barberBookings,
+        barberData: barber,
+      });
+
+      if (conflict.hasConflict) {
+        throw new Error(conflict.reason);
+      }
+
       const newBooking = await bookingsService.create({
         ...bookingData,
         branchId: selectedBranchId,
@@ -457,7 +478,7 @@ export function AppProvider({ children }) {
       console.error('Error creating booking:', error);
       throw error;
     }
-  }, [selectedBranchId, services]);
+  }, [selectedBranchId, services, bookings, barbers]);
 
   const updateBooking = useCallback(async (bookingId, updates) => {
     try {

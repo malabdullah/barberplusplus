@@ -5,6 +5,7 @@ import { TIME_SLOTS } from '../../constants/time';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
 import { validatePhoneNumber } from '../../utils/validation';
+import { checkBookingConflicts } from '../../utils/bookingConflicts';
 
 /**
  * Shared BookingForm component for both manager and barber views
@@ -14,10 +15,11 @@ import { validatePhoneNumber } from '../../utils/validation';
  * @param {Array} [props.barbers] - List of barbers (manager view only)
  * @param {Object} [props.currentBarber] - Current barber (barber view only)
  * @param {Array} props.services - List of available services
+ * @param {Array} [props.existingBookings] - Existing bookings to check for conflicts
  * @param {Function} props.onSubmit - Callback when form is submitted
  * @param {Function} props.onCancel - Callback when form is cancelled
  */
-function BookingForm({ booking, barbers, currentBarber, services, onSubmit, onCancel }) {
+function BookingForm({ booking, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
   // Determine mode: manager (has barbers list) or barber (has currentBarber)
   const isManagerView = !!barbers && barbers.length > 0;
 
@@ -96,6 +98,29 @@ function BookingForm({ booking, barbers, currentBarber, services, onSubmit, onCa
 
     if (!formData.time) {
       newErrors.time = 'Time is required';
+    }
+
+    // Check for booking conflicts
+    const barberToCheck = isManagerView
+      ? barbers.find(b => b.id === formData.barberId)
+      : currentBarber;
+
+    const effectiveBarberId = formData.barberId || currentBarber?.id;
+
+    if (barberToCheck && formData.date && formData.time && totalDuration > 0 && effectiveBarberId) {
+      const conflict = checkBookingConflicts({
+        barberId: effectiveBarberId,
+        date: formData.date,
+        time: formData.time,
+        duration: totalDuration,
+        existingBookings,
+        barberData: barberToCheck,
+        editingBookingId: booking?.id,
+      });
+
+      if (conflict.hasConflict) {
+        newErrors.time = conflict.reason;
+      }
     }
 
     setErrors(newErrors);

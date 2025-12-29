@@ -41,7 +41,6 @@ const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue
 const STATUS_CONFIG = {
   confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
   pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
-  'in-progress': { icon: Clock, label: 'In Progress', class: 'status-progress' },
   completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
   cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
   'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
@@ -104,7 +103,7 @@ export default function Dashboard() {
 
   const upcomingBookings = useMemo(() =>
     todayBookings.filter(b =>
-      ['confirmed', 'pending', 'in-progress'].includes(b.status)
+      ['confirmed', 'pending'].includes(b.status)
     ),
     [todayBookings]
   );
