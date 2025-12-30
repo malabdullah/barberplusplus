@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FileText,
   Search,
@@ -104,6 +105,7 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
 });
 
 export default function MyLogs() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -191,17 +193,17 @@ export default function MyLogs() {
     <div className="logs-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">My Activity</h2>
-          <p className="page-description">View your personal activity and error logs</p>
+          <h2 className="page-title">{t('logs.myActivity')}</h2>
+          <p className="page-description">{t('logs.myActivityDescription')}</p>
         </div>
         <div className="page-header-actions">
           <button className="btn btn-secondary" onClick={loadLogs} disabled={loading}>
             <RefreshCw size={18} strokeWidth={2} className={loading ? 'spin' : ''} />
-            Refresh
+            {t('common.refresh')}
           </button>
           <button className="btn btn-secondary" onClick={exportLogs} disabled={logs.length === 0}>
             <Download size={18} strokeWidth={2} />
-            Export
+            {t('logs.export')}
           </button>
         </div>
       </div>
@@ -212,28 +214,28 @@ export default function MyLogs() {
           <AlertTriangle size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.error}</span>
-            <span className="log-stat-label">Errors</span>
+            <span className="log-stat-label">{t('logs.errors')}</span>
           </div>
         </div>
         <div className="log-stat-card warning">
           <AlertCircle size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.warning}</span>
-            <span className="log-stat-label">Warnings</span>
+            <span className="log-stat-label">{t('logs.warnings')}</span>
           </div>
         </div>
         <div className="log-stat-card info">
           <Info size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.info}</span>
-            <span className="log-stat-label">Info</span>
+            <span className="log-stat-label">{t('logs.info')}</span>
           </div>
         </div>
         <div className="log-stat-card total">
           <FileText size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{logs.length}</span>
-            <span className="log-stat-label">Total</span>
+            <span className="log-stat-label">{t('logs.total')}</span>
           </div>
         </div>
       </div>
@@ -244,7 +246,7 @@ export default function MyLogs() {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search logs..."
+            placeholder={t('logs.searchLogs')}
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="logs-search-input"
@@ -255,7 +257,7 @@ export default function MyLogs() {
           onClick={() => setShowFilters(!showFilters)}
         >
           <Filter size={18} strokeWidth={2} />
-          Filters
+          {t('logs.filters')}
         </button>
       </div>
 
@@ -263,13 +265,13 @@ export default function MyLogs() {
       {showFilters && (
         <div className="logs-filters animate-fade-in-up">
           <div className="filter-group">
-            <label>Level</label>
+            <label>{t('logs.level')}</label>
             <select
               value={filters.level}
               onChange={(e) => handleFilterChange('level', e.target.value)}
               className="form-input form-select"
             >
-              <option value="">All Levels</option>
+              <option value="">{t('logs.allLevels')}</option>
               {LOG_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {LOG_LEVEL_CONFIG[level].label}
@@ -278,13 +280,13 @@ export default function MyLogs() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Type</label>
+            <label>{t('logs.type')}</label>
             <select
               value={filters.logType}
               onChange={(e) => handleFilterChange('logType', e.target.value)}
               className="form-input form-select"
             >
-              <option value="">All Types</option>
+              <option value="">{t('logs.allTypes')}</option>
               {LOG_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {LOG_TYPE_CONFIG[type].label}
@@ -293,7 +295,7 @@ export default function MyLogs() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Start Date</label>
+            <label>{t('logs.startDate')}</label>
             <input
               type="date"
               value={filters.startDate}
@@ -302,7 +304,7 @@ export default function MyLogs() {
             />
           </div>
           <div className="filter-group">
-            <label>End Date</label>
+            <label>{t('logs.endDate')}</label>
             <input
               type="date"
               value={filters.endDate}
@@ -312,7 +314,7 @@ export default function MyLogs() {
           </div>
           <button className="btn btn-text" onClick={clearFilters}>
             <X size={16} />
-            Clear
+            {t('common.clear')}
           </button>
         </div>
       )}
@@ -322,13 +324,13 @@ export default function MyLogs() {
         {loading ? (
           <div className="logs-loading">
             <RefreshCw size={24} className="spin" />
-            <span>Loading logs...</span>
+            <span>{t('logs.loadingLogs')}</span>
           </div>
         ) : logs.length === 0 ? (
           <div className="logs-empty">
             <FileText size={48} strokeWidth={1} />
-            <h3>No activity yet</h3>
-            <p>Your activity logs will appear here</p>
+            <h3>{t('logs.noActivityYet')}</h3>
+            <p>{t('logs.activityLogsWillAppear')}</p>
           </div>
         ) : (
           <div className="logs-list">

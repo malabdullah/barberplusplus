@@ -12,6 +12,7 @@ import {
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
+import i18n from '../i18n';
 
 const AppContext = createContext(null);
 
@@ -76,12 +77,20 @@ export function AppProvider({ children }) {
     saveUserSettings({ theme: newTheme });
   }, [applyTheme, saveUserSettings]);
 
+  // Apply language direction (RTL/LTR)
+  const applyLanguage = useCallback((lang) => {
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+    i18n.changeLanguage(lang);
+  }, []);
+
   // Set language with persistence
   const setLanguage = useCallback((newLanguage) => {
     setLanguageState(newLanguage);
     localStorage.setItem('barber-language', newLanguage);
+    applyLanguage(newLanguage);
     saveUserSettings({ language: newLanguage });
-  }, [saveUserSettings]);
+  }, [applyLanguage, saveUserSettings]);
 
   // Apply theme on mount and listen for system theme changes
   useEffect(() => {
@@ -94,6 +103,11 @@ export function AppProvider({ children }) {
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [theme, applyTheme]);
+
+  // Apply language direction on mount
+  useEffect(() => {
+    applyLanguage(language);
+  }, [language, applyLanguage]);
 
   // Load user settings from database when authenticated
   useEffect(() => {
@@ -123,6 +137,7 @@ export function AppProvider({ children }) {
           if (data.language) {
             setLanguageState(data.language);
             localStorage.setItem('barber-language', data.language);
+            applyLanguage(data.language);
           }
         }
       } catch (err) {
@@ -131,7 +146,7 @@ export function AppProvider({ children }) {
     };
 
     loadUserSettings();
-  }, [user?.id, applyTheme]);
+  }, [user?.id, applyTheme, applyLanguage]);
 
   // Initialize auth state on mount and listen for changes
   useEffect(() => {

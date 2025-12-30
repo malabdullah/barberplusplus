@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationsService } from '../services';
 import './Login.css';
 
 export default function AcceptInvite() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [password, setPassword] = useState('');
@@ -54,11 +56,11 @@ export default function AcceptInvite() {
 
   const validateForm = () => {
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('validation.passwordMin'));
       return false;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordMismatch'));
       return false;
     }
     return true;
@@ -125,7 +127,7 @@ export default function AcceptInvite() {
 
     } catch (err) {
       console.error('Error setting password:', err);
-      setError(err.message || 'Failed to set password. Please try again.');
+      setError(err.message || t('errors.setPasswordFailed'));
       setIsLoading(false);
     }
   };
@@ -144,7 +146,7 @@ export default function AcceptInvite() {
             </div>
           </div>
           <div className="login-welcome">
-            <p>Loading...</p>
+            <p>{t('common.loading')}</p>
           </div>
         </div>
       </div>
@@ -165,8 +167,8 @@ export default function AcceptInvite() {
             </div>
           </div>
           <div className="login-welcome">
-            <h1>Welcome to Barber++!</h1>
-            <p>Your account is ready. Redirecting to your dashboard...</p>
+            <h1>{t('auth.welcomeToBarber')}</h1>
+            <p>{t('auth.accountReadyRedirecting')}</p>
           </div>
         </div>
       </div>
@@ -203,8 +205,8 @@ export default function AcceptInvite() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>Welcome{userName ? `, ${userName}` : ''}!</h1>
-          <p>Set your password to complete your account setup</p>
+          <h1>{t('auth.welcome')}{userName ? `, ${userName}` : ''}!</h1>
+          <p>{t('auth.setPasswordToComplete')}</p>
         </div>
 
         {/* Form */}
@@ -216,7 +218,7 @@ export default function AcceptInvite() {
           )}
 
           <div className="login-field">
-            <label htmlFor="password">Create Password</label>
+            <label htmlFor="password">{t('auth.createPassword')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -227,7 +229,7 @@ export default function AcceptInvite() {
                   setPassword(e.target.value);
                   if (error) setError('');
                 }}
-                placeholder="At least 8 characters"
+                placeholder={t('auth.atLeast8Chars')}
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -247,7 +249,7 @@ export default function AcceptInvite() {
           </div>
 
           <div className="login-field">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -258,7 +260,7 @@ export default function AcceptInvite() {
                   setConfirmPassword(e.target.value);
                   if (error) setError('');
                 }}
-                placeholder="Confirm your password"
+                placeholder={t('auth.confirmYourPassword')}
                 autoComplete="new-password"
                 required
               />
@@ -271,10 +273,10 @@ export default function AcceptInvite() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="login-loading">Setting up...</span>
+              <span className="login-loading">{t('auth.settingUp')}</span>
             ) : (
               <>
-                Complete Setup
+                {t('auth.completeSetup')}
                 <ArrowRight size={18} strokeWidth={2} />
               </>
             )}

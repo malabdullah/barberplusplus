@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   Plus,
@@ -192,6 +193,7 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
 }
 
 export default function MyBookings() {
+  const { t } = useTranslation();
   const {
     currentBarber,
     barberBookings,
@@ -371,14 +373,14 @@ export default function MyBookings() {
     <div className="bookings-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">My Bookings</h2>
+          <h2 className="page-title">{t('nav.myBookings')}</h2>
           <p className="page-description">
-            Your schedule at {barberBranch?.name}
+            {t('bookings.yourScheduleAt')} {barberBranch?.name}
           </p>
         </div>
         <button className="btn btn-primary" onClick={handleAdd}>
           <Plus size={18} strokeWidth={2} />
-          New Booking
+          {t('bookings.newBooking')}
         </button>
       </div>
 
@@ -386,7 +388,7 @@ export default function MyBookings() {
       <div className="calendar-nav animate-fade-in-up stagger-1">
         <div className="calendar-nav-left">
           <button className="btn btn-secondary" onClick={goToToday}>
-            Today
+            {t('bookings.today')}
           </button>
           <div className="calendar-nav-arrows">
             <button className="nav-arrow" onClick={() => navigateWeek('prev')}>
@@ -470,7 +472,7 @@ export default function MyBookings() {
                   </div>
                 ) : !hasFullDayOff ? (
                   <div className="calendar-day-empty">
-                    <span>No bookings</span>
+                    <span>{t('bookings.noBookings')}</span>
                   </div>
                 ) : null}
               </div>
@@ -483,31 +485,31 @@ export default function MyBookings() {
       <div className="calendar-legend animate-fade-in-up stagger-3">
         <div className="legend-item">
           <span className="legend-dot success"></span>
-          <span>Confirmed</span>
+          <span>{t('bookings.statusConfirmed')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot warning"></span>
-          <span>Pending</span>
+          <span>{t('bookings.statusPending')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot muted"></span>
-          <span>Completed</span>
+          <span>{t('bookings.statusCompleted')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot error"></span>
-          <span>Cancelled</span>
+          <span>{t('bookings.statusCancelled')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot vacation"></span>
-          <span>Vacation</span>
+          <span>{t('availability.vacation')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot time-off"></span>
-          <span>Time-Off</span>
+          <span>{t('availability.timeOff')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot day-off"></span>
-          <span>Day Off</span>
+          <span>{t('availability.dayOff')}</span>
         </div>
       </div>
 
@@ -515,7 +517,7 @@ export default function MyBookings() {
       <Modal
         isOpen={isFormOpen}
         onClose={() => { setIsFormOpen(false); setEditingBooking(null); }}
-        title={editingBooking ? 'Edit Booking' : 'New Booking'}
+        title={editingBooking ? t('bookings.editBooking') : t('bookings.newBooking')}
         size="large"
       >
         <BookingForm
@@ -549,9 +551,9 @@ export default function MyBookings() {
         isOpen={!!cancellingBooking}
         onClose={() => setCancellingBooking(null)}
         onConfirm={handleCancelConfirm}
-        title="Cancel Booking"
-        message={`Are you sure you want to cancel the booking for ${cancellingBooking?.customerName}? The customer will be notified.`}
-        confirmText="Cancel Booking"
+        title={t('bookings.cancelBooking')}
+        message={t('bookings.cancelConfirmMessage', { name: cancellingBooking?.customerName })}
+        confirmText={t('bookings.cancelBooking')}
         variant="danger"
       />
     </div>

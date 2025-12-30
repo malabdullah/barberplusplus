@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Scissors,
   Plus,
@@ -13,6 +14,7 @@ import ConfirmDialog from '../components/UI/ConfirmDialog';
 import './Services.css';
 
 function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: service?.name || '',
     description: service?.description || '',
@@ -35,9 +37,9 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Service name is required';
-    if (formData.duration < 5) newErrors.duration = 'Duration must be at least 5 minutes';
-    if (formData.price < 0) newErrors.price = 'Price cannot be negative';
+    if (!formData.name.trim()) newErrors.name = t('validation.serviceNameRequired');
+    if (formData.duration < 5) newErrors.duration = t('validation.durationMin');
+    if (formData.price < 0) newErrors.price = t('validation.priceNegative');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -52,33 +54,33 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
   return (
     <form className="form" onSubmit={handleSubmit}>
       <div className="form-group">
-        <label className="form-label">Service Name</label>
+        <label className="form-label">{t('services.name')}</label>
         <input
           type="text"
           name="name"
           value={formData.name}
           onChange={handleChange}
           className={`form-input ${errors.name ? 'error' : ''}`}
-          placeholder="e.g., Classic Haircut"
+          placeholder={t('services.namePlaceholder')}
         />
         {errors.name && <span className="form-error">{errors.name}</span>}
       </div>
 
       <div className="form-group">
-        <label className="form-label">Description</label>
+        <label className="form-label">{t('common.description')}</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           className="form-input form-textarea"
-          placeholder="Brief description of the service"
+          placeholder={t('services.descriptionPlaceholder')}
           rows={3}
         />
       </div>
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Duration (minutes)</label>
+          <label className="form-label">{t('services.duration')}</label>
           <input
             type="number"
             name="duration"
@@ -92,7 +94,7 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Price (KWD)</label>
+          <label className="form-label">{t('services.price')} ({t('common.currency')})</label>
           <input
             type="number"
             name="price"
@@ -108,17 +110,17 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
 
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : (service ? 'Save Changes' : 'Add Service')}
+          {isSubmitting ? t('common.loading') : (service ? t('common.saveChanges') : t('services.addService'))}
         </button>
       </div>
     </form>
   );
 }
 
-function ServiceCard({ service, onEdit, onDelete }) {
+function ServiceCard({ service, onEdit, onDelete, t }) {
   const handleCardClick = () => {
     onEdit(service);
   };
@@ -150,10 +152,10 @@ function ServiceCard({ service, onEdit, onDelete }) {
         <div className="service-details">
           <div className="detail-item">
             <Clock size={16} strokeWidth={1.5} />
-            <span>{service.duration} min</span>
+            <span>{service.duration} {t('common.min')}</span>
           </div>
           <div className="detail-item price">
-            <span>{service.price} KWD</span>
+            <span>{service.price} {t('common.currency')}</span>
           </div>
         </div>
 
@@ -162,14 +164,14 @@ function ServiceCard({ service, onEdit, onDelete }) {
             <button
               className="action-btn"
               onClick={handleEditClick}
-              title="Edit Service"
+              title={t('services.editService')}
             >
               <Pencil size={16} strokeWidth={1.5} />
             </button>
             <button
               className="action-btn danger"
               onClick={handleDeleteClick}
-              title="Delete Service"
+              title={t('services.deleteService')}
             >
               <Trash2 size={16} strokeWidth={1.5} />
             </button>
@@ -181,6 +183,7 @@ function ServiceCard({ service, onEdit, onDelete }) {
 }
 
 export default function Services() {
+  const { t } = useTranslation();
   const { branchServices, selectedBranch, addService, updateService, deleteService } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -243,14 +246,14 @@ export default function Services() {
     <div className="services-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">Services</h2>
+          <h2 className="page-title">{t('services.title')}</h2>
           <p className="page-description">
-            Manage services offered at {selectedBranch?.name}
+            {t('services.subtitle')} {selectedBranch?.name}
           </p>
         </div>
         <button className="btn btn-primary" onClick={handleAdd}>
           <Plus size={18} strokeWidth={2} />
-          Add Service
+          {t('services.addService')}
         </button>
       </div>
 
@@ -260,14 +263,14 @@ export default function Services() {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search services..."
+            placeholder={t('services.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
         </div>
         <div className="services-count">
-          {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''}
+          {filteredServices.length} {filteredServices.length === 1 ? t('services.service') : t('services.servicesPlural')}
         </div>
       </div>
 
@@ -280,6 +283,7 @@ export default function Services() {
               service={service}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              t={t}
               style={{ animationDelay: `${index * 50}ms` }}
             />
           ))}
@@ -289,19 +293,19 @@ export default function Services() {
           <div className="empty-state-icon">
             <Search size={48} strokeWidth={1} />
           </div>
-          <h3>No services found</h3>
-          <p>Try adjusting your search query</p>
+          <h3>{t('services.noServicesFound')}</h3>
+          <p>{t('services.adjustSearch')}</p>
         </div>
       ) : (
         <div className="empty-state animate-fade-in-up">
           <div className="empty-state-icon">
             <Scissors size={48} strokeWidth={1} />
           </div>
-          <h3>No services yet</h3>
-          <p>Add your first service to get started</p>
+          <h3>{t('services.noServices')}</h3>
+          <p>{t('services.addFirst')}</p>
           <button className="btn btn-primary" onClick={handleAdd}>
             <Plus size={18} strokeWidth={2} />
-            Add Your First Service
+            {t('services.addFirstService')}
           </button>
         </div>
       )}
@@ -310,7 +314,7 @@ export default function Services() {
       <Modal
         isOpen={isFormOpen}
         onClose={() => { setIsFormOpen(false); setEditingService(null); }}
-        title={editingService ? 'Edit Service' : 'Add New Service'}
+        title={editingService ? t('services.editService') : t('services.addNewService')}
       >
         {error && (
           <div className="form-error-banner" style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--status-error-bg)', color: 'var(--status-error)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
@@ -330,9 +334,9 @@ export default function Services() {
         isOpen={!!deletingService}
         onClose={() => setDeletingService(null)}
         onConfirm={handleConfirmDelete}
-        title="Delete Service"
-        message={`Are you sure you want to delete "${deletingService?.name}"? This action cannot be undone.`}
-        confirmText="Delete Service"
+        title={t('services.deleteService')}
+        message={t('services.deleteConfirm', { name: deletingService?.name })}
+        confirmText={t('services.deleteService')}
         variant="danger"
       />
     </div>

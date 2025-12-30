@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import './Forms.css';
 
 export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: barber?.name || '',
     nameAr: barber?.nameAr || '',
@@ -66,18 +68,18 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.name.trim()) newErrors.name = t('validation.nameRequired');
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('validation.invalidEmail');
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
+      newErrors.phone = t('validation.phoneRequired');
     } else {
       const country = GCC_COUNTRIES.find(c => c.code === formData.countryCode);
       if (country && !country.pattern.test(formData.phone.replace(/\s/g, ''))) {
-        newErrors.phone = `Invalid ${country.label.split(' ')[0]} phone number`;
+        newErrors.phone = t('validation.invalidPhone');
       }
     }
     setErrors(newErrors);
@@ -94,7 +96,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   return (
     <form className="form" onSubmit={handleSubmit}>
       <div className="form-section">
-        <h4 className="form-section-title">Profile</h4>
+        <h4 className="form-section-title">{t('profile.title')}</h4>
 
         <div className="profile-picture-upload">
           <div className="profile-picture-preview">
@@ -108,7 +110,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
           </div>
           <label className="profile-picture-button">
             <Camera size={16} strokeWidth={1.5} />
-            Upload Photo
+            {t('barbers.uploadPhoto')}
             <input
               type="file"
               accept="image/*"
@@ -120,7 +122,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">Basic Information</h4>
+        <h4 className="form-section-title">{t('barbers.basicInfo')}</h4>
 
         <div className="form-group">
           <label className="form-checkbox">
@@ -130,26 +132,26 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
               checked={formData.isActive}
               onChange={handleChange}
             />
-            <span>Active</span>
+            <span>{t('common.active')}</span>
           </label>
-          <span className="form-hint">Inactive barbers won't appear in booking options</span>
+          <span className="form-hint">{t('barbers.inactiveHint')}</span>
         </div>
 
         <div className="form-group">
-          <label className="form-label">Full Name</label>
+          <label className="form-label">{t('common.fullName')}</label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
             className={`form-input ${errors.name ? 'error' : ''}`}
-            placeholder="e.g., John Smith"
+            placeholder={t('barbers.namePlaceholder')}
           />
           {errors.name && <span className="form-error">{errors.name}</span>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">Arabic Full Name</label>
+          <label className="form-label">{t('barbers.nameAr')}</label>
           <input
             type="text"
             name="nameAr"
@@ -162,7 +164,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         </div>
 
         <div className="form-group">
-          <label className="form-label">Email</label>
+          <label className="form-label">{t('common.email')}</label>
           <input
             type="email"
             name="email"
@@ -175,7 +177,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         </div>
 
         <div className="form-group">
-          <label className="form-label">Phone</label>
+          <label className="form-label">{t('common.phone')}</label>
           <div className="phone-input-group">
             <select
               name="countryCode"
@@ -203,7 +205,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">Assigned Services</h4>
+        <h4 className="form-section-title">{t('barbers.assignedServices')}</h4>
 
         {services.length > 0 ? (
           <div className="services-select">
@@ -215,21 +217,21 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
                   onChange={() => toggleService(service.id)}
                 />
                 <span>{service.name}</span>
-                <span className="service-price">{service.price} KWD</span>
+                <span className="service-price">{service.price} {t('common.currency')}</span>
               </label>
             ))}
           </div>
         ) : (
-          <span className="form-hint">No services available. Add services to the branch first.</span>
+          <span className="form-hint">{t('barbers.noServicesAvailable')}</span>
         )}
       </div>
 
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : (barber ? 'Save Changes' : 'Add Barber')}
+          {isSubmitting ? t('common.loading') : (barber ? t('common.saveChanges') : t('barbers.addBarber'))}
         </button>
       </div>
     </form>

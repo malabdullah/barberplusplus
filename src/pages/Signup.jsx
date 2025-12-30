@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
@@ -7,6 +8,7 @@ import './Login.css';
 import './Signup.css';
 
 export default function Signup() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { signup } = useApp();
 
@@ -31,44 +33,44 @@ export default function Signup() {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError('Please enter your full name');
+      setError(t('validation.nameRequired'));
       return false;
     }
     if (!formData.email.trim()) {
-      setError('Please enter your email');
+      setError(t('validation.emailRequired'));
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError(t('validation.invalidEmail'));
       return false;
     }
     if (!formData.phone.trim()) {
-      setError('Please enter your phone number');
+      setError(t('validation.phoneRequired'));
       return false;
     }
     // Strong password validation
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('validation.passwordLength'));
       return false;
     }
     if (!/[A-Z]/.test(formData.password)) {
-      setError('Password must contain at least one uppercase letter');
+      setError(t('validation.passwordUppercase'));
       return false;
     }
     if (!/[a-z]/.test(formData.password)) {
-      setError('Password must contain at least one lowercase letter');
+      setError(t('validation.passwordLowercase'));
       return false;
     }
     if (!/[0-9]/.test(formData.password)) {
-      setError('Password must contain at least one number');
+      setError(t('validation.passwordNumber'));
       return false;
     }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-      setError('Password must contain at least one special character');
+      setError(t('validation.passwordSpecial'));
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('validation.passwordsMismatch'));
       return false;
     }
     return true;
@@ -94,7 +96,7 @@ export default function Signup() {
     if (result.success) {
       navigate('/');
     } else {
-      setError(result.error || 'Registration failed. Please try again.');
+      setError(result.error || t('auth.registrationFailed'));
       setIsLoading(false);
     }
   };
@@ -129,8 +131,8 @@ export default function Signup() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>Create Account</h1>
-          <p>Sign up to manage your barbershops</p>
+          <h1>{t('auth.createAccount')}</h1>
+          <p>{t('auth.signUpMessage')}</p>
         </div>
 
         {/* Signup Form */}
@@ -142,7 +144,7 @@ export default function Signup() {
           )}
 
           <div className="login-field">
-            <label htmlFor="name">Full Name</label>
+            <label htmlFor="name">{t('common.fullName')}</label>
             <div className="login-input-wrapper">
               <User size={18} strokeWidth={1.5} />
               <input
@@ -151,14 +153,14 @@ export default function Signup() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="John Doe"
+                placeholder={t('auth.namePlaceholder')}
                 autoComplete="name"
               />
             </div>
           </div>
 
           <div className="login-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('common.email')}</label>
             <div className="login-input-wrapper">
               <Mail size={18} strokeWidth={1.5} />
               <input
@@ -167,14 +169,14 @@ export default function Signup() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="your@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 autoComplete="email"
               />
             </div>
           </div>
 
           <div className="login-field">
-            <label htmlFor="phone">Phone Number</label>
+            <label htmlFor="phone">{t('auth.phoneNumber')}</label>
             <div className="signup-phone-wrapper">
               <select
                 name="countryCode"
@@ -204,7 +206,7 @@ export default function Signup() {
           </div>
 
           <div className="login-field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -213,7 +215,7 @@ export default function Signup() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Min. 8 chars, uppercase, number, special"
+                placeholder={t('auth.passwordPlaceholder')}
                 autoComplete="new-password"
               />
               <button
@@ -231,7 +233,7 @@ export default function Signup() {
           </div>
 
           <div className="login-field">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -240,7 +242,7 @@ export default function Signup() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="Repeat password"
+                placeholder={t('auth.repeatPassword')}
                 autoComplete="new-password"
               />
               <button
@@ -263,10 +265,10 @@ export default function Signup() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="login-loading">Creating account...</span>
+              <span className="login-loading">{t('auth.creatingAccount')}</span>
             ) : (
               <>
-                Create Account
+                {t('auth.createAccount')}
                 <ArrowRight size={18} strokeWidth={2} />
               </>
             )}
@@ -275,7 +277,7 @@ export default function Signup() {
 
         {/* Footer */}
         <div className="login-footer">
-          <p>Already have an account? <Link to="/login">Sign in</Link></p>
+          <p>{t('auth.haveAccount')} <Link to="/login">{t('auth.signIn')}</Link></p>
         </div>
       </div>
 

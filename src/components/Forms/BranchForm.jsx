@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Camera, Building2 } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { DAYS, DEFAULT_SCHEDULE } from '../../constants/time';
@@ -8,6 +9,7 @@ import './Forms.css';
 const DEFAULT_HOURS = DEFAULT_SCHEDULE;
 
 export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = false }) {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     name: branch?.name || '',
     nameAr: branch?.nameAr || '',
@@ -131,16 +133,16 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Branch name is required';
-    if (!formData.locationUrl.trim()) newErrors.locationUrl = 'Location URL is required';
-    if (!formData.governorateId) newErrors.governorateId = 'Governorate is required';
-    if (!formData.areaId) newErrors.areaId = 'Area is required';
+    if (!formData.name.trim()) newErrors.name = t('validation.branchNameRequired');
+    if (!formData.locationUrl.trim()) newErrors.locationUrl = t('validation.locationUrlRequired');
+    if (!formData.governorateId) newErrors.governorateId = t('validation.governorateRequired');
+    if (!formData.areaId) newErrors.areaId = t('validation.areaRequired');
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
+      newErrors.phone = t('validation.phoneRequired');
     } else {
       const country = GCC_COUNTRIES.find(c => c.code === formData.countryCode);
       if (country && !country.pattern.test(formData.phone.replace(/\s/g, ''))) {
-        newErrors.phone = `Invalid ${country.label.split(' ')[0]} phone number`;
+        newErrors.phone = t('validation.invalidPhone');
       }
     }
     setErrors(newErrors);
@@ -167,7 +169,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
   return (
     <form className="form" onSubmit={handleSubmit}>
       <div className="form-section">
-        <h4 className="form-section-title">Branch Image</h4>
+        <h4 className="form-section-title">{t('branches.image')}</h4>
 
         <div className="profile-picture-upload">
           <div className="profile-picture-preview branch-image-preview">
@@ -181,7 +183,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
           </div>
           <label className="profile-picture-button">
             <Camera size={16} strokeWidth={1.5} />
-            Upload Photo
+            {t('branches.uploadImage')}
             <input
               type="file"
               accept="image/*"
@@ -193,23 +195,23 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">Basic Information</h4>
+        <h4 className="form-section-title">{t('branches.basicInfo')}</h4>
 
         <div className="form-group">
-          <label className="form-label">Branch Name</label>
+          <label className="form-label">{t('branches.name')}</label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
             className={`form-input ${errors.name ? 'error' : ''}`}
-            placeholder="e.g., Downtown Studio"
+            placeholder={t('branches.namePlaceholder')}
           />
           {errors.name && <span className="form-error">{errors.name}</span>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">Arabic Branch Name</label>
+          <label className="form-label">{t('branches.nameAr')}</label>
           <input
             type="text"
             name="nameAr"
@@ -222,7 +224,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         </div>
 
         <div className="form-group">
-          <label className="form-label">Location URL</label>
+          <label className="form-label">{t('branches.locationUrl')}</label>
           <input
             type="url"
             name="locationUrl"
@@ -236,7 +238,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Governorate</label>
+            <label className="form-label">{t('branches.governorate')}</label>
             <select
               name="governorateId"
               value={formData.governorateId}
@@ -244,10 +246,10 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
               className={`form-input form-select ${errors.governorateId ? 'error' : ''}`}
               disabled={loadingLocations}
             >
-              <option value="">{loadingLocations ? 'Loading...' : 'Select governorate...'}</option>
+              <option value="">{loadingLocations ? t('common.loading') : t('branches.selectGovernorate')}</option>
               {governorates.map((gov) => (
                 <option key={gov.id} value={gov.id}>
-                  {gov.name_en}
+                  {i18n.language === 'ar' ? gov.name_ar : gov.name_en}
                 </option>
               ))}
             </select>
@@ -255,7 +257,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
           </div>
 
           <div className="form-group">
-            <label className="form-label">Area</label>
+            <label className="form-label">{t('branches.area')}</label>
             <select
               name="areaId"
               value={formData.areaId}
@@ -263,10 +265,10 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
               className={`form-input form-select ${errors.areaId ? 'error' : ''}`}
               disabled={!formData.governorateId || loadingLocations}
             >
-              <option value="">Select area...</option>
+              <option value="">{t('branches.selectArea')}</option>
               {areas.map((area) => (
                 <option key={area.id} value={area.id}>
-                  {area.name_en}
+                  {i18n.language === 'ar' ? area.name_ar : area.name_en}
                 </option>
               ))}
             </select>
@@ -275,7 +277,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         </div>
 
         <div className="form-group">
-          <label className="form-label">Phone</label>
+          <label className="form-label">{t('common.phone')}</label>
           <div className="phone-input-group">
             <select
               name="countryCode"
@@ -302,7 +304,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         </div>
 
         <div className="form-group">
-          <label className="form-label">Number of Barbers</label>
+          <label className="form-label">{t('branches.numberOfBarbers')}</label>
           <input
             type="number"
             name="numberOfBarbers"
@@ -310,25 +312,25 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
             onChange={handleChange}
             className="form-input"
             min="1"
-            placeholder="e.g., 5"
+            placeholder={t('branches.numberOfBarbersPlaceholder')}
           />
         </div>
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">Operating Hours</h4>
+        <h4 className="form-section-title">{t('branches.operatingHours')}</h4>
 
         <div className="hours-editor">
-          {DAYS.map(({ key, label }) => {
+          {DAYS.map(({ key, label, labelAr }) => {
             const dayHours = formData.openingHours[key];
             const isClosed = !dayHours?.open;
 
             return (
               <div key={key} className="hours-row-edit">
-                <span className="hours-day-label">{label}</span>
+                <span className="hours-day-label">{i18n.language === 'ar' ? labelAr : label}</span>
                 <div className="hours-inputs">
                   {isClosed ? (
-                    <span className="hours-closed-label">Closed</span>
+                    <span className="hours-closed-label">{t('availability.closed')}</span>
                   ) : (
                     <>
                       <input
@@ -337,7 +339,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                         onChange={(e) => handleHoursChange(key, 'open', e.target.value)}
                         className="form-input time-input"
                       />
-                      <span className="hours-separator">to</span>
+                      <span className="hours-separator">{t('branches.to')}</span>
                       <input
                         type="time"
                         value={dayHours?.close || ''}
@@ -352,13 +354,13 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                   className={`hours-toggle ${isClosed ? 'closed' : 'open'}`}
                   onClick={() => toggleDayClosed(key)}
                 >
-                  {isClosed ? 'Set Hours' : 'Close'}
+                  {isClosed ? t('branches.setHours') : t('branches.close')}
                 </button>
                 <button
                   type="button"
                   className="hours-copy-btn"
                   onClick={() => copyHoursToAll(key)}
-                  title="Copy to all days"
+                  title={t('branches.copyToAll')}
                 >
                   <Copy size={14} strokeWidth={2} />
                 </button>
@@ -370,10 +372,10 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
 
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : (branch ? 'Save Changes' : 'Create Branch')}
+          {isSubmitting ? t('common.loading') : (branch ? t('common.saveChanges') : t('branches.createBranch'))}
         </button>
       </div>
     </form>

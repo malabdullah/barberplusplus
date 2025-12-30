@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import './Login.css';
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useApp();
 
@@ -26,7 +28,7 @@ export default function Login() {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
-      setError('Please enter both email and password');
+      setError(t('validation.emailPasswordRequired'));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function Login() {
         navigate('/');
       }
     } else {
-      setError('Invalid email or password');
+      setError(t('auth.invalidCredentials'));
       setIsLoading(false);
     }
   };
@@ -80,8 +82,8 @@ export default function Login() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>Welcome back</h1>
-          <p>Sign in to manage your barbershops</p>
+          <h1>{t('auth.welcomeBack')}</h1>
+          <p>{t('auth.signInMessage')}</p>
         </div>
 
         {/* Login Form */}
@@ -93,7 +95,7 @@ export default function Login() {
           )}
 
           <div className="login-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('common.email')}</label>
             <div className="login-input-wrapper">
               <Mail size={18} strokeWidth={1.5} />
               <input
@@ -102,14 +104,14 @@ export default function Login() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="your@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 autoComplete="email"
               />
             </div>
           </div>
 
           <div className="login-field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -138,10 +140,10 @@ export default function Login() {
           <div className="login-options">
             <label className="login-remember">
               <input type="checkbox" />
-              <span>Remember me</span>
+              <span>{t('auth.rememberMe')}</span>
             </label>
             <Link to="/forgot-password" className="login-forgot">
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
 
@@ -151,10 +153,10 @@ export default function Login() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="login-loading">Signing in...</span>
+              <span className="login-loading">{t('auth.signingIn')}</span>
             ) : (
               <>
-                Sign In
+                {t('auth.signIn')}
                 <ArrowRight size={18} strokeWidth={2} />
               </>
             )}
@@ -163,7 +165,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="login-footer">
-          <p>Don't have an account? <Link to="/signup">Sign up</Link></p>
+          <p>{t('auth.noAccount')} <Link to="/signup">{t('auth.signUp')}</Link></p>
         </div>
       </div>
 

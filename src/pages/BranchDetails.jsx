@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   MapPin,
@@ -15,13 +16,14 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { DAY_KEYS as DAYS, DAY_LABELS } from '../constants/time';
+import { DAY_KEYS as DAYS, DAY_LABELS, DAY_LABELS_AR } from '../constants/time';
 import Modal from '../components/UI/Modal';
 import BranchForm from '../components/Forms/BranchForm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import './BranchDetails.css';
 
 export default function BranchDetails() {
+  const { t, i18n } = useTranslation();
   const { branchId } = useParams();
   const navigate = useNavigate();
   const { branches, barbers, services, bookings, updateBranch, deleteBranch } = useApp();
@@ -37,9 +39,9 @@ export default function BranchDetails() {
   if (!branch) {
     return (
       <div className="not-found">
-        <h2>Branch not found</h2>
+        <h2>{t('branches.branchNotFound')}</h2>
         <Link to="/branches" className="btn btn-primary">
-          Back to Branches
+          {t('branches.backToBranches')}
         </Link>
       </div>
     );
@@ -56,7 +58,7 @@ export default function BranchDetails() {
   };
 
   const formatHours = (hours) => {
-    if (!hours?.open || !hours?.close) return 'Closed';
+    if (!hours?.open || !hours?.close) return t('availability.closed');
     return `${hours.open} - ${hours.close}`;
   };
 
@@ -69,7 +71,7 @@ export default function BranchDetails() {
       {/* Back Button */}
       <Link to="/branches" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
-        Back to Branches
+        {t('branches.backToBranches')}
       </Link>
 
       {/* Header */}
@@ -101,11 +103,11 @@ export default function BranchDetails() {
         <div className="branch-details-actions">
           <button className="btn btn-secondary" onClick={() => setIsEditOpen(true)}>
             <Edit size={16} strokeWidth={1.5} />
-            Edit
+            {t('common.edit')}
           </button>
           <button className="btn btn-danger-outline" onClick={() => setIsDeleteOpen(true)}>
             <Trash2 size={16} strokeWidth={1.5} />
-            Delete
+            {t('common.delete')}
           </button>
         </div>
       </div>
@@ -118,7 +120,7 @@ export default function BranchDetails() {
           </div>
           <div className="stat-content">
             <div className="stat-value">{branchBarbers.length}</div>
-            <div className="stat-label">Barbers</div>
+            <div className="stat-label">{t('nav.barbers')}</div>
           </div>
         </div>
         <div className="branch-stat-card">
@@ -127,7 +129,7 @@ export default function BranchDetails() {
           </div>
           <div className="stat-content">
             <div className="stat-value">{branchServices.length}</div>
-            <div className="stat-label">Services</div>
+            <div className="stat-label">{t('nav.services')}</div>
           </div>
         </div>
         <div className="branch-stat-card">
@@ -136,7 +138,7 @@ export default function BranchDetails() {
           </div>
           <div className="stat-content">
             <div className="stat-value">{todayBookings.length}</div>
-            <div className="stat-label">Today's Bookings</div>
+            <div className="stat-label">{t('dashboard.todayBookings')}</div>
           </div>
         </div>
       </div>
@@ -147,9 +149,9 @@ export default function BranchDetails() {
         <div className="branch-content-card animate-fade-in-up stagger-2">
           <div className="content-card-header">
             <Users size={20} strokeWidth={1.5} />
-            <h3>Team Members</h3>
+            <h3>{t('branches.teamMembers')}</h3>
             <Link to="/barbers" className="content-card-link">
-              Manage <ChevronRight size={14} />
+              {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
           {branchBarbers.length > 0 ? (
@@ -166,21 +168,21 @@ export default function BranchDetails() {
                     </span>
                   </div>
                   <div className={`team-status ${barber.status}`}>
-                    {barber.status === 'active' ? 'Active' : 'Away'}
+                    {barber.status === 'active' ? t('common.active') : t('barbers.away')}
                   </div>
                 </div>
               ))}
               {branchBarbers.length > 4 && (
                 <Link to="/barbers" className="view-more-link">
-                  +{branchBarbers.length - 4} more barbers
+                  +{branchBarbers.length - 4} {t('branches.moreBarbers')}
                 </Link>
               )}
             </div>
           ) : (
             <div className="empty-section">
-              <p>No barbers assigned to this branch</p>
+              <p>{t('branches.noBarbersAssigned')}</p>
               <Link to="/barbers" className="btn btn-sm btn-primary">
-                <Plus size={14} /> Add Barber
+                <Plus size={14} /> {t('barbers.addBarber')}
               </Link>
             </div>
           )}
@@ -190,9 +192,9 @@ export default function BranchDetails() {
         <div className="branch-content-card animate-fade-in-up stagger-3">
           <div className="content-card-header">
             <Scissors size={20} strokeWidth={1.5} />
-            <h3>Services Offered</h3>
+            <h3>{t('branches.servicesOffered')}</h3>
             <Link to="/services" className="content-card-link">
-              Manage <ChevronRight size={14} />
+              {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
           {branchServices.length > 0 ? (
@@ -201,22 +203,22 @@ export default function BranchDetails() {
                 <div key={service.id} className="service-item">
                   <div className="service-details">
                     <span className="service-name">{service.name}</span>
-                    <span className="service-duration">{service.duration} min</span>
+                    <span className="service-duration">{service.duration} {t('common.min')}</span>
                   </div>
-                  <span className="service-price">{service.price} KWD</span>
+                  <span className="service-price">{service.price} {t('common.currency')}</span>
                 </div>
               ))}
               {branchServices.length > 5 && (
                 <Link to="/services" className="view-more-link">
-                  +{branchServices.length - 5} more services
+                  +{branchServices.length - 5} {t('branches.moreServices')}
                 </Link>
               )}
             </div>
           ) : (
             <div className="empty-section">
-              <p>No services configured for this branch</p>
+              <p>{t('branches.noServicesConfigured')}</p>
               <Link to="/services" className="btn btn-sm btn-primary">
-                <Plus size={14} /> Add Service
+                <Plus size={14} /> {t('services.addService')}
               </Link>
             </div>
           )}
@@ -226,15 +228,16 @@ export default function BranchDetails() {
         <div className="branch-content-card animate-fade-in-up stagger-4">
           <div className="content-card-header">
             <Clock size={20} strokeWidth={1.5} />
-            <h3>Operating Hours</h3>
+            <h3>{t('branches.operatingHours')}</h3>
           </div>
           <div className="hours-grid">
             {DAYS.map((day, index) => {
               const hours = branch.openingHours?.[day];
               const isToday = new Date().getDay() === (index + 1) % 7;
+              const dayLabels = i18n.language === 'ar' ? DAY_LABELS_AR : DAY_LABELS;
               return (
                 <div key={day} className={`hours-row ${isToday ? 'today' : ''}`}>
-                  <span className="hours-day">{DAY_LABELS[index]}</span>
+                  <span className="hours-day">{dayLabels[index]}</span>
                   <span className={`hours-time ${!hours?.open ? 'closed' : ''}`}>
                     {formatHours(hours)}
                   </span>
@@ -249,7 +252,7 @@ export default function BranchDetails() {
       <Modal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        title="Edit Branch"
+        title={t('branches.editBranch')}
       >
         <BranchForm
           branch={branch}
@@ -263,9 +266,9 @@ export default function BranchDetails() {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Branch"
-        message={`Are you sure you want to delete "${branch.name}"? This action cannot be undone.`}
-        confirmText="Delete Branch"
+        title={t('branches.deleteBranch')}
+        message={t('branches.deleteConfirmMessage', { name: branch.name })}
+        confirmText={t('branches.deleteBranch')}
         variant="danger"
       />
     </div>

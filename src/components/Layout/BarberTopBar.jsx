@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   Search,
@@ -7,11 +8,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import { notificationPreferencesService } from '../../services';
 import './TopBar.css';
 
 export default function BarberTopBar({ onMenuClick }) {
+  const { t, i18n } = useTranslation();
   const {
     barberBranch,
     notifications,
@@ -21,6 +24,7 @@ export default function BarberTopBar({ onMenuClick }) {
     markNotificationRead,
     markAllNotificationsRead,
   } = useApp();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -70,7 +74,7 @@ export default function BarberTopBar({ onMenuClick }) {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search bookings..."
+            placeholder={t('bookings.searchBookings')}
             className="topbar-search-input"
           />
           <span className="topbar-search-shortcut">⌘K</span>
@@ -102,11 +106,11 @@ export default function BarberTopBar({ onMenuClick }) {
           {notificationsOpen && (
             <div className="topbar-dropdown topbar-notifications-dropdown animate-scale-in">
               <div className="topbar-dropdown-header">
-                <span>Notifications</span>
+                <span>{t('notifications.title')}</span>
                 {visibleUnreadCount > 0 && (
                   <button className="topbar-dropdown-action" onClick={handleMarkAllRead}>
                     <CheckCheck size={14} />
-                    Mark all read
+                    {t('notifications.markAllRead')}
                   </button>
                 )}
               </div>
@@ -114,12 +118,12 @@ export default function BarberTopBar({ onMenuClick }) {
                 {notificationsLoading ? (
                   <div className="topbar-notification-empty">
                     <Loader2 size={20} className="animate-spin" />
-                    <span>Loading...</span>
+                    <span>{t('common.loading')}</span>
                   </div>
                 ) : visibleNotifications.length === 0 ? (
                   <div className="topbar-notification-empty">
                     <Bell size={24} strokeWidth={1} />
-                    <span>No notifications yet</span>
+                    <span>{t('notifications.noNotifications')}</span>
                   </div>
                 ) : (
                   visibleNotifications.slice(0, 10).map((notification) => (
@@ -137,7 +141,7 @@ export default function BarberTopBar({ onMenuClick }) {
                           {notification.message}
                         </span>
                         <span className="topbar-notification-time">
-                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: dateLocale })}
                         </span>
                       </div>
                     </button>
@@ -146,7 +150,7 @@ export default function BarberTopBar({ onMenuClick }) {
               </div>
               {visibleNotifications.length > 10 && (
                 <div className="topbar-dropdown-footer">
-                  <button>View all notifications</button>
+                  <button>{t('notifications.viewAll')}</button>
                 </div>
               )}
             </div>

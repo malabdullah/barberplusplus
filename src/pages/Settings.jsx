@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   User,
   Bell,
@@ -76,6 +77,7 @@ const parsePhone = (fullPhone) => {
 };
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user, userRole, logout, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
@@ -131,9 +133,9 @@ export default function Settings() {
     <div className="settings-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">Settings</h2>
+          <h2 className="page-title">{t('settings.title')}</h2>
           <p className="page-description">
-            Manage your account and preferences
+            {t('settings.subtitle')}
           </p>
         </div>
       </div>
@@ -143,8 +145,8 @@ export default function Settings() {
         {userRole === 'manager' && (
           <SettingsSection
             icon={User}
-            title="Profile"
-            description="Your personal information"
+            title={t('settings.profile')}
+            description={t('settings.profileDescription')}
           >
             <div className="profile-avatar-section">
               <div className="profile-avatar">
@@ -152,12 +154,12 @@ export default function Settings() {
               </div>
               <button className="avatar-upload-btn">
                 <Camera size={16} strokeWidth={1.5} />
-                Change Photo
+                {t('settings.changePhoto')}
               </button>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Full Name</label>
+              <label className="form-label">{t('common.fullName')}</label>
               <input
                 type="text"
                 name="name"
@@ -168,7 +170,7 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label">{t('common.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -179,7 +181,7 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phone</label>
+              <label className="form-label">{t('common.phone')}</label>
               <div className="phone-input-group">
                 <select
                   name="countryCode"
@@ -206,7 +208,7 @@ export default function Settings() {
 
             <button className="btn btn-primary" onClick={handleSaveProfile}>
               <Save size={16} strokeWidth={1.5} />
-              Save Changes
+              {t('common.saveChanges')}
             </button>
           </SettingsSection>
         )}
@@ -214,19 +216,19 @@ export default function Settings() {
         {/* Notifications Section */}
         <SettingsSection
           icon={Bell}
-          title="Notifications"
-          description="Control which in-app notifications you receive"
+          title={t('settings.notifications')}
+          description={t('settings.notificationsDescription')}
         >
           {notificationsLoading ? (
-            <div className="settings-loading">Loading preferences...</div>
+            <div className="settings-loading">{t('settings.loadingPreferences')}</div>
           ) : (
             <>
               {/* Booking Notifications Category */}
-              <div className="settings-category-label">Bookings</div>
+              <div className="settings-category-label">{t('nav.bookings')}</div>
 
               <SettingsItem
-                label="New Bookings"
-                description="When a booking is created"
+                label={t('settings.newBookings')}
+                description={t('settings.newBookingsDesc')}
               >
                 <Toggle
                   checked={notificationPreferences?.newBookings}
@@ -235,8 +237,8 @@ export default function Settings() {
               </SettingsItem>
 
               <SettingsItem
-                label="Booking Updates"
-                description="When booking status changes"
+                label={t('settings.bookingUpdates')}
+                description={t('settings.bookingUpdatesDesc')}
               >
                 <Toggle
                   checked={notificationPreferences?.bookingUpdates}
@@ -245,8 +247,8 @@ export default function Settings() {
               </SettingsItem>
 
               <SettingsItem
-                label="Cancellations"
-                description="When a booking is cancelled"
+                label={t('settings.cancellations')}
+                description={t('settings.cancellationsDesc')}
               >
                 <Toggle
                   checked={notificationPreferences?.cancellations}
@@ -257,11 +259,11 @@ export default function Settings() {
               <div className="settings-divider" />
 
               {/* System Category */}
-              <div className="settings-category-label">System</div>
+              <div className="settings-category-label">{t('settings.system')}</div>
 
               <SettingsItem
-                label="System Alerts"
-                description="Important system notifications"
+                label={t('settings.systemAlerts')}
+                description={t('settings.systemAlertsDesc')}
               >
                 <Toggle
                   checked={notificationPreferences?.systemAlerts}
@@ -275,22 +277,22 @@ export default function Settings() {
         {/* Appearance Section */}
         <SettingsSection
           icon={Palette}
-          title="Appearance"
-          description="Customize the look and feel"
+          title={t('settings.appearance')}
+          description={t('settings.appearanceDescription')}
         >
-          <SettingsItem label="Theme">
+          <SettingsItem label={t('settings.theme')}>
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="form-input form-select settings-select"
             >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="system">System</option>
+              <option value="dark">{t('settings.themeDark')}</option>
+              <option value="light">{t('settings.themeLight')}</option>
+              <option value="system">{t('settings.themeSystem')}</option>
             </select>
           </SettingsItem>
 
-          <SettingsItem label="Language">
+          <SettingsItem label={t('settings.language')}>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
@@ -305,21 +307,21 @@ export default function Settings() {
         {/* Security Section */}
         <SettingsSection
           icon={Lock}
-          title="Security"
-          description="Protect your account"
+          title={t('settings.security')}
+          description={t('settings.securityDescription')}
         >
           <button className="settings-link-btn">
-            Change Password
+            {t('settings.changePassword')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
           <button className="settings-link-btn">
-            Two-Factor Authentication
+            {t('settings.twoFactor')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
           <button className="settings-link-btn">
-            Active Sessions
+            {t('settings.activeSessions')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
         </SettingsSection>
@@ -327,21 +329,21 @@ export default function Settings() {
         {/* Help Section */}
         <SettingsSection
           icon={HelpCircle}
-          title="Help & Support"
-          description="Get assistance"
+          title={t('settings.helpSupport')}
+          description={t('settings.helpDescription')}
         >
           <button className="settings-link-btn">
-            Help Center
+            {t('settings.helpCenter')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
           <button className="settings-link-btn">
-            Contact Support
+            {t('settings.contactSupport')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
           <button className="settings-link-btn">
-            Feature Requests
+            {t('settings.featureRequests')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
         </SettingsSection>
@@ -349,12 +351,12 @@ export default function Settings() {
         {/* Danger Zone */}
         <div className="settings-section danger-zone animate-fade-in-up">
           <div className="settings-section-header">
-            <h3>Danger Zone</h3>
+            <h3>{t('settings.dangerZone')}</h3>
           </div>
           <div className="settings-section-content">
             <button className="btn btn-danger-outline" onClick={logout}>
               <LogOut size={16} strokeWidth={1.5} />
-              Sign Out
+              {t('auth.signOut')}
             </button>
           </div>
         </div>

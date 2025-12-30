@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
 import './AddBranch.css';
 
 export default function AddBarber() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { addBarber, selectedBranch, branchServices } = useApp();
   const [error, setError] = useState(null);
@@ -19,7 +21,7 @@ export default function AddBarber() {
       navigate('/barbers');
     } catch (err) {
       console.error('Error creating barber:', err);
-      setError(err.message || 'Failed to create barber. Please try again.');
+      setError(err.message || t('errors.createBarberFailed'));
       setIsSubmitting(false);
     }
   };
@@ -32,12 +34,12 @@ export default function AddBarber() {
     <div className="add-branch-page">
       <Link to="/barbers" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
-        Back to Barbers
+        {t('barbers.backToBarbers')}
       </Link>
 
       <div className="add-branch-header animate-fade-in-up">
-        <h1>Add New Barber</h1>
-        <p>Add a team member to {selectedBranch?.name}</p>
+        <h1>{t('barbers.addNewBarber')}</h1>
+        <p>{t('barbers.addTeamMember')} {selectedBranch?.name}</p>
       </div>
 
       {error && (

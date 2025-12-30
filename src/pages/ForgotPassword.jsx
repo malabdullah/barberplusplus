@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import './Login.css';
 import './ForgotPassword.css';
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,12 +21,12 @@ export default function ForgotPassword() {
     e.preventDefault();
 
     if (!email.trim()) {
-      setError('Please enter your email address');
+      setError(t('auth.emailRequired'));
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address');
+      setError(t('validation.invalidEmail'));
       return;
     }
 
@@ -71,25 +73,25 @@ export default function ForgotPassword() {
             <div className="forgot-success-icon">
               <CheckCircle size={48} strokeWidth={1.5} />
             </div>
-            <h1>Check your email</h1>
+            <h1>{t('auth.checkYourEmail')}</h1>
             <p>
-              We've sent a password reset link to <strong>{email}</strong>.
-              Please check your inbox and follow the instructions.
+              {t('auth.resetLinkSentTo')} <strong>{email}</strong>.
+              {t('auth.checkInboxInstructions')}
             </p>
             <div className="forgot-success-note">
-              <p>Didn't receive the email? Check your spam folder or try again.</p>
+              <p>{t('auth.didntReceiveEmail')}</p>
             </div>
             <Link to="/login" className="login-submit">
               <ArrowLeft size={18} strokeWidth={2} />
-              Back to Sign In
+              {t('auth.backToLogin')}
             </Link>
           </div>
         ) : (
           <>
             {/* Welcome Text */}
             <div className="login-welcome">
-              <h1>Forgot Password?</h1>
-              <p>Enter your email to receive a reset link</p>
+              <h1>{t('auth.forgotPassword')}</h1>
+              <p>{t('auth.enterEmailForReset')}</p>
             </div>
 
             {/* Forgot Password Form */}
@@ -101,7 +103,7 @@ export default function ForgotPassword() {
               )}
 
               <div className="login-field">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="email">{t('auth.email')}</label>
                 <div className="login-input-wrapper">
                   <Mail size={18} strokeWidth={1.5} />
                   <input
@@ -122,10 +124,10 @@ export default function ForgotPassword() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <span className="login-loading">Sending...</span>
+                  <span className="login-loading">{t('auth.sending')}</span>
                 ) : (
                   <>
-                    Send Reset Link
+                    {t('auth.sendResetLink')}
                     <ArrowRight size={18} strokeWidth={2} />
                   </>
                 )}
@@ -137,7 +139,7 @@ export default function ForgotPassword() {
               <p>
                 <Link to="/login" className="forgot-back-link">
                   <ArrowLeft size={14} strokeWidth={2} />
-                  Back to Sign In
+                  {t('auth.backToLogin')}
                 </Link>
               </p>
             </div>

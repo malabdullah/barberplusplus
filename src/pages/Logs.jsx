@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FileText,
   Search,
@@ -14,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../context/AppContext';
 import { loggingService } from '../services/logging.service';
 import {
@@ -49,6 +51,9 @@ const LogTypeBadge = memo(function LogTypeBadge({ type }) {
 });
 
 const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
+
   return (
     <div className={`log-row ${isExpanded ? 'expanded' : ''}`}>
       <div className="log-row-main" onClick={onToggle}>
@@ -56,7 +61,7 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
         <span className="log-time">
-          {format(new Date(log.createdAt), 'MMM d, HH:mm:ss')}
+          {format(new Date(log.createdAt), 'MMM d, HH:mm:ss', { locale: dateLocale })}
         </span>
         <LogLevelBadge level={log.level} />
         <LogTypeBadge type={log.logType} />
@@ -68,29 +73,29 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
         <div className="log-details animate-fade-in">
           <div className="log-detail-grid">
             <div className="log-detail-item">
-              <span className="log-detail-label">User ID</span>
+              <span className="log-detail-label">{t('logs.userId')}</span>
               <span className="log-detail-value">{log.userId || 'N/A'}</span>
             </div>
             <div className="log-detail-item">
-              <span className="log-detail-label">Role</span>
+              <span className="log-detail-label">{t('logs.role')}</span>
               <span className="log-detail-value">{log.userRole || 'N/A'}</span>
             </div>
             <div className="log-detail-item">
-              <span className="log-detail-label">Branch ID</span>
+              <span className="log-detail-label">{t('logs.branchId')}</span>
               <span className="log-detail-value">
                 {log.branchId ? log.branchId.slice(0, 8) + '...' : 'N/A'}
               </span>
             </div>
             <div className="log-detail-item">
-              <span className="log-detail-label">Action</span>
+              <span className="log-detail-label">{t('logs.action')}</span>
               <span className="log-detail-value">{log.action || 'N/A'}</span>
             </div>
             <div className="log-detail-item">
-              <span className="log-detail-label">Page URL</span>
+              <span className="log-detail-label">{t('logs.pageUrl')}</span>
               <span className="log-detail-value log-url">{log.pageUrl || 'N/A'}</span>
             </div>
             <div className="log-detail-item">
-              <span className="log-detail-label">Full Timestamp</span>
+              <span className="log-detail-label">{t('logs.fullTimestamp')}</span>
               <span className="log-detail-value">
                 {format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss.SSS')}
               </span>
@@ -99,7 +104,7 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
 
           {log.metadata && Object.keys(log.metadata).length > 0 && (
             <div className="log-metadata">
-              <span className="log-detail-label">Metadata</span>
+              <span className="log-detail-label">{t('logs.metadata')}</span>
               <pre className="log-metadata-content">
                 {JSON.stringify(log.metadata, null, 2)}
               </pre>
@@ -108,7 +113,7 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
 
           {log.stackTrace && (
             <div className="log-stack-trace">
-              <span className="log-detail-label">Stack Trace</span>
+              <span className="log-detail-label">{t('logs.stackTrace')}</span>
               <pre className="log-stack-content">{log.stackTrace}</pre>
             </div>
           )}
@@ -119,6 +124,7 @@ const LogRow = memo(function LogRow({ log, isExpanded, onToggle }) {
 });
 
 export default function Logs() {
+  const { t } = useTranslation();
   const { selectedBranchId, branches } = useApp();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -210,17 +216,17 @@ export default function Logs() {
     <div className="logs-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">Activity Logs</h2>
-          <p className="page-description">View all system activity and error logs</p>
+          <h2 className="page-title">{t('logs.title')}</h2>
+          <p className="page-description">{t('logs.description')}</p>
         </div>
         <div className="page-header-actions">
           <button className="btn btn-secondary" onClick={loadLogs} disabled={loading}>
             <RefreshCw size={18} strokeWidth={2} className={loading ? 'spin' : ''} />
-            Refresh
+            {t('logs.refresh')}
           </button>
           <button className="btn btn-secondary" onClick={exportLogs} disabled={logs.length === 0}>
             <Download size={18} strokeWidth={2} />
-            Export
+            {t('logs.export')}
           </button>
         </div>
       </div>
@@ -231,28 +237,28 @@ export default function Logs() {
           <AlertTriangle size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.error}</span>
-            <span className="log-stat-label">Errors</span>
+            <span className="log-stat-label">{t('logs.errors')}</span>
           </div>
         </div>
         <div className="log-stat-card warning">
           <AlertCircle size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.warning}</span>
-            <span className="log-stat-label">Warnings</span>
+            <span className="log-stat-label">{t('logs.warnings')}</span>
           </div>
         </div>
         <div className="log-stat-card info">
           <Info size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{stats.info}</span>
-            <span className="log-stat-label">Info</span>
+            <span className="log-stat-label">{t('logs.info')}</span>
           </div>
         </div>
         <div className="log-stat-card total">
           <FileText size={20} />
           <div className="log-stat-content">
             <span className="log-stat-value">{logs.length}</span>
-            <span className="log-stat-label">Total</span>
+            <span className="log-stat-label">{t('logs.total')}</span>
           </div>
         </div>
       </div>
@@ -263,7 +269,7 @@ export default function Logs() {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search logs..."
+            placeholder={t('logs.searchLogs')}
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="logs-search-input"
@@ -274,7 +280,7 @@ export default function Logs() {
           onClick={() => setShowFilters(!showFilters)}
         >
           <Filter size={18} strokeWidth={2} />
-          Filters
+          {t('logs.filters')}
         </button>
       </div>
 
@@ -282,13 +288,13 @@ export default function Logs() {
       {showFilters && (
         <div className="logs-filters animate-fade-in-up">
           <div className="filter-group">
-            <label>Level</label>
+            <label>{t('logs.level')}</label>
             <select
               value={filters.level}
               onChange={(e) => handleFilterChange('level', e.target.value)}
               className="form-input form-select"
             >
-              <option value="">All Levels</option>
+              <option value="">{t('logs.allLevels')}</option>
               {LOG_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {LOG_LEVEL_CONFIG[level].label}
@@ -297,13 +303,13 @@ export default function Logs() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Type</label>
+            <label>{t('logs.type')}</label>
             <select
               value={filters.logType}
               onChange={(e) => handleFilterChange('logType', e.target.value)}
               className="form-input form-select"
             >
-              <option value="">All Types</option>
+              <option value="">{t('logs.allTypes')}</option>
               {LOG_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {LOG_TYPE_CONFIG[type].label}
@@ -312,13 +318,13 @@ export default function Logs() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Branch</label>
+            <label>{t('logs.branch')}</label>
             <select
               value={filters.branchId}
               onChange={(e) => handleFilterChange('branchId', e.target.value)}
               className="form-input form-select"
             >
-              <option value="">All Branches</option>
+              <option value="">{t('logs.allBranches')}</option>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
                   {branch.name}
@@ -327,7 +333,7 @@ export default function Logs() {
             </select>
           </div>
           <div className="filter-group">
-            <label>Start Date</label>
+            <label>{t('logs.startDate')}</label>
             <input
               type="date"
               value={filters.startDate}
@@ -336,7 +342,7 @@ export default function Logs() {
             />
           </div>
           <div className="filter-group">
-            <label>End Date</label>
+            <label>{t('logs.endDate')}</label>
             <input
               type="date"
               value={filters.endDate}
@@ -346,7 +352,7 @@ export default function Logs() {
           </div>
           <button className="btn btn-text" onClick={clearFilters}>
             <X size={16} />
-            Clear
+            {t('logs.clear')}
           </button>
         </div>
       )}
@@ -356,13 +362,13 @@ export default function Logs() {
         {loading ? (
           <div className="logs-loading">
             <RefreshCw size={24} className="spin" />
-            <span>Loading logs...</span>
+            <span>{t('logs.loadingLogs')}</span>
           </div>
         ) : logs.length === 0 ? (
           <div className="logs-empty">
             <FileText size={48} strokeWidth={1} />
-            <h3>No logs found</h3>
-            <p>No activity logs match your current filters</p>
+            <h3>{t('logs.noLogsFound')}</h3>
+            <p>{t('logs.noLogsMatch')}</p>
           </div>
         ) : (
           <div className="logs-list">

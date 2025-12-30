@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   User,
   Camera,
@@ -14,6 +15,7 @@ import { GCC_COUNTRIES } from '../../constants/countries';
 import './MyProfile.css';
 
 export default function MyProfile() {
+  const { t } = useTranslation();
   const { currentBarber, barberBranch, barberServices, updateBarber } = useApp();
 
   const [formData, setFormData] = useState({
@@ -85,18 +87,18 @@ export default function MyProfile() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.name.trim()) newErrors.name = t('validation.nameRequired');
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('validation.invalidEmail');
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
+      newErrors.phone = t('validation.phoneRequired');
     } else {
       const country = GCC_COUNTRIES.find(c => c.code === formData.countryCode);
       if (country && !country.pattern.test(formData.phone.replace(/\s/g, ''))) {
-        newErrors.phone = `Invalid ${country.label.split(' ')[0]} phone number`;
+        newErrors.phone = t('validation.invalidPhone');
       }
     }
     setErrors(newErrors);
@@ -126,9 +128,9 @@ export default function MyProfile() {
     <div className="profile-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">My Profile</h2>
+          <h2 className="page-title">{t('nav.myProfile')}</h2>
           <p className="page-description">
-            Update your personal information
+            {t('profile.updatePersonalInfo')}
           </p>
         </div>
         <button
@@ -137,11 +139,11 @@ export default function MyProfile() {
           disabled={!hasChanges || isSubmitting}
         >
           {isSubmitting ? (
-            'Saving...'
+            t('common.saving')
           ) : (
             <>
               <Save size={18} strokeWidth={2} />
-              Save Changes
+              {t('common.saveChanges')}
             </>
           )}
         </button>
@@ -150,7 +152,7 @@ export default function MyProfile() {
       {saveStatus === 'saved' && (
         <div className="save-notification animate-fade-in">
           <Check size={16} strokeWidth={2} />
-          <span>Profile saved successfully</span>
+          <span>{t('profile.profileSaved')}</span>
         </div>
       )}
 
@@ -178,7 +180,7 @@ export default function MyProfile() {
             </div>
             <div className="profile-info-summary">
               <h3>{currentBarber.name}</h3>
-              <span className="profile-role">Barber</span>
+              <span className="profile-role">{t('profile.barber')}</span>
               <div className="profile-branch">
                 <MapPin size={14} strokeWidth={1.5} />
                 <span>{barberBranch?.name}</span>
@@ -191,26 +193,26 @@ export default function MyProfile() {
         <div className="profile-section animate-fade-in-up stagger-2">
           <div className="profile-section-header">
             <User size={20} strokeWidth={1.5} />
-            <h3>Basic Information</h3>
+            <h3>{t('profile.basicInformation')}</h3>
           </div>
 
           <div className="profile-section-content">
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Full Name</label>
+                <label className="form-label">{t('common.fullName')}</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   className={`form-input ${errors.name ? 'error' : ''}`}
-                  placeholder="e.g., John Smith"
+                  placeholder={t('barbers.namePlaceholder')}
                 />
                 {errors.name && <span className="form-error">{errors.name}</span>}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Arabic Name</label>
+                <label className="form-label">{t('barbers.nameAr')}</label>
                 <input
                   type="text"
                   name="nameAr"
@@ -229,12 +231,12 @@ export default function MyProfile() {
         <div className="profile-section animate-fade-in-up stagger-3">
           <div className="profile-section-header">
             <Mail size={20} strokeWidth={1.5} />
-            <h3>Contact Information</h3>
+            <h3>{t('profile.contactInformation')}</h3>
           </div>
 
           <div className="profile-section-content">
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label">{t('common.email')}</label>
               <input
                 type="email"
                 name="email"
@@ -247,7 +249,7 @@ export default function MyProfile() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phone</label>
+              <label className="form-label">{t('common.phone')}</label>
               <div className="phone-input-group">
                 <select
                   name="countryCode"
@@ -279,12 +281,12 @@ export default function MyProfile() {
         <div className="profile-section animate-fade-in-up stagger-4">
           <div className="profile-section-header">
             <Scissors size={20} strokeWidth={1.5} />
-            <h3>My Services</h3>
+            <h3>{t('profile.myServices')}</h3>
           </div>
 
           <div className="profile-section-content">
             <p className="profile-section-desc">
-              Select the services you can provide. Customers will see these when booking with you.
+              {t('profile.selectServicesDescription')}
             </p>
 
             {barberServices.length > 0 ? (
@@ -302,8 +304,8 @@ export default function MyProfile() {
                     <div className="service-card-content">
                       <span className="service-name">{service.name}</span>
                       <div className="service-meta">
-                        <span>{service.duration} min</span>
-                        <span className="service-price">{service.price} KWD</span>
+                        <span>{service.duration} {t('common.min')}</span>
+                        <span className="service-price">{service.price} {t('common.currency')}</span>
                       </div>
                     </div>
                     <div className="service-check">
@@ -313,7 +315,7 @@ export default function MyProfile() {
                 ))}
               </div>
             ) : (
-              <p className="no-services">No services available at your branch.</p>
+              <p className="no-services">{t('profile.noServicesAvailable')}</p>
             )}
           </div>
         </div>

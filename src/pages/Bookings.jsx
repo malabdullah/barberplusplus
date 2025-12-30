@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   Plus,
@@ -22,6 +23,7 @@ import {
   isToday,
   parseISO,
 } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../context/AppContext';
 import Modal from '../components/UI/Modal';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
@@ -30,12 +32,13 @@ import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses'
 import './Bookings.css';
 
 function BookingCard({ booking, onEdit, onCancel, onComplete }) {
+  const { t } = useTranslation();
   const statusConfig = {
-    confirmed: { color: 'success', label: 'Confirmed' },
-    pending: { color: 'warning', label: 'Pending' },
-    completed: { color: 'muted', label: 'Completed' },
-    cancelled: { color: 'error', label: 'Cancelled' },
-    'no-show': { color: 'error', label: 'No Show' },
+    confirmed: { color: 'success', labelKey: 'bookings.status.confirmed' },
+    pending: { color: 'warning', labelKey: 'bookings.status.pending' },
+    completed: { color: 'muted', labelKey: 'bookings.status.completed' },
+    cancelled: { color: 'error', labelKey: 'bookings.status.cancelled' },
+    'no-show': { color: 'error', labelKey: 'bookings.status.noShow' },
   };
 
   const status = statusConfig[booking.status] || statusConfig.pending;
@@ -48,17 +51,20 @@ function BookingCard({ booking, onEdit, onCancel, onComplete }) {
         <div className="booking-card-service">{booking.serviceName}</div>
         <div className="booking-card-barber">{booking.barberName}</div>
       </div>
-      <div className={`booking-card-status ${status.color}`}>{status.label}</div>
+      <div className={`booking-card-status ${status.color}`}>{t(status.labelKey)}</div>
     </div>
   );
 }
 
 function BookingDetails({ booking, onClose, onStatusChange }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
+
   return (
     <div className="booking-details">
       <div className="booking-details-header">
         <div className={`booking-status-badge ${booking.status}`}>
-          {booking.status.replace('-', ' ')}
+          {t(`bookings.status.${booking.status === 'no-show' ? 'noShow' : booking.status}`)}
         </div>
         <button className="booking-close-btn" onClick={onClose}>
           <X size={20} />
@@ -69,14 +75,14 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
         <div className="booking-detail-row">
           <User size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Customer</span>
+            <span className="detail-label">{t('bookings.customer')}</span>
             <span className="detail-value">{booking.customerName}</span>
           </div>
         </div>
         <div className="booking-detail-row">
           <Phone size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Phone</span>
+            <span className="detail-label">{t('common.phone')}</span>
             <span className="detail-value">{booking.customerCountryCode} {booking.customerPhone}</span>
           </div>
         </div>
@@ -86,40 +92,40 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
         <div className="booking-detail-row">
           <Scissors size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Service</span>
+            <span className="detail-label">{t('bookings.service')}</span>
             <span className="detail-value">{booking.serviceName}</span>
           </div>
         </div>
         <div className="booking-detail-row">
           <User size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Barber</span>
+            <span className="detail-label">{t('common.barber')}</span>
             <span className="detail-value">{booking.barberName}</span>
           </div>
         </div>
         <div className="booking-detail-row">
           <Calendar size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Date</span>
+            <span className="detail-label">{t('bookings.date')}</span>
             <span className="detail-value">
-              {format(new Date(booking.date), 'EEEE, MMMM d, yyyy')}
+              {format(new Date(booking.date), 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
             </span>
           </div>
         </div>
         <div className="booking-detail-row">
           <Clock size={18} strokeWidth={1.5} />
           <div>
-            <span className="detail-label">Time</span>
+            <span className="detail-label">{t('bookings.time')}</span>
             <span className="detail-value">
-              {booking.time} ({booking.duration} min)
+              {booking.time} ({booking.duration} {t('common.min')})
             </span>
           </div>
         </div>
       </div>
 
       <div className="booking-details-price">
-        <span>Total</span>
-        <span className="price">{booking.price} KWD</span>
+        <span>{t('bookings.total')}</span>
+        <span className="price">{booking.price} {t('common.currency')}</span>
       </div>
 
       {booking.notes && (
@@ -130,7 +136,7 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
       )}
 
       <div className="booking-status-change">
-        <span className="status-change-label">Change Status</span>
+        <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select
           className="status-change-select"
           value={booking.status}
@@ -138,7 +144,7 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
         >
           {BOOKING_STATUSES.map((status) => (
             <option key={status} value={status}>
-              {getStatusConfig(status).label}
+              {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
         </select>
@@ -148,6 +154,8 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
 }
 
 export default function Bookings() {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const {
     branchBookings,
     branchBarbers,
@@ -259,14 +267,14 @@ export default function Bookings() {
     <div className="bookings-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">Bookings</h2>
+          <h2 className="page-title">{t('nav.bookings')}</h2>
           <p className="page-description">
-            Manage appointments at {selectedBranch?.name}
+            {t('bookings.manageAppointments', { branch: selectedBranch?.name })}
           </p>
         </div>
         <button className="btn btn-primary" onClick={handleAdd}>
           <Plus size={18} strokeWidth={2} />
-          New Booking
+          {t('bookings.newBooking')}
         </button>
       </div>
 
@@ -274,7 +282,7 @@ export default function Bookings() {
       <div className="calendar-nav animate-fade-in-up stagger-1">
         <div className="calendar-nav-left">
           <button className="btn btn-secondary" onClick={goToToday}>
-            Today
+            {t('bookings.today')}
           </button>
           <div className="calendar-nav-arrows">
             <button className="nav-arrow" onClick={() => viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}>
@@ -286,8 +294,8 @@ export default function Bookings() {
           </div>
           <h3 className="calendar-period">
             {viewMode === 'week'
-              ? `${format(weekStart, 'MMMM d')} - ${format(addDays(weekStart, 6), 'MMMM d, yyyy')}`
-              : format(selectedDay, 'EEEE, MMMM d, yyyy')
+              ? `${format(weekStart, 'MMMM d', { locale: dateLocale })} - ${format(addDays(weekStart, 6), 'MMMM d, yyyy', { locale: dateLocale })}`
+              : format(selectedDay, 'EEEE, MMMM d, yyyy', { locale: dateLocale })
             }
           </h3>
         </div>
@@ -298,13 +306,13 @@ export default function Bookings() {
               className={`view-toggle-btn ${viewMode === 'week' ? 'active' : ''}`}
               onClick={() => setViewMode('week')}
             >
-              Week
+              {t('bookings.week')}
             </button>
             <button
               className={`view-toggle-btn ${viewMode === 'day' ? 'active' : ''}`}
               onClick={() => setViewMode('day')}
             >
-              Day
+              {t('bookings.day')}
             </button>
           </div>
         </div>
@@ -320,7 +328,7 @@ export default function Bookings() {
                 key={day.toISOString()}
                 className={`calendar-header-cell ${isToday(day) ? 'today' : ''}`}
               >
-                <span className="calendar-day-name">{format(day, 'EEE')}</span>
+                <span className="calendar-day-name">{format(day, 'EEE', { locale: dateLocale })}</span>
                 <span className="calendar-day-number">{format(day, 'd')}</span>
               </div>
             ))}
@@ -352,7 +360,7 @@ export default function Bookings() {
                     </div>
                   ) : (
                     <div className="calendar-day-empty">
-                      <span>No bookings</span>
+                      <span>{t('bookings.noBookings')}</span>
                     </div>
                   )}
                 </div>
@@ -363,8 +371,8 @@ export default function Bookings() {
       ) : (
         <div className="calendar-day-view animate-fade-in-up stagger-2">
           <div className="day-view-header">
-            <span className="day-view-date">{format(selectedDay, 'EEEE')}</span>
-            <span className="day-view-full-date">{format(selectedDay, 'MMMM d, yyyy')}</span>
+            <span className="day-view-date">{format(selectedDay, 'EEEE', { locale: dateLocale })}</span>
+            <span className="day-view-full-date">{format(selectedDay, 'MMMM d, yyyy', { locale: dateLocale })}</span>
           </div>
           <div className="day-view-bookings">
             {(() => {
@@ -384,7 +392,7 @@ export default function Bookings() {
               ) : (
                 <div className="calendar-day-empty">
                   <Calendar size={40} strokeWidth={1} />
-                  <span>No bookings for this day</span>
+                  <span>{t('bookings.noBookingsDay')}</span>
                 </div>
               );
             })()}
@@ -396,19 +404,19 @@ export default function Bookings() {
       <div className="calendar-legend animate-fade-in-up stagger-3">
         <div className="legend-item">
           <span className="legend-dot success"></span>
-          <span>Confirmed</span>
+          <span>{t('bookings.status.confirmed')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot warning"></span>
-          <span>Pending</span>
+          <span>{t('bookings.status.pending')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot muted"></span>
-          <span>Completed</span>
+          <span>{t('bookings.status.completed')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-dot error"></span>
-          <span>Cancelled</span>
+          <span>{t('bookings.status.cancelled')}</span>
         </div>
       </div>
 
@@ -416,7 +424,7 @@ export default function Bookings() {
       <Modal
         isOpen={isFormOpen}
         onClose={() => { setIsFormOpen(false); setEditingBooking(null); }}
-        title={editingBooking ? 'Edit Booking' : 'New Booking'}
+        title={editingBooking ? t('bookings.editBooking') : t('bookings.newBooking')}
         size="large"
       >
         <BookingForm
@@ -450,9 +458,9 @@ export default function Bookings() {
         isOpen={!!cancellingBooking}
         onClose={() => setCancellingBooking(null)}
         onConfirm={handleCancelConfirm}
-        title="Cancel Booking"
-        message={`Are you sure you want to cancel the booking for ${cancellingBooking?.customerName}? The customer will be notified.`}
-        confirmText="Cancel Booking"
+        title={t('bookings.cancelBooking')}
+        message={t('bookings.cancelConfirmMessage', { name: cancellingBooking?.customerName })}
+        confirmText={t('bookings.cancelBooking')}
         variant="danger"
       />
     </div>

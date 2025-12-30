@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Building2,
@@ -15,16 +16,17 @@ import { useApp } from '../../context/AppContext';
 import './Sidebar.css';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/branches', icon: Building2, label: 'Branches' },
-  { path: '/services', icon: Scissors, label: 'Services' },
-  { path: '/barbers', icon: Users, label: 'Barbers' },
-  { path: '/bookings', icon: Calendar, label: 'Bookings' },
-  { path: '/logs', icon: FileText, label: 'Activity Logs' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
+  { path: '/branches', icon: Building2, labelKey: 'nav.branches' },
+  { path: '/services', icon: Scissors, labelKey: 'nav.services' },
+  { path: '/barbers', icon: Users, labelKey: 'nav.barbers' },
+  { path: '/bookings', icon: Calendar, labelKey: 'nav.bookings' },
+  { path: '/logs', icon: FileText, labelKey: 'nav.logs' },
+  { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
+  const { t } = useTranslation();
   const { logout, manager } = useApp();
   const location = useLocation();
 
@@ -85,7 +87,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <div className="sidebar-nav-icon">
                 <Icon size={20} strokeWidth={1.5} />
               </div>
-              <span className="sidebar-nav-label">{item.label}</span>
+              <span className="sidebar-nav-label">{t(item.labelKey)}</span>
               {isActive && <div className="sidebar-nav-indicator" />}
             </NavLink>
           );
@@ -101,18 +103,18 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* User info */}
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">
-            {(manager?.user_metadata?.name || 'User').split(' ').map(n => n[0]).join('')}
+            {(manager?.user_metadata?.name || t('common.name')).split(' ').map(n => n[0]).join('')}
           </div>
           <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{manager?.user_metadata?.name || 'User'}</span>
-            <span className="sidebar-user-role">Manager</span>
+            <span className="sidebar-user-name">{manager?.user_metadata?.name || t('common.name')}</span>
+            <span className="sidebar-user-role">{t('barbers.title')}</span>
           </div>
         </div>
 
         {/* Logout */}
         <button className="sidebar-logout" onClick={logout}>
           <LogOut size={18} strokeWidth={1.5} />
-          <span>Sign Out</span>
+          <span>{t('auth.signOut')}</span>
         </button>
       </div>
     </aside>

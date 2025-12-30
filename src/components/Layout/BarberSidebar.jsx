@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Calendar,
@@ -15,15 +16,16 @@ import { useApp } from '../../context/AppContext';
 import './Sidebar.css';
 
 const navItems = [
-  { path: '/barber', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { path: '/barber/bookings', icon: Calendar, label: 'My Bookings' },
-  { path: '/barber/availability', icon: Clock, label: 'My Availability' },
-  { path: '/barber/profile', icon: User, label: 'My Profile' },
-  { path: '/barber/logs', icon: FileText, label: 'My Activity' },
-  { path: '/barber/settings', icon: Settings, label: 'Settings' },
+  { path: '/barber', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
+  { path: '/barber/bookings', icon: Calendar, labelKey: 'nav.myBookings' },
+  { path: '/barber/availability', icon: Clock, labelKey: 'nav.availability' },
+  { path: '/barber/profile', icon: User, labelKey: 'nav.profile' },
+  { path: '/barber/logs', icon: FileText, labelKey: 'nav.myActivity' },
+  { path: '/barber/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function BarberSidebar({ isOpen, onClose }) {
+  const { t } = useTranslation();
   const { logout, currentBarber } = useApp();
   const location = useLocation();
 
@@ -85,7 +87,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
               <div className="sidebar-nav-icon">
                 <Icon size={20} strokeWidth={1.5} />
               </div>
-              <span className="sidebar-nav-label">{item.label}</span>
+              <span className="sidebar-nav-label">{t(item.labelKey)}</span>
               {isActive && <div className="sidebar-nav-indicator" />}
             </NavLink>
           );
@@ -105,14 +107,14 @@ export default function BarberSidebar({ isOpen, onClose }) {
           </div>
           <div className="sidebar-user-info">
             <span className="sidebar-user-name">{currentBarber.name}</span>
-            <span className="sidebar-user-role">Barber</span>
+            <span className="sidebar-user-role">{t('common.barber')}</span>
           </div>
         </div>
 
         {/* Logout */}
         <button className="sidebar-logout" onClick={logout}>
           <LogOut size={18} strokeWidth={1.5} />
-          <span>Sign Out</span>
+          <span>{t('auth.signOut')}</span>
         </button>
       </div>
     </aside>

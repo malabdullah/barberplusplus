@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Clock,
   Calendar,
@@ -46,7 +47,7 @@ const convertAvailabilityFormat = (availability) => {
   return converted;
 };
 
-function DayScheduleRow({ day, schedule, onChange, onCopyToAll }) {
+function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
   const handleToggle = () => {
     onChange({
       ...schedule,
@@ -87,7 +88,7 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll }) {
                 </option>
               ))}
             </select>
-            <span className="schedule-time-separator">to</span>
+            <span className="schedule-time-separator">{t('availability.to')}</span>
             <select
               className="schedule-time-select"
               value={schedule.end}
@@ -102,13 +103,13 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll }) {
             <button
               className="hours-copy-btn"
               onClick={onCopyToAll}
-              title="Copy to all days"
+              title={t('availability.copyToAllDays')}
             >
               <Copy size={14} strokeWidth={2} />
             </button>
           </>
         ) : (
-          <span className="schedule-day-off">Day off</span>
+          <span className="schedule-day-off">{t('availability.dayOff')}</span>
         )}
       </div>
 
@@ -146,7 +147,7 @@ function calculateTotalHours(schedule) {
 }
 
 // Time-Off Section Component
-function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) {
+function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const today = new Date().toISOString().split('T')[0];
@@ -175,7 +176,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
     // Validation for recurring type
     if (formData.type === 'recurring') {
       if (schedule && schedule[formData.day] && !schedule[formData.day].enabled) {
-        setError(`${getDayLabel(formData.day)} is already marked as a day off in your schedule`);
+        setError(t('availability.errorDayAlreadyOff', { day: getDayLabel(formData.day) }));
         return;
       }
     }
@@ -183,11 +184,11 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
     // Validation for one-time type
     if (formData.type === 'one-time') {
       if (!formData.date) {
-        setError('Please select a date');
+        setError(t('availability.errorSelectDate'));
         return;
       }
       if (formData.date < today) {
-        setError('Cannot add time-off for past dates');
+        setError(t('availability.errorPastDate'));
         return;
       }
       // Check if the date falls on a day that's already a day off
@@ -196,14 +197,14 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
       const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dayKey = dayKeys[dayIndex];
       if (schedule && schedule[dayKey] && !schedule[dayKey].enabled) {
-        setError(`${getDayLabel(dayKey)} is already a day off in your schedule`);
+        setError(t('availability.errorDayAlreadyOff', { day: getDayLabel(dayKey) }));
         return;
       }
     }
 
     // Check if end time is after start time
     if (formData.start >= formData.end) {
-      setError('End time must be after start time');
+      setError(t('availability.errorEndTimeAfterStart'));
       return;
     }
 
@@ -244,11 +245,11 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
         <div className="section-card-header">
           <div className="section-card-title">
             <Coffee size={20} strokeWidth={1.5} />
-            <h3>Time-Off</h3>
+            <h3>{t('availability.timeOff')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
-            Add Time-Off
+            {t('availability.addTimeOff')}
           </button>
         </div>
 
@@ -256,21 +257,21 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
           <div className="timeoff-form">
             {/* Type Toggle */}
             <div className="form-group">
-              <label className="form-label">Type</label>
+              <label className="form-label">{t('availability.type')}</label>
               <div className="toggle-buttons" style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
                   className={`btn btn-sm ${formData.type === 'recurring' ? 'btn-primary' : 'btn-ghost'}`}
                   onClick={() => setFormData({ ...formData, type: 'recurring' })}
                 >
-                  Recurring Weekly
+                  {t('availability.recurringWeekly')}
                 </button>
                 <button
                   type="button"
                   className={`btn btn-sm ${formData.type === 'one-time' ? 'btn-primary' : 'btn-ghost'}`}
                   onClick={() => setFormData({ ...formData, type: 'one-time' })}
                 >
-                  One-Time Only
+                  {t('availability.oneTimeOnly')}
                 </button>
               </div>
             </div>
@@ -279,7 +280,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
               {/* Day selector for recurring OR Date picker for one-time */}
               {formData.type === 'recurring' ? (
                 <div className="form-group">
-                  <label className="form-label">Day</label>
+                  <label className="form-label">{t('availability.day')}</label>
                   <select
                     className="form-select"
                     value={formData.day}
@@ -294,7 +295,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
                 </div>
               ) : (
                 <div className="form-group">
-                  <label className="form-label">Date</label>
+                  <label className="form-label">{t('availability.date')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -305,7 +306,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
                 </div>
               )}
               <div className="form-group">
-                <label className="form-label">From</label>
+                <label className="form-label">{t('availability.from')}</label>
                 <select
                   className="form-select"
                   value={formData.start}
@@ -319,7 +320,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">To</label>
+                <label className="form-label">{t('availability.toTime')}</label>
                 <select
                   className="form-select"
                   value={formData.end}
@@ -334,11 +335,11 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Reason (optional)</label>
+              <label className="form-label">{t('availability.reasonOptional')}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder={formData.type === 'recurring' ? 'e.g., Lunch break, Prayer time' : 'e.g., Doctor appointment, Meeting'}
+                placeholder={formData.type === 'recurring' ? t('availability.reasonRecurringPlaceholder') : t('availability.reasonOneTimePlaceholder')}
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
@@ -350,10 +351,10 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
             )}
             <div className="form-actions">
               <button className="btn btn-ghost" onClick={() => { setShowForm(false); setError(''); }}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
-                Add Time-Off
+                {t('availability.addTimeOff')}
               </button>
             </div>
           </div>
@@ -363,8 +364,8 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
           {timeOffs.length === 0 ? (
             <div className="empty-state">
               <Coffee size={32} strokeWidth={1} />
-              <p>No time-off scheduled</p>
-              <span>Add recurring breaks or one-time appointments</span>
+              <p>{t('availability.noTimeOffScheduled')}</p>
+              <span>{t('availability.addRecurringOrOneTime')}</span>
             </div>
           ) : (
             <>
@@ -372,12 +373,12 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
               {recurringItems.length > 0 && (
                 <>
                   <div className="timeoff-section-label" style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', marginTop: '8px' }}>
-                    Recurring Weekly
+                    {t('availability.recurringWeekly')}
                   </div>
                   {recurringItems.map((item) => (
                     <div key={item.id} className="timeoff-card">
                       <div className="timeoff-card-day">
-                        <span className="timeoff-day-badge">Every {getDayLabel(item.day)}</span>
+                        <span className="timeoff-day-badge">{t('availability.every')} {getDayLabel(item.day)}</span>
                       </div>
                       <div className="timeoff-card-time">
                         <Clock size={14} strokeWidth={2} />
@@ -398,7 +399,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
               {oneTimeItems.length > 0 && (
                 <>
                   <div className="timeoff-section-label" style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', marginTop: recurringItems.length > 0 ? '16px' : '8px' }}>
-                    One-Time
+                    {t('availability.oneTime')}
                   </div>
                   {oneTimeItems.map((item) => (
                     <div key={item.id} className="timeoff-card">
@@ -428,7 +429,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule }) 
 }
 
 // Vacations Section Component
-function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
+function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const today = new Date().toISOString().split('T')[0];
@@ -443,7 +444,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
 
     // Check if end date is after start date
     if (formData.startDate > formData.endDate) {
-      setError('End date must be on or after start date');
+      setError(t('availability.errorEndDateAfterStart'));
       return;
     }
 
@@ -503,11 +504,11 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
         <div className="section-card-header">
           <div className="section-card-title">
             <Umbrella size={20} strokeWidth={1.5} />
-            <h3>Vacation Periods</h3>
+            <h3>{t('availability.vacationPeriods')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
-            Add Vacation
+            {t('availability.addVacation')}
           </button>
         </div>
 
@@ -515,7 +516,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
           <div className="vacation-form">
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">From Date</label>
+                <label className="form-label">{t('availability.fromDate')}</label>
                 <input
                   type="date"
                   className="form-input"
@@ -525,7 +526,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">To Date</label>
+                <label className="form-label">{t('availability.toDate')}</label>
                 <input
                   type="date"
                   className="form-input"
@@ -536,11 +537,11 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Reason (optional)</label>
+              <label className="form-label">{t('availability.reasonOptional')}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g., Family vacation, Medical leave"
+                placeholder={t('availability.vacationReasonPlaceholder')}
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
@@ -552,10 +553,10 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
             )}
             <div className="form-actions">
               <button className="btn btn-ghost" onClick={() => { setShowForm(false); setError(''); }}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
-                Add Vacation
+                {t('availability.addVacation')}
               </button>
             </div>
           </div>
@@ -565,8 +566,8 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
           {sortedVacations.length === 0 ? (
             <div className="empty-state">
               <Umbrella size={32} strokeWidth={1} />
-              <p>No vacations scheduled</p>
-              <span>Plan your time off by adding vacation periods</span>
+              <p>{t('availability.noVacationsScheduled')}</p>
+              <span>{t('availability.planTimeOff')}</span>
             </div>
           ) : (
             sortedVacations.map((item) => {
@@ -579,11 +580,11 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
                     <span>{formatDateRange(item.startDate, item.endDate)}</span>
                   </div>
                   <div className="vacation-card-duration">
-                    {daysCount} day{daysCount > 1 ? 's' : ''}
+                    {daysCount} {daysCount === 1 ? t('availability.day') : t('availability.days')}
                   </div>
                   {item.reason && <div className="vacation-card-reason">{item.reason}</div>}
                   <div className={`vacation-status-badge ${status}`}>
-                    {status === 'upcoming' ? 'Upcoming' : 'Past'}
+                    {status === 'upcoming' ? t('availability.upcoming') : t('availability.past')}
                   </div>
                   <button className="vacation-delete-btn" onClick={() => handleDelete(item.id)}>
                     <Trash2 size={16} strokeWidth={2} />
@@ -599,6 +600,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges }) {
 }
 
 export default function MyAvailability() {
+  const { t } = useTranslation();
   const { currentBarber, barberBranch, updateBarber } = useApp();
   const [activeTab, setActiveTab] = useState('schedule');
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
@@ -707,16 +709,16 @@ export default function MyAvailability() {
     <div className="availability-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">My Availability</h2>
+          <h2 className="page-title">{t('availability.myAvailability')}</h2>
           <p className="page-description">
-            Manage your schedule at {barberBranch?.name}
+            {t('availability.manageScheduleAt')} {barberBranch?.name}
           </p>
         </div>
         <div className="page-actions">
           {hasChanges && (
             <button className="btn btn-ghost" onClick={handleReset}>
               <RotateCcw size={18} strokeWidth={2} />
-              Reset
+              {t('common.reset')}
             </button>
           )}
           <button
@@ -725,11 +727,11 @@ export default function MyAvailability() {
             disabled={!hasChanges || isSubmitting}
           >
             {isSubmitting ? (
-              'Saving...'
+              t('common.saving')
             ) : (
               <>
                 <Save size={18} strokeWidth={2} />
-                Save Changes
+                {t('common.saveChanges')}
               </>
             )}
           </button>
@@ -739,7 +741,7 @@ export default function MyAvailability() {
       {saveStatus === 'saved' && (
         <div className="save-notification animate-fade-in">
           <Check size={16} strokeWidth={2} />
-          <span>Changes saved successfully</span>
+          <span>{t('common.changesSaved')}</span>
         </div>
       )}
 
@@ -751,7 +753,7 @@ export default function MyAvailability() {
           </div>
           <div className="summary-content">
             <div className="summary-value">{workingDays}</div>
-            <div className="summary-label">Working Days</div>
+            <div className="summary-label">{t('availability.workingDays')}</div>
           </div>
         </div>
         <div className="summary-card">
@@ -760,7 +762,7 @@ export default function MyAvailability() {
           </div>
           <div className="summary-content">
             <div className="summary-value">{totalHours}</div>
-            <div className="summary-label">Hours / Week</div>
+            <div className="summary-label">{t('availability.hoursPerWeek')}</div>
           </div>
         </div>
         <div className="summary-card">
@@ -769,7 +771,7 @@ export default function MyAvailability() {
           </div>
           <div className="summary-content">
             <div className="summary-value">{timeOffs.length}</div>
-            <div className="summary-label">Time-Offs</div>
+            <div className="summary-label">{t('availability.timeOffs')}</div>
           </div>
         </div>
         <div className="summary-card">
@@ -778,7 +780,7 @@ export default function MyAvailability() {
           </div>
           <div className="summary-content">
             <div className="summary-value">{upcomingVacations}</div>
-            <div className="summary-label">Upcoming Vacations</div>
+            <div className="summary-label">{t('availability.upcomingVacations')}</div>
           </div>
         </div>
       </div>
@@ -790,14 +792,14 @@ export default function MyAvailability() {
           onClick={() => setActiveTab('schedule')}
         >
           <Calendar size={18} strokeWidth={2} />
-          Weekly Schedule
+          {t('availability.weeklySchedule')}
         </button>
         <button
           className={`tab-btn ${activeTab === 'timeoffs' ? 'active' : ''}`}
           onClick={() => setActiveTab('timeoffs')}
         >
           <Coffee size={18} strokeWidth={2} />
-          Time-Off
+          {t('availability.timeOff')}
           {timeOffs.length > 0 && <span className="tab-badge">{timeOffs.length}</span>}
         </button>
         <button
@@ -805,7 +807,7 @@ export default function MyAvailability() {
           onClick={() => setActiveTab('vacations')}
         >
           <Umbrella size={18} strokeWidth={2} />
-          Vacations
+          {t('availability.vacations')}
           {upcomingVacations > 0 && <span className="tab-badge">{upcomingVacations}</span>}
         </button>
       </div>
@@ -816,25 +818,25 @@ export default function MyAvailability() {
           <div className="schedule-card-header">
             <div className="schedule-card-title">
               <Clock size={20} strokeWidth={1.5} />
-              <h3>Weekly Schedule</h3>
+              <h3>{t('availability.weeklySchedule')}</h3>
             </div>
             <div className="schedule-legend">
               <span className="schedule-legend-item">
                 <span className="legend-dot active"></span>
-                Working
+                {t('availability.working')}
               </span>
               <span className="schedule-legend-item">
                 <span className="legend-dot off"></span>
-                Day Off
+                {t('availability.dayOff')}
               </span>
             </div>
           </div>
 
           <div className="schedule-grid">
             <div className="schedule-grid-header">
-              <div className="schedule-col day">Day</div>
-              <div className="schedule-col times">Working Hours</div>
-              <div className="schedule-col hours">Total</div>
+              <div className="schedule-col day">{t('availability.day')}</div>
+              <div className="schedule-col times">{t('availability.workingHours')}</div>
+              <div className="schedule-col hours">{t('availability.total')}</div>
             </div>
 
             {DAYS_OF_WEEK.map((day) => (
@@ -844,13 +846,14 @@ export default function MyAvailability() {
                 schedule={schedule[day.key]}
                 onChange={(newSchedule) => handleDayChange(day.key, newSchedule)}
                 onCopyToAll={() => copyHoursToAll(day.key)}
+                t={t}
               />
             ))}
           </div>
 
           <div className="schedule-footer">
             <div className="schedule-total">
-              <span>Total Weekly Hours:</span>
+              <span>{t('availability.totalWeeklyHours')}:</span>
               <strong>{totalHours}h</strong>
             </div>
           </div>
@@ -864,6 +867,7 @@ export default function MyAvailability() {
           onDelete={handleDeleteTimeOff}
           setHasChanges={setHasChanges}
           schedule={schedule}
+          t={t}
         />
       )}
 
@@ -873,32 +877,33 @@ export default function MyAvailability() {
           onAdd={handleAddVacation}
           onDelete={handleDeleteVacation}
           setHasChanges={setHasChanges}
+          t={t}
         />
       )}
 
       {/* Tips */}
       <div className="availability-tips animate-fade-in-up stagger-3">
-        <h4>Tips</h4>
+        <h4>{t('availability.tips')}</h4>
         <ul>
           {activeTab === 'schedule' && (
             <>
-              <li>Click the toggle to enable/disable working days</li>
-              <li>Customers can only book during your available hours</li>
+              <li>{t('availability.tipToggle')}</li>
+              <li>{t('availability.tipBookingHours')}</li>
             </>
           )}
           {activeTab === 'timeoffs' && (
             <>
-              <li>Time-offs are recurring blocks that repeat every week</li>
-              <li>Use them for lunch breaks or regular appointments</li>
+              <li>{t('availability.tipTimeOffsRecurring')}</li>
+              <li>{t('availability.tipTimeOffsUse')}</li>
             </>
           )}
           {activeTab === 'vacations' && (
             <>
-              <li>Vacations block entire date ranges</li>
-              <li>Customers cannot book during your vacation periods</li>
+              <li>{t('availability.tipVacationsBlock')}</li>
+              <li>{t('availability.tipVacationsNoBook')}</li>
             </>
           )}
-          <li>Changes are applied immediately after saving</li>
+          <li>{t('availability.tipChangesApplied')}</li>
         </ul>
       </div>
     </div>

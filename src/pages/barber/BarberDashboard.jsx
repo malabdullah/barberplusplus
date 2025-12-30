@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   DollarSign,
@@ -18,7 +19,7 @@ import { useApp } from '../../context/AppContext';
 import { format } from 'date-fns';
 import './BarberDashboard.css';
 
-function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
+function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay, t }) {
   return (
     <div className={`metric-card animate-fade-in-up stagger-${delay}`}>
       <div className="metric-card-header">
@@ -39,53 +40,53 @@ function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay })
   );
 }
 
-function BookingStatusBadge({ status }) {
+function BookingStatusBadge({ status, t }) {
   const config = {
-    confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
-    pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
-    completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
-    cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
-    'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
+    confirmed: { icon: CheckCircle, labelKey: 'bookings.statusConfirmed', class: 'status-confirmed' },
+    pending: { icon: AlertCircle, labelKey: 'bookings.statusPending', class: 'status-pending' },
+    completed: { icon: CheckCircle, labelKey: 'bookings.statusCompleted', class: 'status-completed' },
+    cancelled: { icon: XCircle, labelKey: 'bookings.statusCancelled', class: 'status-cancelled' },
+    'no-show': { icon: XCircle, labelKey: 'bookings.statusNoShow', class: 'status-noshow' },
   };
 
-  const { icon: Icon, label, class: className } = config[status] || config.pending;
+  const { icon: Icon, labelKey, class: className } = config[status] || config.pending;
 
   return (
     <span className={`booking-status ${className}`}>
       <Icon size={12} strokeWidth={2} />
-      {label}
+      {t(labelKey)}
     </span>
   );
 }
 
-function TodayBookingItem({ booking, onComplete, onCancel }) {
+function TodayBookingItem({ booking, onComplete, onCancel, t }) {
   const canTakeAction = ['confirmed', 'pending'].includes(booking.status);
 
   return (
     <div className="today-booking-item">
       <div className="today-booking-time">
         <span className="today-booking-hour">{booking.time}</span>
-        <span className="today-booking-duration">{booking.duration} min</span>
+        <span className="today-booking-duration">{booking.duration} {t('common.min')}</span>
       </div>
       <div className="today-booking-details">
         <div className="today-booking-customer">{booking.customerName}</div>
         <div className="today-booking-service">{booking.serviceName}</div>
       </div>
       <div className="today-booking-actions">
-        <BookingStatusBadge status={booking.status} />
+        <BookingStatusBadge status={booking.status} t={t} />
         {canTakeAction && (
           <div className="today-booking-btns">
             <button
               className="booking-action-btn complete"
               onClick={() => onComplete(booking.id)}
-              title="Mark as completed"
+              title={t('bookings.markCompleted')}
             >
               <Check size={14} strokeWidth={2} />
             </button>
             <button
               className="booking-action-btn cancel"
               onClick={() => onCancel(booking.id)}
-              title="Cancel booking"
+              title={t('bookings.cancelBooking')}
             >
               <X size={14} strokeWidth={2} />
             </button>
@@ -97,6 +98,7 @@ function TodayBookingItem({ booking, onComplete, onCancel }) {
 }
 
 export default function BarberDashboard() {
+  const { t } = useTranslation();
   const {
     currentBarber,
     barberBookings,
@@ -112,7 +114,7 @@ export default function BarberDashboard() {
       <div className="dashboard">
         <div className="dashboard-empty-state">
           <Calendar size={40} strokeWidth={1} />
-          <p>Loading dashboard...</p>
+          <p>{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -156,10 +158,10 @@ export default function BarberDashboard() {
       <div className="dashboard-welcome animate-fade-in">
         <div className="dashboard-welcome-content">
           <h2 className="dashboard-welcome-title">
-            Good {getTimeOfDay()}, {currentBarber.name.split(' ')[0]}
+            {t(`dashboard.good${getTimeOfDay()}`)}, {currentBarber.name.split(' ')[0]}
           </h2>
           <p className="dashboard-welcome-text">
-            Here's your schedule at <span className="text-accent">{barberBranch?.name}</span> today.
+            {t('dashboard.hereIsYourSchedule')} <span className="text-accent">{barberBranch?.name}</span>
           </p>
         </div>
         <div className="dashboard-welcome-date">
@@ -172,36 +174,40 @@ export default function BarberDashboard() {
       <div className="dashboard-metrics">
         <MetricCard
           icon={Calendar}
-          label="Today's Appointments"
+          label={t('dashboard.todayAppointments')}
           value={barberMetrics.todayTotal}
-          subValue={`${barberMetrics.todayCompleted} completed, ${barberMetrics.todayUpcoming} upcoming`}
+          subValue={`${barberMetrics.todayCompleted} ${t('dashboard.completed')}, ${barberMetrics.todayUpcoming} ${t('dashboard.upcoming')}`}
           color="accent"
           delay={1}
+          t={t}
         />
         <MetricCard
           icon={Clock}
-          label="This Week"
+          label={t('dashboard.thisWeek')}
           value={barberMetrics.weekTotal}
-          subValue="Total bookings"
+          subValue={t('dashboard.totalBookings')}
           color="info"
           delay={2}
+          t={t}
         />
         <MetricCard
           icon={DollarSign}
-          label="My Earnings"
-          value={`${barberMetrics.weekEarnings.toLocaleString()} KWD`}
-          subValue="This week"
+          label={t('dashboard.myEarnings')}
+          value={`${barberMetrics.weekEarnings.toLocaleString()} ${t('common.currency')}`}
+          subValue={t('dashboard.thisWeek')}
           trend={8}
           color="success"
           delay={3}
+          t={t}
         />
         <MetricCard
           icon={Target}
-          label="Completion Rate"
+          label={t('dashboard.completionRate')}
           value={`${barberMetrics.completionRate}%`}
-          subValue="Completed vs no-show"
+          subValue={t('dashboard.completedVsNoShow')}
           color="secondary"
           delay={4}
+          t={t}
         />
       </div>
 
@@ -212,10 +218,10 @@ export default function BarberDashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <Clock size={20} strokeWidth={1.5} />
-              <h3>Today's Schedule</h3>
+              <h3>{t('dashboard.todaySchedule')}</h3>
             </div>
             <Link to="/barber/bookings" className="dashboard-card-link">
-              View All <ArrowRight size={14} strokeWidth={2} />
+              {t('common.viewAll')} <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>
 
@@ -228,16 +234,17 @@ export default function BarberDashboard() {
                     booking={booking}
                     onComplete={handleComplete}
                     onCancel={handleCancel}
+                    t={t}
                   />
                 ))}
               </div>
             ) : (
               <div className="dashboard-empty-state">
                 <Calendar size={40} strokeWidth={1} />
-                <p>No upcoming bookings for today</p>
+                <p>{t('dashboard.noUpcomingBookings')}</p>
                 <Link to="/barber/bookings" className="btn btn-primary btn-sm">
                   <Plus size={16} strokeWidth={2} />
-                  View Calendar
+                  {t('dashboard.viewCalendar')}
                 </Link>
               </div>
             )}
@@ -249,7 +256,7 @@ export default function BarberDashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <TrendingUp size={20} strokeWidth={1.5} />
-              <h3>Quick Actions</h3>
+              <h3>{t('dashboard.quickActions')}</h3>
             </div>
           </div>
 
@@ -259,25 +266,25 @@ export default function BarberDashboard() {
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>
-                <span>My Bookings</span>
+                <span>{t('nav.myBookings')}</span>
               </Link>
               <Link to="/barber/availability" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Clock size={24} strokeWidth={1.5} />
                 </div>
-                <span>Update Hours</span>
+                <span>{t('dashboard.updateHours')}</span>
               </Link>
               <Link to="/barber/profile" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Target size={24} strokeWidth={1.5} />
                 </div>
-                <span>My Profile</span>
+                <span>{t('nav.myProfile')}</span>
               </Link>
               <Link to="/barber/settings" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Plus size={24} strokeWidth={1.5} />
                 </div>
-                <span>Settings</span>
+                <span>{t('nav.settings')}</span>
               </Link>
             </div>
           </div>
@@ -288,7 +295,7 @@ export default function BarberDashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <CheckCircle size={20} strokeWidth={1.5} />
-              <h3>Completed Today</h3>
+              <h3>{t('dashboard.completedToday')}</h3>
             </div>
           </div>
 
@@ -306,7 +313,7 @@ export default function BarberDashboard() {
                       <div className="completed-booking-info">
                         <span className="completed-booking-customer">{booking.customerName}</span>
                         <span className="completed-booking-service">
-                          {booking.serviceName} • {booking.price} KWD
+                          {booking.serviceName} • {booking.price} {t('common.currency')}
                         </span>
                       </div>
                       <span className="completed-booking-time">{booking.time}</span>
@@ -316,7 +323,7 @@ export default function BarberDashboard() {
             ) : (
               <div className="dashboard-empty-state small">
                 <CheckCircle size={32} strokeWidth={1} />
-                <p>No completed bookings yet</p>
+                <p>{t('dashboard.noCompletedBookings')}</p>
               </div>
             )}
           </div>

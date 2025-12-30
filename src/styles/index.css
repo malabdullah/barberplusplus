@@ -429,3 +429,177 @@ a:active {
     font-size: 1.75rem;
   }
 }
+
+/* ================================
+   RTL (RIGHT-TO-LEFT) SUPPORT
+   For Arabic language
+   ================================ */
+
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* RTL font adjustments for Arabic */
+[dir="rtl"] body {
+  font-family: 'Outfit', 'Segoe UI', 'Tahoma', sans-serif;
+}
+
+/* Sidebar RTL positioning */
+[dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
+  border-right: none;
+  border-left: 1px solid var(--accent-border);
+}
+
+[dir="rtl"] .layout-content {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Flip directional icons */
+[dir="rtl"] .icon-chevron-right,
+[dir="rtl"] .chevron-icon {
+  transform: scaleX(-1);
+}
+
+/* Form inputs */
+[dir="rtl"] .form-input,
+[dir="rtl"] .form-select {
+  text-align: right;
+}
+
+/* Buttons with icons */
+[dir="rtl"] .btn svg:first-child {
+  margin-right: 0;
+  margin-left: var(--space-sm);
+}
+
+[dir="rtl"] .btn svg:last-child {
+  margin-left: 0;
+  margin-right: var(--space-sm);
+}
+
+/* Flex row reverse for RTL */
+[dir="rtl"] .flex-row-rtl {
+  flex-direction: row-reverse;
+}
+
+/* Card layouts */
+[dir="rtl"] .card-header,
+[dir="rtl"] .list-item {
+  text-align: right;
+}
+
+/* Dropdown menus */
+[dir="rtl"] .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+/* Notification badges */
+[dir="rtl"] .badge-position-right {
+  right: auto;
+  left: -8px;
+}
+
+/* Search inputs */
+[dir="rtl"] .search-input {
+  padding-left: var(--space-md);
+  padding-right: 40px;
+}
+
+[dir="rtl"] .search-icon {
+  left: auto;
+  right: var(--space-md);
+}
+
+/* Tables */
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Modal close button */
+[dir="rtl"] .modal-close {
+  left: var(--space-md);
+  right: auto;
+}
+
+/* Page headers */
+[dir="rtl"] .page-header-actions {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Logo - prevent RTL flip (brand name should always be "Barber++") */
+[dir="rtl"] .sidebar-logo-name,
+[dir="rtl"] .login-logo-name {
+  direction: ltr;
+  unicode-bidi: bidi-override;
+}
+
+/* Dashboard Welcome Card RTL */
+[dir="rtl"] .dashboard-welcome::before {
+  right: auto;
+  left: 0;
+  background: radial-gradient(
+    circle at top left,
+    rgba(212, 168, 83, 0.08) 0%,
+    transparent 70%
+  );
+}
+
+[dir="rtl"] .dashboard-welcome-date {
+  text-align: left;
+}
+
+/* TopBar RTL positioning */
+[dir="rtl"] .topbar {
+  left: 0;
+  right: var(--sidebar-width);
+}
+
+/* Layout main RTL margin */
+[dir="rtl"] .layout-main {
+  margin-left: 0;
+  margin-right: var(--sidebar-width);
+}
+
+/* Sidebar nav indicator RTL */
+[dir="rtl"] .sidebar-nav-indicator {
+  right: auto;
+  left: 0;
+}
+
+/* Today booking time RTL */
+[dir="rtl"] .today-booking-time {
+  padding-right: 0;
+  padding-left: var(--space-md);
+  border-right: none;
+  border-left: 1px solid rgba(212, 168, 83, 0.1);
+}
+
+/* Responsive RTL adjustments */
+@media (max-width: 1024px) {
+  [dir="rtl"] .layout-content {
+    margin-right: 0;
+  }
+
+  [dir="rtl"] .sidebar.open {
+    transform: translateX(0);
+  }
+
+  [dir="rtl"] .sidebar {
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .topbar {
+    right: 0;
+  }
+
+  [dir="rtl"] .layout-main {
+    margin-right: 0;
+  }
+}

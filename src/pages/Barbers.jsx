@@ -1,5 +1,6 @@
 import React, { useState, memo, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Plus,
@@ -17,7 +18,7 @@ import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import './Barbers.css';
 
-const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, onResendInvite }) {
+const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, onResendInvite, t }) {
   const navigate = useNavigate();
   const [isResending, setIsResending] = useState(false);
   const initials = barber.name?.split(' ').map((n) => n[0]).join('') || '??';
@@ -56,11 +57,11 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
       case 'accepted':
         return null; // Don't show badge for accepted invites
       case 'sent':
-        return { label: 'Invite Pending', className: 'pending' };
+        return { label: t('barbers.invitePending'), className: 'pending' };
       case 'expired':
-        return { label: 'Invite Expired', className: 'expired' };
+        return { label: t('barbers.inviteExpired'), className: 'expired' };
       default:
-        return { label: 'Not Invited', className: 'not-invited' };
+        return { label: t('barbers.notInvited'), className: 'not-invited' };
     }
   };
 
@@ -85,7 +86,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
         <h3 className="barber-name">{barber.name}</h3>
         <div className="barber-status-row">
           <div className={`barber-status ${barber.status}`}>
-            {barber.status === 'active' ? 'Active' : 'Away'}
+            {barber.status === 'active' ? t('common.active') : t('barbers.away')}
           </div>
           {inviteStatus && (
             <div className={`invite-status ${inviteStatus.className}`}>
@@ -125,14 +126,14 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
         <div className="barber-card-footer">
           <div className="barber-bookings">
             <Calendar size={14} strokeWidth={1.5} />
-            <span>{todayBookings} bookings today</span>
+            <span>{todayBookings} {t('barbers.bookingsToday')}</span>
           </div>
           <div className="barber-actions">
             {showResendButton && (
               <button
                 className="action-btn"
                 onClick={handleResendInvite}
-                title="Resend Invite"
+                title={t('barbers.resendInvite')}
                 disabled={isResending}
               >
                 <RefreshCw size={16} strokeWidth={1.5} className={isResending ? 'spinning' : ''} />
@@ -141,21 +142,21 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
             <button
               className="action-btn"
               onClick={handleEditClick}
-              title="Edit Profile"
+              title={t('barbers.editProfile')}
             >
               <Pencil size={16} strokeWidth={1.5} />
             </button>
             <button
               className="action-btn"
               onClick={handleScheduleClick}
-              title="View Schedule"
+              title={t('barbers.viewSchedule')}
             >
               <Calendar size={16} strokeWidth={1.5} />
             </button>
             <button
               className="action-btn danger"
               onClick={handleDeleteClick}
-              title="Remove"
+              title={t('barbers.remove')}
             >
               <Trash2 size={16} strokeWidth={1.5} />
             </button>
@@ -167,6 +168,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 });
 
 export default function Barbers() {
+  const { t } = useTranslation();
   const {
     branchBarbers,
     branchBookings,
@@ -223,14 +225,14 @@ export default function Barbers() {
     <div className="barbers-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">Barbers</h2>
+          <h2 className="page-title">{t('barbers.title')}</h2>
           <p className="page-description">
-            Manage your team at {selectedBranch?.name}
+            {t('barbers.subtitle')} {selectedBranch?.name}
           </p>
         </div>
         <Link to="/barbers/new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
-          Add Barber
+          {t('barbers.addBarber')}
         </Link>
       </div>
 
@@ -240,14 +242,14 @@ export default function Barbers() {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Search by name or specialty..."
+            placeholder={t('barbers.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
         </div>
         <div className="barbers-count">
-          {filteredBarbers.length} barber{filteredBarbers.length !== 1 ? 's' : ''}
+          {filteredBarbers.length} {filteredBarbers.length === 1 ? t('common.barber') : t('barbers.barbersPlural')}
         </div>
       </div>
 
@@ -261,6 +263,7 @@ export default function Barbers() {
               todayBookings={barberTodayBookingsMap[barber.id] || 0}
               onDelete={handleDelete}
               onResendInvite={handleResendInvite}
+              t={t}
               style={{ animationDelay: `${index * 50}ms` }}
             />
           ))}
@@ -270,19 +273,19 @@ export default function Barbers() {
           <div className="empty-state-icon">
             <Search size={48} strokeWidth={1} />
           </div>
-          <h3>No barbers found</h3>
-          <p>Try adjusting your search query</p>
+          <h3>{t('barbers.noBarbersFound')}</h3>
+          <p>{t('barbers.adjustSearch')}</p>
         </div>
       ) : (
         <div className="empty-state animate-fade-in-up">
           <div className="empty-state-icon">
             <Users size={48} strokeWidth={1} />
           </div>
-          <h3>No barbers yet</h3>
-          <p>Add your first team member to get started</p>
+          <h3>{t('barbers.noBarbers')}</h3>
+          <p>{t('barbers.addFirst')}</p>
           <Link to="/barbers/new" className="btn btn-primary">
             <Plus size={18} strokeWidth={2} />
-            Add Your First Barber
+            {t('barbers.addFirstBarber')}
           </Link>
         </div>
       )}
@@ -292,9 +295,9 @@ export default function Barbers() {
         isOpen={!!deletingBarber}
         onClose={() => setDeletingBarber(null)}
         onConfirm={handleConfirmDelete}
-        title="Remove Barber"
-        message={`Are you sure you want to remove "${deletingBarber?.name}" from your team? Their booking history will be preserved.`}
-        confirmText="Remove Barber"
+        title={t('barbers.removeBarber')}
+        message={t('barbers.deleteConfirm', { name: deletingBarber?.name })}
+        confirmText={t('barbers.removeBarber')}
         variant="danger"
       />
     </div>

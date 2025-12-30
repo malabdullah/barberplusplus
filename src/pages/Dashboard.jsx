@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   DollarSign,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { format, isToday, parseISO } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import './Dashboard.css';
 
 const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
@@ -39,30 +41,32 @@ const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue
 });
 
 const STATUS_CONFIG = {
-  confirmed: { icon: CheckCircle, label: 'Confirmed', class: 'status-confirmed' },
-  pending: { icon: AlertCircle, label: 'Pending', class: 'status-pending' },
-  completed: { icon: CheckCircle, label: 'Completed', class: 'status-completed' },
-  cancelled: { icon: XCircle, label: 'Cancelled', class: 'status-cancelled' },
-  'no-show': { icon: XCircle, label: 'No Show', class: 'status-noshow' },
+  confirmed: { icon: CheckCircle, labelKey: 'bookings.status.confirmed', class: 'status-confirmed' },
+  pending: { icon: AlertCircle, labelKey: 'bookings.status.pending', class: 'status-pending' },
+  completed: { icon: CheckCircle, labelKey: 'bookings.status.completed', class: 'status-completed' },
+  cancelled: { icon: XCircle, labelKey: 'bookings.status.cancelled', class: 'status-cancelled' },
+  'no-show': { icon: XCircle, labelKey: 'bookings.status.noShow', class: 'status-noshow' },
 };
 
 const BookingStatusBadge = memo(function BookingStatusBadge({ status }) {
-  const { icon: Icon, label, class: className } = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const { t } = useTranslation();
+  const { icon: Icon, labelKey, class: className } = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
   return (
     <span className={`booking-status ${className}`}>
       <Icon size={12} strokeWidth={2} />
-      {label}
+      {t(labelKey)}
     </span>
   );
 });
 
 const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
+  const { t } = useTranslation();
   return (
     <div className="today-booking-item">
       <div className="today-booking-time">
         <span className="today-booking-hour">{booking.time}</span>
-        <span className="today-booking-duration">{booking.duration} min</span>
+        <span className="today-booking-duration">{booking.duration} {t('common.min')}</span>
       </div>
       <div className="today-booking-details">
         <div className="today-booking-customer">{booking.customerName}</div>
@@ -76,7 +80,9 @@ const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
 });
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch } = useApp();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -114,15 +120,15 @@ export default function Dashboard() {
       <div className="dashboard-welcome animate-fade-in">
         <div className="dashboard-welcome-content">
           <h2 className="dashboard-welcome-title">
-            Good {getTimeOfDay()}
+            {t(`dashboard.greeting.${getTimeOfDay()}`)}
           </h2>
           <p className="dashboard-welcome-text">
-            Here's what's happening at <span className="text-accent">{selectedBranch?.name}</span> today.
+            {t('dashboard.welcomeMessage', { branch: selectedBranch?.name })}
           </p>
         </div>
         <div className="dashboard-welcome-date">
-          <div className="dashboard-date-day">{format(new Date(), 'EEEE')}</div>
-          <div className="dashboard-date-full">{format(new Date(), 'MMMM d, yyyy')}</div>
+          <div className="dashboard-date-day">{format(new Date(), 'EEEE', { locale: dateLocale })}</div>
+          <div className="dashboard-date-full">{format(new Date(), 'MMMM d, yyyy', { locale: dateLocale })}</div>
         </div>
       </div>
 
@@ -130,34 +136,34 @@ export default function Dashboard() {
       <div className="dashboard-metrics">
         <MetricCard
           icon={Calendar}
-          label="Today's Bookings"
+          label={t('dashboard.todayBookings')}
           value={metrics.todayTotal}
-          subValue={`${metrics.todayCompleted} completed, ${metrics.todayUpcoming} upcoming`}
+          subValue={t('dashboard.bookingsSubtext', { completed: metrics.todayCompleted, upcoming: metrics.todayUpcoming })}
           color="accent"
           delay={1}
         />
         <MetricCard
           icon={DollarSign}
-          label="Week Revenue"
-          value={`${metrics.weekRevenue.toLocaleString()} KWD`}
-          subValue={`From ${metrics.weekBookings} bookings`}
+          label={t('dashboard.weekRevenue')}
+          value={`${metrics.weekRevenue.toLocaleString()} ${t('common.currency')}`}
+          subValue={t('dashboard.fromBookings', { count: metrics.weekBookings })}
           trend={12}
           color="success"
           delay={2}
         />
         <MetricCard
           icon={Users}
-          label="Active Barbers"
+          label={t('dashboard.activeBarbers')}
           value={metrics.totalBarbers}
-          subValue="Currently on schedule"
+          subValue={t('dashboard.onSchedule')}
           color="info"
           delay={3}
         />
         <MetricCard
           icon={Scissors}
-          label="Services Offered"
+          label={t('dashboard.servicesOffered')}
           value={metrics.totalServices}
-          subValue="Active services"
+          subValue={t('dashboard.activeServices')}
           color="secondary"
           delay={4}
         />
@@ -170,10 +176,10 @@ export default function Dashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <Clock size={20} strokeWidth={1.5} />
-              <h3>Today's Schedule</h3>
+              <h3>{t('dashboard.todaySchedule')}</h3>
             </div>
             <Link to="/bookings" className="dashboard-card-link">
-              View All <ArrowRight size={14} strokeWidth={2} />
+              {t('common.viewAll')} <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>
 
@@ -187,10 +193,10 @@ export default function Dashboard() {
             ) : (
               <div className="dashboard-empty-state">
                 <Calendar size={40} strokeWidth={1} />
-                <p>No upcoming bookings for today</p>
+                <p>{t('dashboard.noUpcomingBookings')}</p>
                 <Link to="/bookings" className="btn btn-primary btn-sm">
                   <Plus size={16} strokeWidth={2} />
-                  New Booking
+                  {t('bookings.newBooking')}
                 </Link>
               </div>
             )}
@@ -202,7 +208,7 @@ export default function Dashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <TrendingUp size={20} strokeWidth={1.5} />
-              <h3>Quick Actions</h3>
+              <h3>{t('dashboard.quickActions')}</h3>
             </div>
           </div>
 
@@ -212,25 +218,25 @@ export default function Dashboard() {
                 <div className="quick-action-icon">
                   <Plus size={24} strokeWidth={1.5} />
                 </div>
-                <span>New Booking</span>
+                <span>{t('bookings.newBooking')}</span>
               </Link>
               <Link to="/barbers" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Users size={24} strokeWidth={1.5} />
                 </div>
-                <span>Add Barber</span>
+                <span>{t('barbers.addBarber')}</span>
               </Link>
               <Link to="/services" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Scissors size={24} strokeWidth={1.5} />
                 </div>
-                <span>New Service</span>
+                <span>{t('services.addService')}</span>
               </Link>
               <Link to="/branches" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>
-                <span>View Schedule</span>
+                <span>{t('dashboard.viewSchedule')}</span>
               </Link>
             </div>
           </div>
@@ -241,10 +247,10 @@ export default function Dashboard() {
           <div className="dashboard-card-header">
             <div className="dashboard-card-title">
               <Users size={20} strokeWidth={1.5} />
-              <h3>Active Barbers</h3>
+              <h3>{t('dashboard.activeBarbers')}</h3>
             </div>
             <Link to="/barbers" className="dashboard-card-link">
-              Manage <ArrowRight size={14} strokeWidth={2} />
+              {t('common.manage')} <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>
 
@@ -260,11 +266,11 @@ export default function Dashboard() {
                     <div className="barber-mini-info">
                       <span className="barber-mini-name">{barber.name}</span>
                       <span className="barber-mini-stats">
-                        {barberBookings.length} bookings today
+                        {t('dashboard.bookingsToday', { count: barberBookings.length })}
                       </span>
                     </div>
                     <div className={`barber-mini-status ${barber.status}`}>
-                      {barber.status === 'active' ? 'Available' : 'Busy'}
+                      {barber.status === 'active' ? t('barbers.available') : t('barbers.busy')}
                     </div>
                   </div>
                 );
