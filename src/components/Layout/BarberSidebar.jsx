@@ -7,12 +7,13 @@ import {
   Clock,
   User,
   Settings,
-  LogOut,
   Scissors,
   X,
   FileText,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 
 const navItems = [
@@ -26,7 +27,7 @@ const navItems = [
 
 export default function BarberSidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
-  const { logout, currentBarber } = useApp();
+  const { currentBarber, barberProfileLoading, barberProfileError } = useApp();
   const location = useLocation();
 
   // Close sidebar when navigating on mobile
@@ -36,7 +37,68 @@ export default function BarberSidebar({ isOpen, onClose }) {
     }
   };
 
-  if (!currentBarber) return null;
+  // Show loading state while barber profile loads OR hasn't been checked yet
+  if (barberProfileLoading || (!currentBarber && !barberProfileError)) {
+    return (
+      <>
+        {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+        <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+          <button className="sidebar-close-btn" onClick={onClose}>
+            <X size={20} strokeWidth={2} />
+          </button>
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon">
+              <Scissors size={24} strokeWidth={1.5} />
+            </div>
+            <div className="sidebar-logo-text">
+              <span className="sidebar-logo-name">Barber++</span>
+              <span className="sidebar-logo-tagline">Barber</span>
+            </div>
+          </div>
+          <div className="sidebar-divider">
+            <div className="sidebar-divider-line"></div>
+            <div className="sidebar-divider-diamond"></div>
+            <div className="sidebar-divider-line"></div>
+          </div>
+          <div className="sidebar-loading">
+            <Loader2 size={24} strokeWidth={1.5} className="sidebar-loading-spinner" />
+            <span>{t('common.loading')}</span>
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  // Show minimal sidebar with sign out only if profile check actually failed
+  if (barberProfileError) {
+    return (
+      <>
+        {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+        <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+          <button className="sidebar-close-btn" onClick={onClose}>
+            <X size={20} strokeWidth={2} />
+          </button>
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon">
+              <Scissors size={24} strokeWidth={1.5} />
+            </div>
+            <div className="sidebar-logo-text">
+              <span className="sidebar-logo-name">Barber++</span>
+              <span className="sidebar-logo-tagline">Barber</span>
+            </div>
+          </div>
+          <div className="sidebar-divider">
+            <div className="sidebar-divider-line"></div>
+            <div className="sidebar-divider-diamond"></div>
+            <div className="sidebar-divider-line"></div>
+          </div>
+          <div className="sidebar-bottom" style={{ marginTop: 'auto' }}>
+            <SignOutCard />
+          </div>
+        </aside>
+      </>
+    );
+  }
 
   return (
     <>
@@ -68,6 +130,17 @@ export default function BarberSidebar({ isOpen, onClose }) {
         <div className="sidebar-divider-line"></div>
       </div>
 
+      {/* User info */}
+      <div className="sidebar-user">
+        <div className="sidebar-user-avatar">
+          {currentBarber.name.split(' ').map(n => n[0]).join('')}
+        </div>
+        <div className="sidebar-user-info">
+          <span className="sidebar-user-name">{currentBarber.name}</span>
+          <span className="sidebar-user-role">{t('common.barber')}</span>
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="sidebar-nav">
         {navItems.map((item, index) => {
@@ -96,26 +169,8 @@ export default function BarberSidebar({ isOpen, onClose }) {
 
       {/* Bottom section */}
       <div className="sidebar-bottom">
-        <div className="sidebar-divider">
-          <div className="sidebar-divider-line"></div>
-        </div>
-
-        {/* User info */}
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar">
-            {currentBarber.name.split(' ').map(n => n[0]).join('')}
-          </div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{currentBarber.name}</span>
-            <span className="sidebar-user-role">{t('common.barber')}</span>
-          </div>
-        </div>
-
         {/* Logout */}
-        <button className="sidebar-logout" onClick={logout}>
-          <LogOut size={18} strokeWidth={1.5} />
-          <span>{t('auth.signOut')}</span>
-        </button>
+        <SignOutCard />
       </div>
     </aside>
     </>

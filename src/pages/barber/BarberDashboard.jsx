@@ -14,6 +14,8 @@ import {
   Check,
   X,
   Target,
+  Loader2,
+  UserX,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { format } from 'date-fns';
@@ -104,25 +106,24 @@ export default function BarberDashboard() {
     barberBookings,
     barberServices,
     barberMetrics,
+    barberMetricsLoading,
     barberBranch,
+    barberProfileLoading,
+    barberProfileError,
     updateBooking,
     cancelBooking,
+    logout,
   } = useApp();
 
-  if (!currentBarber || !barberMetrics) {
-    return (
-      <div className="dashboard">
-        <div className="dashboard-empty-state">
-          <Calendar size={40} strokeWidth={1} />
-          <p>{t('common.loading')}</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Calculate today's date (needed for useMemo dependency)
   const today = new Date().toISOString().split('T')[0];
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // This follows React's Rules of Hooks - hooks must be called in the same order every render
   const todayBookings = useMemo(() => {
+    // Guard for when data isn't loaded yet
+    if (!barberBookings || !barberServices) return [];
+
     const servicesMap = new Map(barberServices.map(s => [s.id, s]));
 
     return barberBookings
@@ -140,10 +141,12 @@ export default function BarberDashboard() {
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [barberBookings, barberServices, today]);
 
-  const upcomingBookings = todayBookings.filter(b =>
-    ['confirmed', 'pending'].includes(b.status)
+  const upcomingBookings = useMemo(() =>
+    todayBookings.filter(b => ['confirmed', 'pending'].includes(b.status)),
+    [todayBookings]
   );
 
+  // Event handlers (not hooks, can be defined anywhere)
   const handleComplete = (bookingId) => {
     updateBooking(bookingId, { status: 'completed' });
   };
@@ -151,6 +154,48 @@ export default function BarberDashboard() {
   const handleCancel = (bookingId) => {
     cancelBooking(bookingId);
   };
+
+  // NOW we can have early returns - all hooks have been called above
+
+  // Show loading state while profile is being fetched OR hasn't been checked yet
+  if (barberProfileLoading || (!currentBarber && !barberProfileError)) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-empty-state">
+          <Loader2 size={40} strokeWidth={1.5} className="animate-spin" />
+          <p>{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state only if profile check actually completed and failed
+  if (barberProfileError) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-error-state">
+          <UserX size={48} strokeWidth={1.5} />
+          <h3>{t('errors.barberProfileNotFound')}</h3>
+          <p>{t('errors.barberProfileNotFoundDesc')}</p>
+          <button className="btn btn-primary" onClick={logout}>
+            {t('auth.signOut')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while metrics are being fetched
+  if (barberMetricsLoading || !barberMetrics) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-empty-state">
+          <Loader2 size={40} strokeWidth={1.5} className="animate-spin" />
+          <p>{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">

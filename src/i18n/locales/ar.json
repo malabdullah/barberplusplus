@@ -58,6 +58,7 @@
     "currency": "د.ك",
     "fullName": "الاسم الكامل",
     "barber": "حلاق",
+    "manager": "مدير",
     "manage": "إدارة",
     "viewAll": "عرض الكل",
     "saveChanges": "حفظ التغييرات",
@@ -434,6 +435,11 @@
     "contactSupport": "تواصل مع الدعم",
     "featureRequests": "طلبات الميزات",
     "dangerZone": "منطقة الخطر",
+    "dangerZoneDesc": "إجراءات لا يمكن التراجع عنها تؤثر على حسابك",
+    "signOutDesc": "إنهاء جلستك الحالية والعودة لتسجيل الدخول",
+    "signOutDescShort": "إنهاء الجلسة والعودة لتسجيل الدخول",
+    "signOutConfirmTitle": "تسجيل الخروج",
+    "signOutConfirmMessage": "هل أنت متأكد من تسجيل الخروج؟ ستحتاج لتسجيل الدخول مرة أخرى للوصول إلى حسابك.",
     "profileDescription": "تحديث معلومات ملفك الشخصي",
     "notificationsDescription": "إدارة الإشعارات التي تتلقاها",
     "appearanceDescription": "تخصيص الشكل والمظهر",
@@ -597,7 +603,9 @@
     "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
     "createBarberFailed": "فشل إنشاء الحلاق. يرجى المحاولة مرة أخرى.",
     "createBranchFailed": "فشل إنشاء الفرع. يرجى المحاولة مرة أخرى.",
-    "setPasswordFailed": "فشل تعيين كلمة المرور. يرجى المحاولة مرة أخرى."
+    "setPasswordFailed": "فشل تعيين كلمة المرور. يرجى المحاولة مرة أخرى.",
+    "barberProfileNotFound": "الملف الشخصي غير موجود",
+    "barberProfileNotFoundDesc": "لم يتم العثور على ملفك الشخصي كحلاق. يرجى التواصل مع مديرك لإعداد حسابك."
   },
   "confirm": {
     "deleteTitle": "تأكيد الحذف",

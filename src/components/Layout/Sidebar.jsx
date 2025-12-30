@@ -8,11 +8,11 @@ import {
   Users,
   Calendar,
   Settings,
-  LogOut,
   X,
   FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 
 const navItems = [
@@ -27,7 +27,7 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
-  const { logout, manager } = useApp();
+  const { manager } = useApp();
   const location = useLocation();
 
   // Close sidebar when navigating on mobile
@@ -68,6 +68,17 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-divider-line"></div>
       </div>
 
+      {/* User info */}
+      <div className="sidebar-user">
+        <div className="sidebar-user-avatar">
+          {(manager?.user_metadata?.name || t('common.name')).split(' ').map(n => n[0]).join('')}
+        </div>
+        <div className="sidebar-user-info">
+          <span className="sidebar-user-name">{manager?.user_metadata?.name || t('common.name')}</span>
+          <span className="sidebar-user-role">{t('common.manager')}</span>
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="sidebar-nav">
         {navItems.map((item, index) => {
@@ -96,26 +107,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Bottom section */}
       <div className="sidebar-bottom">
-        <div className="sidebar-divider">
-          <div className="sidebar-divider-line"></div>
-        </div>
-
-        {/* User info */}
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar">
-            {(manager?.user_metadata?.name || t('common.name')).split(' ').map(n => n[0]).join('')}
-          </div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{manager?.user_metadata?.name || t('common.name')}</span>
-            <span className="sidebar-user-role">{t('barbers.title')}</span>
-          </div>
-        </div>
-
         {/* Logout */}
-        <button className="sidebar-logout" onClick={logout}>
-          <LogOut size={18} strokeWidth={1.5} />
-          <span>{t('auth.signOut')}</span>
-        </button>
+        <SignOutCard />
       </div>
     </aside>
     </>

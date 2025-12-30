@@ -1,0 +1,120 @@
+/* ================================
+   Sign Out Card - Compact Sidebar
+   ================================ */
+
+.signout-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+  background: linear-gradient(
+    135deg,
+    rgba(199, 90, 90, 0.04) 0%,
+    rgba(199, 90, 90, 0.02) 100%
+  );
+  border: 1px solid rgba(199, 90, 90, 0.1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Top accent line - subtle danger indicator */
+.signout-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(199, 90, 90, 0.4) 50%,
+    transparent 100%
+  );
+}
+
+/* Header: Icon + Title inline */
+.signout-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.signout-card-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(199, 90, 90, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--status-error);
+  flex-shrink: 0;
+}
+
+.signout-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Short description */
+.signout-card-desc {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  margin: 0;
+  margin-bottom: var(--space-md);
+}
+
+/* Full-width button at bottom */
+.signout-card-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  border: 1px solid rgba(199, 90, 90, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--status-error);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.signout-card-btn:hover {
+  background: var(--status-error);
+  border-color: var(--status-error);
+  color: white;
+}
+
+.signout-card-btn:active {
+  transform: scale(0.98);
+}
+
+.signout-card-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.signout-card-btn:hover svg {
+  transform: translateX(2px);
+}
+
+/* RTL Support */
+[dir="rtl"] .signout-card-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* Light theme refinements */
+[data-theme="light"] .signout-card {
+  background: linear-gradient(
+    135deg,
+    rgba(199, 90, 90, 0.03) 0%,
+    rgba(199, 90, 90, 0.01) 100%
+  );
+}

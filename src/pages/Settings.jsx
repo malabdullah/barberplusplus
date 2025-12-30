@@ -10,8 +10,10 @@ import {
   ChevronRight,
   Camera,
   Save,
-  LogOut,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
+import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { notificationPreferencesService } from '../services';
@@ -78,7 +80,7 @@ const parsePhone = (fullPhone) => {
 
 export default function Settings() {
   const { t } = useTranslation();
-  const { user, userRole, logout, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
+  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
 
@@ -349,16 +351,28 @@ export default function Settings() {
         </SettingsSection>
 
         {/* Danger Zone */}
-        <div className="settings-section danger-zone animate-fade-in-up">
-          <div className="settings-section-header">
-            <h3>{t('settings.dangerZone')}</h3>
+        <div className="danger-zone-container animate-fade-in-up">
+          {/* Decorative corner accent */}
+          <div className="danger-zone-accent" />
+
+          <div className="danger-zone-header">
+            <div className="danger-zone-icon">
+              <ShieldAlert size={22} strokeWidth={1.5} />
+            </div>
+            <div className="danger-zone-title-group">
+              <h3>{t('settings.dangerZone')}</h3>
+              <p>{t('settings.dangerZoneDesc')}</p>
+            </div>
           </div>
-          <div className="settings-section-content">
-            <button className="btn btn-danger-outline" onClick={logout}>
-              <LogOut size={16} strokeWidth={1.5} />
-              {t('auth.signOut')}
-            </button>
+
+          <div className="danger-zone-divider" />
+
+          <div className="danger-zone-content">
+            <SignOutCard />
           </div>
+
+          {/* Subtle warning pattern */}
+          <div className="danger-zone-pattern" />
         </div>
       </div>
     </div>

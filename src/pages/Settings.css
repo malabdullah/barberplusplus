@@ -218,13 +218,279 @@
   color: var(--text-tertiary);
 }
 
-/* Danger Zone */
-.danger-zone {
-  border-color: rgba(199, 90, 90, 0.2);
+/* ================================
+   DANGER ZONE - Enhanced Design
+   ================================ */
+
+.danger-zone-container {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(199, 90, 90, 0.04) 0%,
+    var(--bg-secondary) 50%,
+    rgba(199, 90, 90, 0.02) 100%
+  );
+  border: 1px solid rgba(199, 90, 90, 0.15);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.danger-zone .settings-section-header h3 {
+/* Corner accent decoration */
+.danger-zone-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle at top left,
+    rgba(199, 90, 90, 0.12) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+[dir="rtl"] .danger-zone-accent {
+  left: auto;
+  right: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(199, 90, 90, 0.12) 0%,
+    transparent 70%
+  );
+}
+
+/* Subtle diagonal stripe pattern */
+.danger-zone-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(199, 90, 90, 0.015) 10px,
+    rgba(199, 90, 90, 0.015) 20px
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Header section */
+.danger-zone-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.danger-zone-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(199, 90, 90, 0.12);
+  border: 1px solid rgba(199, 90, 90, 0.2);
+  border-radius: var(--radius-md);
   color: var(--status-error);
+}
+
+.danger-zone-title-group h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--status-error);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.danger-zone-title-group p {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+/* Divider */
+.danger-zone-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(199, 90, 90, 0.2),
+    rgba(199, 90, 90, 0.05)
+  );
+  margin-bottom: var(--space-lg);
+}
+
+[dir="rtl"] .danger-zone-divider {
+  background: linear-gradient(
+    to left,
+    rgba(199, 90, 90, 0.2),
+    rgba(199, 90, 90, 0.05)
+  );
+}
+
+/* Content area */
+.danger-zone-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Action row */
+.danger-zone-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(199, 90, 90, 0.04);
+  border: 1px solid rgba(199, 90, 90, 0.08);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.danger-zone-action:hover {
+  background: rgba(199, 90, 90, 0.06);
+  border-color: rgba(199, 90, 90, 0.12);
+}
+
+.danger-zone-action-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.danger-zone-action-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(199, 90, 90, 0.08);
+  border-radius: var(--radius-sm);
+  color: var(--status-error);
+  opacity: 0.8;
+}
+
+.danger-zone-action-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.danger-zone-action-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.danger-zone-action-desc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Sign Out Button - Refined styling */
+.danger-zone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: transparent;
+  border: 1.5px solid var(--status-error);
+  border-radius: var(--radius-md);
+  color: var(--status-error);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.danger-zone-btn:hover {
+  background: var(--status-error);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(199, 90, 90, 0.25);
+}
+
+.danger-zone-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(199, 90, 90, 0.2);
+}
+
+.danger-zone-btn svg {
+  transition: transform var(--transition-fast);
+}
+
+.danger-zone-btn:hover svg {
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .danger-zone-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .danger-zone-action {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+
+  .danger-zone-action-info {
+    justify-content: flex-start;
+  }
+
+  .danger-zone-btn {
+    width: 100%;
+    justify-content: center;
+    padding: var(--space-md);
+  }
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .danger-zone-container {
+  background: linear-gradient(
+    135deg,
+    rgba(199, 90, 90, 0.03) 0%,
+    var(--bg-secondary) 50%,
+    rgba(199, 90, 90, 0.02) 100%
+  );
+}
+
+[data-theme="light"] .danger-zone-accent {
+  background: radial-gradient(
+    circle at top left,
+    rgba(199, 90, 90, 0.08) 0%,
+    transparent 70%
+  );
+}
+
+[data-theme="light"][dir="rtl"] .danger-zone-accent {
+  background: radial-gradient(
+    circle at top right,
+    rgba(199, 90, 90, 0.08) 0%,
+    transparent 70%
+  );
+}
+
+[data-theme="light"] .danger-zone-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(199, 90, 90, 0.02) 10px,
+    rgba(199, 90, 90, 0.02) 20px
+  );
+}
+
+[data-theme="light"] .danger-zone-btn:hover {
+  box-shadow: 0 4px 12px rgba(199, 90, 90, 0.2);
 }
 
 /* Responsive */

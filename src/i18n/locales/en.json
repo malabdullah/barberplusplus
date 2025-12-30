@@ -58,6 +58,7 @@
     "currency": "KWD",
     "fullName": "Full Name",
     "barber": "Barber",
+    "manager": "Manager",
     "manage": "Manage",
     "viewAll": "View All",
     "saveChanges": "Save Changes",
@@ -434,6 +435,11 @@
     "contactSupport": "Contact Support",
     "featureRequests": "Feature Requests",
     "dangerZone": "Danger Zone",
+    "dangerZoneDesc": "Irreversible actions that affect your account",
+    "signOutDesc": "End your current session and return to login",
+    "signOutDescShort": "End session & return to login",
+    "signOutConfirmTitle": "Sign Out",
+    "signOutConfirmMessage": "Are you sure you want to sign out? You will need to log in again to access your account.",
     "profileDescription": "Update your profile information",
     "notificationsDescription": "Manage which notifications you receive",
     "appearanceDescription": "Customize the look and feel",
@@ -597,7 +603,9 @@
     "serverError": "Server error. Please try again later.",
     "createBarberFailed": "Failed to create barber. Please try again.",
     "createBranchFailed": "Failed to create branch. Please try again.",
-    "setPasswordFailed": "Failed to set password. Please try again."
+    "setPasswordFailed": "Failed to set password. Please try again.",
+    "barberProfileNotFound": "Profile Not Found",
+    "barberProfileNotFoundDesc": "Your barber profile could not be found. Please contact your manager to set up your account."
   },
   "confirm": {
     "deleteTitle": "Delete Confirmation",

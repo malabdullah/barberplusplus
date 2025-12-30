@@ -192,6 +192,11 @@
   border-radius: var(--radius-full);
 }
 
+[dir="rtl"] .topbar-notification-badge {
+  right: auto;
+  left: 6px;
+}
+
 /* Dropdown */
 .topbar-dropdown {
   position: absolute;
@@ -204,6 +209,12 @@
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 100;
+}
+
+/* RTL Support for Dropdowns */
+[dir="rtl"] .topbar-dropdown {
+  right: auto;
+  left: 0;
 }
 
 .topbar-dropdown-header {
@@ -375,6 +386,11 @@
     min-width: calc(100vw - var(--space-md) * 2);
     right: calc(-1 * var(--space-md));
   }
+
+  [dir="rtl"] .topbar-notifications-dropdown {
+    right: auto;
+    left: calc(-1 * var(--space-md));
+  }
 }
 
 /* Notification Empty State */
@@ -403,6 +419,10 @@ button.topbar-notification-item {
 
 button.topbar-notification-item:hover {
   background: var(--bg-hover);
+}
+
+[dir="rtl"] button.topbar-notification-item {
+  text-align: right;
 }
 
 /* Mark All Read Button */

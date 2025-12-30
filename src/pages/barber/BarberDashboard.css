@@ -389,6 +389,52 @@
   font-size: 0.9375rem;
 }
 
+/* Error State - Profile Not Found */
+.dashboard-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xl);
+  text-align: center;
+  gap: var(--space-lg);
+  min-height: 60vh;
+}
+
+.dashboard-error-state svg {
+  color: var(--status-error);
+  opacity: 0.8;
+}
+
+.dashboard-error-state h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dashboard-error-state p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.dashboard-error-state .btn {
+  margin-top: var(--space-md);
+}
+
+/* Spin animation for loader */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Quick Actions */
 .quick-actions-grid {
   display: grid;

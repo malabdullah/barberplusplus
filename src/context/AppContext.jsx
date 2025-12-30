@@ -27,6 +27,9 @@ export function AppProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [barberProfile, setBarberProfile] = useState(null);
+  const [barberProfileLoading, setBarberProfileLoading] = useState(false);
+  const [barberProfileError, setBarberProfileError] = useState(null);
+  const [barberMetricsLoading, setBarberMetricsLoading] = useState(false);
   const [theme, setThemeState] = useState(() => {
     const saved = localStorage.getItem('barber-theme');
     return saved || 'dark';
@@ -268,17 +271,28 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const loadBarberProfile = async () => {
       if (userRole === 'barber' && user?.id) {
+        setBarberProfileLoading(true);
+        setBarberProfileError(null);
         try {
           const profile = await barbersService.getByUserId(user.id);
           if (profile) {
             setBarberProfile(profile);
             setSelectedBranchId(profile.branchId);
+          } else {
+            // Profile not found in database
+            setBarberProfileError('PROFILE_NOT_FOUND');
+            console.error('Barber profile not found for user:', user.id);
           }
         } catch (error) {
+          setBarberProfileError('LOAD_ERROR');
           console.error('Error loading barber profile:', error);
+        } finally {
+          setBarberProfileLoading(false);
         }
       } else {
         setBarberProfile(null);
+        setBarberProfileLoading(false);
+        setBarberProfileError(null);
       }
     };
     loadBarberProfile();
@@ -984,8 +998,24 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const loadBarberMetrics = async () => {
       if (currentBarber) {
-        const metricsData = await bookingsService.getBarberMetrics(currentBarber.id);
-        setBarberMetrics(metricsData);
+        setBarberMetricsLoading(true);
+        try {
+          const metricsData = await bookingsService.getBarberMetrics(currentBarber.id);
+          setBarberMetrics(metricsData);
+        } catch (error) {
+          console.error('Failed to load barber metrics:', error);
+          // Set default metrics so dashboard can render
+          setBarberMetrics({
+            todayTotal: 0,
+            todayCompleted: 0,
+            todayUpcoming: 0,
+            weekTotal: 0,
+            weekEarnings: 0,
+            completionRate: 0,
+          });
+        } finally {
+          setBarberMetricsLoading(false);
+        }
       } else {
         setBarberMetrics(null);
       }
@@ -1027,8 +1057,11 @@ export function AppProvider({ children }) {
     currentBarber,
     barberBookings,
     barberMetrics,
+    barberMetricsLoading,
     barberServices,
     barberBranch,
+    barberProfileLoading,
+    barberProfileError,
 
     // Notifications
     notifications,
