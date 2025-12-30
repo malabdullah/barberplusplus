@@ -76,7 +76,7 @@ const parsePhone = (fullPhone) => {
 };
 
 export default function Settings() {
-  const { user, userRole, logout, theme, setTheme, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
+  const { user, userRole, logout, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
 
@@ -101,8 +101,6 @@ export default function Settings() {
         .catch(() => {}); // Silently fail, keep Kuwait default
     }
   }, [user?.user_metadata?.phone]);
-
-  const [language, setLanguage] = useState('en');
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -299,7 +297,6 @@ export default function Settings() {
               className="form-input form-select settings-select"
             >
               <option value="en">English</option>
-              <option value="es">Español</option>
               <option value="ar">العربية</option>
             </select>
           </SettingsItem>

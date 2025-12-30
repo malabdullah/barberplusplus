@@ -78,16 +78,17 @@
 
 /* Calendar Grid */
 .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   background: var(--bg-secondary);
   border: 1px solid rgba(212, 168, 83, 0.08);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  min-height: 400px;
 }
 
 .calendar-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+  display: contents;
 }
 
 .calendar-header-cell {
@@ -96,6 +97,12 @@
   align-items: center;
   padding: var(--space-md);
   background: var(--bg-tertiary);
+  border-right: 1px solid rgba(212, 168, 83, 0.06);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+.calendar-header-cell:nth-child(7) {
+  border-right: none;
 }
 
 .calendar-header-cell.today {
@@ -122,9 +129,7 @@
 }
 
 .calendar-body {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  min-height: 400px;
+  display: contents;
 }
 
 .calendar-day {
@@ -553,7 +558,7 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .calendar-body {
+  .calendar-grid {
     display: block;
   }
 

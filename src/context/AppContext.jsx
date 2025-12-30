@@ -30,6 +30,10 @@ export function AppProvider({ children }) {
     const saved = localStorage.getItem('barber-theme');
     return saved || 'dark';
   });
+  const [language, setLanguageState] = useState(() => {
+    const saved = localStorage.getItem('barber-language');
+    return saved || 'en';
+  });
 
   // Notification state
   const [notifications, setNotifications] = useState([]);
@@ -47,12 +51,37 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('data-theme', effectiveTheme);
   }, []);
 
+  // Save user settings to database
+  const saveUserSettings = useCallback(async (settings) => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          ...settings,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      if (error) console.error('Error saving user settings:', error);
+    } catch (err) {
+      console.error('Error saving user settings:', err);
+    }
+  }, [user?.id]);
+
   // Set theme with persistence
   const setTheme = useCallback((newTheme) => {
     setThemeState(newTheme);
     localStorage.setItem('barber-theme', newTheme);
     applyTheme(newTheme);
-  }, [applyTheme]);
+    saveUserSettings({ theme: newTheme });
+  }, [applyTheme, saveUserSettings]);
+
+  // Set language with persistence
+  const setLanguage = useCallback((newLanguage) => {
+    setLanguageState(newLanguage);
+    localStorage.setItem('barber-language', newLanguage);
+    saveUserSettings({ language: newLanguage });
+  }, [saveUserSettings]);
 
   // Apply theme on mount and listen for system theme changes
   useEffect(() => {
@@ -65,6 +94,44 @@ export function AppProvider({ children }) {
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [theme, applyTheme]);
+
+  // Load user settings from database when authenticated
+  useEffect(() => {
+    const loadUserSettings = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('theme, language')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 = no rows found (first time user)
+          console.error('Error loading user settings:', error);
+          return;
+        }
+
+        if (data) {
+          // Apply database settings, update localStorage
+          if (data.theme) {
+            setThemeState(data.theme);
+            localStorage.setItem('barber-theme', data.theme);
+            applyTheme(data.theme);
+          }
+          if (data.language) {
+            setLanguageState(data.language);
+            localStorage.setItem('barber-language', data.language);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user settings:', err);
+      }
+    };
+
+    loadUserSettings();
+  }, [user?.id, applyTheme]);
 
   // Initialize auth state on mount and listen for changes
   useEffect(() => {
@@ -939,6 +1006,7 @@ export function AppProvider({ children }) {
     isAuthenticated,
     loading,
     theme,
+    language,
 
     // Barber-specific state
     currentBarber,
@@ -961,6 +1029,7 @@ export function AppProvider({ children }) {
 
     // Actions
     setTheme,
+    setLanguage,
     setSelectedBranchId,
     reloadData,
     addBranch,
