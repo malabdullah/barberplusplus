@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
@@ -41,7 +42,9 @@ export default function TopBar({
     notificationPreferences,
     markNotificationRead,
     markAllNotificationsRead,
+    userRole,
   } = useApp();
+  const navigate = useNavigate();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -99,6 +102,11 @@ export default function TopBar({
 
   const handleMarkAllRead = async () => {
     await markAllNotificationsRead();
+  };
+
+  const handleViewAllNotifications = () => {
+    setNotificationsOpen(false);
+    navigate(userRole === 'barber' ? '/barber/notifications' : '/notifications');
   };
 
   return (
@@ -247,7 +255,7 @@ export default function TopBar({
               </div>
               {visibleNotifications.length > 10 && (
                 <div className="topbar-dropdown-footer">
-                  <button>{t('notifications.viewAll')}</button>
+                  <button onClick={handleViewAllNotifications}>{t('notifications.viewAll')}</button>
                 </div>
               )}
             </div>

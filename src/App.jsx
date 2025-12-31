@@ -24,6 +24,7 @@ import MyBookings from './pages/barber/MyBookings';
 import MyAvailability from './pages/barber/MyAvailability';
 import MyProfile from './pages/barber/MyProfile';
 import Logs from './pages/Logs';
+import Notifications from './pages/Notifications';
 import MyLogs from './pages/barber/MyLogs';
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -124,6 +125,7 @@ function AppRoutes() {
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="logs" element={<Logs />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
@@ -141,6 +143,7 @@ function AppRoutes() {
         <Route path="availability" element={<MyAvailability />} />
         <Route path="profile" element={<MyProfile />} />
         <Route path="logs" element={<MyLogs />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
