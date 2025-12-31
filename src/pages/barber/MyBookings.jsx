@@ -261,7 +261,9 @@ export default function MyBookings() {
       const blocks = [];
 
       // 1. Check if it's a day off from weekly schedule
-      if (availability && availability[dayKey] && !availability[dayKey].enabled) {
+      const daySchedule = availability?.[dayKey];
+      const isEnabled = daySchedule?.enabled ?? daySchedule?.available;
+      if (availability && daySchedule && !isEnabled) {
         blocks.push({
           type: 'day-off',
           fullDay: true,
