@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import LanguageSelector from '../components/UI/LanguageSelector';
+import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
 
 export default function Login() {
@@ -62,6 +64,12 @@ export default function Login() {
 
       {/* Login Container */}
       <div className="login-container animate-scale-in">
+        {/* Preferences Selectors */}
+        <div className="auth-preferences">
+          <LanguageSelector />
+          <ThemeSelector />
+        </div>
+
         {/* Logo */}
         <div className="login-logo">
           <div className="login-logo-icon">

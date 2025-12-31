@@ -644,6 +644,10 @@
     "november": "November",
     "december": "December"
   },
+  "preferences": {
+    "selectLanguage": "Select Language",
+    "selectTheme": "Select Theme"
+  },
   "validation": {
     "required": "This field is required",
     "invalidEmail": "Please enter a valid email",

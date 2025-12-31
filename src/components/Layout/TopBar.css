@@ -472,3 +472,31 @@ button.topbar-notification-item:hover {
   font-weight: 500;
   color: var(--text-primary);
 }
+
+/* Preferences Selectors (Language/Theme) */
+.preferences-selector {
+  position: relative;
+}
+
+.preferences-dropdown {
+  min-width: 180px;
+}
+
+.preferences-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+[dir="rtl"] .preferences-option {
+  text-align: right;
+}
+
+.preferences-option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}

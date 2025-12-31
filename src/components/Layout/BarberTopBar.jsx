@@ -11,6 +11,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import { notificationPreferencesService } from '../../services';
+import LanguageSelector from '../UI/LanguageSelector';
+import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
 
 export default function BarberTopBar({ onMenuClick }) {
@@ -26,6 +28,7 @@ export default function BarberTopBar({ onMenuClick }) {
   } = useApp();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [activePreferenceDropdown, setActivePreferenceDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
   // Filter notifications based on user preferences
@@ -46,11 +49,20 @@ export default function BarberTopBar({ onMenuClick }) {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setNotificationsOpen(false);
+        setActivePreferenceDropdown(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Handle preference dropdown toggle (close others when one opens)
+  const handlePreferenceDropdownToggle = (dropdownName) => {
+    setActivePreferenceDropdown(dropdownName);
+    if (dropdownName) {
+      setNotificationsOpen(false);
+    }
+  };
 
   const handleNotificationClick = async (notification) => {
     if (!notification.isRead) {
@@ -89,11 +101,20 @@ export default function BarberTopBar({ onMenuClick }) {
           </div>
         )}
 
+        {/* Language Selector */}
+        <LanguageSelector onDropdownToggle={handlePreferenceDropdownToggle} />
+
+        {/* Theme Selector */}
+        <ThemeSelector onDropdownToggle={handlePreferenceDropdownToggle} />
+
         {/* Notifications */}
         <div className="topbar-notifications">
           <button
             className="topbar-icon-btn"
-            onClick={() => setNotificationsOpen(!notificationsOpen)}
+            onClick={() => {
+              setNotificationsOpen(!notificationsOpen);
+              setActivePreferenceDropdown(null);
+            }}
           >
             <Bell size={20} strokeWidth={1.5} />
             {visibleUnreadCount > 0 && (

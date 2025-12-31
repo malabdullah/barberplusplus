@@ -14,6 +14,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import { notificationPreferencesService } from '../../services';
+import LanguageSelector from '../UI/LanguageSelector';
+import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
 
 export default function TopBar({ onMenuClick }) {
@@ -32,6 +34,7 @@ export default function TopBar({ onMenuClick }) {
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [activePreferenceDropdown, setActivePreferenceDropdown] = useState(null);
   const dropdownRef = useRef(null);
 
   // Filter notifications based on user preferences
@@ -53,11 +56,21 @@ export default function TopBar({ onMenuClick }) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setBranchDropdownOpen(false);
         setNotificationsOpen(false);
+        setActivePreferenceDropdown(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Handle preference dropdown toggle (close others when one opens)
+  const handlePreferenceDropdownToggle = (dropdownName) => {
+    setActivePreferenceDropdown(dropdownName);
+    if (dropdownName) {
+      setBranchDropdownOpen(false);
+      setNotificationsOpen(false);
+    }
+  };
 
   const handleBranchSelect = (branchId) => {
     setSelectedBranchId(branchId);
@@ -101,6 +114,7 @@ export default function TopBar({ onMenuClick }) {
             onClick={() => {
               setBranchDropdownOpen(!branchDropdownOpen);
               setNotificationsOpen(false);
+              setActivePreferenceDropdown(null);
             }}
           >
             <Building2 size={18} strokeWidth={1.5} />
@@ -142,6 +156,12 @@ export default function TopBar({ onMenuClick }) {
           )}
         </div>
 
+        {/* Language Selector */}
+        <LanguageSelector onDropdownToggle={handlePreferenceDropdownToggle} />
+
+        {/* Theme Selector */}
+        <ThemeSelector onDropdownToggle={handlePreferenceDropdownToggle} />
+
         {/* Notifications */}
         <div className="topbar-notifications">
           <button
@@ -149,6 +169,7 @@ export default function TopBar({ onMenuClick }) {
             onClick={() => {
               setNotificationsOpen(!notificationsOpen);
               setBranchDropdownOpen(false);
+              setActivePreferenceDropdown(null);
             }}
           >
             <Bell size={20} strokeWidth={1.5} />

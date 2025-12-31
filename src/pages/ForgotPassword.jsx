@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import LanguageSelector from '../components/UI/LanguageSelector';
+import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
 import './ForgotPassword.css';
 
@@ -49,6 +51,12 @@ export default function ForgotPassword() {
 
       {/* Forgot Password Container */}
       <div className="login-container animate-scale-in">
+        {/* Preferences Selectors */}
+        <div className="auth-preferences">
+          <LanguageSelector />
+          <ThemeSelector />
+        </div>
+
         {/* Logo */}
         <div className="login-logo">
           <div className="login-logo-icon">

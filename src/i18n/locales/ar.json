@@ -644,6 +644,10 @@
     "november": "نوفمبر",
     "december": "ديسمبر"
   },
+  "preferences": {
+    "selectLanguage": "اختر اللغة",
+    "selectTheme": "اختر السمة"
+  },
   "validation": {
     "required": "هذا الحقل مطلوب",
     "invalidEmail": "يرجى إدخال بريد إلكتروني صحيح",

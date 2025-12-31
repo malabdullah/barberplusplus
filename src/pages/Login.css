@@ -354,12 +354,37 @@
   }
 }
 
+/* Auth Page Preferences Selectors */
+.auth-preferences {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  gap: var(--space-xs);
+  z-index: 10;
+}
+
+[dir="rtl"] .auth-preferences {
+  right: auto;
+  left: var(--space-md);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .login-page {
     padding: var(--space-md);
     align-items: flex-start;
     padding-top: var(--space-2xl);
+  }
+
+  .auth-preferences {
+    top: var(--space-sm);
+    right: var(--space-sm);
+  }
+
+  [dir="rtl"] .auth-preferences {
+    right: auto;
+    left: var(--space-sm);
   }
 
   .login-container {
