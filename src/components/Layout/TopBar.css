@@ -357,8 +357,7 @@
 @media (max-width: 1024px) {
   .topbar {
     left: 0;
-    padding: 0 var(--space-lg);
-    top: env(safe-area-inset-top, 0);
+    padding: env(safe-area-inset-top, 0) var(--space-lg) 0 var(--space-lg);
   }
 
   .topbar-menu-btn {
