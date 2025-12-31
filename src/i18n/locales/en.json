@@ -447,7 +447,10 @@
     "helpDescription": "Get help and support",
     "helpSupport": "Help & Support",
     "loadingPreferences": "Loading preferences...",
-    "system": "System"
+    "system": "System",
+    "activity": "Activity",
+    "activityDescription": "View your activity history and system logs",
+    "viewActivity": "View Activity Log"
   },
   "logs": {
     "title": "Activity Logs",

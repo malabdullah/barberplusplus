@@ -9,7 +9,6 @@ import {
   Calendar,
   Settings,
   X,
-  FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import SignOutCard from '../UI/SignOutCard';
@@ -21,7 +20,6 @@ const navItems = [
   { path: '/services', icon: Scissors, labelKey: 'nav.services' },
   { path: '/barbers', icon: Users, labelKey: 'nav.barbers' },
   { path: '/bookings', icon: Calendar, labelKey: 'nav.bookings' },
-  { path: '/logs', icon: FileText, labelKey: 'nav.logs' },
   { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

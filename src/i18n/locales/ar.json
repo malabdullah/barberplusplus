@@ -447,7 +447,10 @@
     "helpDescription": "الحصول على المساعدة والدعم",
     "helpSupport": "المساعدة والدعم",
     "loadingPreferences": "جاري تحميل التفضيلات...",
-    "system": "النظام"
+    "system": "النظام",
+    "activity": "النشاط",
+    "activityDescription": "عرض سجل نشاطك وسجلات النظام",
+    "viewActivity": "عرض سجل النشاط"
   },
   "logs": {
     "title": "سجل النشاط",

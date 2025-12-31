@@ -9,7 +9,6 @@ import {
   Settings,
   Scissors,
   X,
-  FileText,
   Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -21,7 +20,6 @@ const navItems = [
   { path: '/barber/bookings', icon: Calendar, labelKey: 'nav.myBookings' },
   { path: '/barber/availability', icon: Clock, labelKey: 'nav.availability' },
   { path: '/barber/profile', icon: User, labelKey: 'nav.profile' },
-  { path: '/barber/logs', icon: FileText, labelKey: 'nav.myActivity' },
   { path: '/barber/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

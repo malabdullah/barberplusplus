@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   User,
   Bell,
@@ -12,6 +13,7 @@ import {
   Save,
   AlertTriangle,
   ShieldAlert,
+  FileText,
 } from 'lucide-react';
 import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
@@ -80,6 +82,7 @@ const parsePhone = (fullPhone) => {
 
 export default function Settings() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
@@ -346,6 +349,21 @@ export default function Settings() {
 
           <button className="settings-link-btn">
             {t('settings.featureRequests')}
+            <ChevronRight size={16} strokeWidth={1.5} />
+          </button>
+        </SettingsSection>
+
+        {/* Activity Section */}
+        <SettingsSection
+          icon={FileText}
+          title={t('settings.activity')}
+          description={t('settings.activityDescription')}
+        >
+          <button
+            className="settings-link-btn"
+            onClick={() => navigate(userRole === 'manager' ? '/logs' : '/barber/logs')}
+          >
+            {t('settings.viewActivity')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
         </SettingsSection>
