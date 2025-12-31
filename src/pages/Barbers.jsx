@@ -1,4 +1,4 @@
-import React, { useState, memo, useMemo, useCallback } from 'react';
+import React, { useState, memo, useMemo, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,6 +13,9 @@ import {
   Calendar,
   RefreshCw,
   Send,
+  CheckCircle,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
@@ -179,6 +182,15 @@ export default function Barbers() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingBarber, setDeletingBarber] = useState(null);
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -216,13 +228,30 @@ export default function Barbers() {
   const handleResendInvite = useCallback(async (barberId) => {
     try {
       await resendBarberInvite(barberId);
+      setToast({ type: 'success', message: t('barbers.inviteResent') });
     } catch (error) {
       console.error('Error resending invite:', error);
+      setToast({ type: 'error', message: error.message || t('barbers.inviteResendFailed') });
     }
-  }, [resendBarberInvite]);
+  }, [resendBarberInvite, t]);
 
   return (
     <div className="barbers-page">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`barbers-toast ${toast.type}`}>
+          {toast.type === 'success' ? (
+            <CheckCircle size={18} strokeWidth={1.5} />
+          ) : (
+            <AlertCircle size={18} strokeWidth={1.5} />
+          )}
+          <span>{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast(null)}>
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
+
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('barbers.title')}</h2>

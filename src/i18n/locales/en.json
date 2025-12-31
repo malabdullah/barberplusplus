@@ -298,7 +298,9 @@
     "noBarbersFound": "No barbers found",
     "adjustSearch": "Try adjusting your search",
     "addFirstBarber": "Add First Barber",
-    "removeBarber": "Remove Barber"
+    "removeBarber": "Remove Barber",
+    "inviteResent": "Invitation sent successfully",
+    "inviteResendFailed": "Failed to resend invitation"
   },
   "services": {
     "title": "Services",

@@ -170,9 +170,10 @@ export const barbersService = {
    * @param {string} email
    * @param {string} name
    * @param {string} branchId
+   * @param {boolean} isResend - If true, deletes existing user and re-invites
    * @returns {Promise<{success: boolean, userId?: string, error?: string}>}
    */
-  sendInvite: async (barberId, email, name, branchId) => {
+  sendInvite: async (barberId, email, name, branchId, isResend = false) => {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
@@ -187,7 +188,7 @@ export const barbersService = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ barberId, email, name, branchId }),
+        body: JSON.stringify({ barberId, email, name, branchId, isResend }),
       }
     );
 
@@ -215,11 +216,13 @@ export const barbersService = {
     if (error) throw error;
     if (!barber) throw new Error('Barber not found');
 
+    // Pass isResend=true to delete existing user and send fresh invite
     return barbersService.sendInvite(
       barberId,
       barber.email,
       barber.name,
-      barber.branch_id
+      barber.branch_id,
+      true
     );
   },
 };

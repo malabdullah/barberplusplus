@@ -298,7 +298,9 @@
     "noBarbersFound": "لم يتم العثور على حلاقين",
     "adjustSearch": "جرب تعديل البحث",
     "addFirstBarber": "أضف أول حلاق",
-    "removeBarber": "إزالة الحلاق"
+    "removeBarber": "إزالة الحلاق",
+    "inviteResent": "تم إرسال الدعوة بنجاح",
+    "inviteResendFailed": "فشل في إعادة إرسال الدعوة"
   },
   "services": {
     "title": "الخدمات",
