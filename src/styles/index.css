@@ -675,6 +675,7 @@ a:active {
 [dir="rtl"] .layout-main {
   margin-left: 0;
   margin-right: var(--sidebar-width);
+  max-width: calc(100% - var(--sidebar-width));
 }
 
 /* Sidebar nav indicator RTL */
@@ -711,5 +712,6 @@ a:active {
 
   [dir="rtl"] .layout-main {
     margin-right: 0;
+    max-width: 100%;
   }
 }

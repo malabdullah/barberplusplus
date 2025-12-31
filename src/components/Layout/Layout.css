@@ -2,6 +2,8 @@
 .layout {
   display: flex;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .layout-main {
@@ -10,6 +12,8 @@
   flex-direction: column;
   margin-left: var(--sidebar-width);
   min-height: 100vh;
+  max-width: calc(100% - var(--sidebar-width));
+  overflow-x: hidden;
   transition: margin-left var(--transition-base);
 }
 
@@ -24,6 +28,7 @@
 @media (max-width: 1024px) {
   .layout-main {
     margin-left: 0;
+    max-width: 100%;
   }
 
   .layout-content {
