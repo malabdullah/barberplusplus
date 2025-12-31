@@ -20,6 +20,7 @@ npm run preview  # Preview production build
 - **Frontend**: React 18, React Router v6, Vite 5
 - **Backend**: Supabase (Auth + PostgreSQL)
 - **Styling**: CSS with custom properties (design system in `src/styles/index.css`)
+- **i18n**: i18next with English and Arabic locales (`src/i18n/locales/`)
 - **Icons**: lucide-react
 - **Dates**: date-fns
 
@@ -27,14 +28,17 @@ npm run preview  # Preview production build
 ```
 src/
 ├── components/
-│   ├── Forms/      # BarberForm, BranchForm
+│   ├── Forms/      # BarberForm, BranchForm, BookingForm
 │   ├── Layout/     # Layout, Sidebar, TopBar (manager & barber variants)
-│   └── UI/         # Modal, ConfirmDialog
+│   └── UI/         # Modal, ConfirmDialog, NotificationToast
 ├── pages/          # Route pages (manager at root, barber at /barber)
 ├── services/       # API layer (auth, branches, barbers, services, bookings)
 ├── context/        # AppContext (global state via React Context)
 ├── lib/            # Supabase client setup
-├── constants/      # countries, locations, time slots
+├── i18n/           # i18next config and locale JSON files
+├── hooks/          # Custom hooks (useGeoLocation, useLogger)
+├── utils/          # Helpers (validation, caseConverter, bookingConflicts)
+├── constants/      # countries, locations, time slots, booking statuses
 └── styles/         # Global CSS with design tokens
 ```
 
@@ -66,6 +70,15 @@ export const entityService = {
 }
 ```
 
+### Database Field Conversion
+Services use `toFrontend()`/`toDatabase()` converters for snake_case (DB) ↔ camelCase (frontend):
+```javascript
+// DB returns: { branch_id, customer_name }
+// Frontend uses: { branchId, customerName }
+const toFrontend = (record) => ({ branchId: record.branch_id, ... });
+const toDatabase = (data) => ({ branch_id: data.branchId, ... });
+```
+
 ### Design System
 CSS custom properties defined in `src/styles/index.css`:
 - Colors: `--bg-primary`, `--accent-primary` (#D4A853 amber), `--status-*`
@@ -80,3 +93,5 @@ CSS custom properties defined in `src/styles/index.css`:
 - Forms use controlled components with local state
 - Modals/dialogs use the shared `Modal` and `ConfirmDialog` components
 - Environment variables prefixed with `VITE_` for Supabase config
+- Use `useTranslation()` hook from react-i18next for all UI text
+- RTL support: Arabic locale automatically sets `dir="rtl"` on document
