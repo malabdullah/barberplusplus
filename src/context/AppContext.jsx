@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
 import logger from '../utils/logger';
 import i18n from '../i18n';
+import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
 
 const AppContext = createContext(null);
 
@@ -596,6 +597,7 @@ export function AppProvider({ children }) {
         ...data,
         branchId: selectedBranchId,
         status: 'active',
+        availability: BARBER_DEFAULT_SCHEDULE,
       });
 
       // Upload profile picture if provided
