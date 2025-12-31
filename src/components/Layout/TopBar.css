@@ -13,7 +13,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-xl);
-  z-index: 90;
+  z-index: 999;
   animation: fadeInDown var(--transition-slow) ease-out;
 }
 
@@ -358,6 +358,7 @@
   .topbar {
     left: 0;
     padding: 0 var(--space-lg);
+    top: env(safe-area-inset-top, 0);
   }
 
   .topbar-menu-btn {
@@ -427,7 +428,7 @@
 
   .topbar-branch-dropdown {
     position: fixed;
-    top: calc(var(--topbar-height) + var(--space-sm));
+    top: calc(var(--topbar-height) + var(--space-sm) + env(safe-area-inset-top, 0));
     left: var(--space-md);
     right: var(--space-md);
     min-width: auto;

@@ -33,13 +33,13 @@
 
   .layout-content {
     padding: var(--space-lg);
-    padding-top: calc(var(--topbar-height) + var(--space-lg));
+    padding-top: calc(var(--topbar-height) + var(--space-lg) + env(safe-area-inset-top, 0));
   }
 }
 
 @media (max-width: 640px) {
   .layout-content {
     padding: var(--space-md);
-    padding-top: calc(var(--topbar-height) + var(--space-md));
+    padding-top: calc(var(--topbar-height) + var(--space-md) + env(safe-area-inset-top, 0));
   }
 }
