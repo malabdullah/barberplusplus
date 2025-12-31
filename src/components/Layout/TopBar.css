@@ -432,7 +432,7 @@
     right: var(--space-md);
     min-width: auto;
     width: auto;
-    max-width: calc(100vw - var(--space-md) * 2);
+    max-width: calc(100% - var(--space-md) * 2);
   }
 
   [dir="rtl"] .topbar-branch-dropdown {
