@@ -415,7 +415,7 @@
   }
 
   .topbar-notifications-dropdown {
-    min-width: calc(100vw - var(--space-md) * 2);
+    min-width: calc(100% - var(--space-md) * 2);
     right: calc(-1 * var(--space-md));
     max-height: 70vh;
   }

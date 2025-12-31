@@ -130,6 +130,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -139,6 +140,7 @@ body {
   color: var(--text-primary);
   background: var(--bg-primary);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Subtle noise texture overlay */
@@ -422,7 +424,7 @@ a:active {
 
 @media (max-width: 480px) {
   :root {
-    --sidebar-width: 100vw;
+    --sidebar-width: 100%;
     --topbar-height: 64px;
     --space-lg: 16px;
     --space-xl: 20px;
