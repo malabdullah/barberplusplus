@@ -77,7 +77,8 @@ export function checkBookingConflicts({
   // 2. Check if it's barber's day off
   if (barberData?.availability) {
     const daySchedule = barberData.availability[dayKey];
-    if (!daySchedule?.enabled) {
+    const isEnabled = daySchedule?.enabled ?? daySchedule?.available;
+    if (!isEnabled) {
       return { hasConflict: true, reason: 'Barber is not available on this day' };
     }
 
