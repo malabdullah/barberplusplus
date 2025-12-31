@@ -425,6 +425,21 @@
     left: calc(-1 * var(--space-md));
   }
 
+  .topbar-branch-dropdown {
+    position: fixed;
+    top: calc(var(--topbar-height) + var(--space-sm));
+    left: var(--space-md);
+    right: var(--space-md);
+    min-width: auto;
+    width: auto;
+    max-width: calc(100vw - var(--space-md) * 2);
+  }
+
+  [dir="rtl"] .topbar-branch-dropdown {
+    left: var(--space-md);
+    right: var(--space-md);
+  }
+
   .topbar-notification-item {
     padding: var(--space-md);
   }
