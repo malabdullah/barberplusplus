@@ -582,15 +582,21 @@
 }
 
 @media (max-width: 768px) {
+  .bookings-page {
+    gap: var(--space-md);
+  }
+
   .calendar-nav {
     flex-direction: column;
     gap: var(--space-md);
     align-items: stretch;
+    padding: var(--space-md);
   }
 
   .calendar-nav-left {
     flex-wrap: wrap;
     justify-content: center;
+    gap: var(--space-sm);
   }
 
   .calendar-period {
@@ -603,13 +609,239 @@
     justify-content: center;
   }
 
+  .nav-arrow {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .calendar-legend {
     flex-wrap: wrap;
     gap: var(--space-md);
+    justify-content: flex-start;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .booking-sidebar {
     width: 100%;
+  }
+
+  .booking-details {
+    padding: var(--space-lg);
+  }
+
+  .booking-details-actions {
+    flex-direction: column;
+  }
+
+  .booking-details-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-nav {
+    padding: var(--space-sm);
+    border-radius: var(--radius-lg);
+  }
+
+  .calendar-nav-arrows {
+    gap: var(--space-xs);
+  }
+
+  .nav-arrow {
+    width: 44px;
+    height: 44px;
+  }
+
+  .calendar-period {
+    font-size: 0.9375rem;
+  }
+
+  .view-toggle {
+    padding: 3px;
+  }
+
+  .view-toggle-btn {
+    padding: var(--space-sm);
+    font-size: 0.75rem;
+  }
+
+  .calendar-grid {
+    border-radius: var(--radius-lg);
+    min-height: 300px;
+  }
+
+  .calendar-day {
+    padding: var(--space-md);
+    border-bottom: 2px solid rgba(212, 168, 83, 0.1);
+  }
+
+  .calendar-day::before {
+    font-size: 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--accent-glow);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-bottom: var(--space-sm);
+  }
+
+  .calendar-day-bookings {
+    gap: var(--space-sm);
+  }
+
+  .booking-card {
+    padding: var(--space-md);
+    min-height: 48px;
+    border-left-width: 4px;
+  }
+
+  .booking-card-time {
+    font-size: 0.625rem;
+  }
+
+  .booking-card-customer {
+    font-size: 0.8125rem;
+  }
+
+  .booking-card-service,
+  .booking-card-barber {
+    font-size: 0.625rem;
+  }
+
+  .calendar-legend {
+    padding: var(--space-sm);
+    gap: var(--space-sm);
+  }
+
+  .legend-item {
+    font-size: 0.6875rem;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* Day View Mobile Enhancements */
+  .calendar-day-view {
+    border-radius: var(--radius-lg);
+  }
+
+  .day-view-header {
+    padding: var(--space-lg);
+  }
+
+  .day-view-date {
+    font-size: 1.25rem;
+  }
+
+  .day-view-full-date {
+    font-size: 0.8125rem;
+  }
+
+  .day-view-bookings {
+    padding: var(--space-md);
+    min-height: 250px;
+  }
+
+  .day-view-bookings .calendar-day-empty {
+    padding: var(--space-xl);
+  }
+
+  /* Booking Sidebar Mobile */
+  .booking-sidebar-overlay {
+    padding: 0;
+  }
+
+  .booking-sidebar {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 95vh;
+  }
+
+  .booking-details {
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .booking-details-header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .booking-status-badge {
+    font-size: 0.6875rem;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .booking-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .booking-details-section {
+    padding: var(--space-md) 0;
+  }
+
+  .detail-label {
+    font-size: 0.625rem;
+  }
+
+  .detail-value {
+    font-size: 0.875rem;
+  }
+
+  .booking-details-price .price {
+    font-size: 1.25rem;
+  }
+
+  .booking-status-change {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+  }
+
+  .status-change-select {
+    width: 100%;
+    min-height: 48px;
+    font-size: 0.9375rem;
+  }
+
+  .services-select-grid {
+    grid-template-columns: 1fr;
+    max-height: 200px;
+  }
+
+  .service-checkbox-card {
+    min-height: 48px;
+    padding: var(--space-md);
+  }
+
+  .service-checkbox-name {
+    font-size: 0.8125rem;
+  }
+
+  .service-checkbox-meta {
+    font-size: 0.6875rem;
+  }
+
+  .services-total {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8125rem;
   }
 }
 

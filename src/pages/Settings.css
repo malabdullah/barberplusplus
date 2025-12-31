@@ -501,19 +501,160 @@
 }
 
 @media (max-width: 640px) {
+  .settings-page {
+    gap: var(--space-lg);
+  }
+
+  .settings-section {
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+  }
+
+  .settings-section-header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .settings-section-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .settings-section-info h3 {
+    font-size: 1.125rem;
+  }
+
+  .settings-section-info p {
+    font-size: 0.75rem;
+  }
+
   .settings-item {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-sm);
+    min-height: 44px;
+    padding: var(--space-md) 0;
+  }
+
+  .settings-item-label {
+    font-size: 0.875rem;
+  }
+
+  .settings-item-desc {
+    font-size: 0.6875rem;
   }
 
   .settings-select {
     width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .toggle {
+    min-width: 52px;
+    min-height: 28px;
   }
 
   .profile-avatar-section {
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 1.25rem;
+  }
+
+  .avatar-upload-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .settings-link-btn {
+    min-height: 48px;
+    padding: var(--space-md);
+  }
+
+  .settings-category-label {
+    font-size: 0.625rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-page {
+    gap: var(--space-md);
+  }
+
+  .settings-section {
+    padding: var(--space-md);
+  }
+
+  .settings-section-header {
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .settings-section-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .settings-section-info h3 {
+    font-size: 1rem;
+  }
+
+  .settings-item {
+    padding: var(--space-sm) 0;
+  }
+
+  /* Danger Zone Mobile */
+  .danger-zone-container {
+    padding: var(--space-lg);
+  }
+
+  .danger-zone-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .danger-zone-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .danger-zone-title-group h3 {
+    font-size: 1.125rem;
+  }
+
+  .danger-zone-title-group p {
+    font-size: 0.75rem;
+  }
+
+  .danger-zone-action {
+    padding: var(--space-md);
+  }
+
+  .danger-zone-action-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .danger-zone-action-label {
+    font-size: 0.875rem;
+  }
+
+  .danger-zone-action-desc {
+    font-size: 0.6875rem;
+  }
+
+  .danger-zone-btn {
+    min-height: 48px;
+    padding: var(--space-md) var(--space-lg);
   }
 }

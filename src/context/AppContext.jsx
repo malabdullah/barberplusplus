@@ -1035,12 +1035,17 @@ export function AppProvider({ children }) {
     const currentUserId = user?.id;
     const currentRole = userRole;
     try {
-      await authService.logout();
+      // Log logout event BEFORE signing out (while still authenticated)
       loggingService.logAuth('logout', currentUserId, currentRole, true);
+      // Flush logs immediately to ensure they're sent while still authenticated
+      await loggingService.flush();
+      await authService.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       loggingService.clearContext();
+      // Clear the queue to prevent orphaned logs from trying to send
+      loggingService.clearQueue();
       setUser(null);
       setUserRole(null);
       setIsAuthenticated(false);

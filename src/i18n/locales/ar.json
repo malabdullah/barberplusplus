@@ -342,6 +342,15 @@
     "customerName": "اسم العميل",
     "customerPhone": "هاتف العميل",
     "customerEmail": "بريد العميل",
+    "customerInformation": "معلومات العميل",
+    "phoneNumber": "رقم الهاتف",
+    "namePlaceholder": "الاسم الكامل",
+    "phonePlaceholder": "XXXX XXXX",
+    "selectBarberPlaceholder": "اختر الحلاق...",
+    "notesLabel": "ملاحظات (اختياري)",
+    "notesPlaceholder": "أي طلبات أو ملاحظات خاصة...",
+    "updateBooking": "تحديث الحجز",
+    "createBooking": "إنشاء حجز",
     "barber": "الحلاق",
     "service": "الخدمة",
     "services": "الخدمات",
@@ -387,6 +396,14 @@
     "searchBookings": "البحث في الحجوزات...",
     "total": "الإجمالي",
     "manageAppointments": "إدارة المواعيد في {{branch}}",
+    "validation": {
+      "customerNameRequired": "اسم العميل مطلوب",
+      "phoneRequired": "رقم الهاتف مطلوب",
+      "barberRequired": "يرجى اختيار الحلاق",
+      "serviceRequired": "يرجى اختيار خدمة واحدة على الأقل",
+      "dateRequired": "التاريخ مطلوب",
+      "timeRequired": "الوقت مطلوب"
+    },
     "status": {
       "confirmed": "مؤكد",
       "pending": "قيد الانتظار",
@@ -675,5 +692,13 @@
     "passwordNumber": "يجب أن تحتوي كلمة المرور على رقم",
     "passwordSpecial": "يجب أن تحتوي كلمة المرور على رمز خاص",
     "passwordsMismatch": "كلمتا المرور غير متطابقتين"
+  },
+  "countries": {
+    "KW": "الكويت",
+    "SA": "السعودية",
+    "AE": "الإمارات",
+    "BH": "البحرين",
+    "QA": "قطر",
+    "OM": "عمان"
   }
 }

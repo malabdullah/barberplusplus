@@ -146,16 +146,117 @@
   color: var(--text-primary);
 }
 
+/* Slide up animation for mobile */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .modal-overlay {
-    padding: var(--space-md);
+    padding: 0;
     align-items: flex-end;
   }
 
   .modal-container {
     max-width: 100%;
-    max-height: 90vh;
+    max-height: 95vh;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: slideUp var(--transition-base) ease-out;
+  }
+
+  .modal-header {
+    padding: var(--space-md) var(--space-lg);
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 1;
+    border-bottom: 1px solid rgba(212, 168, 83, 0.1);
+  }
+
+  /* Drag handle indicator */
+  .modal-header::before {
+    content: '';
+    position: absolute;
+    top: var(--space-sm);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: var(--text-tertiary);
+    border-radius: var(--radius-full);
+    opacity: 0.4;
+  }
+
+  .modal-title {
+    font-size: 1.125rem;
+    padding-top: var(--space-xs);
+  }
+
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modal-content {
+    padding: var(--space-lg);
+    padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Confirm dialog mobile adjustments */
+  .confirm-dialog {
+    padding: var(--space-md) 0;
+  }
+
+  .confirm-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: var(--space-md);
+  }
+
+  .confirm-title {
+    font-size: 1.125rem;
+  }
+
+  .confirm-message {
+    font-size: 0.875rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .confirm-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-sm);
+  }
+
+  .confirm-actions .btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .modal-container {
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-header::before {
+    display: none;
+  }
+
+  .modal-content {
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
   }
 }

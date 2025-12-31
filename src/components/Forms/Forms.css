@@ -413,41 +413,228 @@
 
 /* Responsive */
 @media (max-width: 640px) {
+  .form {
+    gap: var(--space-lg);
+  }
+
   .form-row {
     grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .form-section-title {
+    font-size: 0.9375rem;
+    padding-bottom: var(--space-xs);
+  }
+
+  .form-label {
+    font-size: 0.75rem;
+  }
+
+  /* Touch-friendly input sizing */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    min-height: 48px;
+    padding: var(--space-md);
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  .form-textarea {
+    min-height: 100px;
+  }
+
+  .form-select {
+    background-position: right var(--space-md) center;
+    padding-right: var(--space-2xl);
   }
 
   .hours-row-edit {
     flex-wrap: wrap;
+    padding: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .hours-day-label {
     width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .hours-inputs {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .time-input {
     flex: 1;
-    min-width: 0;
+    min-width: 80px;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .hours-toggle {
+    min-height: 36px;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .form-actions {
     flex-direction: column;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
   }
 
   .form-actions .btn {
     width: 100%;
+    min-height: 48px;
+    justify-content: center;
   }
 
   .phone-input-group {
     flex-direction: column;
+    gap: var(--space-sm);
   }
 
   .country-code-select {
     flex: none;
     width: 100%;
+    min-height: 48px;
+  }
+
+  .phone-number-input {
+    min-height: 48px;
+  }
+
+  /* Profile Picture Mobile */
+  .profile-picture-upload {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-md);
+  }
+
+  .profile-picture-preview {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-picture-button {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .profile-header-row {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  /* Tags Input Mobile */
+  .tags-input {
+    min-height: 52px;
+    padding: var(--space-sm);
+  }
+
+  .tag {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.8125rem;
+  }
+
+  .tag button {
+    width: 20px;
+    height: 20px;
+    min-width: 44px;
+    min-height: 44px;
+    margin: -14px;
+    margin-left: 0;
+  }
+
+  .tags-input input {
+    min-height: 36px;
+    font-size: 16px;
+  }
+
+  /* Checkbox/Radio Mobile */
+  .form-checkbox,
+  .form-radio {
+    min-height: 44px;
+    padding: var(--space-xs) 0;
+  }
+
+  .form-checkbox input,
+  .form-radio input {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Services Select Mobile */
+  .services-select {
+    max-height: 250px;
+    padding: var(--space-sm);
+  }
+
+  .service-checkbox {
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .service-checkbox input {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Availability Editor Mobile */
+  .availability-day {
+    padding: var(--space-md);
+  }
+
+  .availability-day-header {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .availability-slot {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .form-input,
+  .form-select {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .hours-row-edit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hours-inputs {
+    justify-content: space-between;
+  }
+
+  .time-input {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .hours-separator {
+    display: none;
+  }
+
+  .hours-inputs::after {
+    content: '–';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .hours-inputs {
+    position: relative;
+    gap: var(--space-xl);
   }
 }

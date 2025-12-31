@@ -422,12 +422,120 @@ a:active {
 
 @media (max-width: 480px) {
   :root {
-    --sidebar-width: 280px;
+    --sidebar-width: 100vw;
+    --topbar-height: 64px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+    --space-2xl: 32px;
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+
+  h4 {
+    font-size: 1rem;
+  }
+
+  /* Thinner scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* ================================
+   SAFE AREA INSETS (Notched Devices)
+   ================================ */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ================================
+   MOBILE UTILITY CLASSES
+   ================================ */
+
+/* Horizontal scroll container */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+}
+
+.scroll-x::-webkit-scrollbar {
+  height: 4px;
+}
+
+/* Scroll snap utilities */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+.scroll-snap-center {
+  scroll-snap-align: center;
+}
+
+/* Hide on mobile utilities */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hide-small {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 481px) {
+  .show-small-only {
+    display: none !important;
+  }
+}
+
+/* Text truncation utility */
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Touch-friendly tap area */
+.touch-target {
+  position: relative;
+}
+
+.touch-target::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 
 /* ================================

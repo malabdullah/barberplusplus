@@ -342,6 +342,15 @@
     "customerName": "Customer Name",
     "customerPhone": "Customer Phone",
     "customerEmail": "Customer Email",
+    "customerInformation": "Customer Information",
+    "phoneNumber": "Phone Number",
+    "namePlaceholder": "Full name",
+    "phonePlaceholder": "XXXX XXXX",
+    "selectBarberPlaceholder": "Select barber...",
+    "notesLabel": "Notes (optional)",
+    "notesPlaceholder": "Any special requests or notes...",
+    "updateBooking": "Update Booking",
+    "createBooking": "Create Booking",
     "barber": "Barber",
     "service": "Service",
     "services": "Services",
@@ -387,6 +396,14 @@
     "searchBookings": "Search bookings...",
     "total": "Total",
     "manageAppointments": "Manage appointments at {{branch}}",
+    "validation": {
+      "customerNameRequired": "Customer name is required",
+      "phoneRequired": "Phone number is required",
+      "barberRequired": "Please select a barber",
+      "serviceRequired": "Please select at least one service",
+      "dateRequired": "Date is required",
+      "timeRequired": "Time is required"
+    },
     "status": {
       "confirmed": "Confirmed",
       "pending": "Pending",
@@ -675,5 +692,13 @@
     "passwordNumber": "Password must contain a number",
     "passwordSpecial": "Password must contain a special character",
     "passwordsMismatch": "Passwords do not match"
+  },
+  "countries": {
+    "KW": "Kuwait",
+    "SA": "Saudi Arabia",
+    "AE": "UAE",
+    "BH": "Bahrain",
+    "QA": "Qatar",
+    "OM": "Oman"
   }
 }

@@ -285,3 +285,32 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* RTL Support */
+[dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
+  border-right: none;
+  border-left: 1px solid rgba(212, 168, 83, 0.08);
+}
+
+[dir="rtl"] .sidebar-close-btn {
+  right: auto;
+  left: var(--space-md);
+}
+
+[dir="rtl"] .sidebar-nav-indicator {
+  right: auto;
+  left: 0;
+}
+
+/* RTL Mobile Responsive */
+@media (max-width: 1024px) {
+  [dir="rtl"] .sidebar {
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .sidebar.open {
+    transform: translateX(0);
+  }
+}

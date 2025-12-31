@@ -53,7 +53,7 @@
 /* Services Grid */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: var(--space-lg);
 }
 
@@ -189,5 +189,67 @@
 
   .services-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .services-page {
+    gap: var(--space-md);
+  }
+
+  .services-toolbar {
+    gap: var(--space-sm);
+  }
+
+  .search-input-wrapper {
+    padding: var(--space-md);
+    min-height: 48px;
+  }
+
+  .search-input {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  .services-page .service-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .services-page .service-card-header {
+    padding: var(--space-md);
+  }
+
+  .services-page .service-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+  }
+
+  .services-page .service-card-content {
+    padding: var(--space-md);
+  }
+
+  .services-page .service-name {
+    font-size: 1.125rem;
+  }
+
+  .services-page .service-description {
+    font-size: 0.8125rem;
+  }
+
+  .services-page .service-details {
+    padding: var(--space-sm) 0;
+    margin-bottom: var(--space-sm);
+  }
+
+  .services-page .detail-item {
+    font-size: 0.75rem;
+  }
+
+  .services-page .service-actions .action-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 44px;
+    min-height: 44px;
   }
 }

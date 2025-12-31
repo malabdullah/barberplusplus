@@ -4,6 +4,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Page Header */
@@ -718,11 +720,13 @@
   .schedule-times {
     width: 100%;
     padding-left: 44px;
+    box-sizing: border-box;
   }
 
   .schedule-hours {
     text-align: left;
     padding-left: 44px;
+    box-sizing: border-box;
   }
 
   .schedule-legend {
@@ -751,6 +755,10 @@
 }
 
 @media (max-width: 480px) {
+  .availability-page {
+    gap: var(--space-md);
+  }
+
   .availability-summary {
     grid-template-columns: 1fr;
   }
@@ -759,9 +767,86 @@
     font-size: 1.5rem;
   }
 
+  .page-description {
+    font-size: 0.875rem;
+  }
+
+  .page-actions .btn {
+    min-height: 48px;
+  }
+
+  .schedule-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .schedule-card-header {
+    padding: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .schedule-card-title h3 {
+    font-size: 1rem;
+  }
+
+  .schedule-grid {
+    padding: var(--space-sm);
+  }
+
+  .schedule-row {
+    padding: var(--space-md);
+    gap: var(--space-sm);
+  }
+
   .schedule-toggle {
     width: 44px;
     height: 44px;
+  }
+
+  .schedule-day-label {
+    font-size: 0.875rem;
+  }
+
+  .schedule-times {
+    padding-left: 0;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .schedule-time-select {
+    flex: 1;
+    min-width: 80px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .schedule-time-separator {
+    display: none;
+  }
+
+  .schedule-hours {
+    padding-left: 0;
+  }
+
+  .hours-copy-btn {
+    width: 44px;
+    height: 44px;
+    margin-left: 0;
+  }
+
+  .schedule-footer {
+    padding: var(--space-md);
+  }
+
+  .schedule-total {
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .schedule-total strong {
+    font-size: 1.125rem;
   }
 
   .timeoff-delete-btn,
@@ -770,13 +855,69 @@
     height: 44px;
   }
 
+  .availability-tabs {
+    padding: var(--space-xs);
+  }
+
   .tab-btn {
     min-height: 44px;
+    padding: var(--space-sm);
+    font-size: 0.8125rem;
+  }
+
+  .section-card-header {
+    padding: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .section-card-title h3 {
+    font-size: 1rem;
+  }
+
+  .timeoff-form,
+  .vacation-form {
+    padding: var(--space-md);
   }
 
   .form-select,
   .form-input {
-    min-height: 44px;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .timeoff-list,
+  .vacations-list {
+    padding: var(--space-md);
+  }
+
+  .timeoff-card,
+  .vacation-card {
+    padding: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .timeoff-card-reason,
+  .vacation-card-reason {
+    order: unset;
+    margin-top: 0;
+    white-space: normal;
+  }
+
+  .vacation-card-duration {
+    order: -1;
   }
 
   .summary-card {
@@ -791,5 +932,33 @@
 
   .summary-value {
     font-size: 1.25rem;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+  }
+
+  .availability-tips {
+    padding: var(--space-md);
+  }
+
+  .availability-tips h4 {
+    font-size: 0.875rem;
+  }
+
+  .availability-tips li {
+    font-size: 0.75rem;
+  }
+
+  .empty-state {
+    padding: var(--space-xl);
+  }
+
+  .empty-state p {
+    font-size: 0.875rem;
+  }
+
+  .empty-state span {
+    font-size: 0.75rem;
   }
 }

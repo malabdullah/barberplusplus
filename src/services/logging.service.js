@@ -71,8 +71,12 @@ const flushLogs = async () => {
 
     if (error) {
       console.error('Failed to flush logs:', error);
-      // Re-queue failed logs (with limit to prevent infinite growth)
-      if (logQueue.length < 100) {
+      // Don't re-queue on auth/RLS errors (user logged out or no permission)
+      const isAuthError = error.code === '42501' ||
+                          error.message?.includes('JWT') ||
+                          error.code === 'PGRST301';
+      // Re-queue failed logs only if not an auth error (with limit to prevent infinite growth)
+      if (!isAuthError && logQueue.length < 100) {
         logQueue = [...logsToFlush, ...logQueue];
       }
     }
@@ -130,6 +134,17 @@ export const loggingService = {
       branchId: null,
       barberId: null,
     };
+  },
+
+  /**
+   * Clear the log queue (on logout to prevent auth errors)
+   */
+  clearQueue: () => {
+    logQueue = [];
+    if (flushTimeout) {
+      clearTimeout(flushTimeout);
+      flushTimeout = null;
+    }
   },
 
   /**

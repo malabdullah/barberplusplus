@@ -21,7 +21,7 @@
 /* Barbers Grid */
 .barbers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: var(--space-lg);
 }
 
@@ -274,5 +274,80 @@
 
   .barbers-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .barbers-page {
+    gap: var(--space-md);
+  }
+
+  .barber-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .barber-card-header {
+    padding: var(--space-md);
+  }
+
+  .barber-avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  .barber-card-content {
+    padding: var(--space-md);
+  }
+
+  .barber-name {
+    font-size: 1.125rem;
+  }
+
+  .barber-status {
+    font-size: 0.625rem;
+    padding: 3px 8px;
+  }
+
+  .barber-bio {
+    font-size: 0.8125rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .specialty-tag {
+    font-size: 0.625rem;
+    padding: 3px 8px;
+  }
+
+  .specialty-more {
+    font-size: 0.625rem;
+    padding: 3px 8px;
+  }
+
+  .barber-contact {
+    padding: var(--space-sm) 0;
+    margin-bottom: var(--space-sm);
+  }
+
+  .contact-item {
+    font-size: 0.75rem;
+  }
+
+  .barber-bookings {
+    font-size: 0.75rem;
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .invite-status {
+    font-size: 0.625rem;
+    padding: 3px 8px;
   }
 }

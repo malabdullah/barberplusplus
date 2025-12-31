@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { TIME_SLOTS } from '../../constants/time';
@@ -20,6 +21,8 @@ import { checkBookingConflicts } from '../../utils/bookingConflicts';
  * @param {Function} props.onCancel - Callback when form is cancelled
  */
 function BookingForm({ booking, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
+  const { t } = useTranslation();
+
   // Determine mode: manager (has barbers list) or barber (has currentBarber)
   const isManagerView = !!barbers && barbers.length > 0;
 
@@ -68,11 +71,11 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
     const newErrors = {};
 
     if (!formData.customerName.trim()) {
-      newErrors.customerName = 'Customer name is required';
+      newErrors.customerName = t('bookings.validation.customerNameRequired');
     }
 
     if (!formData.customerPhone.trim()) {
-      newErrors.customerPhone = 'Phone is required';
+      newErrors.customerPhone = t('bookings.validation.phoneRequired');
     } else {
       const phoneValidation = validatePhoneNumber(
         formData.customerPhone,
@@ -85,19 +88,19 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
     // Only validate barberId in manager view
     if (isManagerView && !formData.barberId) {
-      newErrors.barberId = 'Please select a barber';
+      newErrors.barberId = t('bookings.validation.barberRequired');
     }
 
     if (!formData.serviceIds.length) {
-      newErrors.serviceIds = 'Please select at least one service';
+      newErrors.serviceIds = t('bookings.validation.serviceRequired');
     }
 
     if (!formData.date) {
-      newErrors.date = 'Date is required';
+      newErrors.date = t('bookings.validation.dateRequired');
     }
 
     if (!formData.time) {
-      newErrors.time = 'Time is required';
+      newErrors.time = t('bookings.validation.timeRequired');
     }
 
     // Check for booking conflicts
@@ -142,24 +145,24 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   return (
     <form className="form" onSubmit={handleSubmit}>
       <div className="form-section">
-        <h4 className="form-section-title">Customer Information</h4>
+        <h4 className="form-section-title">{t('bookings.customerInformation')}</h4>
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Customer Name</label>
+            <label className="form-label">{t('bookings.customerName')}</label>
             <input
               type="text"
               name="customerName"
               value={formData.customerName}
               onChange={handleChange}
               className={`form-input ${errors.customerName ? 'error' : ''}`}
-              placeholder="Full name"
+              placeholder={t('bookings.namePlaceholder')}
             />
             {errors.customerName && <span className="form-error">{errors.customerName}</span>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Phone Number</label>
+            <label className="form-label">{t('bookings.phoneNumber')}</label>
             <div className="phone-input-group">
               <select
                 name="customerCountryCode"
@@ -169,7 +172,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
               >
                 {GCC_COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
-                    {country.label}
+                    {t(`countries.${country.country}`)} ({country.code})
                   </option>
                 ))}
               </select>
@@ -179,7 +182,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
                 value={formData.customerPhone}
                 onChange={handleChange}
                 className={`form-input phone-number-input ${errors.customerPhone ? 'error' : ''}`}
-                placeholder="XXXX XXXX"
+                placeholder={t('bookings.phonePlaceholder')}
               />
             </div>
             {errors.customerPhone && <span className="form-error">{errors.customerPhone}</span>}
@@ -188,20 +191,20 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">Booking Details</h4>
+        <h4 className="form-section-title">{t('bookings.bookingDetails')}</h4>
 
         {/* Barber selection - only in manager view */}
         {isManagerView && (
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Barber</label>
+              <label className="form-label">{t('bookings.barber')}</label>
               <select
                 name="barberId"
                 value={formData.barberId}
                 onChange={handleChange}
                 className={`form-input form-select ${errors.barberId ? 'error' : ''}`}
               >
-                <option value="">Select barber...</option>
+                <option value="">{t('bookings.selectBarberPlaceholder')}</option>
                 {barbers.map((barber) => (
                   <option key={barber.id} value={barber.id}>
                     {barber.name}
@@ -214,7 +217,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         )}
 
         <div className="form-group">
-          <label className="form-label">Services</label>
+          <label className="form-label">{t('bookings.services')}</label>
           <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
             {services.map((service) => {
               const isSelected = formData.serviceIds.includes(service.id);
@@ -231,7 +234,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
                   <div className="service-checkbox-content">
                     <span className="service-checkbox-name">{service.name}</span>
                     <span className="service-checkbox-meta">
-                      {service.duration} min - {service.price} KWD
+                      {service.duration} {t('common.min')} - {service.price} {t('common.currency')}
                     </span>
                   </div>
                   <div className="service-checkbox-check">
@@ -244,15 +247,15 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
           {errors.serviceIds && <span className="form-error">{errors.serviceIds}</span>}
           {formData.serviceIds.length > 0 && (
             <div className="services-total">
-              <span>Total:</span>
-              <span className="services-total-value">{totalDuration} min - {totalPrice} KWD</span>
+              <span>{t('common.total')}:</span>
+              <span className="services-total-value">{totalDuration} {t('common.min')} - {totalPrice} {t('common.currency')}</span>
             </div>
           )}
         </div>
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Date</label>
+            <label className="form-label">{t('bookings.date')}</label>
             <input
               type="date"
               name="date"
@@ -264,7 +267,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
           </div>
 
           <div className="form-group">
-            <label className="form-label">Time</label>
+            <label className="form-label">{t('bookings.time')}</label>
             <select
               name="time"
               value={formData.time}
@@ -282,13 +285,13 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         </div>
 
         <div className="form-group">
-          <label className="form-label">Notes (optional)</label>
+          <label className="form-label">{t('bookings.notesLabel')}</label>
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleChange}
             className="form-input form-textarea"
-            placeholder="Any special requests or notes..."
+            placeholder={t('bookings.notesPlaceholder')}
             rows={2}
           />
         </div>
@@ -296,10 +299,10 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary">
-          {booking ? 'Update Booking' : 'Create Booking'}
+          {booking ? t('bookings.updateBooking') : t('bookings.createBooking')}
         </button>
       </div>
     </form>

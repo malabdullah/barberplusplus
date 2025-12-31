@@ -37,7 +37,7 @@
 /* Branches Grid */
 .branches-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: var(--space-lg);
 }
 
@@ -284,9 +284,126 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
+    padding: var(--space-lg);
   }
 
   .branches-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .branches-page {
+    gap: var(--space-md);
+  }
+
+  .page-header {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .page-description {
+    font-size: 0.8125rem;
+  }
+
+  .page-header .btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .branch-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .branch-card-header {
+    padding: var(--space-md);
+  }
+
+  .branch-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+  }
+
+  .branch-card-content {
+    padding: var(--space-md);
+  }
+
+  .branch-card-name {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .branch-info-item {
+    font-size: 0.75rem;
+  }
+
+  .branch-card-stats {
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    flex-wrap: wrap;
+  }
+
+  .branch-stat {
+    font-size: 0.75rem;
+  }
+
+  .branch-card-footer {
+    padding: var(--space-sm) var(--space-md);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .branch-hours {
+    font-size: 0.6875rem;
+  }
+
+  .branch-status {
+    font-size: 0.625rem;
+    padding: 3px 8px;
+  }
+
+  .branch-actions .action-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .add-branch-card {
+    min-height: 200px;
+    padding: var(--space-lg);
+  }
+
+  .add-branch-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .add-branch-card span {
+    font-size: 0.875rem;
+  }
+
+  .empty-state {
+    padding: var(--space-xl);
+  }
+
+  .empty-state-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .empty-state h3 {
+    font-size: 1.25rem;
+  }
+
+  .empty-state p {
+    font-size: 0.875rem;
   }
 }
