@@ -1,5 +1,14 @@
 import { CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
+// Status constants to avoid magic strings throughout the codebase
+export const BOOKING_STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+  NO_SHOW: 'no-show',
+};
+
 export const BOOKING_STATUS_CONFIG = {
   confirmed: {
     icon: CheckCircle,

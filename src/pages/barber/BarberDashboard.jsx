@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -61,7 +61,7 @@ function BookingStatusBadge({ status, t }) {
   );
 }
 
-function TodayBookingItem({ booking, onComplete, onCancel, t }) {
+const TodayBookingItem = memo(function TodayBookingItem({ booking, onComplete, onCancel, t }) {
   const canTakeAction = ['confirmed', 'pending'].includes(booking.status);
 
   return (
@@ -97,7 +97,7 @@ function TodayBookingItem({ booking, onComplete, onCancel, t }) {
       </div>
     </div>
   );
-}
+});
 
 export default function BarberDashboard() {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Scissors,
@@ -120,7 +120,7 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
   );
 }
 
-function ServiceCard({ service, onEdit, onDelete, t }) {
+const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) {
   const handleCardClick = () => {
     onEdit(service);
   };
@@ -180,7 +180,7 @@ function ServiceCard({ service, onEdit, onDelete, t }) {
       </div>
     </div>
   );
-}
+});
 
 export default function Services() {
   const { t } = useTranslation();
@@ -192,23 +192,26 @@ export default function Services() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const filteredServices = branchServices.filter((service) =>
-    service.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredServices = useMemo(() =>
+    branchServices.filter((service) =>
+      service.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [branchServices, searchQuery]
   );
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     setEditingService(null);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleEdit = (service) => {
+  const handleEdit = useCallback((service) => {
     setEditingService(service);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleDelete = (service) => {
+  const handleDelete = useCallback((service) => {
     setDeletingService(service);
-  };
+  }, []);
 
   const handleFormSubmit = async (data) => {
     setError(null);
@@ -284,7 +287,6 @@ export default function Services() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               t={t}
-              style={{ animationDelay: `${index * 50}ms` }}
             />
           ))}
         </div>

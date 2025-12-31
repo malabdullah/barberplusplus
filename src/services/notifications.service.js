@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import logger from '../utils/logger';
 
 // Convert snake_case DB columns to camelCase for frontend
 const toFrontend = (notification) => {
@@ -118,7 +119,7 @@ export const notificationsService = {
       .insert([dbData]);
 
     if (error) {
-      console.error('[NotificationsService] create error:', error);
+      logger.error('Notification create error', error);
       throw error;
     }
 
@@ -138,12 +139,12 @@ export const notificationsService = {
    */
   createBatch: async (notifications) => {
     if (!notifications || notifications.length === 0) {
-      console.log('[NotificationsService] createBatch: No notifications to create');
+      logger.debug('createBatch: No notifications to create');
       return [];
     }
 
     const dbNotifications = notifications.map(toDatabase);
-    console.log('[NotificationsService] createBatch: Inserting notifications:', dbNotifications);
+    logger.debug('createBatch: Inserting notifications', { count: dbNotifications.length });
 
     // Don't use .select() - it triggers SELECT RLS policies which may not match the inserting user
     const { error } = await supabase
@@ -151,11 +152,11 @@ export const notificationsService = {
       .insert(dbNotifications);
 
     if (error) {
-      console.error('[NotificationsService] createBatch error:', error);
+      logger.error('createBatch error', error);
       throw error;
     }
 
-    console.log('[NotificationsService] createBatch success');
+    logger.debug('createBatch success');
 
     // Return transformed input data with generated IDs
     return dbNotifications.map(dbNotif => toFrontend({
@@ -190,7 +191,7 @@ export const notificationsService = {
    * @returns {object} - Supabase channel (call .unsubscribe() to cleanup)
    */
   subscribe: (onInsert, onUpdate, userId, branchIds = []) => {
-    console.log('[NotificationsService] Setting up realtime subscription for userId:', userId, 'branchIds:', branchIds);
+    logger.debug('Setting up realtime subscription');
     const channel = supabase.channel('notifications-realtime');
 
     // Subscribe to notifications for this user
@@ -202,17 +203,15 @@ export const notificationsService = {
         table: 'notifications',
       },
       (payload) => {
-        console.log('[NotificationsService] Realtime INSERT received:', payload.new);
+        logger.debug('Realtime INSERT received');
         const notification = toFrontend(payload.new);
         // Filter on client side - check if notification is for this user or their branches
         if (
           notification.recipientUserId === userId ||
           branchIds.includes(notification.recipientBranchId)
         ) {
-          console.log('[NotificationsService] Notification matches user/branch, calling onInsert');
+          logger.debug('Notification matches user/branch');
           onInsert(notification);
-        } else {
-          console.log('[NotificationsService] Notification does not match user/branch, skipping');
         }
       }
     );
@@ -225,7 +224,7 @@ export const notificationsService = {
         table: 'notifications',
       },
       (payload) => {
-        console.log('[NotificationsService] Realtime UPDATE received:', payload.new);
+        logger.debug('Realtime UPDATE received');
         const notification = toFrontend(payload.new);
         if (
           notification.recipientUserId === userId ||
@@ -237,7 +236,7 @@ export const notificationsService = {
     );
 
     channel.subscribe((status) => {
-      console.log('[NotificationsService] Realtime subscription status:', status);
+      logger.debug('Realtime subscription status', { status });
     });
     return channel;
   },

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { authService } from '../services';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
@@ -34,11 +35,19 @@ export default function ForgotPassword() {
 
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const result = await authService.resetPassword(email);
 
-    setIsLoading(false);
-    setIsSuccess(true);
+      if (result.success) {
+        setIsSuccess(true);
+      } else {
+        setError(result.error || t('errors.resetFailed'));
+      }
+    } catch (err) {
+      setError(err.message || t('errors.resetFailed'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -18,14 +18,25 @@ import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
 
-export default function TopBar({ onMenuClick }) {
+/**
+ * Unified TopBar component for both manager and barber roles
+ * @param {Object} props
+ * @param {Function} props.onMenuClick - Handler for mobile menu toggle
+ * @param {boolean} props.showBranchSelector - Whether to show branch selector (manager) or just display branch name (barber)
+ * @param {string} props.searchPlaceholderKey - Translation key for search placeholder
+ */
+export default function TopBar({
+  onMenuClick,
+  showBranchSelector = true,
+  searchPlaceholderKey = 'common.search',
+}) {
   const { t, i18n } = useTranslation();
   const {
     branches,
     selectedBranch,
+    barberBranch,
     setSelectedBranchId,
     notifications,
-    unreadCount,
     notificationsLoading,
     notificationPreferences,
     markNotificationRead,
@@ -36,6 +47,9 @@ export default function TopBar({ onMenuClick }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activePreferenceDropdown, setActivePreferenceDropdown] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Get the current branch based on role
+  const currentBranch = showBranchSelector ? selectedBranch : barberBranch;
 
   // Filter notifications based on user preferences
   const visibleNotifications = useMemo(() => {
@@ -99,7 +113,7 @@ export default function TopBar({ onMenuClick }) {
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
-            placeholder={t('common.search')}
+            placeholder={t(searchPlaceholderKey)}
             className="topbar-search-input"
           />
           <span className="topbar-search-shortcut">⌘K</span>
@@ -107,54 +121,60 @@ export default function TopBar({ onMenuClick }) {
       </div>
 
       <div className="topbar-right" ref={dropdownRef}>
-        {/* Branch Selector */}
-        <div className="topbar-branch-selector">
-          <button
-            className="topbar-branch-btn"
-            onClick={() => {
-              setBranchDropdownOpen(!branchDropdownOpen);
-              setNotificationsOpen(false);
-              setActivePreferenceDropdown(null);
-            }}
-          >
-            <Building2 size={18} strokeWidth={1.5} />
-            <span className="topbar-branch-name">
-              {selectedBranch?.name || t('branches.selectBranch')}
-            </span>
-            <ChevronDown
-              size={16}
-              strokeWidth={1.5}
-              className={`topbar-branch-chevron ${branchDropdownOpen ? 'open' : ''}`}
-            />
-          </button>
+        {/* Branch Selector (Manager) or Branch Info (Barber) */}
+        {showBranchSelector ? (
+          <div className="topbar-branch-selector">
+            <button
+              className="topbar-branch-btn"
+              onClick={() => {
+                setBranchDropdownOpen(!branchDropdownOpen);
+                setNotificationsOpen(false);
+                setActivePreferenceDropdown(null);
+              }}
+            >
+              <Building2 size={18} strokeWidth={1.5} />
+              <span className="topbar-branch-name">
+                {currentBranch?.name || t('branches.selectBranch')}
+              </span>
+              <ChevronDown
+                size={16}
+                strokeWidth={1.5}
+                className={`topbar-branch-chevron ${branchDropdownOpen ? 'open' : ''}`}
+              />
+            </button>
 
-          {branchDropdownOpen && (
-            <div className="topbar-dropdown topbar-branch-dropdown animate-scale-in">
-              <div className="topbar-dropdown-header">
-                <span>{t('branches.switchBranch')}</span>
+            {branchDropdownOpen && (
+              <div className="topbar-dropdown topbar-branch-dropdown animate-scale-in">
+                <div className="topbar-dropdown-header">
+                  <span>{t('branches.switchBranch')}</span>
+                </div>
+                <div className="topbar-dropdown-list">
+                  {branches.map((branch) => (
+                    <button
+                      key={branch.id}
+                      className={`topbar-dropdown-item ${
+                        branch.id === currentBranch?.id ? 'active' : ''
+                      }`}
+                      onClick={() => handleBranchSelect(branch.id)}
+                    >
+                      <div className="topbar-dropdown-item-info">
+                        <span className="topbar-dropdown-item-name">{branch.name}</span>
+                        <span className="topbar-dropdown-item-address">{branch.address}</span>
+                      </div>
+                      {branch.id === currentBranch?.id && (
+                        <Check size={16} strokeWidth={2} className="topbar-dropdown-check" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="topbar-dropdown-list">
-                {branches.map((branch) => (
-                  <button
-                    key={branch.id}
-                    className={`topbar-dropdown-item ${
-                      branch.id === selectedBranch?.id ? 'active' : ''
-                    }`}
-                    onClick={() => handleBranchSelect(branch.id)}
-                  >
-                    <div className="topbar-dropdown-item-info">
-                      <span className="topbar-dropdown-item-name">{branch.name}</span>
-                      <span className="topbar-dropdown-item-address">{branch.address}</span>
-                    </div>
-                    {branch.id === selectedBranch?.id && (
-                      <Check size={16} strokeWidth={2} className="topbar-dropdown-check" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : currentBranch && (
+          <div className="topbar-branch-info">
+            <span className="topbar-branch-label">{currentBranch.name}</span>
+          </div>
+        )}
 
         {/* Language Selector */}
         <LanguageSelector onDropdownToggle={handlePreferenceDropdownToggle} />

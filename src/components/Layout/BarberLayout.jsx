@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import BarberSidebar from './BarberSidebar';
-import BarberTopBar from './BarberTopBar';
+import TopBar from './TopBar';
 import NotificationToast from '../UI/NotificationToast';
 import { useApp } from '../../context/AppContext';
 import './Layout.css';
@@ -22,7 +22,11 @@ export default function BarberLayout() {
     <div className="layout">
       <BarberSidebar isOpen={mobileMenuOpen} onClose={handleMenuClose} />
       <div className="layout-main">
-        <BarberTopBar onMenuClick={handleMenuToggle} />
+        <TopBar
+          onMenuClick={handleMenuToggle}
+          showBranchSelector={false}
+          searchPlaceholderKey="bookings.searchBookings"
+        />
         <main className="layout-content">
           <Outlet />
         </main>

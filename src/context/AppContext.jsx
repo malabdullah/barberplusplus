@@ -12,6 +12,7 @@ import {
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts } from '../utils/bookingConflicts';
+import logger from '../utils/logger';
 import i18n from '../i18n';
 
 const AppContext = createContext(null);
@@ -29,7 +30,6 @@ export function AppProvider({ children }) {
   const [barberProfile, setBarberProfile] = useState(null);
   const [barberProfileLoading, setBarberProfileLoading] = useState(false);
   const [barberProfileError, setBarberProfileError] = useState(null);
-  const [barberMetricsLoading, setBarberMetricsLoading] = useState(false);
   const [theme, setThemeState] = useState(() => {
     const saved = localStorage.getItem('barber-theme');
     return saved || 'dark';
@@ -214,16 +214,70 @@ export function AppProvider({ children }) {
     [bookings, selectedBranchId]
   );
 
-  // Get dashboard metrics
-  const [metrics, setMetrics] = useState({
-    todayTotal: 0,
-    todayCompleted: 0,
-    todayUpcoming: 0,
-    weekRevenue: 0,
-    weekBookings: 0,
-    totalBarbers: 0,
-    totalServices: 0,
-  });
+  // Helper: get today's date in YYYY-MM-DD format
+  const getToday = () => new Date().toISOString().split('T')[0];
+
+  // Helper: get week start (Monday) in YYYY-MM-DD format
+  const getWeekStart = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(now.getFullYear(), now.getMonth(), diff).toISOString().split('T')[0];
+  };
+
+  // Helper: get week end (Sunday) in YYYY-MM-DD format
+  const getWeekEnd = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? 0 : 7);
+    return new Date(now.getFullYear(), now.getMonth(), diff).toISOString().split('T')[0];
+  };
+
+  // Compute dashboard metrics client-side (avoids 4 DB queries on every booking change)
+  const metrics = useMemo(() => {
+    if (!selectedBranchId) {
+      return {
+        todayTotal: 0,
+        todayCompleted: 0,
+        todayUpcoming: 0,
+        weekRevenue: 0,
+        weekBookings: 0,
+        totalBarbers: 0,
+        totalServices: 0,
+      };
+    }
+
+    const today = getToday();
+    const weekStart = getWeekStart();
+    const weekEnd = getWeekEnd();
+
+    // Filter bookings by branch
+    const branchBookingsData = bookings.filter(b => b.branchId === selectedBranchId);
+
+    // Today's bookings
+    const todayBookings = branchBookingsData.filter(b => b.date === today);
+
+    // Week's bookings
+    const weekBookings = branchBookingsData.filter(b =>
+      b.date >= weekStart && b.date <= weekEnd
+    );
+
+    // Barber and service counts for this branch
+    const branchBarberCount = barbers.filter(b => b.branchId === selectedBranchId).length;
+    const branchServiceCount = services.filter(s => s.branchId === selectedBranchId).length;
+
+    return {
+      todayTotal: todayBookings.length,
+      todayCompleted: todayBookings.filter(b => b.status === 'completed').length,
+      todayUpcoming: todayBookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length,
+      weekRevenue: weekBookings
+        .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + (b.price || 0), 0),
+      weekBookings: weekBookings.length,
+      totalBarbers: branchBarberCount,
+      totalServices: branchServiceCount,
+    };
+  }, [bookings, barbers, services, selectedBranchId]);
 
   // Load initial data
   useEffect(() => {
@@ -256,17 +310,6 @@ export function AppProvider({ children }) {
     // Don't set loading=false here - auth initialization handles it
   }, [isAuthenticated]);
 
-  // Load metrics when branch changes
-  useEffect(() => {
-    const loadMetrics = async () => {
-      if (selectedBranchId) {
-        const metricsData = await bookingsService.getMetrics(selectedBranchId);
-        setMetrics(metricsData);
-      }
-    };
-    loadMetrics();
-  }, [selectedBranchId, bookings]);
-
   // Load barber profile when user is a barber
   useEffect(() => {
     const loadBarberProfile = async () => {
@@ -281,11 +324,11 @@ export function AppProvider({ children }) {
           } else {
             // Profile not found in database
             setBarberProfileError('PROFILE_NOT_FOUND');
-            console.error('Barber profile not found for user:', user.id);
+            logger.error('Barber profile not found for authenticated user');
           }
         } catch (error) {
           setBarberProfileError('LOAD_ERROR');
-          console.error('Error loading barber profile:', error);
+          logger.error('Error loading barber profile', error);
         } finally {
           setBarberProfileLoading(false);
         }
@@ -400,30 +443,48 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  // Notification actions
+  // Notification actions (with optimistic updates)
   const markNotificationRead = useCallback(async (notificationId) => {
+    // Optimistic update - immediately update UI
+    const readAt = new Date().toISOString();
+    setNotifications(prev =>
+      prev.map(n => n.id === notificationId ? { ...n, isRead: true, readAt } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
     try {
-      const updated = await notificationsService.markRead(notificationId);
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? updated : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      await notificationsService.markRead(notificationId);
     } catch (error) {
+      // Revert on error
       console.error('Error marking notification as read:', error);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, isRead: false, readAt: null } : n)
+      );
+      setUnreadCount(prev => prev + 1);
     }
   }, []);
 
   const markAllNotificationsRead = useCallback(async () => {
+    // Store previous state for potential rollback
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+
+    // Optimistic update
+    const readAt = new Date().toISOString();
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, isRead: true, readAt }))
+    );
+    setUnreadCount(0);
+
     try {
       await notificationsService.markAllRead();
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
-      );
-      setUnreadCount(0);
     } catch (error) {
+      // Revert on error
       console.error('Error marking all notifications as read:', error);
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
     }
-  }, []);
+  }, [notifications, unreadCount]);
 
   const reloadNotifications = useCallback(async () => {
     try {
@@ -787,14 +848,14 @@ export function AppProvider({ children }) {
       }
 
       // Create notifications (don't await to avoid blocking)
-      console.log('[Notifications] Creating booking notifications:', notificationsToCreate);
+      logger.debug('Creating booking notifications', { count: notificationsToCreate.length });
       notificationsService.createBatch(notificationsToCreate)
-        .then(created => console.log('[Notifications] Successfully created:', created))
-        .catch(err => console.error('[Notifications] Error creating booking notifications:', err));
+        .then(created => logger.debug('Notifications created', { count: created?.length }))
+        .catch(err => logger.error('Error creating booking notifications', err));
 
       return newBooking;
     } catch (error) {
-      console.error('Error creating booking:', error);
+      logger.error('Error creating booking', error);
       loggingService.logError(error, { entityType: 'booking', action: 'create' });
       throw error;
     }
@@ -862,9 +923,18 @@ export function AppProvider({ children }) {
   }, [bookings, barbers]);
 
   const cancelBooking = useCallback(async (bookingId) => {
+    const oldBooking = bookings.find(b => b.id === bookingId);
+    if (!oldBooking) return;
+
+    // Optimistic update - immediately show cancelled status
+    const optimisticCancelled = { ...oldBooking, status: 'cancelled' };
+    setBookings(prev =>
+      prev.map(b => b.id === bookingId ? optimisticCancelled : b)
+    );
+
     try {
-      const oldBooking = bookings.find(b => b.id === bookingId);
       const cancelled = await bookingsService.cancel(bookingId);
+      // Update with actual server response
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? cancelled : b)
       );
@@ -914,6 +984,10 @@ export function AppProvider({ children }) {
 
       return cancelled;
     } catch (error) {
+      // Revert optimistic update on error
+      setBookings(prev =>
+        prev.map(b => b.id === bookingId ? oldBooking : b)
+      );
       console.error('Error cancelling booking:', error);
       loggingService.logError(error, { entityType: 'booking', action: 'cancel', entityId: bookingId });
       throw error;
@@ -992,35 +1066,37 @@ export function AppProvider({ children }) {
     return bookings.filter(b => b.barberId === currentBarber.id);
   }, [currentBarber, bookings]);
 
-  const [barberMetrics, setBarberMetrics] = useState(null);
+  // Compute barber metrics client-side (avoids 2 DB queries on every booking change)
+  const barberMetrics = useMemo(() => {
+    if (!currentBarber) return null;
 
-  // Load barber metrics when barber changes
-  useEffect(() => {
-    const loadBarberMetrics = async () => {
-      if (currentBarber) {
-        setBarberMetricsLoading(true);
-        try {
-          const metricsData = await bookingsService.getBarberMetrics(currentBarber.id);
-          setBarberMetrics(metricsData);
-        } catch (error) {
-          console.error('Failed to load barber metrics:', error);
-          // Set default metrics so dashboard can render
-          setBarberMetrics({
-            todayTotal: 0,
-            todayCompleted: 0,
-            todayUpcoming: 0,
-            weekTotal: 0,
-            weekEarnings: 0,
-            completionRate: 0,
-          });
-        } finally {
-          setBarberMetricsLoading(false);
-        }
-      } else {
-        setBarberMetrics(null);
-      }
+    const today = getToday();
+    const weekStart = getWeekStart();
+    const weekEnd = getWeekEnd();
+
+    // Filter bookings for this barber
+    const barberBookingsData = bookings.filter(b => b.barberId === currentBarber.id);
+
+    // Today's bookings
+    const todayBookings = barberBookingsData.filter(b => b.date === today);
+
+    // Week's bookings
+    const weekBookings = barberBookingsData.filter(b =>
+      b.date >= weekStart && b.date <= weekEnd
+    );
+
+    const completedThisWeek = weekBookings.filter(b => b.status === 'completed').length;
+
+    return {
+      todayTotal: todayBookings.length,
+      todayCompleted: todayBookings.filter(b => b.status === 'completed').length,
+      todayUpcoming: todayBookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length,
+      weekTotal: weekBookings.length,
+      weekEarnings: weekBookings
+        .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + (b.price || 0), 0),
+      completionRate: weekBookings.length > 0 ? Math.round((completedThisWeek / weekBookings.length) * 100) : 0,
     };
-    loadBarberMetrics();
   }, [currentBarber, bookings]);
 
   const barberServices = useMemo(() => {
@@ -1057,7 +1133,7 @@ export function AppProvider({ children }) {
     currentBarber,
     barberBookings,
     barberMetrics,
-    barberMetricsLoading,
+    barberMetricsLoading: false, // Metrics computed client-side, always ready
     barberServices,
     barberBranch,
     barberProfileLoading,

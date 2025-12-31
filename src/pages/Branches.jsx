@@ -173,7 +173,6 @@ export default function Branches() {
               serviceCount={serviceCountByBranch[branch.id] || 0}
               onDelete={handleDeleteBranch}
               t={t}
-              style={{ animationDelay: `${index * 50}ms` }}
             />
           ))}
 

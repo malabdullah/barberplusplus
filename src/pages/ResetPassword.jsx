@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { notificationsService } from '../services';
+import LanguageSelector from '../components/UI/LanguageSelector';
+import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
 
-export default function AcceptInvite() {
+export default function ResetPassword() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -16,110 +17,49 @@ export default function AcceptInvite() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [userName, setUserName] = useState('');
+  const [isValidSession, setIsValidSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [isValidInvite, setIsValidInvite] = useState(false);
-  const [inviteError, setInviteError] = useState('');
 
   useEffect(() => {
-    // Check for existing session and validate barber invite
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // SECURITY: Verify this is actually an invited barber
-          const barberId = session.user.user_metadata?.barberId;
-
-          if (!barberId) {
-            // Not an invited barber - redirect based on role
-            const role = session.user.user_metadata?.role;
-            if (role === 'barber' || role === 'manager') {
-              navigate(role === 'barber' ? '/barber' : '/');
-              return;
-            }
-            setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
-            setIsCheckingSession(false);
-            return;
-          }
-
-          // If user already accepted invite, redirect to dashboard
-          if (session.user.user_metadata?.invite_accepted) {
-            navigate('/barber');
-            return;
-          }
-
-          // SECURITY: Verify barber record exists and invite is still valid
-          const { data: barber, error: barberError } = await supabase
-            .from('barbers')
-            .select('id, invite_status, name')
-            .eq('id', barberId)
-            .single();
-
-          if (barberError || !barber) {
-            setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
-            setIsCheckingSession(false);
-            return;
-          }
-
-          if (barber.invite_status === 'accepted') {
-            // Already accepted, redirect
-            navigate('/barber');
-            return;
-          }
-
-          if (barber.invite_status !== 'sent' && barber.invite_status !== 'pending') {
-            setInviteError(t('auth.inviteExpired') || 'This invite is no longer valid');
-            setIsCheckingSession(false);
-            return;
-          }
-
-          // Invite is valid
-          setUserName(barber.name || session.user.user_metadata?.name || '');
-          setIsValidInvite(true);
+          setIsValidSession(true);
         }
       } catch (err) {
-        setInviteError(t('auth.invalidInviteLink') || 'Failed to verify invite');
+        // Session check failed
       }
       setIsCheckingSession(false);
     };
 
-    checkSession();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        if (session?.user) {
-          const barberId = session.user.user_metadata?.barberId;
-
-          // SECURITY: Validate barberId exists
-          if (!barberId) {
-            setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
-            setIsCheckingSession(false);
-            return;
-          }
-
-          // Verify barber record
-          const { data: barber } = await supabase
-            .from('barbers')
-            .select('id, invite_status, name')
-            .eq('id', barberId)
-            .single();
-
-          if (barber && (barber.invite_status === 'sent' || barber.invite_status === 'pending')) {
-            setUserName(barber.name || session.user.user_metadata?.name || '');
-            setIsValidInvite(true);
-          }
-          setIsCheckingSession(false);
-        }
+    // Listen for PASSWORD_RECOVERY event from the reset link
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsValidSession(true);
+        setIsCheckingSession(false);
       }
     });
 
+    checkSession();
     return () => subscription.unsubscribe();
-  }, [navigate, t]);
+  }, []);
 
   const validateForm = () => {
     if (password.length < 8) {
       setError(t('validation.passwordMin'));
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError(t('validation.passwordUppercase') || 'Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError(t('validation.passwordLowercase') || 'Password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError(t('validation.passwordNumber') || 'Password must contain at least one number');
       return false;
     }
     if (password !== confirmPassword) {
@@ -138,63 +78,26 @@ export default function AcceptInvite() {
     setIsLoading(true);
 
     try {
-      // Update the user's password
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-        data: { invite_accepted: true }
+        password: password
       });
 
       if (updateError) throw updateError;
 
-      // Update barber record to mark invite as accepted
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.barberId) {
-        // Get barber details for notification
-        const { data: barberData } = await supabase
-          .from('barbers')
-          .select('name, branch_id')
-          .eq('id', user.user_metadata.barberId)
-          .single();
-
-        await supabase
-          .from('barbers')
-          .update({
-            invite_status: 'accepted',
-            invite_accepted_at: new Date().toISOString()
-          })
-          .eq('id', user.user_metadata.barberId);
-
-        // Create notification for manager
-        if (barberData?.branch_id) {
-          notificationsService.create({
-            recipientBranchId: barberData.branch_id,
-            recipientRole: 'manager',
-            type: 'barber_invite_accepted',
-            title: 'New Team Member',
-            message: `${barberData.name || userName || 'A barber'} has accepted your invitation and joined the team`,
-            entityType: 'barber',
-            entityId: user.user_metadata.barberId,
-            metadata: {
-              barberName: barberData.name || userName,
-            },
-          }).catch(err => console.error('Error creating invite accepted notification:', err));
-        }
-      }
-
       setIsSuccess(true);
 
-      // Redirect to barber dashboard after short delay
+      // Redirect to login after short delay
       setTimeout(() => {
-        navigate('/barber');
+        navigate('/login');
       }, 2000);
 
     } catch (err) {
-      console.error('Error setting password:', err);
-      setError(err.message || t('errors.setPasswordFailed'));
+      setError(err.message || t('errors.resetFailed'));
       setIsLoading(false);
     }
   };
 
+  // Loading state
   if (isCheckingSession) {
     return (
       <div className="login-page">
@@ -216,8 +119,8 @@ export default function AcceptInvite() {
     );
   }
 
-  // Invalid or expired invite error
-  if (inviteError || (!isValidInvite && !isCheckingSession)) {
+  // Invalid or expired link
+  if (!isValidSession) {
     return (
       <div className="login-page">
         <div className="login-bg">
@@ -225,20 +128,24 @@ export default function AcceptInvite() {
           <div className="login-bg-pattern" />
         </div>
         <div className="login-container animate-scale-in">
+          <div className="auth-preferences">
+            <LanguageSelector />
+            <ThemeSelector />
+          </div>
           <div className="login-logo">
             <div className="login-logo-icon" style={{ background: 'var(--status-error)', color: 'white' }}>
               <AlertCircle size={28} strokeWidth={2} />
             </div>
           </div>
           <div className="login-welcome">
-            <h1>{t('auth.invalidInviteTitle') || 'Invalid Invite'}</h1>
-            <p>{inviteError || t('auth.inviteExpired') || 'This invite link is invalid or has expired.'}</p>
+            <h1>{t('auth.invalidResetLink') || 'Invalid Reset Link'}</h1>
+            <p>{t('auth.resetLinkExpired') || 'This password reset link is invalid or has expired. Please request a new one.'}</p>
           </div>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/forgot-password')}
             className="login-submit"
           >
-            {t('auth.goToLogin') || 'Go to Login'}
+            {t('auth.requestNewLink') || 'Request New Link'}
             <ArrowRight size={18} strokeWidth={2} />
           </button>
         </div>
@@ -246,6 +153,7 @@ export default function AcceptInvite() {
     );
   }
 
+  // Success state
   if (isSuccess) {
     return (
       <div className="login-page">
@@ -260,14 +168,15 @@ export default function AcceptInvite() {
             </div>
           </div>
           <div className="login-welcome">
-            <h1>{t('auth.welcomeToBarber')}</h1>
-            <p>{t('auth.accountReadyRedirecting')}</p>
+            <h1>{t('auth.passwordResetSuccess') || 'Password Reset!'}</h1>
+            <p>{t('auth.redirectingToLogin') || 'Your password has been updated. Redirecting to login...'}</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Password reset form
   return (
     <div className="login-page">
       {/* Background Pattern */}
@@ -278,6 +187,12 @@ export default function AcceptInvite() {
 
       {/* Container */}
       <div className="login-container animate-scale-in">
+        {/* Preferences Selectors */}
+        <div className="auth-preferences">
+          <LanguageSelector />
+          <ThemeSelector />
+        </div>
+
         {/* Logo */}
         <div className="login-logo">
           <div className="login-logo-icon">
@@ -298,8 +213,8 @@ export default function AcceptInvite() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>{t('auth.welcome')}{userName ? `, ${userName}` : ''}!</h1>
-          <p>{t('auth.setPasswordToComplete')}</p>
+          <h1>{t('auth.resetYourPassword') || 'Reset Your Password'}</h1>
+          <p>{t('auth.enterNewPassword') || 'Enter your new password below.'}</p>
         </div>
 
         {/* Form */}
@@ -311,7 +226,7 @@ export default function AcceptInvite() {
           )}
 
           <div className="login-field">
-            <label htmlFor="password">{t('auth.createPassword')}</label>
+            <label htmlFor="password">{t('auth.newPassword')}</label>
             <div className="login-input-wrapper">
               <Lock size={18} strokeWidth={1.5} />
               <input
@@ -366,10 +281,10 @@ export default function AcceptInvite() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="login-loading">{t('auth.settingUp')}</span>
+              <span className="login-loading">{t('auth.updating') || 'Updating...'}</span>
             ) : (
               <>
-                {t('auth.completeSetup')}
+                {t('auth.resetPassword')}
                 <ArrowRight size={18} strokeWidth={2} />
               </>
             )}

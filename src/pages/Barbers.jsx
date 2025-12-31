@@ -264,7 +264,6 @@ export default function Barbers() {
               onDelete={handleDelete}
               onResendInvite={handleResendInvite}
               t={t}
-              style={{ animationDelay: `${index * 50}ms` }}
             />
           ))}
         </div>

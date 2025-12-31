@@ -23,10 +23,10 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   // Detect user's country via IP geolocation
   useEffect(() => {
     if (!barber?.countryCode) {
-      fetch('http://ip-api.com/json/?fields=countryCode')
+      fetch('https://ipapi.co/json/')
         .then(res => res.json())
         .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.countryCode);
+          const country = GCC_COUNTRIES.find(c => c.country === data.country_code);
           if (country) {
             setFormData(prev => ({ ...prev, countryCode: country.code }));
           }

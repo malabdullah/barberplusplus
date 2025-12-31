@@ -97,10 +97,10 @@ export default function Settings() {
   // Detect user's country via IP geolocation
   useEffect(() => {
     if (!profile.countryCode || profile.countryCode === '+965') {
-      fetch('http://ip-api.com/json/?fields=countryCode')
+      fetch('https://ipapi.co/json/')
         .then(res => res.json())
         .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.countryCode);
+          const country = GCC_COUNTRIES.find(c => c.country === data.country_code);
           if (country) {
             setProfile(prev => ({ ...prev, countryCode: country.code }));
           }

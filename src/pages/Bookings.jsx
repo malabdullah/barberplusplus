@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Calendar,
@@ -31,7 +31,7 @@ import BookingForm from '../components/Forms/BookingForm';
 import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses';
 import './Bookings.css';
 
-function BookingCard({ booking, onEdit, onCancel, onComplete }) {
+const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onComplete }) {
   const { t } = useTranslation();
   const statusConfig = {
     confirmed: { color: 'success', labelKey: 'bookings.status.confirmed' },
@@ -54,9 +54,9 @@ function BookingCard({ booking, onEdit, onCancel, onComplete }) {
       <div className={`booking-card-status ${status.color}`}>{t(status.labelKey)}</div>
     </div>
   );
-}
+});
 
-function BookingDetails({ booking, onClose, onStatusChange }) {
+const BookingDetails = memo(function BookingDetails({ booking, onClose, onStatusChange }) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
@@ -151,7 +151,7 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
       </div>
     </div>
   );
-}
+});
 
 export default function Bookings() {
   const { t, i18n } = useTranslation();

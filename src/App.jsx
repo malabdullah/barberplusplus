@@ -6,6 +6,7 @@ import BarberLayout from './components/Layout/BarberLayout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AcceptInvite from './pages/AcceptInvite';
 import Dashboard from './pages/Dashboard';
 import Branches from './pages/Branches';
@@ -97,6 +98,10 @@ function AppRoutes() {
       <Route
         path="/accept-invite"
         element={<AcceptInvite />}
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
       />
 
       {/* Manager Routes */}
