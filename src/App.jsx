@@ -4,6 +4,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
 import AdminLayout from './components/Layout/AdminLayout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -69,7 +70,7 @@ function ProtectedRoute({ children, allowedRole }) {
     // Redirect to role-appropriate dashboard
     const defaultRoutes = {
       admin: '/admin',
-      manager: '/',
+      manager: '/dashboard',
       barber: '/barber'
     };
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
@@ -82,13 +83,13 @@ function AppRoutes() {
   const { isAuthenticated, userRole, loading } = useApp();
 
   const getDefaultRoute = () => {
-    if (!isAuthenticated) return '/login';
+    if (!isAuthenticated) return '/';
     const routes = {
       admin: '/admin',
-      manager: '/',
+      manager: '/dashboard',
       barber: '/barber'
     };
-    return routes[userRole] || '/';
+    return routes[userRole] || '/dashboard';
   };
 
   // Show loading while auth state is being determined
@@ -109,6 +110,12 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Landing Page - Public */}
+      <Route
+        path="/"
+        element={<Landing />}
+      />
+
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />}
@@ -132,7 +139,7 @@ function AppRoutes() {
 
       {/* Manager Routes */}
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute allowedRole="manager">
             <Layout />

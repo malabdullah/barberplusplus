@@ -1050,5 +1050,135 @@
     "BH": "Bahrain",
     "QA": "Qatar",
     "OM": "Oman"
+  },
+  "landing": {
+    "header": {
+      "tagline": "Dashboard",
+      "signIn": "Sign In",
+      "getStarted": "Get Started"
+    },
+    "nav": {
+      "features": "Features",
+      "howItWorks": "How It Works",
+      "benefits": "Benefits"
+    },
+    "hero": {
+      "badge": "WhatsApp Booking Integration",
+      "titleStart": "Modernize Your",
+      "titleAccent": "Barbershop",
+      "subtitle": "Let customers book appointments through WhatsApp. Manage branches, barbers, and bookings from one elegant dashboard designed for the modern barbershop.",
+      "cta": "Start Free",
+      "secondaryCta": "Sign In",
+      "mockupAlt": "WhatsApp booking conversation demo",
+      "stats": {
+        "barbershops": "Barbershops",
+        "bookings": "Monthly Bookings",
+        "rating": "Average Rating"
+      },
+      "whatsapp": {
+        "online": "Online",
+        "msg1": "Hi, I'd like to book a haircut for tomorrow",
+        "msg2": "Welcome! Please choose your barber:",
+        "msg3": "Great choice! Here are available times:",
+        "msg4": "Tomorrow at 10:00 AM with Mohammed. See you then!",
+        "confirmed": "Booking Confirmed",
+        "inputPlaceholder": "Type a message..."
+      }
+    },
+    "features": {
+      "eyebrow": "Features",
+      "title": "Everything You Need",
+      "subtitle": "Powerful tools designed specifically for barbershop owners and managers",
+      "multiBranch": {
+        "title": "Multi-Branch Management",
+        "description": "Control all your locations from a single, unified dashboard"
+      },
+      "bookingControl": {
+        "title": "Complete Booking Control",
+        "description": "Create, edit, reschedule, and complete bookings effortlessly"
+      },
+      "staffManagement": {
+        "title": "Staff Management",
+        "description": "Invite barbers, manage schedules, and track availability"
+      },
+      "services": {
+        "title": "Services & Pricing",
+        "description": "Configure your service menu with flexible pricing options"
+      },
+      "analytics": {
+        "title": "Real-Time Analytics",
+        "description": "Track revenue, bookings, and performance metrics live"
+      },
+      "activityLogs": {
+        "title": "Activity Logs",
+        "description": "Complete audit trail of all system actions and changes"
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "How It Works",
+      "title": "Booking Made Simple",
+      "subtitle": "Three easy steps for your customers to book their next appointment",
+      "step1": {
+        "title": "Customer Messages",
+        "description": "Your customer sends a WhatsApp message to your booking number"
+      },
+      "step2": {
+        "title": "Select & Schedule",
+        "description": "They choose their preferred barber and pick an available time slot"
+      },
+      "step3": {
+        "title": "Instant Confirmation",
+        "description": "Booking is confirmed instantly. Both you and your customer get notified"
+      }
+    },
+    "benefits": {
+      "eyebrow": "Benefits",
+      "title": "Why Choose Barber++?",
+      "subtitle": "Built with modern barbershops in mind, designed to save you time and delight your customers",
+      "whatsapp": {
+        "title": "WhatsApp Booking",
+        "description": "Customers book via WhatsApp - no app downloads needed"
+      },
+      "multilingual": {
+        "title": "English & Arabic",
+        "description": "Full RTL support for Arabic-speaking customers"
+      },
+      "mobile": {
+        "title": "Mobile Responsive",
+        "description": "Manage your shop from any device, anywhere"
+      },
+      "notifications": {
+        "title": "Real-Time Alerts",
+        "description": "Never miss a booking with instant notifications"
+      },
+      "themes": {
+        "title": "Dark & Light Themes",
+        "description": "Choose the look that suits your style"
+      },
+      "intuitive": {
+        "title": "No Training Needed",
+        "description": "Intuitive design your team will love from day one"
+      }
+    },
+    "cta": {
+      "title": "Ready to Modernize Your Barbershop?",
+      "subtitle": "Join hundreds of barbershop owners who have streamlined their booking process",
+      "button": "Create Free Account"
+    },
+    "footer": {
+      "tagline": "Modern barbershop management. Designed for the gentleman's experience.",
+      "product": "Product",
+      "features": "Features",
+      "howItWorks": "How It Works",
+      "benefits": "Benefits",
+      "company": "Company",
+      "about": "About",
+      "contact": "Contact",
+      "careers": "Careers",
+      "legal": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "copyright": "Barber++. All rights reserved."
+    }
   }
 }
