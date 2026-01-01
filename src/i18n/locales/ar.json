@@ -99,7 +99,7 @@
     "welcomeBack": "مرحباً بعودتك",
     "signInToContinue": "سجل الدخول للمتابعة إلى لوحة التحكم",
     "createManagerAccount": "أنشئ حساب المدير الخاص بك",
-    "getStarted": "ابدأ مع Barber++",
+    "getStarted": "ابدأ مع ⁦Barber++⁩",
     "emailRequired": "الرجاء إدخال بريدك الإلكتروني",
     "passwordRequired": "الرجاء إدخال كلمة المرور",
     "bothRequired": "الرجاء إدخال البريد الإلكتروني وكلمة المرور",
@@ -126,7 +126,7 @@
     "creatingAccount": "جاري إنشاء الحساب...",
     "registrationFailed": "فشل التسجيل. يرجى المحاولة مرة أخرى.",
     "welcome": "مرحباً",
-    "welcomeToBarber": "مرحباً بك في Barber++",
+    "welcomeToBarber": "مرحباً بك في ⁦Barber++⁩",
     "setPasswordToComplete": "أنشئ كلمة المرور لإكمال الإعداد",
     "createPassword": "إنشاء كلمة المرور",
     "atLeast8Chars": "8 أحرف على الأقل",
@@ -1133,7 +1133,7 @@
     },
     "benefits": {
       "eyebrow": "الفوائد",
-      "title": "لماذا تختار Barber++؟",
+      "title": "لماذا تختار ⁦Barber++⁩؟",
       "subtitle": "مصمم لصالونات الحلاقة العصرية، لتوفير وقتك وإسعاد عملائك",
       "whatsapp": {
         "title": "الحجز عبر واتساب",
@@ -1178,7 +1178,7 @@
       "legal": "قانوني",
       "privacy": "سياسة الخصوصية",
       "terms": "شروط الخدمة",
-      "copyright": "Barber++. جميع الحقوق محفوظة."
+      "copyright": "⁦Barber++⁩. جميع الحقوق محفوظة."
     }
   }
 }
