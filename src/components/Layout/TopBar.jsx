@@ -106,7 +106,12 @@ export default function TopBar({
 
   const handleViewAllNotifications = () => {
     setNotificationsOpen(false);
-    navigate(userRole === 'barber' ? '/barber/notifications' : '/notifications');
+    const routes = {
+      admin: '/admin/notifications',
+      barber: '/barber/notifications',
+      manager: '/notifications',
+    };
+    navigate(routes[userRole] || '/notifications');
   };
 
   return (
@@ -253,11 +258,9 @@ export default function TopBar({
                   ))
                 )}
               </div>
-              {visibleNotifications.length > 10 && (
-                <div className="topbar-dropdown-footer">
-                  <button onClick={handleViewAllNotifications}>{t('notifications.viewAll')}</button>
-                </div>
-              )}
+              <div className="topbar-dropdown-footer">
+                <button onClick={handleViewAllNotifications}>{t('notifications.viewAll')}</button>
+              </div>
             </div>
           )}
         </div>

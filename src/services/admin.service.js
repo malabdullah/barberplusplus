@@ -310,7 +310,7 @@ export const adminService = {
 
       // Create audit log
       await adminService.createAuditLog({
-        actionType: newStatus ? 'MANAGER_ENABLED' : 'MANAGER_DISABLED',
+        actionType: newStatus ? 'manager_enabled' : 'manager_disabled',
         targetUserId: managerId,
         targetEntityType: 'manager',
         targetEntityId: managerId,
@@ -465,7 +465,16 @@ export const adminService = {
   /**
    * Get audit logs with filtering
    */
-  getAuditLogs: async ({ page = 1, limit = 25, actionType = null, startDate = null, endDate = null } = {}) => {
+  getAuditLogs: async ({
+    page = 1,
+    limit = 25,
+    actionType = null,
+    entityType = null,
+    userId = null,
+    search = null,
+    startDate = null,
+    endDate = null
+  } = {}) => {
     try {
       let query = supabase
         .from('audit_logs')
@@ -476,12 +485,20 @@ export const adminService = {
         query = query.eq('action_type', actionType);
       }
 
+      if (entityType) {
+        query = query.eq('target_entity_type', entityType);
+      }
+
+      if (userId) {
+        query = query.or(`admin_user_id.eq.${userId},target_user_id.eq.${userId}`);
+      }
+
       if (startDate) {
         query = query.gte('created_at', startDate);
       }
 
       if (endDate) {
-        query = query.lte('created_at', endDate);
+        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
       }
 
       // Apply pagination
@@ -511,6 +528,7 @@ export const adminService = {
         total: count || 0,
         page,
         limit,
+        totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
       console.error('Error fetching audit logs:', error);
@@ -555,6 +573,274 @@ export const adminService = {
       console.error('Error creating audit log:', error);
       // Don't throw - audit logging shouldn't break main operations
       return null;
+    }
+  },
+
+  /**
+   * Get audit stats for dashboard cards
+   */
+  getAuditStats: async (days = 7) => {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('action_type, created_at')
+        .gte('created_at', startDate.toISOString());
+
+      if (error) throw error;
+
+      const stats = {
+        total: data?.length || 0,
+        byActionType: {},
+        byDay: {},
+        userActions: 0,
+        configActions: 0,
+        securityEvents: 0,
+      };
+
+      data?.forEach(log => {
+        // Count by action type
+        stats.byActionType[log.action_type] = (stats.byActionType[log.action_type] || 0) + 1;
+
+        // Count by day
+        const day = log.created_at.split('T')[0];
+        stats.byDay[day] = (stats.byDay[day] || 0) + 1;
+
+        // Categorize (lowercase to match DB)
+        if (['user_created', 'user_updated', 'user_deleted', 'user_disabled', 'user_enabled', 'manager_enabled', 'manager_disabled', 'barber_enabled', 'barber_disabled', 'role_assigned'].includes(log.action_type)) {
+          stats.userActions++;
+        } else if (['settings_changed', 'template_updated', 'location_modified', 'branch_modified', 'barber_modified', 'service_modified', 'booking_modified', 'system_config'].includes(log.action_type)) {
+          stats.configActions++;
+        } else if (['login_success', 'login_failure', 'logout', 'password_reset_requested', 'password_reset_completed', 'permission_denied', 'suspicious_activity', 'session_expired', 'account_locked', 'account_unlocked', 'security_event'].includes(log.action_type)) {
+          stats.securityEvents++;
+        }
+      });
+
+      return stats;
+    } catch (error) {
+      console.error('Error fetching audit stats:', error);
+      return {
+        total: 0,
+        byActionType: {},
+        byDay: {},
+        userActions: 0,
+        configActions: 0,
+        securityEvents: 0,
+      };
+    }
+  },
+
+  /**
+   * Get security events (filtered audit logs)
+   */
+  getSecurityEvents: async ({
+    page = 1,
+    limit = 25,
+    eventType = null,
+    severity = null,
+    startDate = null,
+    endDate = null
+  } = {}) => {
+    // Security event types (lowercase to match DB constraint)
+    const securityTypes = [
+      'login_success', 'login_failure', 'logout',
+      'password_reset_requested', 'password_reset_completed',
+      'permission_denied', 'suspicious_activity',
+      'session_expired', 'account_locked', 'account_unlocked',
+      'security_event'
+    ];
+
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact' })
+        .in('action_type', securityTypes)
+        .order('created_at', { ascending: false });
+
+      if (eventType) {
+        query = query.eq('action_type', eventType);
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+
+      if (endDate) {
+        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
+      }
+
+      // Apply pagination
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        events: data?.map(log => ({
+          id: log.id,
+          adminUserId: log.admin_user_id,
+          actionType: log.action_type,
+          targetUserId: log.target_user_id,
+          targetEntityType: log.target_entity_type,
+          targetEntityId: log.target_entity_id,
+          ipAddress: log.ip_address,
+          userAgent: log.user_agent,
+          metadata: log.metadata,
+          createdAt: log.created_at,
+        })) || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      };
+    } catch (error) {
+      console.error('Error fetching security events:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get security stats for dashboard
+   */
+  getSecurityStats: async (days = 7) => {
+    // Security event types (lowercase to match DB constraint)
+    const securityTypes = [
+      'login_success', 'login_failure', 'logout',
+      'password_reset_requested', 'password_reset_completed',
+      'permission_denied', 'suspicious_activity',
+      'session_expired', 'account_locked', 'account_unlocked',
+      'security_event'
+    ];
+
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('action_type, created_at')
+        .in('action_type', securityTypes)
+        .gte('created_at', startDate.toISOString());
+
+      if (error) throw error;
+
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const stats = {
+        failedLogins24h: 0,
+        permissionDenied24h: 0,
+        suspiciousActivity7d: 0,
+        passwordResets7d: 0,
+        totalEvents: data?.length || 0,
+        byType: {},
+        byDay: {},
+      };
+
+      data?.forEach(event => {
+        const eventDate = new Date(event.created_at);
+
+        // Count by type
+        stats.byType[event.action_type] = (stats.byType[event.action_type] || 0) + 1;
+
+        // 24h counts (lowercase to match DB)
+        if (eventDate >= oneDayAgo) {
+          if (event.action_type === 'login_failure') stats.failedLogins24h++;
+          if (event.action_type === 'permission_denied') stats.permissionDenied24h++;
+        }
+
+        // 7d counts (lowercase to match DB)
+        if (event.action_type === 'suspicious_activity') stats.suspiciousActivity7d++;
+        if (event.action_type === 'password_reset_requested' || event.action_type === 'password_reset_completed') {
+          stats.passwordResets7d++;
+        }
+
+        // By day
+        const day = event.created_at.split('T')[0];
+        stats.byDay[day] = (stats.byDay[day] || 0) + 1;
+      });
+
+      return stats;
+    } catch (error) {
+      console.error('Error fetching security stats:', error);
+      return {
+        failedLogins24h: 0,
+        permissionDenied24h: 0,
+        suspiciousActivity7d: 0,
+        passwordResets7d: 0,
+        totalEvents: 0,
+        byType: {},
+        byDay: {},
+      };
+    }
+  },
+
+  /**
+   * Export audit logs (no pagination, for download)
+   */
+  exportAuditLogs: async ({ format = 'json', actionType = null, startDate = null, endDate = null } = {}) => {
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000); // Safety limit
+
+      if (actionType) {
+        query = query.eq('action_type', actionType);
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+
+      if (endDate) {
+        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const logs = data?.map(log => ({
+        id: log.id,
+        adminUserId: log.admin_user_id,
+        actionType: log.action_type,
+        targetUserId: log.target_user_id,
+        targetEntityType: log.target_entity_type,
+        targetEntityId: log.target_entity_id,
+        oldValues: log.old_values,
+        newValues: log.new_values,
+        ipAddress: log.ip_address,
+        userAgent: log.user_agent,
+        metadata: log.metadata,
+        createdAt: log.created_at,
+      })) || [];
+
+      if (format === 'csv') {
+        // Convert to CSV
+        const headers = ['ID', 'Timestamp', 'Action', 'Admin User', 'Target Entity Type', 'Target Entity ID', 'IP Address'];
+        const rows = logs.map(log => [
+          log.id,
+          log.createdAt,
+          log.actionType,
+          log.adminUserId || '',
+          log.targetEntityType || '',
+          log.targetEntityId || '',
+          log.ipAddress || '',
+        ]);
+        return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+      }
+
+      return logs;
+    } catch (error) {
+      console.error('Error exporting audit logs:', error);
+      throw error;
     }
   },
 

@@ -47,9 +47,9 @@ export default function AdminDashboard() {
   // Get greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return t('dashboard.goodMorning');
-    if (hour < 18) return t('dashboard.goodAfternoon');
-    return t('dashboard.goodEvening');
+    if (hour < 12) return t('dashboard.greeting.morning');
+    if (hour < 18) return t('dashboard.greeting.afternoon');
+    return t('dashboard.greeting.evening');
   };
 
   const quickActions = [

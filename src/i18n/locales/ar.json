@@ -816,8 +816,122 @@
       "subtitle": "سجلات النشاط والأحداث الأمنية",
       "activity": "سجلات النشاط",
       "activityDesc": "عرض جميع أنشطة النظام عبر المنصة",
+      "activitySubtitle": "تتبع جميع إجراءات المسؤول والتغييرات",
       "security": "الأحداث الأمنية",
-      "securityDesc": "أحداث المصادقة والأمان"
+      "securityDesc": "أحداث المصادقة والأمان",
+      "securitySubtitle": "مراقبة محاولات تسجيل الدخول والحوادث الأمنية",
+      "stats": {
+        "totalActions": "إجمالي الإجراءات",
+        "userChanges": "تغييرات المستخدمين",
+        "configChanges": "تغييرات الإعدادات",
+        "securityEvents": "أحداث الأمان",
+        "failedLogins": "تسجيلات دخول فاشلة",
+        "permissionDenied": "وصول مرفوض",
+        "suspiciousActivity": "نشاط مشبوه",
+        "passwordResets": "إعادة تعيين كلمات المرور",
+        "last24h": "آخر 24 ساعة",
+        "last7d": "آخر 7 أيام"
+      },
+      "filters": {
+        "actionType": "نوع الإجراء",
+        "allActions": "جميع الإجراءات",
+        "entityType": "نوع الكيان",
+        "allEntities": "جميع الكيانات",
+        "user": "المستخدم",
+        "allUsers": "جميع المستخدمين",
+        "severity": "الخطورة",
+        "allSeverities": "جميع مستويات الخطورة",
+        "eventType": "نوع الحدث",
+        "allEvents": "جميع الأحداث",
+        "dateRange": "نطاق التاريخ",
+        "startDate": "تاريخ البدء",
+        "endDate": "تاريخ الانتهاء",
+        "search": "بحث في السجلات...",
+        "clear": "مسح الفلاتر"
+      },
+      "actions": {
+        "MANAGER_ENABLED": "تفعيل مدير",
+        "MANAGER_DISABLED": "تعطيل مدير",
+        "BARBER_ENABLED": "تفعيل حلاق",
+        "BARBER_DISABLED": "تعطيل حلاق",
+        "USER_CREATED": "إنشاء مستخدم",
+        "USER_UPDATED": "تحديث مستخدم",
+        "USER_DELETED": "حذف مستخدم",
+        "SETTING_UPDATED": "تحديث إعداد",
+        "TEMPLATE_UPDATED": "تحديث قالب",
+        "LOCATION_MODIFIED": "تعديل موقع",
+        "GOVERNORATE_CREATED": "إنشاء محافظة",
+        "GOVERNORATE_UPDATED": "تحديث محافظة",
+        "GOVERNORATE_DELETED": "حذف محافظة",
+        "AREA_CREATED": "إنشاء منطقة",
+        "AREA_UPDATED": "تحديث منطقة",
+        "AREA_DELETED": "حذف منطقة",
+        "LOGIN_SUCCESS": "تسجيل دخول ناجح",
+        "LOGIN_FAILURE": "فشل تسجيل الدخول",
+        "LOGOUT": "تسجيل خروج",
+        "PASSWORD_RESET_REQUESTED": "طلب إعادة تعيين كلمة المرور",
+        "PASSWORD_RESET_COMPLETED": "إكمال إعادة تعيين كلمة المرور",
+        "PERMISSION_DENIED": "رفض الصلاحية",
+        "SUSPICIOUS_ACTIVITY": "نشاط مشبوه",
+        "SESSION_EXPIRED": "انتهاء الجلسة",
+        "ACCOUNT_LOCKED": "قفل الحساب",
+        "ACCOUNT_UNLOCKED": "فتح قفل الحساب",
+        "ADMIN_LOGIN": "تسجيل دخول المسؤول",
+        "ADMIN_ACTION": "إجراء المسؤول",
+        "BULK_OPERATION": "عملية جماعية",
+        "EXPORT_DATA": "تصدير البيانات",
+        "IMPORT_DATA": "استيراد البيانات"
+      },
+      "details": {
+        "adminUser": "مستخدم المسؤول",
+        "targetUser": "المستخدم المستهدف",
+        "entityType": "نوع الكيان",
+        "entityId": "معرف الكيان",
+        "oldValues": "القيم السابقة",
+        "newValues": "القيم الجديدة",
+        "metadata": "معلومات إضافية",
+        "userAgent": "المتصفح/الجهاز",
+        "ipAddress": "عنوان IP",
+        "fullTimestamp": "الطابع الزمني الكامل",
+        "noDetails": "لا توجد تفاصيل إضافية"
+      },
+      "export": {
+        "title": "تصدير السجلات",
+        "json": "تصدير JSON",
+        "csv": "تصدير CSV",
+        "exporting": "جاري التصدير..."
+      },
+      "empty": {
+        "noLogs": "لا توجد سجلات نشاط",
+        "noLogsDesc": "ستظهر الأنشطة هنا عندما يقوم المسؤولون بإجراء تغييرات",
+        "noEvents": "لا توجد أحداث أمنية",
+        "noEventsDesc": "ستظهر الأحداث الأمنية هنا عند حدوثها",
+        "adjustFilters": "جرب تعديل الفلاتر"
+      },
+      "loading": {
+        "logs": "جاري تحميل سجلات النشاط...",
+        "events": "جاري تحميل الأحداث الأمنية...",
+        "stats": "جاري تحميل الإحصائيات..."
+      },
+      "pagination": {
+        "showing": "عرض {{from}}-{{to}} من {{total}}",
+        "page": "صفحة {{current}} من {{total}}",
+        "previous": "السابق",
+        "next": "التالي"
+      },
+      "severity": {
+        "info": "معلومات",
+        "warning": "تحذير",
+        "error": "خطأ",
+        "critical": "حرج",
+        "success": "نجاح"
+      },
+      "timeline": {
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "thisWeek": "هذا الأسبوع",
+        "older": "أقدم"
+      }
     },
     "globalSettings": {
       "title": "الإعدادات العامة",

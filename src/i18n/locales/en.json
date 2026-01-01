@@ -816,8 +816,122 @@
       "subtitle": "Activity logs and security events",
       "activity": "Activity Logs",
       "activityDesc": "View all system activity across the platform",
+      "activitySubtitle": "Track all admin actions and changes",
       "security": "Security Events",
-      "securityDesc": "Authentication and security-related events"
+      "securityDesc": "Authentication and security-related events",
+      "securitySubtitle": "Monitor login attempts and security incidents",
+      "stats": {
+        "totalActions": "Total Actions",
+        "userChanges": "User Changes",
+        "configChanges": "Config Changes",
+        "securityEvents": "Security Events",
+        "failedLogins": "Failed Logins",
+        "permissionDenied": "Access Denied",
+        "suspiciousActivity": "Suspicious Activity",
+        "passwordResets": "Password Resets",
+        "last24h": "Last 24 hours",
+        "last7d": "Last 7 days"
+      },
+      "filters": {
+        "actionType": "Action Type",
+        "allActions": "All Actions",
+        "entityType": "Entity Type",
+        "allEntities": "All Entities",
+        "user": "User",
+        "allUsers": "All Users",
+        "severity": "Severity",
+        "allSeverities": "All Severities",
+        "eventType": "Event Type",
+        "allEvents": "All Events",
+        "dateRange": "Date Range",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "search": "Search logs...",
+        "clear": "Clear Filters"
+      },
+      "actions": {
+        "MANAGER_ENABLED": "Manager Enabled",
+        "MANAGER_DISABLED": "Manager Disabled",
+        "BARBER_ENABLED": "Barber Enabled",
+        "BARBER_DISABLED": "Barber Disabled",
+        "USER_CREATED": "User Created",
+        "USER_UPDATED": "User Updated",
+        "USER_DELETED": "User Deleted",
+        "SETTING_UPDATED": "Setting Updated",
+        "TEMPLATE_UPDATED": "Template Updated",
+        "LOCATION_MODIFIED": "Location Modified",
+        "GOVERNORATE_CREATED": "Governorate Created",
+        "GOVERNORATE_UPDATED": "Governorate Updated",
+        "GOVERNORATE_DELETED": "Governorate Deleted",
+        "AREA_CREATED": "Area Created",
+        "AREA_UPDATED": "Area Updated",
+        "AREA_DELETED": "Area Deleted",
+        "LOGIN_SUCCESS": "Successful Login",
+        "LOGIN_FAILURE": "Failed Login",
+        "LOGOUT": "Logout",
+        "PASSWORD_RESET_REQUESTED": "Password Reset Requested",
+        "PASSWORD_RESET_COMPLETED": "Password Reset Completed",
+        "PERMISSION_DENIED": "Permission Denied",
+        "SUSPICIOUS_ACTIVITY": "Suspicious Activity",
+        "SESSION_EXPIRED": "Session Expired",
+        "ACCOUNT_LOCKED": "Account Locked",
+        "ACCOUNT_UNLOCKED": "Account Unlocked",
+        "ADMIN_LOGIN": "Admin Login",
+        "ADMIN_ACTION": "Admin Action",
+        "BULK_OPERATION": "Bulk Operation",
+        "EXPORT_DATA": "Data Exported",
+        "IMPORT_DATA": "Data Imported"
+      },
+      "details": {
+        "adminUser": "Admin User",
+        "targetUser": "Target User",
+        "entityType": "Entity Type",
+        "entityId": "Entity ID",
+        "oldValues": "Previous Values",
+        "newValues": "New Values",
+        "metadata": "Additional Info",
+        "userAgent": "Browser/Device",
+        "ipAddress": "IP Address",
+        "fullTimestamp": "Full Timestamp",
+        "noDetails": "No additional details"
+      },
+      "export": {
+        "title": "Export Logs",
+        "json": "Export JSON",
+        "csv": "Export CSV",
+        "exporting": "Exporting..."
+      },
+      "empty": {
+        "noLogs": "No activity logs found",
+        "noLogsDesc": "Activity will appear here as admins make changes",
+        "noEvents": "No security events found",
+        "noEventsDesc": "Security events will appear here as they occur",
+        "adjustFilters": "Try adjusting your filters"
+      },
+      "loading": {
+        "logs": "Loading activity logs...",
+        "events": "Loading security events...",
+        "stats": "Loading statistics..."
+      },
+      "pagination": {
+        "showing": "Showing {{from}}-{{to}} of {{total}}",
+        "page": "Page {{current}} of {{total}}",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "error": "Error",
+        "critical": "Critical",
+        "success": "Success"
+      },
+      "timeline": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "thisWeek": "This Week",
+        "older": "Older"
+      }
     },
     "globalSettings": {
       "title": "Global Settings",
