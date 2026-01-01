@@ -314,3 +314,40 @@
     transform: translateX(0);
   }
 }
+
+/* Admin Sidebar Styles */
+.admin-sidebar .admin-logo-icon {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+.admin-sidebar .admin-tagline {
+  color: #818cf8;
+}
+
+.admin-sidebar .admin-diamond {
+  background: #6366f1;
+}
+
+.admin-sidebar .admin-avatar {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+.admin-sidebar .admin-role {
+  color: #818cf8;
+}
+
+.admin-sidebar .sidebar-nav-item.active {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.admin-sidebar .sidebar-nav-item.active::before {
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+}
+
+.admin-sidebar .sidebar-nav-item.active .sidebar-nav-icon {
+  color: #818cf8;
+}
+
+.admin-sidebar .sidebar-nav-indicator {
+  background: #6366f1;
+}

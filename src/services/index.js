@@ -8,3 +8,4 @@ export { storageService } from './storage.service';
 export { loggingService } from './logging.service';
 export { notificationsService } from './notifications.service';
 export { notificationPreferencesService } from './notificationPreferences.service';
+export { adminService } from './admin.service';

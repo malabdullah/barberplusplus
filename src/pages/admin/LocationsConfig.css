@@ -1,0 +1,262 @@
+/* Locations Config Page Styles */
+
+.locations-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.locations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Governorate Card */
+.governorate-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.governorate-card:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.governorate-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.governorate-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.governorate-expand {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.governorate-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: var(--radius-md);
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.governorate-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.governorate-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.governorate-secondary {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.governorate-code {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.governorate-meta {
+  flex-shrink: 0;
+}
+
+.area-count {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.governorate-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* Governorate Content (Areas) */
+.governorate-content {
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-lg);
+  background: var(--bg-tertiary);
+}
+
+.areas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.areas-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.areas-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.area-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.area-item:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.area-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.area-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.area-secondary {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.area-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.no-areas {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+/* Location Form */
+.location-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.area-parent-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: var(--radius-md);
+  color: #6366f1;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Small button variant */
+.btn-sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.8125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .locations-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .governorate-header {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .governorate-expand {
+    order: -1;
+  }
+
+  .governorate-meta {
+    width: 100%;
+    margin-top: var(--space-xs);
+    order: 10;
+  }
+
+  .governorate-actions {
+    margin-left: auto;
+  }
+
+  .area-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .area-actions {
+    align-self: flex-end;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] .governorate-secondary {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .area-parent-info {
+  flex-direction: row-reverse;
+}

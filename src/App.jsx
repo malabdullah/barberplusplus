@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
+import AdminLayout from './components/Layout/AdminLayout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -26,6 +27,19 @@ import MyProfile from './pages/barber/MyProfile';
 import Logs from './pages/Logs';
 import Notifications from './pages/Notifications';
 import MyLogs from './pages/barber/MyLogs';
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import ManagersList from './pages/admin/ManagersList';
+import BarbersList from './pages/admin/BarbersList';
+import PlatformAnalytics from './pages/admin/PlatformAnalytics';
+import SystemConfiguration from './pages/admin/SystemConfiguration';
+import LocationsConfig from './pages/admin/LocationsConfig';
+import NotificationTemplates from './pages/admin/NotificationTemplates';
+import GlobalSettings from './pages/admin/GlobalSettings';
+import AuditCompliance from './pages/admin/AuditCompliance';
+import ActivityLogs from './pages/admin/ActivityLogs';
+import SecurityEvents from './pages/admin/SecurityEvents';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -52,7 +66,13 @@ function ProtectedRoute({ children, allowedRole }) {
 
   // Only check role if userRole is set (not null)
   if (allowedRole && userRole && userRole !== allowedRole) {
-    return <Navigate to={userRole === 'barber' ? '/barber' : '/'} replace />;
+    // Redirect to role-appropriate dashboard
+    const defaultRoutes = {
+      admin: '/admin',
+      manager: '/',
+      barber: '/barber'
+    };
+    return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
 
   return children;
@@ -63,7 +83,12 @@ function AppRoutes() {
 
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/login';
-    return userRole === 'barber' ? '/barber' : '/';
+    const routes = {
+      admin: '/admin',
+      manager: '/',
+      barber: '/barber'
+    };
+    return routes[userRole] || '/';
   };
 
   // Show loading while auth state is being determined
@@ -143,6 +168,31 @@ function AppRoutes() {
         <Route path="availability" element={<MyAvailability />} />
         <Route path="profile" element={<MyProfile />} />
         <Route path="logs" element={<MyLogs />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRole="admin">
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="users/managers" element={<ManagersList />} />
+        <Route path="users/barbers" element={<BarbersList />} />
+        <Route path="analytics" element={<PlatformAnalytics />} />
+        <Route path="configuration" element={<SystemConfiguration />} />
+        <Route path="configuration/locations" element={<LocationsConfig />} />
+        <Route path="configuration/templates" element={<NotificationTemplates />} />
+        <Route path="configuration/settings" element={<GlobalSettings />} />
+        <Route path="audit" element={<AuditCompliance />} />
+        <Route path="audit/activity" element={<ActivityLogs />} />
+        <Route path="audit/security" element={<SecurityEvents />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>

@@ -1066,6 +1066,9 @@ export function AppProvider({ children }) {
   // Manager alias for backwards compatibility
   const manager = userRole === 'manager' ? user : null;
 
+  // Admin check
+  const isAdmin = useMemo(() => userRole === 'admin', [userRole]);
+
   // Barber-specific data - use fetched profile (not raw auth user)
   const currentBarber = userRole === 'barber' ? barberProfile : null;
   const barberBookings = useMemo(() => {
@@ -1120,6 +1123,7 @@ export function AppProvider({ children }) {
     // State
     user,
     userRole,
+    isAdmin,
     manager,
     branches,
     barbers,
