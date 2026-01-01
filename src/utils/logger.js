@@ -31,26 +31,26 @@ export const logger = {
   },
 
   /**
-   * Warning level logging (always shown)
+   * Warning level logging (development only)
    * Use for potential issues that don't break functionality
    */
   warn: (...args) => {
-    console.warn('[WARN]', ...args);
+    if (isDev) {
+      console.warn('[WARN]', ...args);
+    }
   },
 
   /**
-   * Error level logging (always shown, but sanitized)
+   * Error level logging (development only with full details)
    * Use for errors that need attention
-   * SECURITY: Do not include sensitive data in error messages
+   * SECURITY: Only logs full error details in development
    */
   error: (message, error = null) => {
-    // In production, only log the message without stack traces
     if (isDev) {
       console.error('[ERROR]', message, error);
-    } else {
-      // In production, log only the error message without details
-      console.error('[ERROR]', message);
     }
+    // In production, errors should be sent to server-side logging
+    // via loggingService, not console
   },
 
   /**

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Barbers.css';
 
 const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, onResendInvite, t }) {
@@ -230,8 +231,8 @@ export default function Barbers() {
       await resendBarberInvite(barberId);
       setToast({ type: 'success', message: t('barbers.inviteResent') });
     } catch (error) {
-      console.error('Error resending invite:', error);
-      setToast({ type: 'error', message: error.message || t('barbers.inviteResendFailed') });
+      logErrorSafely(error, 'Barbers.resendInvite');
+      setToast({ type: 'error', message: getErrorMessage(error, t('barbers.inviteResendFailed')) });
     }
   }, [resendBarberInvite, t]);
 

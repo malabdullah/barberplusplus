@@ -4,12 +4,16 @@ import { Copy, Camera, Building2 } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { DAYS, DEFAULT_SCHEDULE } from '../../constants/time';
 import { locationsService } from '../../services';
+import { validateUrl } from '../../utils/validation';
+import { useGeoLocation } from '../../hooks/useGeoLocation';
 import './Forms.css';
 
 const DEFAULT_HOURS = DEFAULT_SCHEDULE;
 
 export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = false }) {
   const { t, i18n } = useTranslation();
+  // Use cached geolocation hook instead of direct API call
+  const { dialCode: detectedCountryCode } = useGeoLocation(branch?.countryCode);
   const [formData, setFormData] = useState({
     name: branch?.name || '',
     nameAr: branch?.nameAr || '',
@@ -47,20 +51,12 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
       });
   }, [branch?.governorateId]);
 
-  // Detect user's country via IP geolocation
+  // Update country code when geolocation hook returns detected country
   useEffect(() => {
-    if (!branch?.countryCode) {
-      fetch('https://ipapi.co/json/')
-        .then(res => res.json())
-        .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.country_code);
-          if (country) {
-            setFormData(prev => ({ ...prev, countryCode: country.code }));
-          }
-        })
-        .catch(() => {}); // Silently fail, keep Kuwait default
+    if (!branch?.countryCode && detectedCountryCode) {
+      setFormData(prev => ({ ...prev, countryCode: detectedCountryCode }));
     }
-  }, [branch?.countryCode]);
+  }, [branch?.countryCode, detectedCountryCode]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -134,7 +130,16 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('validation.branchNameRequired');
-    if (!formData.locationUrl.trim()) newErrors.locationUrl = t('validation.locationUrlRequired');
+
+    // Validate location URL (required and must be valid http/https URL)
+    if (!formData.locationUrl.trim()) {
+      newErrors.locationUrl = t('validation.locationUrlRequired');
+    } else {
+      const urlValidation = validateUrl(formData.locationUrl, true);
+      if (!urlValidation.valid) {
+        newErrors.locationUrl = urlValidation.error;
+      }
+    }
     if (!formData.governorateId) newErrors.governorateId = t('validation.governorateRequired');
     if (!formData.areaId) newErrors.areaId = t('validation.areaRequired');
     if (!formData.phone.trim()) {

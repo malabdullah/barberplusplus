@@ -19,6 +19,7 @@ import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { notificationPreferencesService } from '../services';
+import { useGeoLocation } from '../hooks/useGeoLocation';
 import './Settings.css';
 
 function SettingsSection({ icon: Icon, title, description, children }) {
@@ -86,6 +87,8 @@ export default function Settings() {
   const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
+  // Use cached geolocation hook instead of direct API call
+  const { dialCode: detectedCountryCode } = useGeoLocation(parsedPhone.countryCode);
 
   const [profile, setProfile] = useState({
     name: user?.user_metadata?.name || '',
@@ -94,20 +97,12 @@ export default function Settings() {
     phone: parsedPhone.phone,
   });
 
-  // Detect user's country via IP geolocation
+  // Update country code when geolocation hook returns detected country
   useEffect(() => {
-    if (!profile.countryCode || profile.countryCode === '+965') {
-      fetch('https://ipapi.co/json/')
-        .then(res => res.json())
-        .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.country_code);
-          if (country) {
-            setProfile(prev => ({ ...prev, countryCode: country.code }));
-          }
-        })
-        .catch(() => {}); // Silently fail, keep Kuwait default
+    if (detectedCountryCode && (!profile.countryCode || profile.countryCode === '+965')) {
+      setProfile(prev => ({ ...prev, countryCode: detectedCountryCode }));
     }
-  }, [user?.user_metadata?.phone]);
+  }, [detectedCountryCode, profile.countryCode]);
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;

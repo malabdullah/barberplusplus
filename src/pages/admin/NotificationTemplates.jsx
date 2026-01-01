@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -195,15 +196,23 @@ export default function NotificationTemplates() {
 
   const renderPreview = (message) => {
     if (!message) return '';
-    let preview = message;
+    // First escape HTML in the message to prevent XSS
+    const escapeHtml = (text) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    let preview = escapeHtml(message);
+    // Replace template variables with styled spans (safe since SAMPLE_DATA is controlled)
     TEMPLATE_VARIABLES.forEach((v) => {
       const regex = new RegExp(`{{${v.key}}}`, 'g');
       preview = preview.replace(
         regex,
-        `<span class="preview-variable">${SAMPLE_DATA[v.key]}</span>`
+        `<span class="preview-variable">${escapeHtml(SAMPLE_DATA[v.key])}</span>`
       );
     });
-    return preview;
+    // Sanitize the final output as an extra layer of protection
+    return DOMPurify.sanitize(preview, { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] });
   };
 
   const getTemplateType = (key) => {

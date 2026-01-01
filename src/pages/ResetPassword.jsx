@@ -62,6 +62,11 @@ export default function ResetPassword() {
       setError(t('validation.passwordNumber') || 'Password must contain at least one number');
       return false;
     }
+    // Check for special characters (matches Signup.jsx validation)
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setError(t('validation.passwordSpecial') || 'Password must contain at least one special character');
+      return false;
+    }
     if (password !== confirmPassword) {
       setError(t('auth.passwordMismatch'));
       return false;

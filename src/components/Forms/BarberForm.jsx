@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
+import { useGeoLocation } from '../../hooks/useGeoLocation';
 import './Forms.css';
 
 export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false }) {
   const { t } = useTranslation();
+  // Use cached geolocation hook instead of direct API call
+  const { dialCode: detectedCountryCode } = useGeoLocation(barber?.countryCode);
   const [formData, setFormData] = useState({
     name: barber?.name || '',
     nameAr: barber?.nameAr || '',
@@ -20,20 +23,12 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
 
   const [errors, setErrors] = useState({});
 
-  // Detect user's country via IP geolocation
+  // Update country code when geolocation hook returns detected country
   useEffect(() => {
-    if (!barber?.countryCode) {
-      fetch('https://ipapi.co/json/')
-        .then(res => res.json())
-        .then(data => {
-          const country = GCC_COUNTRIES.find(c => c.country === data.country_code);
-          if (country) {
-            setFormData(prev => ({ ...prev, countryCode: country.code }));
-          }
-        })
-        .catch(() => {}); // Silently fail, keep Kuwait default
+    if (!barber?.countryCode && detectedCountryCode) {
+      setFormData(prev => ({ ...prev, countryCode: detectedCountryCode }));
     }
-  }, [barber?.countryCode]);
+  }, [barber?.countryCode, detectedCountryCode]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

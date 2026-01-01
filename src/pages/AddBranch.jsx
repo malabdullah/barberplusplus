@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import BranchForm from '../components/Forms/BranchForm';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './AddBranch.css';
 
 export default function AddBranch() {
@@ -20,8 +21,8 @@ export default function AddBranch() {
       await addBranch(data);
       navigate('/branches');
     } catch (err) {
-      console.error('Error creating branch:', err);
-      setError(err.message || t('errors.createBranchFailed'));
+      logErrorSafely(err, 'AddBranch');
+      setError(getErrorMessage(err, t('errors.createBranchFailed')));
       setIsSubmitting(false);
     }
   };

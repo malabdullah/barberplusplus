@@ -67,9 +67,9 @@ export function AppProvider({ children }) {
           ...settings,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
-      if (error) console.error('Error saving user settings:', error);
+      if (error) logger.error('Error saving user settings:', error);
     } catch (err) {
-      console.error('Error saving user settings:', err);
+      logger.error('Error saving user settings:', err);
     }
   }, [user?.id]);
 
@@ -127,7 +127,7 @@ export function AppProvider({ children }) {
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 = no rows found (first time user)
-          console.error('Error loading user settings:', error);
+          logger.error('Error loading user settings:', error);
           return;
         }
 
@@ -145,7 +145,7 @@ export function AppProvider({ children }) {
           }
         }
       } catch (err) {
-        console.error('Error loading user settings:', err);
+        logger.error('Error loading user settings:', err);
       }
     };
 
@@ -165,7 +165,7 @@ export function AppProvider({ children }) {
           setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        logger.error('Error getting session:', error);
       }
       setLoading(false);
     };
@@ -187,7 +187,7 @@ export function AppProvider({ children }) {
       });
       subscription = data?.subscription;
     } catch (error) {
-      console.error('Error setting up auth listener:', error);
+      logger.error('Error setting up auth listener:', error);
     }
 
     return () => {
@@ -299,7 +299,7 @@ export function AppProvider({ children }) {
           setSelectedBranchId(branchesData[0].id);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        logger.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
@@ -374,7 +374,7 @@ export function AppProvider({ children }) {
         setUnreadCount(count);
         setNotificationPreferences(prefs);
       } catch (error) {
-        console.error('Error loading notifications:', error);
+        logger.error('Error loading notifications:', error);
       } finally {
         setNotificationsLoading(false);
       }
@@ -440,7 +440,7 @@ export function AppProvider({ children }) {
       setServices(servicesData);
       setBookings(bookingsData);
     } catch (error) {
-      console.error('Error reloading data:', error);
+      logger.error('Error reloading data:', error);
     }
   }, []);
 
@@ -457,7 +457,7 @@ export function AppProvider({ children }) {
       await notificationsService.markRead(notificationId);
     } catch (error) {
       // Revert on error
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, isRead: false, readAt: null } : n)
       );
@@ -481,7 +481,7 @@ export function AppProvider({ children }) {
       await notificationsService.markAllRead();
     } catch (error) {
       // Revert on error
-      console.error('Error marking all notifications as read:', error);
+      logger.error('Error marking all notifications as read:', error);
       setNotifications(previousNotifications);
       setUnreadCount(previousUnreadCount);
     }
@@ -496,7 +496,7 @@ export function AppProvider({ children }) {
       setNotifications(notifs);
       setUnreadCount(count);
     } catch (error) {
-      console.error('Error reloading notifications:', error);
+      logger.error('Error reloading notifications:', error);
     }
   }, []);
 
@@ -522,7 +522,7 @@ export function AppProvider({ children }) {
           loggingService.logAction('create', 'branch', updatedBranch.id, `Created branch: ${branchData.name}`);
           return updatedBranch;
         } catch (uploadError) {
-          console.error('Error uploading branch image:', uploadError);
+          logger.error('Error uploading branch image:', uploadError);
           // Still return the branch without image
           setBranches(prev => [...prev, newBranch]);
           loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
@@ -534,7 +534,7 @@ export function AppProvider({ children }) {
       loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
       return newBranch;
     } catch (error) {
-      console.error('Error creating branch:', error);
+      logger.error('Error creating branch:', error);
       loggingService.logError(error, { entityType: 'branch', action: 'create' });
       throw error;
     }
@@ -554,7 +554,7 @@ export function AppProvider({ children }) {
           const imageUrl = await storageService.replaceImage(imageFile, 'branches', branchId, oldImageUrl);
           data.imageUrl = imageUrl;
         } catch (uploadError) {
-          console.error('Error uploading branch image:', uploadError);
+          logger.error('Error uploading branch image:', uploadError);
         }
       }
 
@@ -565,7 +565,7 @@ export function AppProvider({ children }) {
       loggingService.logAction('update', 'branch', branchId, `Updated branch: ${updated.name}`);
       return updated;
     } catch (error) {
-      console.error('Error updating branch:', error);
+      logger.error('Error updating branch:', error);
       loggingService.logError(error, { entityType: 'branch', action: 'update', entityId: branchId });
       throw error;
     }
@@ -581,7 +581,7 @@ export function AppProvider({ children }) {
       }
       loggingService.logAction('delete', 'branch', branchId, `Deleted branch: ${branchName}`);
     } catch (error) {
-      console.error('Error deleting branch:', error);
+      logger.error('Error deleting branch:', error);
       loggingService.logError(error, { entityType: 'branch', action: 'delete', entityId: branchId });
       throw error;
     }
@@ -608,7 +608,7 @@ export function AppProvider({ children }) {
           newBarber.profilePicture = avatarUrl;
           newBarber.avatarUrl = avatarUrl;
         } catch (uploadError) {
-          console.error('Error uploading barber profile picture:', uploadError);
+          logger.error('Error uploading barber profile picture:', uploadError);
         }
       }
 
@@ -623,7 +623,7 @@ export function AppProvider({ children }) {
         newBarber.inviteStatus = 'sent';
         newBarber.inviteSentAt = new Date().toISOString();
       } catch (inviteError) {
-        console.error('Failed to send invite:', inviteError);
+        logger.error('Failed to send invite:', inviteError);
         // Barber was created, but invite failed - they can resend later
         newBarber.inviteError = inviteError.message;
       }
@@ -632,7 +632,7 @@ export function AppProvider({ children }) {
       loggingService.logAction('create', 'barber', newBarber.id, `Added barber: ${barberData.name}`);
       return newBarber;
     } catch (error) {
-      console.error('Error creating barber:', error);
+      logger.error('Error creating barber:', error);
       loggingService.logError(error, { entityType: 'barber', action: 'create' });
       throw error;
     }
@@ -650,7 +650,7 @@ export function AppProvider({ children }) {
       );
       return { success: true };
     } catch (error) {
-      console.error('Error resending invite:', error);
+      logger.error('Error resending invite:', error);
       throw error;
     }
   }, []);
@@ -669,7 +669,7 @@ export function AppProvider({ children }) {
           const avatarUrl = await storageService.replaceImage(profilePictureFile, 'barbers', barberId, oldAvatarUrl);
           data.profilePicture = avatarUrl;
         } catch (uploadError) {
-          console.error('Error uploading barber profile picture:', uploadError);
+          logger.error('Error uploading barber profile picture:', uploadError);
         }
       }
 
@@ -698,12 +698,12 @@ export function AppProvider({ children }) {
             barberName: updated.name,
             updateType: isAvailabilityUpdate ? 'availability' : 'profile',
           },
-        }).catch(err => console.error('Error creating barber update notification:', err));
+        }).catch(err => logger.error('Error creating barber update notification:', err));
       }
 
       return updated;
     } catch (error) {
-      console.error('Error updating barber:', error);
+      logger.error('Error updating barber:', error);
       loggingService.logError(error, { entityType: 'barber', action: 'update', entityId: barberId });
       throw error;
     }
@@ -716,7 +716,7 @@ export function AppProvider({ children }) {
       setBarbers(prev => prev.filter(b => b.id !== barberId));
       loggingService.logAction('delete', 'barber', barberId, `Deleted barber: ${barberName}`);
     } catch (error) {
-      console.error('Error deleting barber:', error);
+      logger.error('Error deleting barber:', error);
       loggingService.logError(error, { entityType: 'barber', action: 'delete', entityId: barberId });
       throw error;
     }
@@ -734,7 +734,7 @@ export function AppProvider({ children }) {
       loggingService.logAction('create', 'service', newService.id, `Added service: ${serviceData.name}`);
       return newService;
     } catch (error) {
-      console.error('Error creating service:', error);
+      logger.error('Error creating service:', error);
       loggingService.logError(error, { entityType: 'service', action: 'create' });
       throw error;
     }
@@ -749,7 +749,7 @@ export function AppProvider({ children }) {
       loggingService.logAction('update', 'service', serviceId, `Updated service: ${updated.name}`);
       return updated;
     } catch (error) {
-      console.error('Error updating service:', error);
+      logger.error('Error updating service:', error);
       loggingService.logError(error, { entityType: 'service', action: 'update', entityId: serviceId });
       throw error;
     }
@@ -762,7 +762,7 @@ export function AppProvider({ children }) {
       setServices(prev => prev.filter(s => s.id !== serviceId));
       loggingService.logAction('delete', 'service', serviceId, `Deleted service: ${serviceName}`);
     } catch (error) {
-      console.error('Error deleting service:', error);
+      logger.error('Error deleting service:', error);
       loggingService.logError(error, { entityType: 'service', action: 'delete', entityId: serviceId });
       throw error;
     }
@@ -912,13 +912,13 @@ export function AppProvider({ children }) {
         }
 
         notificationsService.createBatch(notificationsToCreate).catch(err =>
-          console.error('Error creating status change notifications:', err)
+          logger.error('Error creating status change notifications:', err)
         );
       }
 
       return updated;
     } catch (error) {
-      console.error('Error updating booking:', error);
+      logger.error('Error updating booking:', error);
       loggingService.logError(error, { entityType: 'booking', action: 'update', entityId: bookingId });
       throw error;
     }
@@ -980,7 +980,7 @@ export function AppProvider({ children }) {
         }
 
         notificationsService.createBatch(notificationsToCreate).catch(err =>
-          console.error('Error creating cancellation notifications:', err)
+          logger.error('Error creating cancellation notifications:', err)
         );
       }
 
@@ -990,7 +990,7 @@ export function AppProvider({ children }) {
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? oldBooking : b)
       );
-      console.error('Error cancelling booking:', error);
+      logger.error('Error cancelling booking:', error);
       loggingService.logError(error, { entityType: 'booking', action: 'cancel', entityId: bookingId });
       throw error;
     }
@@ -1010,7 +1010,7 @@ export function AppProvider({ children }) {
       }
       return null;
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       loggingService.logAuth('login', null, null, false, error.message);
       return null;
     }
@@ -1027,7 +1027,7 @@ export function AppProvider({ children }) {
       }
       return result;
     } catch (error) {
-      console.error('Signup error:', error);
+      logger.error('Signup error:', error);
       loggingService.logAuth('signup', null, null, false, error.message);
       return { success: false, error: error.message };
     }
@@ -1043,7 +1043,7 @@ export function AppProvider({ children }) {
       await loggingService.flush();
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       loggingService.clearContext();
       // Clear the queue to prevent orphaned logs from trying to send

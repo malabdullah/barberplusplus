@@ -5,6 +5,7 @@ import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react
 import { authService } from '../services';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
 import './ForgotPassword.css';
 
@@ -44,7 +45,8 @@ export default function ForgotPassword() {
         setError(result.error || t('errors.resetFailed'));
       }
     } catch (err) {
-      setError(err.message || t('errors.resetFailed'));
+      logErrorSafely(err, 'ForgotPassword');
+      setError(getErrorMessage(err, t('errors.resetFailed')));
     } finally {
       setIsLoading(false);
     }

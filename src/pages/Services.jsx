@@ -11,6 +11,7 @@ import {
 import { useApp } from '../context/AppContext';
 import Modal from '../components/UI/Modal';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Services.css';
 
 function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
@@ -225,8 +226,8 @@ export default function Services() {
       setIsFormOpen(false);
       setEditingService(null);
     } catch (err) {
-      console.error('Error saving service:', err);
-      setError(err.message || 'Failed to save service. Please try again.');
+      logErrorSafely(err, 'Services.save');
+      setError(getErrorMessage(err, 'Failed to save service. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -238,8 +239,8 @@ export default function Services() {
         await deleteService(deletingService.id);
         setDeletingService(null);
       } catch (err) {
-        console.error('Error deleting service:', err);
-        setError(err.message || 'Failed to delete service. Please try again.');
+        logErrorSafely(err, 'Services.delete');
+        setError(getErrorMessage(err, 'Failed to delete service. Please try again.'));
         setDeletingService(null);
       }
     }
