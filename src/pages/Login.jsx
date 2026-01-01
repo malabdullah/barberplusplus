@@ -45,8 +45,10 @@ export default function Login() {
       // Redirect based on role
       if (role === 'barber') {
         navigate('/barber');
+      } else if (role === 'admin') {
+        navigate('/admin');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     } else {
       setError(t('auth.invalidCredentials'));

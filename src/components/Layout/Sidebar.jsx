@@ -15,12 +15,12 @@ import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
-  { path: '/branches', icon: Building2, labelKey: 'nav.branches' },
-  { path: '/services', icon: Scissors, labelKey: 'nav.services' },
-  { path: '/barbers', icon: Users, labelKey: 'nav.barbers' },
-  { path: '/bookings', icon: Calendar, labelKey: 'nav.bookings' },
-  { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
+  { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
+  { path: '/dashboard/branches', icon: Building2, labelKey: 'nav.branches' },
+  { path: '/dashboard/services', icon: Scissors, labelKey: 'nav.services' },
+  { path: '/dashboard/barbers', icon: Users, labelKey: 'nav.barbers' },
+  { path: '/dashboard/bookings', icon: Calendar, labelKey: 'nav.bookings' },
+  { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
