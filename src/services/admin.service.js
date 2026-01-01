@@ -107,7 +107,7 @@ export const adminService = {
         weekBookingsResult,
       ] = await Promise.all([
         // Count managers (users with role=manager)
-        supabase.rpc('count_users_by_role', { role_filter: 'manager' }).catch(() => ({ data: 0 })),
+        supabase.rpc('count_users_by_role', { role_filter: 'manager' }).then(res => res.error ? { data: 0 } : res),
         // Count all barbers
         supabase.from('barbers').select('id', { count: 'exact', head: true }),
         // Count all branches

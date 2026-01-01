@@ -90,8 +90,9 @@ export const notificationPreferencesService = {
       .eq('user_id', user.id)
       .single();
 
-    // If no preferences exist, return defaults
-    if (error && error.code === 'PGRST116') {
+    // If no preferences exist (PGRST116) or access denied (406), return defaults
+    // 406 can occur when RLS blocks access or auth context is incomplete
+    if (error && (error.code === 'PGRST116' || error.code === '406' || error.message?.includes('406'))) {
       return { ...DEFAULT_PREFERENCES, userId: user.id };
     }
     if (error) throw error;
