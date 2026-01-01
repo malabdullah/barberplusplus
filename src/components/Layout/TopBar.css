@@ -578,6 +578,12 @@ button.topbar-notification-item:hover {
   min-width: 180px;
 }
 
+/* Fix RTL positioning - keep dropdown opening towards center of page */
+[dir="rtl"] .preferences-dropdown {
+  left: auto;
+  right: 0;
+}
+
 .preferences-option {
   display: flex;
   align-items: center;
