@@ -962,3 +962,53 @@
     font-size: 0.75rem;
   }
 }
+
+/* Booking Window Card */
+.booking-window-card {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.1);
+  border-radius: var(--radius-lg);
+}
+
+.booking-window-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  color: var(--accent-primary);
+}
+
+.booking-window-header h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.booking-window-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.booking-window-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.booking-window-input .form-input {
+  width: 80px;
+  text-align: center;
+}
+
+.booking-window-suffix {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+[dir="rtl"] .booking-window-input {
+  flex-direction: row-reverse;
+}

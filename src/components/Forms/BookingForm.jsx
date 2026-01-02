@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { TIME_SLOTS } from '../../constants/time';
+import { getFilteredTimeSlots, getDateAvailability } from '../../utils/availabilityFiltering';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
 import { validatePhoneNumber } from '../../utils/validation';
@@ -23,8 +24,10 @@ import { checkBookingConflicts } from '../../utils/bookingConflicts';
 function BookingForm({ booking, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
   const { t } = useTranslation();
 
-  // Determine mode: manager (has barbers list) or barber (has currentBarber)
-  const isManagerView = !!barbers && barbers.length > 0;
+  // Determine mode: manager (has barbers array) or barber (has currentBarber)
+  // Manager view = barbers array is passed (even if empty)
+  // Barber view = currentBarber object is passed
+  const isManagerView = !currentBarber && Array.isArray(barbers);
 
   // Use geolocation hook for initial country code
   const { dialCode } = useGeoLocation(booking?.customerCountryCode);
@@ -41,15 +44,76 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   });
 
   const [errors, setErrors] = useState({});
+  const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
+  const [dateError, setDateError] = useState(null);
+
+  // Get the currently selected barber
+  const selectedBarber = useMemo(() => {
+    if (!isManagerView) return currentBarber;
+    return barbers.find(b => b.id === formData.barberId) || null;
+  }, [isManagerView, currentBarber, barbers, formData.barberId]);
 
   // Calculate totals from selected services
   const selectedServices = services.filter(s => formData.serviceIds.includes(s.id));
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
+  // Update filtered time slots when date, barber, or duration changes
+  useEffect(() => {
+    if (!selectedBarber || !formData.date) {
+      setFilteredTimeSlots(TIME_SLOTS.map(slot => ({ slot, available: true, reason: null })));
+      return;
+    }
+
+    const barberId = formData.barberId || currentBarber?.id;
+    const barberBookings = existingBookings.filter(b =>
+      b.barberId === barberId && !['cancelled', 'no-show'].includes(b.status)
+    );
+
+    const slots = getFilteredTimeSlots({
+      date: formData.date,
+      duration: totalDuration || 30,
+      barberData: selectedBarber,
+      existingBookings: barberBookings,
+      editingBookingId: booking?.id
+    });
+
+    setFilteredTimeSlots(slots);
+
+    // Clear time if current selection is now unavailable
+    const currentSlot = slots.find(s => s.slot === formData.time);
+    if (formData.time && currentSlot && !currentSlot.available) {
+      setFormData(prev => ({ ...prev, time: '' }));
+    }
+  }, [selectedBarber, formData.date, formData.barberId, totalDuration, existingBookings, booking?.id, currentBarber?.id, formData.time]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear date and time when barber changes
+    if (name === 'barberId') {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: ''
+      }));
+      setDateError(null);
+    } else if (name === 'date') {
+      // Validate date availability
+      const dateAvailability = getDateAvailability(value, selectedBarber);
+      if (!dateAvailability.available) {
+        setDateError(t(`bookings.dateReasons.${dateAvailability.reason}`));
+        // Keep the invalid date visible but show error, clear time
+        setFormData((prev) => ({ ...prev, date: value, time: '' }));
+      } else {
+        setDateError(null);
+        setFormData((prev) => ({ ...prev, date: value, time: '' }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -87,8 +151,12 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
     }
 
     // Only validate barberId in manager view
-    if (isManagerView && !formData.barberId) {
-      newErrors.barberId = t('bookings.validation.barberRequired');
+    if (isManagerView) {
+      if (barbers.length === 0) {
+        newErrors.barberId = t('bookings.noBarbersAvailable');
+      } else if (!formData.barberId) {
+        newErrors.barberId = t('bookings.validation.barberRequired');
+      }
     }
 
     if (!formData.serviceIds.length) {
@@ -97,6 +165,8 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
     if (!formData.date) {
       newErrors.date = t('bookings.validation.dateRequired');
+    } else if (dateError) {
+      newErrors.date = dateError;
     }
 
     if (!formData.time) {
@@ -198,19 +268,25 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">{t('bookings.barber')}</label>
-              <select
-                name="barberId"
-                value={formData.barberId}
-                onChange={handleChange}
-                className={`form-input form-select ${errors.barberId ? 'error' : ''}`}
-              >
-                <option value="">{t('bookings.selectBarberPlaceholder')}</option>
-                {barbers.map((barber) => (
-                  <option key={barber.id} value={barber.id}>
-                    {barber.name}
-                  </option>
-                ))}
-              </select>
+              {barbers.length > 0 ? (
+                <select
+                  name="barberId"
+                  value={formData.barberId}
+                  onChange={handleChange}
+                  className={`form-input form-select ${errors.barberId ? 'error' : ''}`}
+                >
+                  <option value="">{t('bookings.selectBarberPlaceholder')}</option>
+                  {barbers.map((barber) => (
+                    <option key={barber.id} value={barber.id}>
+                      {barber.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="form-empty-state">
+                  <span className="form-error">{t('bookings.noBarbersAvailable')}</span>
+                </div>
+              )}
               {errors.barberId && <span className="form-error">{errors.barberId}</span>}
             </div>
           </div>
@@ -218,39 +294,47 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
         <div className="form-group">
           <label className="form-label">{t('bookings.services')}</label>
-          <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
-            {services.map((service) => {
-              const isSelected = formData.serviceIds.includes(service.id);
-              return (
-                <label
-                  key={service.id}
-                  className={`service-checkbox-card ${isSelected ? 'selected' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleService(service.id)}
-                  />
-                  <div className="service-checkbox-content">
-                    <span className="service-checkbox-name">{service.name}</span>
-                    <span className="service-checkbox-meta">
-                      {service.duration} {t('common.min')} - {service.price} {t('common.currency')}
-                    </span>
-                  </div>
-                  <div className="service-checkbox-check">
-                    <Check size={14} strokeWidth={2} />
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-          {errors.serviceIds && <span className="form-error">{errors.serviceIds}</span>}
-          {formData.serviceIds.length > 0 && (
-            <div className="services-total">
-              <span>{t('common.total')}:</span>
-              <span className="services-total-value">{totalDuration} {t('common.min')} - {totalPrice} {t('common.currency')}</span>
+          {services.length > 0 ? (
+            <>
+              <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
+                {services.map((service) => {
+                  const isSelected = formData.serviceIds.includes(service.id);
+                  return (
+                    <label
+                      key={service.id}
+                      className={`service-checkbox-card ${isSelected ? 'selected' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleService(service.id)}
+                      />
+                      <div className="service-checkbox-content">
+                        <span className="service-checkbox-name">{service.name}</span>
+                        <span className="service-checkbox-meta">
+                          {service.duration} {t('common.min')} - {service.price} {t('common.currency')}
+                        </span>
+                      </div>
+                      <div className="service-checkbox-check">
+                        <Check size={14} strokeWidth={2} />
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              {formData.serviceIds.length > 0 && (
+                <div className="services-total">
+                  <span>{t('common.total')}:</span>
+                  <span className="services-total-value">{totalDuration} {t('common.min')} - {totalPrice} {t('common.currency')}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="form-empty-state">
+              <span className="form-hint">{t('bookings.noServicesAvailable')}</span>
             </div>
           )}
+          {errors.serviceIds && <span className="form-error">{errors.serviceIds}</span>}
         </div>
 
         <div className="form-row">
@@ -261,9 +345,16 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className={`form-input ${errors.date ? 'error' : ''}`}
+              min={format(new Date(), 'yyyy-MM-dd')}
+              max={selectedBarber ? format(addDays(new Date(), selectedBarber.maxBookingDays || 30), 'yyyy-MM-dd') : undefined}
+              disabled={isManagerView && !formData.barberId}
+              className={`form-input ${errors.date || dateError ? 'error' : ''}`}
             />
-            {errors.date && <span className="form-error">{errors.date}</span>}
+            {isManagerView && !formData.barberId && (
+              <span className="form-hint">{t('bookings.selectBarberFirst')}</span>
+            )}
+            {dateError && <span className="form-error">{dateError}</span>}
+            {errors.date && !dateError && <span className="form-error">{errors.date}</span>}
           </div>
 
           <div className="form-group">
@@ -272,14 +363,19 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
               name="time"
               value={formData.time}
               onChange={handleChange}
+              disabled={!formData.date || (isManagerView && !formData.barberId)}
               className={`form-input form-select ${errors.time ? 'error' : ''}`}
             >
-              {TIME_SLOTS.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
+              <option value="">{t('bookings.selectTime')}</option>
+              {filteredTimeSlots.map(({ slot, available, reason }) => (
+                <option key={slot} value={slot} disabled={!available}>
+                  {slot} {!available ? `(${t(`bookings.timeReasons.${reason}`)})` : ''}
                 </option>
               ))}
             </select>
+            {!formData.date && (
+              <span className="form-hint">{t('bookings.selectDateFirst')}</span>
+            )}
             {errors.time && <span className="form-error">{errors.time}</span>}
           </div>
         </div>

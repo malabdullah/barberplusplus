@@ -413,7 +413,25 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "noShow": "No Show"
-    }
+    },
+    "selectBarberFirst": "Select a barber first",
+    "selectDateFirst": "Select a date first",
+    "selectTime": "Select time...",
+    "timeReasons": {
+      "beforeWorkingHours": "Before working hours",
+      "afterWorkingHours": "After working hours",
+      "timeOff": "Break time",
+      "booked": "Already booked",
+      "dayOff": "Day off"
+    },
+    "dateReasons": {
+      "pastDate": "Cannot book in the past",
+      "beyondBookingWindow": "Date is beyond the booking window",
+      "onVacation": "Barber is on vacation this day",
+      "dayOff": "Barber does not work this day"
+    },
+    "noBarbersAvailable": "No barbers available for this branch",
+    "noServicesAvailable": "No services available for this branch"
   },
   "settings": {
     "title": "Settings",
@@ -589,7 +607,10 @@
     "noVacationsScheduled": "No vacations scheduled",
     "planTimeOff": "Plan your time off by adding vacation periods",
     "upcoming": "Upcoming",
-    "past": "Past"
+    "past": "Past",
+    "bookingWindow": "Booking Window",
+    "bookingWindowDesc": "How far in advance can customers book appointments?",
+    "daysAhead": "days ahead"
   },
   "profile": {
     "title": "My Profile",

@@ -413,7 +413,25 @@
       "completed": "مكتمل",
       "cancelled": "ملغي",
       "noShow": "لم يحضر"
-    }
+    },
+    "selectBarberFirst": "اختر الحلاق أولاً",
+    "selectDateFirst": "اختر التاريخ أولاً",
+    "selectTime": "اختر الوقت...",
+    "timeReasons": {
+      "beforeWorkingHours": "قبل ساعات العمل",
+      "afterWorkingHours": "بعد ساعات العمل",
+      "timeOff": "وقت راحة",
+      "booked": "محجوز مسبقاً",
+      "dayOff": "يوم عطلة"
+    },
+    "dateReasons": {
+      "pastDate": "لا يمكن الحجز في الماضي",
+      "beyondBookingWindow": "التاريخ خارج نافذة الحجز",
+      "onVacation": "الحلاق في إجازة في هذا اليوم",
+      "dayOff": "الحلاق لا يعمل في هذا اليوم"
+    },
+    "noBarbersAvailable": "لا يوجد حلاقون متاحون لهذا الفرع",
+    "noServicesAvailable": "لا توجد خدمات متاحة لهذا الفرع"
   },
   "settings": {
     "title": "الإعدادات",
@@ -589,7 +607,10 @@
     "noVacationsScheduled": "لا توجد إجازات مجدولة",
     "planTimeOff": "خطط لإجازتك بإضافة فترات الإجازة",
     "upcoming": "قادم",
-    "past": "سابق"
+    "past": "سابق",
+    "bookingWindow": "نافذة الحجز",
+    "bookingWindowDesc": "كم يوماً مقدماً يمكن للعملاء الحجز؟",
+    "daysAhead": "أيام مقدماً"
   },
   "profile": {
     "title": "ملفي الشخصي",

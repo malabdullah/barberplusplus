@@ -20,6 +20,7 @@ const toFrontend = (barber) => {
     availability: barber.availability,
     timeOffs: barber.time_offs || [],
     vacations: barber.vacations || [],
+    maxBookingDays: barber.max_booking_days ?? 30,
     createdAt: barber.created_at,
     updatedAt: barber.updated_at,
     inviteStatus: barber.invite_status,
@@ -54,6 +55,7 @@ const toDatabase = (data) => {
   if (data.availability !== undefined) result.availability = data.availability;
   if (data.timeOffs !== undefined) result.time_offs = data.timeOffs;
   if (data.vacations !== undefined) result.vacations = data.vacations;
+  if (data.maxBookingDays !== undefined) result.max_booking_days = data.maxBookingDays;
   return result;
 };
 

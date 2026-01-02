@@ -606,6 +606,7 @@ export default function MyAvailability() {
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [timeOffs, setTimeOffs] = useState([]);
   const [vacations, setVacations] = useState([]);
+  const [maxBookingDays, setMaxBookingDays] = useState(30);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -619,6 +620,7 @@ export default function MyAvailability() {
       }
       setTimeOffs(currentBarber.timeOffs || []);
       setVacations(currentBarber.vacations || []);
+      setMaxBookingDays(currentBarber.maxBookingDays || 30);
       setIsInitialized(true);
     }
   }, [currentBarber, isInitialized]);
@@ -656,6 +658,7 @@ export default function MyAvailability() {
         availability: schedule,
         timeOffs: timeOffs,
         vacations: vacations,
+        maxBookingDays: maxBookingDays,
       });
       setHasChanges(false);
       setSaveStatus('saved');
@@ -678,6 +681,7 @@ export default function MyAvailability() {
       }
       setTimeOffs(currentBarber.timeOffs || []);
       setVacations(currentBarber.vacations || []);
+      setMaxBookingDays(currentBarber.maxBookingDays || 30);
     }
     setHasChanges(false);
     setSaveStatus(null);
@@ -814,6 +818,7 @@ export default function MyAvailability() {
 
       {/* Tab Content */}
       {activeTab === 'schedule' && (
+        <>
         <div className="schedule-card animate-fade-in-up">
           <div className="schedule-card-header">
             <div className="schedule-card-title">
@@ -858,6 +863,32 @@ export default function MyAvailability() {
             </div>
           </div>
         </div>
+
+        {/* Booking Window Setting */}
+        <div className="booking-window-card animate-fade-in-up">
+          <div className="booking-window-header">
+            <Calendar size={20} strokeWidth={1.5} />
+            <h3>{t('availability.bookingWindow')}</h3>
+          </div>
+          <p className="booking-window-desc">{t('availability.bookingWindowDesc')}</p>
+          <div className="booking-window-input">
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={maxBookingDays}
+              onChange={(e) => {
+                const value = Math.min(365, Math.max(1, parseInt(e.target.value) || 30));
+                setMaxBookingDays(value);
+                setHasChanges(true);
+                setSaveStatus(null);
+              }}
+              className="form-input"
+            />
+            <span className="booking-window-suffix">{t('availability.daysAhead')}</span>
+          </div>
+        </div>
+        </>
       )}
 
       {activeTab === 'timeoffs' && (
