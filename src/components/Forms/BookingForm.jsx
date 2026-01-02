@@ -345,6 +345,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
               name="date"
               value={formData.date}
               onChange={handleChange}
+              onClick={(e) => e.target.showPicker()}
               min={format(new Date(), 'yyyy-MM-dd')}
               max={selectedBarber ? format(addDays(new Date(), selectedBarber.maxBookingDays || 30), 'yyyy-MM-dd') : undefined}
               disabled={isManagerView && !formData.barberId}

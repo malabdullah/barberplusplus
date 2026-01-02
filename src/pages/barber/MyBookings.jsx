@@ -402,9 +402,10 @@ export default function MyBookings() {
           </div>
           <input
             type="date"
-            className="calendar-date-picker"
+            className="calendar-date-picker form-input"
             value={format(currentWeek, 'yyyy-MM-dd')}
             onChange={(e) => e.target.value && setCurrentWeek(new Date(e.target.value))}
+            onClick={(e) => e.target.showPicker()}
           />
           <h3 className="calendar-period">
             {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}

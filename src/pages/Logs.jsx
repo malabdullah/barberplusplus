@@ -338,6 +338,7 @@ export default function Logs() {
               type="date"
               value={filters.startDate}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              onClick={(e) => e.target.showPicker()}
               className="form-input"
             />
           </div>
@@ -347,6 +348,7 @@ export default function Logs() {
               type="date"
               value={filters.endDate}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              onClick={(e) => e.target.showPicker()}
               className="form-input"
             />
           </div>

@@ -657,3 +657,18 @@
 .form-group.inline .form-input {
   text-align: center;
 }
+
+/* Date Input - click anywhere to open picker */
+input[type="date"].form-input {
+  cursor: pointer;
+}
+
+input[type="date"].form-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+input[type="date"].form-input:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}

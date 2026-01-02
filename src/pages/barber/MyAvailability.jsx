@@ -302,6 +302,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                     value={formData.date}
                     min={today}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    onClick={(e) => e.target.showPicker()}
                   />
                 </div>
               )}
@@ -523,6 +524,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                   value={formData.startDate}
                   min={today}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onClick={(e) => e.target.showPicker()}
                 />
               </div>
               <div className="form-group">
@@ -533,6 +535,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                   value={formData.endDate}
                   min={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onClick={(e) => e.target.showPicker()}
                 />
               </div>
             </div>
