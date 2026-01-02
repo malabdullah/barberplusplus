@@ -18,7 +18,7 @@ export default function AddBarber() {
     setIsSubmitting(true);
     try {
       await addBarber(data);
-      navigate('/barbers');
+      navigate('/dashboard/barbers');
     } catch (err) {
       console.error('Error creating barber:', err);
       setError(err.message || t('errors.createBarberFailed'));
@@ -27,12 +27,12 @@ export default function AddBarber() {
   };
 
   const handleCancel = () => {
-    navigate('/barbers');
+    navigate('/dashboard/barbers');
   };
 
   return (
     <div className="add-branch-page">
-      <Link to="/barbers" className="back-link animate-fade-in">
+      <Link to="/dashboard/barbers" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
         {t('barbers.backToBarbers')}
       </Link>

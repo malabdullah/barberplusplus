@@ -178,7 +178,7 @@ export default function Dashboard() {
               <Clock size={20} strokeWidth={1.5} />
               <h3>{t('dashboard.todaySchedule')}</h3>
             </div>
-            <Link to="/bookings" className="dashboard-card-link">
+            <Link to="/dashboard/bookings" className="dashboard-card-link">
               {t('common.viewAll')} <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>
@@ -194,7 +194,7 @@ export default function Dashboard() {
               <div className="dashboard-empty-state">
                 <Calendar size={40} strokeWidth={1} />
                 <p>{t('dashboard.noUpcomingBookings')}</p>
-                <Link to="/bookings" className="btn btn-primary btn-sm">
+                <Link to="/dashboard/bookings" className="btn btn-primary btn-sm">
                   <Plus size={16} strokeWidth={2} />
                   {t('bookings.newBooking')}
                 </Link>
@@ -214,25 +214,25 @@ export default function Dashboard() {
 
           <div className="dashboard-card-content">
             <div className="quick-actions-grid">
-              <Link to="/bookings" className="quick-action-btn">
+              <Link to="/dashboard/bookings" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Plus size={24} strokeWidth={1.5} />
                 </div>
                 <span>{t('bookings.newBooking')}</span>
               </Link>
-              <Link to="/barbers" className="quick-action-btn">
+              <Link to="/dashboard/barbers" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Users size={24} strokeWidth={1.5} />
                 </div>
                 <span>{t('barbers.addBarber')}</span>
               </Link>
-              <Link to="/services" className="quick-action-btn">
+              <Link to="/dashboard/services" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Scissors size={24} strokeWidth={1.5} />
                 </div>
                 <span>{t('services.addService')}</span>
               </Link>
-              <Link to="/branches" className="quick-action-btn">
+              <Link to="/dashboard/branches" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>
@@ -249,7 +249,7 @@ export default function Dashboard() {
               <Users size={20} strokeWidth={1.5} />
               <h3>{t('dashboard.activeBarbers')}</h3>
             </div>
-            <Link to="/barbers" className="dashboard-card-link">
+            <Link to="/dashboard/barbers" className="dashboard-card-link">
               {t('common.manage')} <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>

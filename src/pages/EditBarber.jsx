@@ -19,7 +19,7 @@ export default function EditBarber() {
     setIsSubmitting(true);
     try {
       await updateBarber(barberId, data);
-      navigate('/barbers');
+      navigate('/dashboard/barbers');
     } catch (error) {
       console.error('Error updating barber:', error);
       setIsSubmitting(false);
@@ -27,19 +27,19 @@ export default function EditBarber() {
   };
 
   const handleCancel = () => {
-    navigate('/barbers');
+    navigate('/dashboard/barbers');
   };
 
   if (!barber) {
     return (
       <div className="edit-branch-page">
-        <Link to="/barbers" className="back-link animate-fade-in">
+        <Link to="/dashboard/barbers" className="back-link animate-fade-in">
           <ArrowLeft size={18} strokeWidth={1.5} />
           {t('barbers.backToBarbers')}
         </Link>
         <div className="not-found">
           <h2>{t('barbers.barberNotFound')}</h2>
-          <Link to="/barbers" className="btn btn-primary">
+          <Link to="/dashboard/barbers" className="btn btn-primary">
             {t('barbers.backToBarbers')}
           </Link>
         </div>
@@ -49,7 +49,7 @@ export default function EditBarber() {
 
   return (
     <div className="edit-branch-page">
-      <Link to="/barbers" className="back-link animate-fade-in">
+      <Link to="/dashboard/barbers" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
         {t('barbers.backToBarbers')}
       </Link>

@@ -19,7 +19,7 @@ export default function AddBranch() {
     setIsSubmitting(true);
     try {
       await addBranch(data);
-      navigate('/branches');
+      navigate('/dashboard/branches');
     } catch (err) {
       logErrorSafely(err, 'AddBranch');
       setError(getErrorMessage(err, t('errors.createBranchFailed')));
@@ -28,12 +28,12 @@ export default function AddBranch() {
   };
 
   const handleCancel = () => {
-    navigate('/branches');
+    navigate('/dashboard/branches');
   };
 
   return (
     <div className="add-branch-page">
-      <Link to="/branches" className="back-link animate-fade-in">
+      <Link to="/dashboard/branches" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
         {t('branches.backToBranches')}
       </Link>

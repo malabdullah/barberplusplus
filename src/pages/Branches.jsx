@@ -46,7 +46,7 @@ const BranchCard = memo(function BranchCard({ branch, barberCount, serviceCount,
         </div>
       </div>
 
-      <Link to={`/branches/${branch.id}`} className="branch-card-content">
+      <Link to={`/dashboard/branches/${branch.id}`} className="branch-card-content">
         <h3 className="branch-card-name">{branch.name}</h3>
 
         <div className="branch-card-info">
@@ -90,14 +90,14 @@ const BranchCard = memo(function BranchCard({ branch, barberCount, serviceCount,
         <div className="branch-actions">
           <button
             className="action-btn"
-            onClick={() => navigate(`/branches/${branch.id}/edit`)}
+            onClick={() => navigate(`/dashboard/branches/${branch.id}/edit`)}
             title={t('branches.editBranch')}
           >
             <Pencil size={16} strokeWidth={1.5} />
           </button>
           <button
             className="action-btn"
-            onClick={() => navigate(`/branches/${branch.id}`)}
+            onClick={() => navigate(`/dashboard/branches/${branch.id}`)}
             title={t('branches.branchDetails')}
           >
             <Eye size={16} strokeWidth={1.5} />
@@ -157,7 +157,7 @@ export default function Branches() {
             {t('branches.subtitle')}
           </p>
         </div>
-        <Link to="/branches/new" className="btn btn-primary">
+        <Link to="/dashboard/branches/new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
           {t('branches.addBranch')}
         </Link>
@@ -177,7 +177,7 @@ export default function Branches() {
           ))}
 
           {/* Add Branch Card */}
-          <Link to="/branches/new" className="add-branch-card animate-fade-in-up">
+          <Link to="/dashboard/branches/new" className="add-branch-card animate-fade-in-up">
             <div className="add-branch-icon">
               <Plus size={32} strokeWidth={1.5} />
             </div>
@@ -191,7 +191,7 @@ export default function Branches() {
           </div>
           <h3>{t('branches.noBranches')}</h3>
           <p>{t('branches.createFirst')}</p>
-          <Link to="/branches/new" className="btn btn-primary">
+          <Link to="/dashboard/branches/new" className="btn btn-primary">
             <Plus size={18} strokeWidth={2} />
             {t('branches.addFirstBranch')}
           </Link>

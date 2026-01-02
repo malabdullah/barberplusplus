@@ -16,23 +16,23 @@ export default function EditBranch() {
 
   const handleSubmit = (data) => {
     updateBranch(branchId, data);
-    navigate('/branches');
+    navigate('/dashboard/branches');
   };
 
   const handleCancel = () => {
-    navigate('/branches');
+    navigate('/dashboard/branches');
   };
 
   if (!branch) {
     return (
       <div className="edit-branch-page">
-        <Link to="/branches" className="back-link animate-fade-in">
+        <Link to="/dashboard/branches" className="back-link animate-fade-in">
           <ArrowLeft size={18} strokeWidth={1.5} />
           {t('branches.backToBranches')}
         </Link>
         <div className="not-found">
           <h2>{t('branches.branchNotFound')}</h2>
-          <Link to="/branches" className="btn btn-primary">
+          <Link to="/dashboard/branches" className="btn btn-primary">
             {t('branches.backToBranches')}
           </Link>
         </div>
@@ -42,7 +42,7 @@ export default function EditBranch() {
 
   return (
     <div className="edit-branch-page">
-      <Link to="/branches" className="back-link animate-fade-in">
+      <Link to="/dashboard/branches" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
         {t('branches.backToBranches')}
       </Link>

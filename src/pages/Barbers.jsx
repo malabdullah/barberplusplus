@@ -28,12 +28,12 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
   const initials = barber.name?.split(' ').map((n) => n[0]).join('') || '??';
 
   const handleCardClick = () => {
-    navigate(`/barbers/${barber.id}/edit`);
+    navigate(`/dashboard/barbers/${barber.id}/edit`);
   };
 
   const handleEditClick = (e) => {
     e.stopPropagation();
-    navigate(`/barbers/${barber.id}/edit`);
+    navigate(`/dashboard/barbers/${barber.id}/edit`);
   };
 
   const handleScheduleClick = (e) => {
@@ -260,7 +260,7 @@ export default function Barbers() {
             {t('barbers.subtitle')} {selectedBranch?.name}
           </p>
         </div>
-        <Link to="/barbers/new" className="btn btn-primary">
+        <Link to="/dashboard/barbers/new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
           {t('barbers.addBarber')}
         </Link>
@@ -312,7 +312,7 @@ export default function Barbers() {
           </div>
           <h3>{t('barbers.noBarbers')}</h3>
           <p>{t('barbers.addFirst')}</p>
-          <Link to="/barbers/new" className="btn btn-primary">
+          <Link to="/dashboard/barbers/new" className="btn btn-primary">
             <Plus size={18} strokeWidth={2} />
             {t('barbers.addFirstBarber')}
           </Link>

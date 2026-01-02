@@ -40,7 +40,7 @@ export default function BranchDetails() {
     return (
       <div className="not-found">
         <h2>{t('branches.branchNotFound')}</h2>
-        <Link to="/branches" className="btn btn-primary">
+        <Link to="/dashboard/branches" className="btn btn-primary">
           {t('branches.backToBranches')}
         </Link>
       </div>
@@ -54,7 +54,7 @@ export default function BranchDetails() {
 
   const handleDelete = () => {
     deleteBranch(branchId);
-    navigate('/branches');
+    navigate('/dashboard/branches');
   };
 
   const formatHours = (hours) => {
@@ -69,7 +69,7 @@ export default function BranchDetails() {
   return (
     <div className="branch-details-page">
       {/* Back Button */}
-      <Link to="/branches" className="back-link animate-fade-in">
+      <Link to="/dashboard/branches" className="back-link animate-fade-in">
         <ArrowLeft size={18} strokeWidth={1.5} />
         {t('branches.backToBranches')}
       </Link>
@@ -150,7 +150,7 @@ export default function BranchDetails() {
           <div className="content-card-header">
             <Users size={20} strokeWidth={1.5} />
             <h3>{t('branches.teamMembers')}</h3>
-            <Link to="/barbers" className="content-card-link">
+            <Link to="/dashboard/barbers" className="content-card-link">
               {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
@@ -173,7 +173,7 @@ export default function BranchDetails() {
                 </div>
               ))}
               {branchBarbers.length > 4 && (
-                <Link to="/barbers" className="view-more-link">
+                <Link to="/dashboard/barbers" className="view-more-link">
                   +{branchBarbers.length - 4} {t('branches.moreBarbers')}
                 </Link>
               )}
@@ -181,7 +181,7 @@ export default function BranchDetails() {
           ) : (
             <div className="empty-section">
               <p>{t('branches.noBarbersAssigned')}</p>
-              <Link to="/barbers" className="btn btn-sm btn-primary">
+              <Link to="/dashboard/barbers" className="btn btn-sm btn-primary">
                 <Plus size={14} /> {t('barbers.addBarber')}
               </Link>
             </div>
@@ -193,7 +193,7 @@ export default function BranchDetails() {
           <div className="content-card-header">
             <Scissors size={20} strokeWidth={1.5} />
             <h3>{t('branches.servicesOffered')}</h3>
-            <Link to="/services" className="content-card-link">
+            <Link to="/dashboard/services" className="content-card-link">
               {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
@@ -209,7 +209,7 @@ export default function BranchDetails() {
                 </div>
               ))}
               {branchServices.length > 5 && (
-                <Link to="/services" className="view-more-link">
+                <Link to="/dashboard/services" className="view-more-link">
                   +{branchServices.length - 5} {t('branches.moreServices')}
                 </Link>
               )}
@@ -217,7 +217,7 @@ export default function BranchDetails() {
           ) : (
             <div className="empty-section">
               <p>{t('branches.noServicesConfigured')}</p>
-              <Link to="/services" className="btn btn-sm btn-primary">
+              <Link to="/dashboard/services" className="btn btn-sm btn-primary">
                 <Plus size={14} /> {t('services.addService')}
               </Link>
             </div>
@@ -253,6 +253,7 @@ export default function BranchDetails() {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         title={t('branches.editBranch')}
+        size="large"
       >
         <BranchForm
           branch={branch}
