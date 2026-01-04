@@ -17,12 +17,13 @@ npm run preview  # Preview production build
 ## Architecture
 
 ### Tech Stack
-- **Frontend**: React 18, React Router v6, Vite 5
-- **Backend**: Supabase (Auth + PostgreSQL)
+- **Frontend**: React 18, React Router v6, Vite 7
+- **Backend**: Supabase (Auth + PostgreSQL + Edge Functions)
 - **Styling**: CSS with custom properties (design system in `src/styles/index.css`)
 - **i18n**: i18next with English and Arabic locales (`src/i18n/locales/`)
 - **Icons**: lucide-react
 - **Dates**: date-fns
+- **Charts**: recharts
 
 ### Directory Structure
 ```
@@ -95,3 +96,25 @@ CSS custom properties defined in `src/styles/index.css`:
 - Environment variables prefixed with `VITE_` for Supabase config
 - Use `useTranslation()` hook from react-i18next for all UI text
 - RTL support: Arabic locale automatically sets `dir="rtl"` on document
+
+### Security Utilities
+Security functions in `src/utils/security.js`:
+- `escapeLikeWildcards()` - Prevent SQL LIKE injection
+- `sanitizeForCSV()` - Prevent CSV injection in exports
+- `sanitizeUUID()` - Validate UUID format
+- `createRateLimiter()` - Rate limiting with exponential backoff
+- `validateUserRole()` - Secure role validation (never default to privileged roles)
+- `logErrorDev()` - Console logging only in development
+
+### Admin Role
+There's a third role `admin` for platform-wide administration:
+- **Admin routes**: `/admin/*` (platform analytics, user management, global settings)
+- Admin pages in `src/pages/admin/`
+- Uses separate `AdminLayout` component
+
+### Logging System
+Centralized logging via `src/services/logging.service.js`:
+- Batched writes to `logs` table for performance
+- Context-aware (auto-includes userId, branchId, role)
+- Use `loggingService.logAction()` for CRUD operations
+- Access via `useLogger()` hook or import directly
