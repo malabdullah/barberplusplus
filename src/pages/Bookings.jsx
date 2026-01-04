@@ -28,7 +28,7 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/UI/Modal';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BookingForm from '../components/Forms/BookingForm';
-import ExtendBookingSection from '../components/Bookings/ExtendBookingSection';
+import ModifyServicesSection from '../components/Bookings/ModifyServicesSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses';
 import './Bookings.css';
 
@@ -57,6 +57,15 @@ const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onCom
   );
 });
 
+// Calculate end time from start time and duration
+const calculateEndTime = (startTime, durationMinutes) => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + durationMinutes;
+  const endHours = Math.floor(totalMinutes / 60) % 24;
+  const endMinutes = totalMinutes % 60;
+  return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+};
+
 const BookingDetails = memo(function BookingDetails({
   booking,
   onClose,
@@ -64,7 +73,7 @@ const BookingDetails = memo(function BookingDetails({
   services,
   barbers,
   existingBookings,
-  onExtend,
+  onModifyServices,
 }) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
@@ -127,7 +136,7 @@ const BookingDetails = memo(function BookingDetails({
           <div>
             <span className="detail-label">{t('bookings.time')}</span>
             <span className="detail-value">
-              {booking.time} ({booking.duration} {t('common.min')})
+              {booking.time?.substring(0, 5)} - {calculateEndTime(booking.time, booking.duration)} ({booking.duration} {t('common.min')})
             </span>
           </div>
         </div>
@@ -138,12 +147,12 @@ const BookingDetails = memo(function BookingDetails({
         <span className="price">{booking.price} {t('common.currency')}</span>
       </div>
 
-      <ExtendBookingSection
+      <ModifyServicesSection
         booking={booking}
         services={services}
         barberData={barberData}
         existingBookings={existingBookings}
-        onExtend={onExtend}
+        onSave={onModifyServices}
       />
 
       {booking.notes && (
@@ -182,7 +191,7 @@ export default function Bookings() {
     addBooking,
     updateBooking,
     cancelBooking,
-    extendBooking,
+    changeBookingServices,
   } = useApp();
 
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -470,8 +479,8 @@ export default function Bookings() {
               services={branchServices}
               barbers={branchBarbers}
               existingBookings={branchBookings}
-              onExtend={async (bookingId, serviceId) => {
-                const updated = await extendBooking(bookingId, serviceId);
+              onModifyServices={async (bookingId, newServiceIds) => {
+                const updated = await changeBookingServices(bookingId, newServiceIds);
                 // Update selectedBooking with new data
                 if (updated) {
                   const barber = branchBarbers.find(b => b.id === updated.barberId);

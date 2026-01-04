@@ -441,6 +441,32 @@
       "success": "Extended with {{service}}",
       "conflictError": "Cannot extend: conflicts with next appointment",
       "workHoursError": "Cannot extend: exceeds working hours"
+    },
+    "changeServices": {
+      "title": "Change Services",
+      "selectServices": "Select services for this booking",
+      "minOneRequired": "At least one service is required",
+      "durationExceeds": "New duration exceeds available time",
+      "maxDuration": "Maximum duration: {{minutes}} min",
+      "currentTotal": "Current",
+      "newTotal": "New",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel",
+      "success": "Services updated successfully"
+    },
+    "modifyServices": {
+      "title": "Modify Services",
+      "subtitle": "Add or remove services for this booking",
+      "add": "Add",
+      "remove": "Remove",
+      "minOneRequired": "At least one service is required",
+      "durationExceeds": "Total duration exceeds available time",
+      "maxDuration": "Maximum duration: {{minutes}} min",
+      "currentTotal": "Current",
+      "newTotal": "New",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel",
+      "success": "Services updated successfully"
     }
   },
   "settings": {

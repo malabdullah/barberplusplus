@@ -441,6 +441,32 @@
       "success": "تم التمديد بخدمة {{service}}",
       "conflictError": "لا يمكن التمديد: يتعارض مع الموعد التالي",
       "workHoursError": "لا يمكن التمديد: يتجاوز ساعات العمل"
+    },
+    "changeServices": {
+      "title": "تغيير الخدمات",
+      "selectServices": "اختر الخدمات لهذا الحجز",
+      "minOneRequired": "مطلوب خدمة واحدة على الأقل",
+      "durationExceeds": "المدة الجديدة تتجاوز الوقت المتاح",
+      "maxDuration": "الحد الأقصى للمدة: {{minutes}} دقيقة",
+      "currentTotal": "الحالي",
+      "newTotal": "الجديد",
+      "saveChanges": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "success": "تم تحديث الخدمات بنجاح"
+    },
+    "modifyServices": {
+      "title": "تعديل الخدمات",
+      "subtitle": "إضافة أو إزالة خدمات لهذا الحجز",
+      "add": "إضافة",
+      "remove": "إزالة",
+      "minOneRequired": "مطلوب خدمة واحدة على الأقل",
+      "durationExceeds": "المدة الإجمالية تتجاوز الوقت المتاح",
+      "maxDuration": "الحد الأقصى للمدة: {{minutes}} دقيقة",
+      "currentTotal": "الحالي",
+      "newTotal": "الجديد",
+      "saveChanges": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "success": "تم تحديث الخدمات بنجاح"
     }
   },
   "settings": {

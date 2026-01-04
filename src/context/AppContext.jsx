@@ -1102,6 +1102,124 @@ export function AppProvider({ children }) {
     }
   }, [bookings, services, barbers]);
 
+  const changeBookingServices = useCallback(async (bookingId, newServiceIds) => {
+    try {
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Check if booking status allows changes
+      if (['completed', 'cancelled', 'no-show'].includes(booking.status)) {
+        throw new Error('Cannot change services for a completed or cancelled booking');
+      }
+
+      // Validate at least one service
+      if (!newServiceIds || newServiceIds.length === 0) {
+        throw new Error('At least one service is required');
+      }
+
+      // Get barber data for conflict checking
+      const barber = barbers.find(b => b.id === booking.barberId);
+
+      // Calculate new totals - iterate over newServiceIds to count duplicates
+      const newTotalDuration = newServiceIds.reduce((sum, id) => {
+        const service = services.find(s => s.id === id);
+        return sum + (service?.duration || 0);
+      }, 0);
+      const newPrice = newServiceIds.reduce((sum, id) => {
+        const service = services.find(s => s.id === id);
+        return sum + (service?.price || 0);
+      }, 0);
+
+      // Check if new duration fits in available time slot
+      const conflictResult = checkExtensionConflicts({
+        booking,
+        newTotalDuration,
+        existingBookings: bookings,
+        barberData: barber,
+      });
+
+      if (!conflictResult.canExtend) {
+        throw new Error(conflictResult.reason);
+      }
+
+      // Update booking
+      const updated = await bookingsService.update(bookingId, {
+        serviceIds: newServiceIds,
+        duration: newTotalDuration,
+        price: newPrice,
+      });
+
+      // Ensure the returned object has our computed values
+      const confirmedUpdate = {
+        ...updated,
+        duration: newTotalDuration,
+        price: newPrice,
+        serviceIds: newServiceIds,
+      };
+
+      setBookings(prev => prev.map(b => b.id === bookingId ? confirmedUpdate : b));
+
+      // Determine what changed for logging
+      const oldServiceNames = (booking.serviceIds || [])
+        .map(id => services.find(s => s.id === id)?.name)
+        .filter(Boolean);
+      const newServiceNames = newServiceIds
+        .map(id => services.find(s => s.id === id)?.name)
+        .filter(Boolean);
+
+      loggingService.logAction('update', 'booking', bookingId,
+        `Changed services from [${oldServiceNames.join(', ')}] to [${newServiceNames.join(', ')}] (${newTotalDuration} min, ${newPrice} KWD)`);
+
+      // Create notification for service change
+      const notificationsToCreate = [
+        {
+          recipientBranchId: booking.branchId,
+          recipientRole: 'manager',
+          type: 'booking_modified',
+          title: 'Booking Services Changed',
+          message: `${booking.customerName}'s booking services updated: ${newServiceNames.join(', ')}`,
+          entityType: 'booking',
+          entityId: bookingId,
+          metadata: {
+            customerName: booking.customerName,
+            services: newServiceNames,
+            duration: newTotalDuration,
+            price: newPrice,
+          },
+        },
+      ];
+
+      if (barber?.userId) {
+        notificationsToCreate.push({
+          recipientUserId: barber.userId,
+          recipientRole: 'barber',
+          type: 'booking_modified',
+          title: 'Booking Services Changed',
+          message: `${booking.customerName}'s appointment services updated`,
+          entityType: 'booking',
+          entityId: bookingId,
+          metadata: {
+            customerName: booking.customerName,
+            services: newServiceNames,
+            duration: newTotalDuration,
+          },
+        });
+      }
+
+      notificationsService.createBatch(notificationsToCreate).catch(err =>
+        logger.error('Error creating service change notifications:', err)
+      );
+
+      return confirmedUpdate;
+    } catch (error) {
+      logger.error('Error changing booking services:', error);
+      loggingService.logError(error, { entityType: 'booking', action: 'changeServices', entityId: bookingId });
+      throw error;
+    }
+  }, [bookings, services, barbers]);
+
   // Auth actions
   const login = useCallback(async (email, password) => {
     try {
@@ -1287,6 +1405,7 @@ export function AppProvider({ children }) {
     updateBooking,
     cancelBooking,
     extendBooking,
+    changeBookingServices,
     login,
     signup,
     logout,
