@@ -31,6 +31,7 @@ import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import BookingForm from '../../components/Forms/BookingForm';
+import ExtendBookingSection from '../../components/Bookings/ExtendBookingSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../../constants/bookingStatuses';
 import './MyBookings.css';
 
@@ -105,7 +106,8 @@ function BookingCard({ booking, onEdit }) {
   );
 }
 
-function BookingDetails({ booking, onClose, onStatusChange }) {
+function BookingDetails({ booking, onClose, onStatusChange, services, barberData, existingBookings, onExtend }) {
+  const { t } = useTranslation();
   return (
     <div className="booking-details">
       <div className="booking-details-header">
@@ -163,9 +165,17 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
       </div>
 
       <div className="booking-details-price">
-        <span>Total</span>
-        <span className="price">{booking.price} KWD</span>
+        <span>{t('bookings.total')}</span>
+        <span className="price">{booking.price} {t('common.currency')}</span>
       </div>
+
+      <ExtendBookingSection
+        booking={booking}
+        services={services}
+        barberData={barberData}
+        existingBookings={existingBookings}
+        onExtend={onExtend}
+      />
 
       {booking.notes && (
         <div className="booking-details-notes">
@@ -175,7 +185,7 @@ function BookingDetails({ booking, onClose, onStatusChange }) {
       )}
 
       <div className="booking-status-change">
-        <span className="status-change-label">Change Status</span>
+        <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select
           className="status-change-select"
           value={booking.status}
@@ -202,6 +212,7 @@ export default function MyBookings() {
     addBooking,
     updateBooking,
     cancelBooking,
+    extendBooking,
   } = useApp();
 
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -543,6 +554,22 @@ export default function MyBookings() {
               onStatusChange={(id, status) => {
                 updateBooking(id, { status });
                 setSelectedBooking(null);
+              }}
+              services={barberServices}
+              barberData={currentBarber}
+              existingBookings={barberBookings}
+              onExtend={async (bookingId, serviceId) => {
+                const updated = await extendBooking(bookingId, serviceId);
+                if (updated) {
+                  const serviceNames = (updated.serviceIds || [])
+                    .map(id => barberServices.find(s => s.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ');
+                  setSelectedBooking({
+                    ...updated,
+                    serviceName: serviceNames || 'No service',
+                  });
+                }
               }}
             />
           </div>

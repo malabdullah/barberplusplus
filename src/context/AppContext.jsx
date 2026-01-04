@@ -11,7 +11,7 @@ import {
   notificationPreferencesService,
 } from '../services';
 import { supabase } from '../lib/supabase';
-import { checkBookingConflicts } from '../utils/bookingConflicts';
+import { checkBookingConflicts, checkExtensionConflicts } from '../utils/bookingConflicts';
 import logger from '../utils/logger';
 import i18n from '../i18n';
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
@@ -996,6 +996,112 @@ export function AppProvider({ children }) {
     }
   }, [bookings, barbers]);
 
+  const extendBooking = useCallback(async (bookingId, additionalServiceId) => {
+    try {
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Check if booking status allows extension
+      if (['completed', 'cancelled', 'no-show'].includes(booking.status)) {
+        throw new Error('Cannot extend a completed or cancelled booking');
+      }
+
+      // Find the additional service
+      const additionalService = services.find(s => s.id === additionalServiceId);
+      if (!additionalService) {
+        throw new Error('Service not found');
+      }
+
+      // Get barber data for conflict checking
+      const barber = barbers.find(b => b.id === booking.barberId);
+
+      // Calculate new values FIRST (before conflict check)
+      const newServiceIds = [...(booking.serviceIds || []), additionalServiceId];
+      const allSelectedServices = services.filter(s => newServiceIds.includes(s.id));
+      const newTotalDuration = allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const newPrice = allSelectedServices.reduce((sum, s) => sum + s.price, 0);
+
+      // Check if extension is possible using the FULL new duration
+      const conflictResult = checkExtensionConflicts({
+        booking,
+        newTotalDuration,
+        existingBookings: bookings,
+        barberData: barber,
+      });
+
+      if (!conflictResult.canExtend) {
+        throw new Error(conflictResult.reason);
+      }
+
+      // Update booking
+      const updated = await bookingsService.update(bookingId, {
+        serviceIds: newServiceIds,
+        duration: newTotalDuration,
+        price: newPrice,
+      });
+
+      // Ensure the returned object has our computed values (DB may return stale data)
+      const confirmedUpdate = {
+        ...updated,
+        duration: newTotalDuration,
+        price: newPrice,
+        serviceIds: newServiceIds,
+      };
+
+      setBookings(prev => prev.map(b => b.id === bookingId ? confirmedUpdate : b));
+      loggingService.logAction('update', 'booking', bookingId,
+        `Extended booking with service ${additionalService.name} (+${additionalService.duration} min)`);
+
+      // Create notification for booking extension
+      const notificationsToCreate = [
+        {
+          recipientBranchId: booking.branchId,
+          recipientRole: 'manager',
+          type: 'booking_extended',
+          title: 'Booking Extended',
+          message: `${booking.customerName}'s booking extended with ${additionalService.name} (+${additionalService.duration} min)`,
+          entityType: 'booking',
+          entityId: bookingId,
+          metadata: {
+            customerName: booking.customerName,
+            addedService: additionalService.name,
+            addedDuration: additionalService.duration,
+            newTotalDuration: newTotalDuration,
+          },
+        },
+      ];
+
+      if (barber?.userId) {
+        notificationsToCreate.push({
+          recipientUserId: barber.userId,
+          recipientRole: 'barber',
+          type: 'booking_extended',
+          title: 'Booking Extended',
+          message: `${booking.customerName}'s appointment extended with ${additionalService.name}`,
+          entityType: 'booking',
+          entityId: bookingId,
+          metadata: {
+            customerName: booking.customerName,
+            addedService: additionalService.name,
+            addedDuration: additionalService.duration,
+          },
+        });
+      }
+
+      notificationsService.createBatch(notificationsToCreate).catch(err =>
+        logger.error('Error creating extension notifications:', err)
+      );
+
+      return confirmedUpdate;
+    } catch (error) {
+      logger.error('Error extending booking:', error);
+      loggingService.logError(error, { entityType: 'booking', action: 'extend', entityId: bookingId });
+      throw error;
+    }
+  }, [bookings, services, barbers]);
+
   // Auth actions
   const login = useCallback(async (email, password) => {
     try {
@@ -1180,6 +1286,7 @@ export function AppProvider({ children }) {
     addBooking,
     updateBooking,
     cancelBooking,
+    extendBooking,
     login,
     signup,
     logout,

@@ -28,6 +28,7 @@ import { useApp } from '../context/AppContext';
 import Modal from '../components/UI/Modal';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BookingForm from '../components/Forms/BookingForm';
+import ExtendBookingSection from '../components/Bookings/ExtendBookingSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses';
 import './Bookings.css';
 
@@ -56,9 +57,18 @@ const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onCom
   );
 });
 
-const BookingDetails = memo(function BookingDetails({ booking, onClose, onStatusChange }) {
+const BookingDetails = memo(function BookingDetails({
+  booking,
+  onClose,
+  onStatusChange,
+  services,
+  barbers,
+  existingBookings,
+  onExtend,
+}) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
+  const barberData = barbers?.find(b => b.id === booking.barberId);
 
   return (
     <div className="booking-details">
@@ -128,6 +138,14 @@ const BookingDetails = memo(function BookingDetails({ booking, onClose, onStatus
         <span className="price">{booking.price} {t('common.currency')}</span>
       </div>
 
+      <ExtendBookingSection
+        booking={booking}
+        services={services}
+        barberData={barberData}
+        existingBookings={existingBookings}
+        onExtend={onExtend}
+      />
+
       {booking.notes && (
         <div className="booking-details-notes">
           <AlertCircle size={14} />
@@ -164,6 +182,7 @@ export default function Bookings() {
     addBooking,
     updateBooking,
     cancelBooking,
+    extendBooking,
   } = useApp();
 
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -447,6 +466,25 @@ export default function Bookings() {
               onStatusChange={(id, status) => {
                 updateBooking(id, { status });
                 setSelectedBooking(null);
+              }}
+              services={branchServices}
+              barbers={branchBarbers}
+              existingBookings={branchBookings}
+              onExtend={async (bookingId, serviceId) => {
+                const updated = await extendBooking(bookingId, serviceId);
+                // Update selectedBooking with new data
+                if (updated) {
+                  const barber = branchBarbers.find(b => b.id === updated.barberId);
+                  const serviceNames = (updated.serviceIds || [])
+                    .map(id => branchServices.find(s => s.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ');
+                  setSelectedBooking({
+                    ...updated,
+                    barberName: barber?.name || 'Unknown',
+                    serviceName: serviceNames || 'No service',
+                  });
+                }
               }}
             />
           </div>

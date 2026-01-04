@@ -431,7 +431,17 @@
       "dayOff": "Barber does not work this day"
     },
     "noBarbersAvailable": "No barbers available for this branch",
-    "noServicesAvailable": "No services available for this branch"
+    "noServicesAvailable": "No services available for this branch",
+    "extend": {
+      "title": "Extend Booking",
+      "selectService": "Select a service to add",
+      "noTimeAvailable": "No time available for extension",
+      "noServicesAvailable": "No services fit within the available time",
+      "maxAvailable": "Maximum extension: {{minutes}} min",
+      "success": "Extended with {{service}}",
+      "conflictError": "Cannot extend: conflicts with next appointment",
+      "workHoursError": "Cannot extend: exceeds working hours"
+    }
   },
   "settings": {
     "title": "Settings",

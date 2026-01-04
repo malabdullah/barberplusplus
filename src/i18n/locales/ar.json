@@ -431,7 +431,17 @@
       "dayOff": "الحلاق لا يعمل في هذا اليوم"
     },
     "noBarbersAvailable": "لا يوجد حلاقون متاحون لهذا الفرع",
-    "noServicesAvailable": "لا توجد خدمات متاحة لهذا الفرع"
+    "noServicesAvailable": "لا توجد خدمات متاحة لهذا الفرع",
+    "extend": {
+      "title": "تمديد الحجز",
+      "selectService": "اختر خدمة للإضافة",
+      "noTimeAvailable": "لا يوجد وقت متاح للتمديد",
+      "noServicesAvailable": "لا توجد خدمات تناسب الوقت المتاح",
+      "maxAvailable": "الحد الأقصى للتمديد: {{minutes}} دقيقة",
+      "success": "تم التمديد بخدمة {{service}}",
+      "conflictError": "لا يمكن التمديد: يتعارض مع الموعد التالي",
+      "workHoursError": "لا يمكن التمديد: يتجاوز ساعات العمل"
+    }
   },
   "settings": {
     "title": "الإعدادات",
