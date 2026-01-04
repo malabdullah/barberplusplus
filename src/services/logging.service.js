@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase';
-import { escapeLikeWildcards, logErrorDev } from '../utils/security';
+import { escapeLikeWildcards, logErrorDev, sanitizeUrlForLogging, anonymizeUserAgent } from '../utils/security';
+
+// SECURITY: Maximum search query length to prevent DoS
+const MAX_SEARCH_QUERY_LENGTH = 200;
 
 // Log types for categorization
 const LOG_TYPES = {
@@ -34,6 +37,7 @@ const toFrontend = (log) => {
 };
 
 // Convert camelCase frontend data to snake_case for DB
+// SECURITY: Sanitizes user agent and strips query params from URLs
 const toDatabase = (logData) => ({
   level: logData.level,
   log_type: logData.logType,
@@ -47,8 +51,10 @@ const toDatabase = (logData) => ({
   message: logData.message,
   stack_trace: logData.stackTrace || null,
   metadata: logData.metadata || {},
-  user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-  page_url: typeof window !== 'undefined' ? window.location.href : null,
+  // SECURITY: Anonymize user agent for privacy
+  user_agent: typeof navigator !== 'undefined' ? anonymizeUserAgent(navigator.userAgent) : null,
+  // SECURITY: Strip query params from URL to prevent logging sensitive data
+  page_url: typeof window !== 'undefined' ? sanitizeUrlForLogging(window.location.href) : null,
 });
 
 // Batch queue for performance optimization
@@ -318,8 +324,10 @@ export const loggingService = {
     if (filters.startDate) query = query.gte('created_at', filters.startDate);
     if (filters.endDate) query = query.lte('created_at', filters.endDate);
     if (filters.search) {
+      // SECURITY: Limit search query length to prevent DoS
+      const truncatedSearch = filters.search.slice(0, MAX_SEARCH_QUERY_LENGTH);
       // Escape wildcards to prevent enumeration attacks
-      const escapedSearch = escapeLikeWildcards(filters.search);
+      const escapedSearch = escapeLikeWildcards(truncatedSearch);
       query = query.ilike('message', `%${escapedSearch}%`);
     }
 

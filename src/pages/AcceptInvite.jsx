@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationsService } from '../services';
+import { sanitizeUUID, logErrorDev } from '../utils/security';
+import { validatePassword } from '../utils/validation';
 import './Login.css';
 
 export default function AcceptInvite() {
@@ -27,8 +29,9 @@ export default function AcceptInvite() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // SECURITY: Verify this is actually an invited barber
-          const barberId = session.user.user_metadata?.barberId;
+          // SECURITY: Verify this is actually an invited barber with valid UUID
+          const rawBarberId = session.user.user_metadata?.barberId;
+          const barberId = sanitizeUUID(rawBarberId);
 
           if (!barberId) {
             // Not an invited barber - redirect based on role
@@ -89,9 +92,10 @@ export default function AcceptInvite() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         if (session?.user) {
-          const barberId = session.user.user_metadata?.barberId;
+          // SECURITY: Validate barberId is a valid UUID
+          const rawBarberId = session.user.user_metadata?.barberId;
+          const barberId = sanitizeUUID(rawBarberId);
 
-          // SECURITY: Validate barberId exists
           if (!barberId) {
             setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
             setIsCheckingSession(false);
@@ -118,8 +122,10 @@ export default function AcceptInvite() {
   }, [navigate, t]);
 
   const validateForm = () => {
-    if (password.length < 8) {
-      setError(t('validation.passwordMin'));
+    // SECURITY: Use full password validation, not just length check
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message);
       return false;
     }
     if (password !== confirmPassword) {
@@ -177,7 +183,7 @@ export default function AcceptInvite() {
             metadata: {
               barberName: barberData.name || userName,
             },
-          }).catch(err => console.error('Error creating invite accepted notification:', err));
+          }).catch(err => logErrorDev('Error creating invite accepted notification:', err));
         }
       }
 
@@ -189,7 +195,7 @@ export default function AcceptInvite() {
       }, 2000);
 
     } catch (err) {
-      console.error('Error setting password:', err);
+      logErrorDev('Error setting password:', err);
       setError(err.message || t('errors.setPasswordFailed'));
       setIsLoading(false);
     }

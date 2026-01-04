@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
 import BackLink from '../components/UI/BackLink';
+import { logErrorDev } from '../utils/security';
 import './AddBranch.css';
 
 export default function EditBarber() {
@@ -21,7 +22,7 @@ export default function EditBarber() {
       await updateBarber(barberId, data);
       navigate('/dashboard/barbers');
     } catch (error) {
-      console.error('Error updating barber:', error);
+      logErrorDev('Error updating barber:', error);
       setIsSubmitting(false);
     }
   };

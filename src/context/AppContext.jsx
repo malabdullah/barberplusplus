@@ -12,6 +12,7 @@ import {
 } from '../services';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts, checkExtensionConflicts } from '../utils/bookingConflicts';
+import { validateUserRole } from '../utils/security';
 import logger from '../utils/logger';
 import i18n from '../i18n';
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
@@ -46,6 +47,9 @@ export function AppProvider({ children }) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationPreferences, setNotificationPreferences] = useState(null);
   const [toastNotification, setToastNotification] = useState(null);
+
+  // SECURITY: Session expiration state for UI feedback
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   // Apply theme to DOM
   const applyTheme = useCallback((newTheme) => {
@@ -160,9 +164,20 @@ export function AppProvider({ children }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          setUser(session.user);
-          setUserRole(session.user.user_metadata?.role || 'manager');
-          setIsAuthenticated(true);
+          // SECURITY: Validate role instead of defaulting to 'manager'
+          const roleValidation = validateUserRole(session.user.user_metadata?.role);
+          if (roleValidation.valid) {
+            setUser(session.user);
+            setUserRole(roleValidation.role);
+            setIsAuthenticated(true);
+          } else {
+            // Invalid or missing role - reject authentication
+            logger.error('Invalid user role:', roleValidation.error);
+            await supabase.auth.signOut();
+            setUser(null);
+            setUserRole(null);
+            setIsAuthenticated(false);
+          }
         }
       } catch (error) {
         logger.error('Error getting session:', error);
@@ -174,12 +189,55 @@ export function AppProvider({ children }) {
 
     // Safely subscribe to auth changes
     try {
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // SECURITY: Handle token refresh failure (session expiration)
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          // Token refresh failed - session expired
+          logger.warn('Session expired - token refresh failed');
+          setSessionExpired(true);
+          setToastNotification({
+            id: 'session-expired',
+            type: 'session_expired',
+            title: 'Session Expired',
+            message: 'Your session has expired. Please log in again.',
+            priority: 'high',
+            persistent: true,
+          });
+        }
+
         if (session?.user) {
-          setUser(session.user);
-          setUserRole(session.user.user_metadata?.role || 'manager');
-          setIsAuthenticated(true);
-        } else {
+          // SECURITY: Validate role instead of defaulting to 'manager'
+          const roleValidation = validateUserRole(session.user.user_metadata?.role);
+          if (roleValidation.valid) {
+            setUser(session.user);
+            setUserRole(roleValidation.role);
+            setIsAuthenticated(true);
+            setSessionExpired(false);
+          } else {
+            // Invalid or missing role - reject authentication
+            logger.error('Invalid user role:', roleValidation.error);
+            await supabase.auth.signOut();
+            setUser(null);
+            setUserRole(null);
+            setIsAuthenticated(false);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setUserRole(null);
+          setIsAuthenticated(false);
+          // Only show expiration message if it was an unexpected signout
+          if (!sessionExpired && isAuthenticated) {
+            setSessionExpired(true);
+            setToastNotification({
+              id: 'session-expired',
+              type: 'session_expired',
+              title: 'Session Ended',
+              message: 'You have been signed out.',
+              priority: 'high',
+              persistent: false,
+            });
+          }
+        } else if (!session) {
           setUser(null);
           setUserRole(null);
           setIsAuthenticated(false);
@@ -1385,6 +1443,8 @@ export function AppProvider({ children }) {
     reloadNotifications,
     toastNotification,
     hideNotificationToast: () => setToastNotification(null),
+    sessionExpired,
+    clearSessionExpired: () => setSessionExpired(false),
 
     // Actions
     setTheme,

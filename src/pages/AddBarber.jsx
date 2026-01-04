@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
 import BackLink from '../components/UI/BackLink';
+import { logErrorDev } from '../utils/security';
 import './AddBranch.css';
 
 export default function AddBarber() {
@@ -20,7 +21,7 @@ export default function AddBarber() {
       await addBarber(data);
       navigate('/dashboard/barbers');
     } catch (err) {
-      console.error('Error creating barber:', err);
+      logErrorDev('Error creating barber:', err);
       setError(err.message || t('errors.createBarberFailed'));
       setIsSubmitting(false);
     }

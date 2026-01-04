@@ -135,6 +135,187 @@ export const logErrorDev = (message, error) => {
   // The actual error handling is done by throwing to the caller
 };
 
+/**
+ * Rate limiter for preventing brute force attacks
+ * Uses exponential backoff with configurable parameters
+ */
+const rateLimitStore = new Map();
+
+/**
+ * Create a rate limiter for a specific action
+ * @param {string} key - Unique key for the action (e.g., 'login', 'signup')
+ * @param {number} maxAttempts - Maximum attempts before lockout
+ * @param {number} windowMs - Time window in milliseconds
+ * @param {number} lockoutMs - Lockout duration in milliseconds
+ * @returns {object} - Rate limiter object with check and reset methods
+ */
+export const createRateLimiter = (key, maxAttempts = 5, windowMs = 60000, lockoutMs = 300000) => {
+  return {
+    /**
+     * Check if action is rate limited
+     * @param {string} identifier - Unique identifier (e.g., email, IP)
+     * @returns {{ allowed: boolean, remainingAttempts: number, retryAfter: number | null }}
+     */
+    check: (identifier) => {
+      const storeKey = `${key}:${identifier}`;
+      const now = Date.now();
+      let record = rateLimitStore.get(storeKey);
+
+      // Clean up expired records
+      if (record && record.windowStart + windowMs < now && !record.lockedUntil) {
+        record = null;
+        rateLimitStore.delete(storeKey);
+      }
+
+      // Check if locked out
+      if (record?.lockedUntil) {
+        if (record.lockedUntil > now) {
+          return {
+            allowed: false,
+            remainingAttempts: 0,
+            retryAfter: Math.ceil((record.lockedUntil - now) / 1000),
+          };
+        }
+        // Lockout expired, reset
+        rateLimitStore.delete(storeKey);
+        record = null;
+      }
+
+      // Initialize or update record
+      if (!record) {
+        record = { attempts: 0, windowStart: now, lockedUntil: null };
+      }
+
+      record.attempts++;
+
+      if (record.attempts > maxAttempts) {
+        record.lockedUntil = now + lockoutMs;
+        rateLimitStore.set(storeKey, record);
+        return {
+          allowed: false,
+          remainingAttempts: 0,
+          retryAfter: Math.ceil(lockoutMs / 1000),
+        };
+      }
+
+      rateLimitStore.set(storeKey, record);
+      return {
+        allowed: true,
+        remainingAttempts: maxAttempts - record.attempts,
+        retryAfter: null,
+      };
+    },
+
+    /**
+     * Reset rate limit for identifier (on successful action)
+     * @param {string} identifier - Unique identifier
+     */
+    reset: (identifier) => {
+      const storeKey = `${key}:${identifier}`;
+      rateLimitStore.delete(storeKey);
+    },
+  };
+};
+
+// Pre-configured rate limiters for common actions
+export const authRateLimiter = createRateLimiter('auth', 5, 60000, 300000); // 5 attempts per minute, 5min lockout
+export const signupRateLimiter = createRateLimiter('signup', 3, 3600000, 3600000); // 3 per hour
+export const passwordResetRateLimiter = createRateLimiter('password-reset', 3, 3600000, 3600000); // 3 per hour
+export const apiRateLimiter = createRateLimiter('api', 100, 60000, 60000); // 100 per minute
+
+/**
+ * Validate user role from JWT metadata
+ * @param {string} role - Role from user_metadata
+ * @returns {{ valid: boolean, role: string | null, error: string | null }}
+ */
+export const validateUserRole = (role) => {
+  const validRoles = ['admin', 'manager', 'barber'];
+
+  if (!role || typeof role !== 'string') {
+    return { valid: false, role: null, error: 'Missing or invalid role' };
+  }
+
+  const normalizedRole = role.toLowerCase().trim();
+
+  if (!validRoles.includes(normalizedRole)) {
+    return { valid: false, role: null, error: `Invalid role: ${role}` };
+  }
+
+  return { valid: true, role: normalizedRole, error: null };
+};
+
+/**
+ * Validate and sanitize redirect URL
+ * Only allows same-origin redirects to prevent open redirect vulnerabilities
+ * @param {string} url - URL to validate
+ * @returns {string} - Safe redirect URL
+ */
+export const validateRedirectUrl = (url) => {
+  const allowedOrigin = window.location.origin;
+
+  try {
+    const parsed = new URL(url, allowedOrigin);
+    // Only allow same-origin redirects
+    if (parsed.origin !== allowedOrigin) {
+      return allowedOrigin;
+    }
+    return parsed.href;
+  } catch {
+    return allowedOrigin;
+  }
+};
+
+/**
+ * Sanitize URL for logging - strip sensitive query parameters
+ * @param {string} url - Full URL
+ * @returns {string} - Sanitized URL without sensitive params
+ */
+export const sanitizeUrlForLogging = (url) => {
+  if (!url || typeof url !== 'string') return '';
+
+  try {
+    const parsed = new URL(url);
+    // Only keep pathname, remove query params and hash
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    // If URL parsing fails, return just the path before any ? or #
+    return url.split('?')[0].split('#')[0];
+  }
+};
+
+/**
+ * Hash or anonymize user agent for privacy
+ * @param {string} userAgent - Full user agent string
+ * @returns {string} - Anonymized user agent
+ */
+export const anonymizeUserAgent = (userAgent) => {
+  if (!userAgent || typeof userAgent !== 'string') return 'unknown';
+
+  // Extract just browser and OS info, remove version details
+  const patterns = [
+    { regex: /Chrome\/[\d.]+/, replace: 'Chrome' },
+    { regex: /Firefox\/[\d.]+/, replace: 'Firefox' },
+    { regex: /Safari\/[\d.]+/, replace: 'Safari' },
+    { regex: /Edge\/[\d.]+/, replace: 'Edge' },
+    { regex: /Windows NT [\d.]+/, replace: 'Windows' },
+    { regex: /Mac OS X [\d_.]+/, replace: 'macOS' },
+    { regex: /Linux/, replace: 'Linux' },
+    { regex: /Android [\d.]+/, replace: 'Android' },
+    { regex: /iPhone OS [\d_]+/, replace: 'iOS' },
+  ];
+
+  let simplified = userAgent;
+  for (const { regex, replace } of patterns) {
+    simplified = simplified.replace(regex, replace);
+  }
+
+  // Extract key components only
+  const browser = simplified.match(/(Chrome|Firefox|Safari|Edge|Opera)/)?.[0] || 'Unknown';
+  const os = simplified.match(/(Windows|macOS|Linux|Android|iOS)/)?.[0] || 'Unknown';
+
+  return `${browser}/${os}`;
+};
+
 export default {
   escapeLikeWildcards,
   sanitizeForCSV,
@@ -144,4 +325,13 @@ export default {
   sanitizeFilterValue,
   hasSuspiciousPatterns,
   logErrorDev,
+  createRateLimiter,
+  authRateLimiter,
+  signupRateLimiter,
+  passwordResetRateLimiter,
+  apiRateLimiter,
+  validateUserRole,
+  validateRedirectUrl,
+  sanitizeUrlForLogging,
+  anonymizeUserAgent,
 };

@@ -1,4 +1,8 @@
 import { supabase } from '../lib/supabase';
+import { logErrorDev } from '../utils/security';
+
+// SECURITY: Timeout for Edge Function calls (prevents hanging requests)
+const EDGE_FUNCTION_TIMEOUT_MS = 30000; // 30 seconds
 
 // Convert snake_case DB columns to camelCase for frontend
 const toFrontend = (barber) => {
@@ -168,6 +172,7 @@ export const barbersService = {
 
   /**
    * Send invite email to barber via Edge Function
+   * SECURITY: Implements timeout and sanitized error messages
    * @param {string} barberId
    * @param {string} email
    * @param {string} name
@@ -182,25 +187,61 @@ export const barbersService = {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-barber`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ barberId, email, name, branchId, isResend }),
+    // SECURITY: AbortController for request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-barber`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ barberId, email, name, branchId, isResend }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // SECURITY: Log raw error for debugging, throw sanitized message
+        logErrorDev('Edge Function error:', result.error);
+        // Map specific known errors to user-friendly messages
+        if (response.status === 401) {
+          throw new Error('Session expired. Please log in again.');
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to perform this action.');
+        } else if (response.status === 429) {
+          throw new Error('Too many requests. Please try again later.');
+        }
+        // Generic error for unknown cases (don't expose raw API errors)
+        throw new Error('Failed to send invite. Please try again.');
       }
-    );
 
-    const result = await response.json();
+      return result;
+    } catch (error) {
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to send invite');
+      // Handle timeout specifically
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+
+      // Re-throw known errors (already sanitized above)
+      if (error.message.includes('Please')) {
+        throw error;
+      }
+
+      // SECURITY: Sanitize unexpected errors
+      logErrorDev('Unexpected Edge Function error:', error);
+      throw new Error('Failed to send invite. Please try again.');
     }
-
-    return result;
   },
 
   /**

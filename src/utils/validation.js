@@ -1,7 +1,18 @@
 import { GCC_COUNTRIES } from '../constants/countries';
 
+// SECURITY: Common passwords to reject (top 100 most common)
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', '123456', '12345678', '123456789',
+  '1234567890', 'qwerty', 'qwerty123', 'abc123', 'letmein', 'welcome',
+  'monkey', 'dragon', 'master', 'admin', 'login', 'sunshine', 'princess',
+  'football', 'baseball', 'iloveyou', 'trustno1', 'password1!', 'changeme',
+  'passw0rd', 'p@ssword', 'p@ssw0rd', 'welcome1', 'welcome123', 'admin123',
+  'admin1234', 'root', 'toor', 'guest', 'test', 'test123', 'demo', 'demo123',
+]);
+
 /**
  * Validate a phone number against country-specific patterns
+ * SECURITY: Rejects unknown countries instead of allowing them
  * @param {string} phone - The phone number to validate
  * @param {string} countryCode - The country dialing code (e.g., '+965')
  * @returns {{ valid: boolean, error?: string }}
@@ -13,7 +24,8 @@ export const validatePhoneNumber = (phone, countryCode) => {
 
   const country = GCC_COUNTRIES.find(c => c.code === countryCode);
   if (!country) {
-    return { valid: true }; // Allow if country not found
+    // SECURITY: Reject unknown country codes instead of allowing
+    return { valid: false, error: 'Please select a valid country code' };
   }
 
   const cleanPhone = phone.replace(/\s/g, '');
@@ -47,32 +59,39 @@ export const validateEmail = (email) => {
 
 /**
  * Validate password strength
+ * SECURITY: Uses OWASP recommendations (12+ chars, common password blacklist)
  * @param {string} password - The password to validate
- * @returns {{ valid: boolean, error?: string }}
+ * @returns {{ valid: boolean, error?: string, message?: string }}
  */
 export const validatePassword = (password) => {
   if (!password) {
-    return { valid: false, error: 'Password is required' };
+    return { valid: false, error: 'Password is required', message: 'Password is required' };
   }
 
-  if (password.length < 8) {
-    return { valid: false, error: 'Password must be at least 8 characters' };
+  // SECURITY: Increased to 12 characters per OWASP guidelines
+  if (password.length < 12) {
+    return { valid: false, error: 'Password must be at least 12 characters', message: 'Password must be at least 12 characters' };
+  }
+
+  // SECURITY: Check against common passwords
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+    return { valid: false, error: 'This password is too common. Please choose a stronger password.', message: 'This password is too common. Please choose a stronger password.' };
   }
 
   if (!/[A-Z]/.test(password)) {
-    return { valid: false, error: 'Password must contain at least one uppercase letter' };
+    return { valid: false, error: 'Password must contain at least one uppercase letter', message: 'Password must contain at least one uppercase letter' };
   }
 
   if (!/[a-z]/.test(password)) {
-    return { valid: false, error: 'Password must contain at least one lowercase letter' };
+    return { valid: false, error: 'Password must contain at least one lowercase letter', message: 'Password must contain at least one lowercase letter' };
   }
 
   if (!/[0-9]/.test(password)) {
-    return { valid: false, error: 'Password must contain at least one number' };
+    return { valid: false, error: 'Password must contain at least one number', message: 'Password must contain at least one number' };
   }
 
   if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    return { valid: false, error: 'Password must contain at least one special character' };
+    return { valid: false, error: 'Password must contain at least one special character', message: 'Password must contain at least one special character' };
   }
 
   return { valid: true };
