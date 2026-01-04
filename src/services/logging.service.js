@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { escapeLikeWildcards, logErrorDev } from '../utils/security';
 
 // Log types for categorization
 const LOG_TYPES = {
@@ -70,7 +71,7 @@ const flushLogs = async () => {
       .insert(logsToFlush.map(toDatabase));
 
     if (error) {
-      console.error('Failed to flush logs:', error);
+      logErrorDev('Failed to flush logs:', error);
       // Don't re-queue on auth/RLS errors (user logged out or no permission)
       const isAuthError = error.code === '42501' ||
                           error.message?.includes('JWT') ||
@@ -81,7 +82,7 @@ const flushLogs = async () => {
       }
     }
   } catch (err) {
-    console.error('Error flushing logs:', err);
+    logErrorDev('Error flushing logs:', err);
   }
 };
 
@@ -317,7 +318,9 @@ export const loggingService = {
     if (filters.startDate) query = query.gte('created_at', filters.startDate);
     if (filters.endDate) query = query.lte('created_at', filters.endDate);
     if (filters.search) {
-      query = query.ilike('message', `%${filters.search}%`);
+      // Escape wildcards to prevent enumeration attacks
+      const escapedSearch = escapeLikeWildcards(filters.search);
+      query = query.ilike('message', `%${escapedSearch}%`);
     }
 
     // Pagination

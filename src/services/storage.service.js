@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { logErrorDev } from '../utils/security';
 
 const BUCKET_NAME = 'avatars';
 
@@ -98,7 +99,7 @@ export const storageService = {
       .remove([filePath]);
 
     if (error) {
-      console.error('Error deleting image:', error);
+      logErrorDev('Error deleting image:', error);
       // Don't throw - deletion failure shouldn't block other operations
     }
   },
@@ -119,7 +120,7 @@ export const storageService = {
     // Delete old image in background (fire and forget)
     if (oldImageUrl && !oldImageUrl.startsWith('data:')) {
       storageService.deleteImage(oldImageUrl).catch((err) => {
-        console.error('Failed to delete old image:', err);
+        logErrorDev('Failed to delete old image:', err);
       });
     }
 

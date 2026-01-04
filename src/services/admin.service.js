@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { escapeLikeWildcards, sanitizeForCSV, sanitizeUUID, logErrorDev } from '../utils/security';
 
 /**
  * Admin Service - Platform-wide administrative operations
@@ -142,7 +143,7 @@ export const adminService = {
         totalBookings: todayBookingsResult.count || 0,
       };
     } catch (error) {
-      console.error('Error fetching platform metrics:', error);
+      logErrorDev('Error fetching platform metrics:', error);
       return {
         totalManagers: 0,
         totalBarbers: 0,
@@ -236,7 +237,7 @@ export const adminService = {
         limit,
       };
     } catch (error) {
-      console.error('Error fetching managers:', error);
+      logErrorDev('Error fetching managers:', error);
       throw error;
     }
   },
@@ -291,7 +292,7 @@ export const adminService = {
         })) || [],
       };
     } catch (error) {
-      console.error('Error fetching manager details:', error);
+      logErrorDev('Error fetching manager details:', error);
       throw error;
     }
   },
@@ -319,7 +320,7 @@ export const adminService = {
 
       return { success: true };
     } catch (error) {
-      console.error('Error toggling manager status:', error);
+      logErrorDev('Error toggling manager status:', error);
       throw error;
     }
   },
@@ -350,9 +351,10 @@ export const adminService = {
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply search filter
+      // Apply search filter (escape wildcards to prevent enumeration attacks)
       if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+        const escapedSearch = escapeLikeWildcards(search);
+        query = query.or(`name.ilike.%${escapedSearch}%,email.ilike.%${escapedSearch}%`);
       }
 
       // Apply branch filter
@@ -404,7 +406,7 @@ export const adminService = {
         limit,
       };
     } catch (error) {
-      console.error('Error fetching barbers:', error);
+      logErrorDev('Error fetching barbers:', error);
       throw error;
     }
   },
@@ -419,9 +421,10 @@ export const adminService = {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply search filter
+      // Apply search filter (escape wildcards to prevent enumeration attacks)
       if (search) {
-        query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%`);
+        const escapedSearch = escapeLikeWildcards(search);
+        query = query.or(`name.ilike.%${escapedSearch}%,address.ilike.%${escapedSearch}%`);
       }
 
       // Apply pagination
@@ -453,7 +456,7 @@ export const adminService = {
         limit,
       };
     } catch (error) {
-      console.error('Error fetching branches:', error);
+      logErrorDev('Error fetching branches:', error);
       throw error;
     }
   },
@@ -490,7 +493,11 @@ export const adminService = {
       }
 
       if (userId) {
-        query = query.or(`admin_user_id.eq.${userId},target_user_id.eq.${userId}`);
+        // Validate UUID format to prevent SQL injection
+        const sanitizedUserId = sanitizeUUID(userId);
+        if (sanitizedUserId) {
+          query = query.or(`admin_user_id.eq.${sanitizedUserId},target_user_id.eq.${sanitizedUserId}`);
+        }
       }
 
       if (startDate) {
@@ -531,7 +538,7 @@ export const adminService = {
         totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
+      logErrorDev('Error fetching audit logs:', error);
       throw error;
     }
   },
@@ -570,7 +577,7 @@ export const adminService = {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error creating audit log:', error);
+      logErrorDev('Error creating audit log:', error);
       // Don't throw - audit logging shouldn't break main operations
       return null;
     }
@@ -620,7 +627,7 @@ export const adminService = {
 
       return stats;
     } catch (error) {
-      console.error('Error fetching audit stats:', error);
+      logErrorDev('Error fetching audit stats:', error);
       return {
         total: 0,
         byActionType: {},
@@ -699,7 +706,7 @@ export const adminService = {
         totalPages: Math.ceil((count || 0) / limit),
       };
     } catch (error) {
-      console.error('Error fetching security events:', error);
+      logErrorDev('Error fetching security events:', error);
       throw error;
     }
   },
@@ -767,7 +774,7 @@ export const adminService = {
 
       return stats;
     } catch (error) {
-      console.error('Error fetching security stats:', error);
+      logErrorDev('Error fetching security stats:', error);
       return {
         failedLogins24h: 0,
         permissionDenied24h: 0,
@@ -823,23 +830,23 @@ export const adminService = {
       })) || [];
 
       if (format === 'csv') {
-        // Convert to CSV
+        // Convert to CSV with sanitization to prevent CSV injection attacks
         const headers = ['ID', 'Timestamp', 'Action', 'Admin User', 'Target Entity Type', 'Target Entity ID', 'IP Address'];
         const rows = logs.map(log => [
-          log.id,
-          log.createdAt,
-          log.actionType,
-          log.adminUserId || '',
-          log.targetEntityType || '',
-          log.targetEntityId || '',
-          log.ipAddress || '',
+          sanitizeForCSV(log.id),
+          sanitizeForCSV(log.createdAt),
+          sanitizeForCSV(log.actionType),
+          sanitizeForCSV(log.adminUserId || ''),
+          sanitizeForCSV(log.targetEntityType || ''),
+          sanitizeForCSV(log.targetEntityId || ''),
+          sanitizeForCSV(log.ipAddress || ''),
         ]);
         return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
       }
 
       return logs;
     } catch (error) {
-      console.error('Error exporting audit logs:', error);
+      logErrorDev('Error exporting audit logs:', error);
       throw error;
     }
   },
@@ -890,7 +897,7 @@ export const adminService = {
         limit,
       };
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      logErrorDev('Error fetching activity logs:', error);
       throw error;
     }
   },
@@ -923,7 +930,7 @@ export const adminService = {
 
       return settings;
     } catch (error) {
-      console.error('Error fetching admin settings:', error);
+      logErrorDev('Error fetching admin settings:', error);
       throw error;
     }
   },
@@ -949,7 +956,7 @@ export const adminService = {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error updating setting:', error);
+      logErrorDev('Error updating setting:', error);
       throw error;
     }
   },
@@ -1103,7 +1110,7 @@ export const adminService = {
         serviceAnalysis: serviceStats.slice(0, 10),  // Top 10
       };
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logErrorDev('Error fetching analytics:', error);
       throw error;
     }
   },
@@ -1154,7 +1161,7 @@ export const adminService = {
 
       return result;
     } catch (error) {
-      console.error('Error fetching revenue time series:', error);
+      logErrorDev('Error fetching revenue time series:', error);
       throw error;
     }
   },
@@ -1188,7 +1195,7 @@ export const adminService = {
         updatedAt: template.updated_at,
       })) || [];
     } catch (error) {
-      console.error('Error fetching notification templates:', error);
+      logErrorDev('Error fetching notification templates:', error);
       throw error;
     }
   },
@@ -1215,7 +1222,7 @@ export const adminService = {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error updating notification template:', error);
+      logErrorDev('Error updating notification template:', error);
       throw error;
     }
   },
@@ -1262,7 +1269,7 @@ export const adminService = {
         })) || [],
       })) || [];
     } catch (error) {
-      console.error('Error fetching governorates:', error);
+      logErrorDev('Error fetching governorates:', error);
       throw error;
     }
   },
@@ -1313,7 +1320,7 @@ export const adminService = {
         areas: [],
       };
     } catch (error) {
-      console.error('Error creating governorate:', error);
+      logErrorDev('Error creating governorate:', error);
       throw error;
     }
   },
@@ -1353,7 +1360,7 @@ export const adminService = {
         code: data.code,
       };
     } catch (error) {
-      console.error('Error updating governorate:', error);
+      logErrorDev('Error updating governorate:', error);
       throw error;
     }
   },
@@ -1394,7 +1401,7 @@ export const adminService = {
 
       return { success: true };
     } catch (error) {
-      console.error('Error deleting governorate:', error);
+      logErrorDev('Error deleting governorate:', error);
       throw error;
     }
   },
@@ -1444,7 +1451,7 @@ export const adminService = {
         createdAt: data.created_at,
       };
     } catch (error) {
-      console.error('Error creating area:', error);
+      logErrorDev('Error creating area:', error);
       throw error;
     }
   },
@@ -1482,7 +1489,7 @@ export const adminService = {
         nameAr: data.name_ar,
       };
     } catch (error) {
-      console.error('Error updating area:', error);
+      logErrorDev('Error updating area:', error);
       throw error;
     }
   },
@@ -1519,7 +1526,7 @@ export const adminService = {
 
       return { success: true };
     } catch (error) {
-      console.error('Error deleting area:', error);
+      logErrorDev('Error deleting area:', error);
       throw error;
     }
   },
@@ -1537,7 +1544,7 @@ export const adminService = {
 
       return { count: count || 0 };
     } catch (error) {
-      console.error('Error checking location dependencies:', error);
+      logErrorDev('Error checking location dependencies:', error);
       return { count: 0 };
     }
   },
