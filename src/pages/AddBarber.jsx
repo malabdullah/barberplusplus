@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
+import BackLink from '../components/UI/BackLink';
 import './AddBranch.css';
 
 export default function AddBarber() {
@@ -32,10 +32,7 @@ export default function AddBarber() {
 
   return (
     <div className="add-branch-page">
-      <Link to="/dashboard/barbers" className="back-link animate-fade-in">
-        <ArrowLeft size={18} strokeWidth={1.5} />
-        {t('barbers.backToBarbers')}
-      </Link>
+      <BackLink to="/dashboard/barbers" label={t('barbers.backToBarbers')} className="animate-fade-in" />
 
       <div className="add-branch-header animate-fade-in-up">
         <h1>{t('barbers.addNewBarber')}</h1>

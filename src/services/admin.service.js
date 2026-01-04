@@ -1,29 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { escapeLikeWildcards, sanitizeForCSV, sanitizeUUID, logErrorDev } from '../utils/security';
+import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
 
 /**
  * Admin Service - Platform-wide administrative operations
  * Requires admin role for all operations
  */
-
-// Helper: Get today's date in YYYY-MM-DD format
-const getToday = () => new Date().toISOString().split('T')[0];
-
-// Helper: Get week start (Monday) in YYYY-MM-DD format
-const getWeekStart = () => {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(now.getFullYear(), now.getMonth(), diff).toISOString().split('T')[0];
-};
-
-// Helper: Get week end (Sunday) in YYYY-MM-DD format
-const getWeekEnd = () => {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? 0 : 7);
-  return new Date(now.getFullYear(), now.getMonth(), diff).toISOString().split('T')[0];
-};
 
 // Helper: Get date range for analytics periods
 const getDateRange = (period) => {

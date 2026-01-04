@@ -5,19 +5,10 @@
 
 import { addDays, format, parseISO, isBefore, isAfter } from 'date-fns';
 import { TIME_SLOTS } from '../constants/time';
+import { toMinutes } from './dateHelpers';
 
 // Map JavaScript getDay() (0=Sunday) to day keys
 const JS_DAY_TO_KEY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-/**
- * Convert time string "HH:MM" to minutes since midnight
- * @param {string} time - Time in "HH:MM" format
- * @returns {number} Minutes since midnight
- */
-export function toMinutes(time) {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-}
 
 /**
  * Check if two time ranges overlap

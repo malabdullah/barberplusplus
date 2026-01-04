@@ -2,15 +2,9 @@
  * Booking conflict detection utilities
  */
 
-const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+import { toMinutes } from './dateHelpers';
 
-/**
- * Convert time string "HH:MM" to minutes since midnight
- */
-function toMinutes(time) {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-}
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 /**
  * Check if two time ranges overlap

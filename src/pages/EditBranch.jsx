@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import BranchForm from '../components/Forms/BranchForm';
+import BackLink from '../components/UI/BackLink';
 import './AddBranch.css';
 
 export default function EditBranch() {
@@ -26,10 +26,7 @@ export default function EditBranch() {
   if (!branch) {
     return (
       <div className="edit-branch-page">
-        <Link to="/dashboard/branches" className="back-link animate-fade-in">
-          <ArrowLeft size={18} strokeWidth={1.5} />
-          {t('branches.backToBranches')}
-        </Link>
+        <BackLink to="/dashboard/branches" label={t('branches.backToBranches')} className="animate-fade-in" />
         <div className="not-found">
           <h2>{t('branches.branchNotFound')}</h2>
           <Link to="/dashboard/branches" className="btn btn-primary">
@@ -42,10 +39,7 @@ export default function EditBranch() {
 
   return (
     <div className="edit-branch-page">
-      <Link to="/dashboard/branches" className="back-link animate-fade-in">
-        <ArrowLeft size={18} strokeWidth={1.5} />
-        {t('branches.backToBranches')}
-      </Link>
+      <BackLink to="/dashboard/branches" label={t('branches.backToBranches')} className="animate-fade-in" />
 
       <div className="edit-branch-header animate-fade-in-up">
         <h1>{t('branches.editBranch')}</h1>

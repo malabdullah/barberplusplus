@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowLeft,
   MapPin,
   Phone,
   Mail,
@@ -20,6 +19,7 @@ import { DAY_KEYS as DAYS, DAY_LABELS, DAY_LABELS_AR } from '../constants/time';
 import Modal from '../components/UI/Modal';
 import BranchForm from '../components/Forms/BranchForm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
+import BackLink from '../components/UI/BackLink';
 import './BranchDetails.css';
 
 export default function BranchDetails() {
@@ -69,10 +69,7 @@ export default function BranchDetails() {
   return (
     <div className="branch-details-page">
       {/* Back Button */}
-      <Link to="/dashboard/branches" className="back-link animate-fade-in">
-        <ArrowLeft size={18} strokeWidth={1.5} />
-        {t('branches.backToBranches')}
-      </Link>
+      <BackLink to="/dashboard/branches" label={t('branches.backToBranches')} className="animate-fade-in" />
 
       {/* Header */}
       <div className="branch-details-header animate-fade-in-up">

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
 
 // Convert snake_case DB columns to camelCase for frontend
 const toFrontend = (booking) => {
@@ -38,27 +39,6 @@ const toDatabase = (data) => {
   if (data.status !== undefined) result.status = data.status;
   if (data.notes !== undefined) result.notes = data.notes;
   return result;
-};
-
-// Get today's date in YYYY-MM-DD format
-const getToday = () => new Date().toISOString().split('T')[0];
-
-// Get the start of the current week (Monday)
-const getWeekStart = () => {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  return monday.toISOString().split('T')[0];
-};
-
-// Get the end of the current week (Sunday)
-const getWeekEnd = () => {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? 0 : 7);
-  const sunday = new Date(now.setDate(diff));
-  return sunday.toISOString().split('T')[0];
 };
 
 export const bookingsService = {

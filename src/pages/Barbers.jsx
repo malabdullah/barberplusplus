@@ -138,31 +138,35 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
                 className="action-btn"
                 onClick={handleResendInvite}
                 title={t('barbers.resendInvite')}
+                aria-label={t('barbers.resendInvite')}
                 disabled={isResending}
               >
-                <RefreshCw size={16} strokeWidth={1.5} className={isResending ? 'spinning' : ''} />
+                <RefreshCw size={16} strokeWidth={1.5} className={isResending ? 'spinning' : ''} aria-hidden="true" />
               </button>
             )}
             <button
               className="action-btn"
               onClick={handleEditClick}
               title={t('barbers.editProfile')}
+              aria-label={t('barbers.editProfile')}
             >
-              <Pencil size={16} strokeWidth={1.5} />
+              <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
             </button>
             <button
               className="action-btn"
               onClick={handleScheduleClick}
               title={t('barbers.viewSchedule')}
+              aria-label={t('barbers.viewSchedule')}
             >
-              <Calendar size={16} strokeWidth={1.5} />
+              <Calendar size={16} strokeWidth={1.5} aria-hidden="true" />
             </button>
             <button
               className="action-btn danger"
               onClick={handleDeleteClick}
               title={t('barbers.remove')}
+              aria-label={t('barbers.remove')}
             >
-              <Trash2 size={16} strokeWidth={1.5} />
+              <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
             </button>
           </div>
         </div>

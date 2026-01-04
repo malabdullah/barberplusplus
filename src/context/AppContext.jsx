@@ -604,9 +604,9 @@ export function AppProvider({ children }) {
       if (profilePictureFile) {
         try {
           const avatarUrl = await storageService.uploadImage(profilePictureFile, 'barbers', newBarber.id);
-          await barbersService.update(newBarber.id, { profilePicture: avatarUrl });
-          newBarber.profilePicture = avatarUrl;
+          await barbersService.update(newBarber.id, { avatarUrl });
           newBarber.avatarUrl = avatarUrl;
+          newBarber.profilePicture = avatarUrl; // For backwards compatibility
         } catch (uploadError) {
           logger.error('Error uploading barber profile picture:', uploadError);
         }
@@ -667,7 +667,7 @@ export function AppProvider({ children }) {
       if (profilePictureFile) {
         try {
           const avatarUrl = await storageService.replaceImage(profilePictureFile, 'barbers', barberId, oldAvatarUrl);
-          data.profilePicture = avatarUrl;
+          data.avatarUrl = avatarUrl;
         } catch (uploadError) {
           logger.error('Error uploading barber profile picture:', uploadError);
         }

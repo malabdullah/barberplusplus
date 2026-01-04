@@ -85,8 +85,8 @@ const BookingDetails = memo(function BookingDetails({
         <div className={`booking-status-badge ${booking.status}`}>
           {t(`bookings.status.${booking.status === 'no-show' ? 'noShow' : booking.status}`)}
         </div>
-        <button className="booking-close-btn" onClick={onClose}>
-          <X size={20} />
+        <button className="booking-close-btn" onClick={onClose} aria-label={t('common.close')}>
+          <X size={20} aria-hidden="true" />
         </button>
       </div>
 
@@ -313,11 +313,19 @@ export default function Bookings() {
             {t('bookings.today')}
           </button>
           <div className="calendar-nav-arrows">
-            <button className="nav-arrow" onClick={() => viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}>
-              <ChevronLeft size={20} strokeWidth={1.5} />
+            <button
+              className="nav-arrow"
+              onClick={() => viewMode === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+              aria-label={t(viewMode === 'week' ? 'bookings.previousWeek' : 'bookings.previousDay')}
+            >
+              <ChevronLeft size={20} strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <button className="nav-arrow" onClick={() => viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}>
-              <ChevronRight size={20} strokeWidth={1.5} />
+            <button
+              className="nav-arrow"
+              onClick={() => viewMode === 'week' ? navigateWeek('next') : navigateDay('next')}
+              aria-label={t(viewMode === 'week' ? 'bookings.nextWeek' : 'bookings.nextDay')}
+            >
+              <ChevronRight size={20} strokeWidth={1.5} aria-hidden="true" />
             </button>
           </div>
           <h3 className="calendar-period">

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import BranchForm from '../components/Forms/BranchForm';
+import BackLink from '../components/UI/BackLink';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './AddBranch.css';
 
@@ -33,10 +33,7 @@ export default function AddBranch() {
 
   return (
     <div className="add-branch-page">
-      <Link to="/dashboard/branches" className="back-link animate-fade-in">
-        <ArrowLeft size={18} strokeWidth={1.5} />
-        {t('branches.backToBranches')}
-      </Link>
+      <BackLink to="/dashboard/branches" label={t('branches.backToBranches')} className="animate-fade-in" />
 
       <div className="add-branch-header animate-fade-in-up">
         <h1>{t('branches.addNewBranch')}</h1>

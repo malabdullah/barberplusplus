@@ -126,7 +126,7 @@ export default function Settings() {
 
   const handleSaveProfile = () => {
     // In production, this would update the profile via API
-    console.log('Saving profile:', profile);
+    // Profile update logic will be implemented when API is ready
   };
 
   return (

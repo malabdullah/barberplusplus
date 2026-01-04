@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
@@ -614,6 +614,19 @@ export default function MyAvailability() {
   const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const saveStatusTimeoutRef = useRef(null);
+
+  // Clear save status after 3 seconds (with proper cleanup)
+  useEffect(() => {
+    if (saveStatus) {
+      saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus(null), 3000);
+      return () => {
+        if (saveStatusTimeoutRef.current) {
+          clearTimeout(saveStatusTimeoutRef.current);
+        }
+      };
+    }
+  }, [saveStatus]);
 
   // Only initialize state from currentBarber on first load, not on every change
   useEffect(() => {
@@ -665,11 +678,11 @@ export default function MyAvailability() {
       });
       setHasChanges(false);
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus(null), 3000);
+      // Timeout handled by useEffect with proper cleanup
     } catch (error) {
       console.error('Error saving availability:', error);
       setSaveStatus('error');
-      setTimeout(() => setSaveStatus(null), 3000);
+      // Timeout handled by useEffect with proper cleanup
     } finally {
       setIsSubmitting(false);
     }
