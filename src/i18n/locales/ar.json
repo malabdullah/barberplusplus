@@ -476,6 +476,19 @@
       "saveChanges": "حفظ التغييرات",
       "cancel": "إلغاء",
       "success": "تم تحديث الخدمات بنجاح"
+    },
+    "addedBy": {
+      "label": "تمت الإضافة بواسطة",
+      "at": "في",
+      "manager": "المدير",
+      "barber": "الحلاق",
+      "whatsapp": "واتساب",
+      "admin": "المسؤول",
+      "system": "النظام"
+    },
+    "modifiedBy": {
+      "label": "آخر تعديل بواسطة",
+      "at": "في"
     }
   },
   "settings": {

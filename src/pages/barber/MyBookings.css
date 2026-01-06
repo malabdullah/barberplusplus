@@ -541,6 +541,13 @@
   color: var(--text-primary);
 }
 
+.detail-timestamp {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
 .booking-details-price {
   display: flex;
   justify-content: space-between;

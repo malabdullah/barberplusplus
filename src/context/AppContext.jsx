@@ -862,6 +862,8 @@ export function AppProvider({ children }) {
         duration: totalDuration || 30,
         price: totalPrice || 0,
         status: 'confirmed',
+        addedByType: userRole,
+        addedByUserId: user?.id,
       });
       setBookings(prev => [...prev, newBooking]);
       loggingService.logAction('create', 'booking', newBooking.id, `Created booking for ${bookingData.customerName}`);
@@ -919,12 +921,16 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'booking', action: 'create' });
       throw error;
     }
-  }, [selectedBranchId, services, bookings, barbers]);
+  }, [selectedBranchId, services, bookings, barbers, user, userRole]);
 
   const updateBooking = useCallback(async (bookingId, updates) => {
     try {
       const oldBooking = bookings.find(b => b.id === bookingId);
-      const updated = await bookingsService.update(bookingId, updates);
+      const updated = await bookingsService.update(bookingId, {
+        ...updates,
+        modifiedByType: userRole,
+        modifiedByUserId: user?.id,
+      });
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? updated : b)
       );
@@ -980,7 +986,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'booking', action: 'update', entityId: bookingId });
       throw error;
     }
-  }, [bookings, barbers]);
+  }, [bookings, barbers, user, userRole]);
 
   const cancelBooking = useCallback(async (bookingId) => {
     const oldBooking = bookings.find(b => b.id === bookingId);
@@ -993,7 +999,10 @@ export function AppProvider({ children }) {
     );
 
     try {
-      const cancelled = await bookingsService.cancel(bookingId);
+      const cancelled = await bookingsService.cancel(bookingId, {
+        modifiedByType: userRole,
+        modifiedByUserId: user?.id,
+      });
       // Update with actual server response
       setBookings(prev =>
         prev.map(b => b.id === bookingId ? cancelled : b)
@@ -1052,7 +1061,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'booking', action: 'cancel', entityId: bookingId });
       throw error;
     }
-  }, [bookings, barbers]);
+  }, [bookings, barbers, user, userRole]);
 
   const extendBooking = useCallback(async (bookingId, additionalServiceId) => {
     try {
@@ -1098,6 +1107,8 @@ export function AppProvider({ children }) {
         serviceIds: newServiceIds,
         duration: newTotalDuration,
         price: newPrice,
+        modifiedByType: userRole,
+        modifiedByUserId: user?.id,
       });
 
       // Ensure the returned object has our computed values (DB may return stale data)
@@ -1158,7 +1169,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'booking', action: 'extend', entityId: bookingId });
       throw error;
     }
-  }, [bookings, services, barbers]);
+  }, [bookings, services, barbers, user, userRole]);
 
   const changeBookingServices = useCallback(async (bookingId, newServiceIds) => {
     try {
@@ -1207,6 +1218,8 @@ export function AppProvider({ children }) {
         serviceIds: newServiceIds,
         duration: newTotalDuration,
         price: newPrice,
+        modifiedByType: userRole,
+        modifiedByUserId: user?.id,
       });
 
       // Ensure the returned object has our computed values
@@ -1276,7 +1289,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'booking', action: 'changeServices', entityId: bookingId });
       throw error;
     }
-  }, [bookings, services, barbers]);
+  }, [bookings, services, barbers, user, userRole]);
 
   // Auth actions
   const login = useCallback(async (email, password) => {

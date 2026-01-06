@@ -476,6 +476,19 @@
       "saveChanges": "Save Changes",
       "cancel": "Cancel",
       "success": "Services updated successfully"
+    },
+    "addedBy": {
+      "label": "Added By",
+      "at": "at",
+      "manager": "Manager",
+      "barber": "Barber",
+      "whatsapp": "WhatsApp",
+      "admin": "Admin",
+      "system": "System"
+    },
+    "modifiedBy": {
+      "label": "Last Modified By",
+      "at": "at"
     }
   },
   "settings": {

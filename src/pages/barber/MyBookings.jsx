@@ -15,6 +15,10 @@ import {
   Coffee,
   Umbrella,
   XCircle,
+  UserCog,
+  MessageCircle,
+  Shield,
+  Bot,
 } from 'lucide-react';
 import {
   format,
@@ -27,13 +31,24 @@ import {
   isWithinInterval,
   parseISO,
 } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import BookingForm from '../../components/Forms/BookingForm';
 import ModifyServicesSection from '../../components/Bookings/ModifyServicesSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../../constants/bookingStatuses';
+import { getAddedByConfig } from '../../constants/addedByTypes';
 import './MyBookings.css';
+
+// Icon mapping for actor types
+const ADDED_BY_ICONS = {
+  manager: UserCog,
+  barber: Scissors,
+  whatsapp_agent: MessageCircle,
+  admin: Shield,
+  system: Bot,
+};
 
 // Day index to key mapping (0=Sunday in JS Date.getDay())
 const DAY_INDEX_TO_KEY = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -116,7 +131,8 @@ const calculateEndTime = (startTime, durationMinutes) => {
 };
 
 function BookingDetails({ booking, onClose, onStatusChange, services, barberData, existingBookings, onModifyServices }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'ar' ? ar : enUS;
   return (
     <div className="booking-details">
       <div className="booking-details-header">
@@ -190,6 +206,50 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
         <div className="booking-details-notes">
           <AlertCircle size={14} />
           <span>{booking.notes}</span>
+        </div>
+      )}
+
+      {/* Added By / Modified By Section */}
+      {(booking.addedByType || booking.createdAt) && (
+        <div className="booking-details-section booking-audit-section">
+          {(booking.addedByType || booking.createdAt) && (
+            <div className="booking-detail-row">
+              {React.createElement(ADDED_BY_ICONS[booking.addedByType] || Bot, {
+                size: 18,
+                strokeWidth: 1.5,
+              })}
+              <div>
+                <span className="detail-label">{t('bookings.addedBy.label')}</span>
+                <span className="detail-value">
+                  {booking.addedByType ? t(getAddedByConfig(booking.addedByType).labelKey) : '—'}
+                  {booking.createdAt && (
+                    <span className="detail-timestamp">
+                      {t('bookings.addedBy.at')} {format(new Date(booking.createdAt), 'MMM d, yyyy h:mm a', { locale: dateLocale })}
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+          {(booking.modifiedByType || (booking.updatedAt && booking.updatedAt !== booking.createdAt)) && (
+            <div className="booking-detail-row">
+              {React.createElement(ADDED_BY_ICONS[booking.modifiedByType] || Bot, {
+                size: 18,
+                strokeWidth: 1.5,
+              })}
+              <div>
+                <span className="detail-label">{t('bookings.modifiedBy.label')}</span>
+                <span className="detail-value">
+                  {booking.modifiedByType ? t(getAddedByConfig(booking.modifiedByType).labelKey) : '—'}
+                  {booking.updatedAt && (
+                    <span className="detail-timestamp">
+                      {t('bookings.modifiedBy.at')} {format(new Date(booking.updatedAt), 'MMM d, yyyy h:mm a', { locale: dateLocale })}
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

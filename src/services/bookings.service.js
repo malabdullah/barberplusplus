@@ -20,6 +20,10 @@ const toFrontend = (booking) => {
     notes: booking.notes,
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
+    addedByType: booking.added_by_type,
+    addedByUserId: booking.added_by_user_id,
+    modifiedByType: booking.modified_by_type,
+    modifiedByUserId: booking.modified_by_user_id,
   };
 };
 
@@ -38,6 +42,10 @@ const toDatabase = (data) => {
   if (data.price !== undefined) result.price = data.price;
   if (data.status !== undefined) result.status = data.status;
   if (data.notes !== undefined) result.notes = data.notes;
+  if (data.addedByType !== undefined) result.added_by_type = data.addedByType;
+  if (data.addedByUserId !== undefined) result.added_by_user_id = data.addedByUserId;
+  if (data.modifiedByType !== undefined) result.modified_by_type = data.modifiedByType;
+  if (data.modifiedByUserId !== undefined) result.modified_by_user_id = data.modifiedByUserId;
   return result;
 };
 
@@ -108,12 +116,17 @@ export const bookingsService = {
   /**
    * Cancel a booking
    * @param {string} id
+   * @param {object} options - Optional params { modifiedByType, modifiedByUserId }
    * @returns {Promise<object | null>}
    */
-  cancel: async (id) => {
+  cancel: async (id, options = {}) => {
+    const updateData = { status: 'cancelled' };
+    if (options.modifiedByType) updateData.modified_by_type = options.modifiedByType;
+    if (options.modifiedByUserId) updateData.modified_by_user_id = options.modifiedByUserId;
+
     const { data, error } = await supabase
       .from('bookings')
-      .update({ status: 'cancelled' })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
