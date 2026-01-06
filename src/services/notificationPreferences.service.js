@@ -88,14 +88,16 @@ export const notificationPreferencesService = {
       .from('user_notification_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    // If no preferences exist (PGRST116) or access denied (406), return defaults
-    // 406 can occur when RLS blocks access or auth context is incomplete
-    if (error && (error.code === 'PGRST116' || error.code === '406' || error.message?.includes('406'))) {
+    // maybeSingle() returns null (not error) when 0 rows found
+    if (error) throw error;
+
+    // If no preferences exist, return defaults
+    if (!data) {
       return { ...DEFAULT_PREFERENCES, userId: user.id };
     }
-    if (error) throw error;
+
     return toFrontend(data);
   },
 
