@@ -138,6 +138,11 @@
     "resetLinkSentTo": "أرسلنا رابط إعادة التعيين إلى",
     "checkInboxInstructions": "تحقق من صندوق الوارد للتعليمات.",
     "didntReceiveEmail": "لم تستلم البريد؟",
+    "resendEmail": "إعادة الإرسال",
+    "resendIn": "إعادة الإرسال خلال {{seconds}} ثانية",
+    "emailResent": "تم إعادة إرسال البريد بنجاح!",
+    "resendFailed": "فشل إعادة الإرسال. حاول مرة أخرى لاحقاً.",
+    "checkSpamFolder": "تحقق من مجلد الرسائل غير المرغوب فيها إذا لم تجد البريد.",
     "sending": "جاري الإرسال...",
     "repeatPassword": "أعد كتابة كلمة المرور"
   },

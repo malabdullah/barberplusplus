@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import { authService } from '../services';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
@@ -15,6 +15,41 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState(null); // 'success' | 'error' | null
+  const [isResending, setIsResending] = useState(false);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Resend email handler
+  const handleResend = async () => {
+    if (resendCooldown > 0 || isResending) return;
+
+    setIsResending(true);
+    setResendStatus(null);
+
+    try {
+      const result = await authService.resetPassword(email);
+
+      if (result.success) {
+        setResendStatus('success');
+        setResendCooldown(60);
+      } else {
+        setResendStatus('error');
+      }
+    } catch (err) {
+      logErrorSafely(err, 'ForgotPassword.resend');
+      setResendStatus('error');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleChange = (e) => {
     setEmail(e.target.value);
@@ -98,7 +133,31 @@ export default function ForgotPassword() {
               {t('auth.checkInboxInstructions')}
             </p>
             <div className="forgot-success-note">
-              <p>{t('auth.didntReceiveEmail')}</p>
+              <p className="forgot-spam-hint">{t('auth.checkSpamFolder')}</p>
+              <div className="forgot-resend-section">
+                <span>{t('auth.didntReceiveEmail')}</span>
+                <button
+                  type="button"
+                  className={`forgot-resend-btn ${resendCooldown > 0 ? 'disabled' : ''} ${isResending ? 'loading' : ''}`}
+                  onClick={handleResend}
+                  disabled={resendCooldown > 0 || isResending}
+                >
+                  {isResending ? (
+                    <RefreshCw size={14} className="spinning" />
+                  ) : (
+                    <RefreshCw size={14} />
+                  )}
+                  {resendCooldown > 0
+                    ? t('auth.resendIn', { seconds: resendCooldown })
+                    : t('auth.resendEmail')}
+                </button>
+              </div>
+              {resendStatus === 'success' && (
+                <p className="forgot-resend-success animate-fade-in">{t('auth.emailResent')}</p>
+              )}
+              {resendStatus === 'error' && (
+                <p className="forgot-resend-error animate-fade-in">{t('auth.resendFailed')}</p>
+              )}
             </div>
             <Link to="/login" className="login-submit">
               <ArrowLeft size={18} strokeWidth={2} />

@@ -138,6 +138,11 @@
     "resetLinkSentTo": "We sent a reset link to",
     "checkInboxInstructions": "Check your inbox for instructions.",
     "didntReceiveEmail": "Didn't receive the email?",
+    "resendEmail": "Resend",
+    "resendIn": "Resend in {{seconds}}s",
+    "emailResent": "Email resent successfully!",
+    "resendFailed": "Failed to resend. Try again later.",
+    "checkSpamFolder": "Check your spam folder if you don't see the email.",
     "sending": "Sending...",
     "repeatPassword": "Repeat password"
   },
