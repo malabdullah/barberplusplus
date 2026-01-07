@@ -679,6 +679,88 @@ export const agentService = {
       throw error;
     }
   },
+
+  // ===========================
+  // REALTIME SUBSCRIPTIONS
+  // ===========================
+
+  /**
+   * Subscribe to new messages for a specific conversation
+   * @param {string} conversationId
+   * @param {function} onNewMessage - Callback when new message arrives
+   * @returns {object} Supabase channel (for cleanup)
+   */
+  subscribeToMessages: (conversationId, onNewMessage) => {
+    const messageToFrontend = (msg) => ({
+      id: msg.id,
+      conversationId: msg.conversation_id,
+      direction: msg.direction,
+      messageType: msg.message_type,
+      content: msg.content,
+      status: msg.status,
+      metadata: msg.metadata,
+      createdAt: msg.created_at,
+    });
+
+    const channel = supabase
+      .channel(`whatsapp-messages-${conversationId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whatsapp_messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        onNewMessage(messageToFrontend(payload.new));
+      })
+      .subscribe();
+
+    return channel;
+  },
+
+  /**
+   * Subscribe to conversation state changes
+   * @param {string} conversationId
+   * @param {function} onUpdate - Callback when conversation is updated
+   * @returns {object} Supabase channel (for cleanup)
+   */
+  subscribeToConversation: (conversationId, onUpdate) => {
+    const conversationToFrontend = (conv) => ({
+      id: conv.id,
+      phoneNumber: conv.phone_number,
+      phoneCountryCode: conv.phone_country_code,
+      customerName: conv.customer_name,
+      currentState: conv.current_state,
+      language: conv.language,
+      context: conv.context,
+      lastMessageAt: conv.last_message_at,
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+    });
+
+    const channel = supabase
+      .channel(`whatsapp-conversation-${conversationId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'whatsapp_conversations',
+        filter: `id=eq.${conversationId}`,
+      }, (payload) => {
+        onUpdate(conversationToFrontend(payload.new));
+      })
+      .subscribe();
+
+    return channel;
+  },
+
+  /**
+   * Unsubscribe from a realtime channel
+   * @param {object} channel - Supabase channel to unsubscribe from
+   */
+  unsubscribe: (channel) => {
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+  },
 };
 
 export default agentService;

@@ -62,6 +62,10 @@ export default function AgentConversations() {
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const messagesEndRef = useRef(null);
 
+  // Realtime subscription refs
+  const messagesChannelRef = useRef(null);
+  const conversationChannelRef = useRef(null);
+
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [conversationDetails, setConversationDetails] = useState(null);
@@ -89,6 +93,14 @@ export default function AgentConversations() {
     scrollToBottom();
   }, [messages]);
 
+  // Cleanup realtime subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      agentService.unsubscribe(messagesChannelRef.current);
+      agentService.unsubscribe(conversationChannelRef.current);
+    };
+  }, []);
+
   // Load conversations
   const loadConversations = useCallback(async () => {
     setLoading(true);
@@ -113,6 +125,10 @@ export default function AgentConversations() {
 
   // Load messages and details for selected conversation
   const loadMessages = async (conversation) => {
+    // Clean up previous subscriptions
+    agentService.unsubscribe(messagesChannelRef.current);
+    agentService.unsubscribe(conversationChannelRef.current);
+
     setSelectedConversation(conversation);
     setLoadingMessages(true);
     setMessageText('');
@@ -124,6 +140,26 @@ export default function AgentConversations() {
       ]);
       setMessages(msgs);
       setConversationDetails(details);
+
+      // Set up realtime subscription for new messages
+      messagesChannelRef.current = agentService.subscribeToMessages(
+        conversation.id,
+        (newMessage) => {
+          setMessages((prev) => {
+            // Prevent duplicates
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
+        }
+      );
+
+      // Set up realtime subscription for conversation state changes
+      conversationChannelRef.current = agentService.subscribeToConversation(
+        conversation.id,
+        (updatedConversation) => {
+          setConversationDetails(updatedConversation);
+        }
+      );
     } catch (error) {
       console.error('Error loading messages:', error);
       setMessages([]);
