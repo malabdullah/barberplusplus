@@ -41,6 +41,10 @@ import GlobalSettings from './pages/admin/GlobalSettings';
 import AuditCompliance from './pages/admin/AuditCompliance';
 import ActivityLogs from './pages/admin/ActivityLogs';
 import SecurityEvents from './pages/admin/SecurityEvents';
+import WhatsAppManagement from './pages/admin/WhatsAppManagement';
+import WhatsAppConversations from './pages/admin/WhatsAppConversations';
+import WhatsAppMessages from './pages/admin/WhatsAppMessages';
+import WhatsAppLogs from './pages/admin/WhatsAppLogs';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -200,6 +204,10 @@ function AppRoutes() {
         <Route path="audit" element={<AuditCompliance />} />
         <Route path="audit/activity" element={<ActivityLogs />} />
         <Route path="audit/security" element={<SecurityEvents />} />
+        <Route path="whatsapp" element={<WhatsAppManagement />} />
+        <Route path="whatsapp/conversations" element={<WhatsAppConversations />} />
+        <Route path="whatsapp/messages" element={<WhatsAppMessages />} />
+        <Route path="whatsapp/logs" element={<WhatsAppLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>

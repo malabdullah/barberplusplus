@@ -1530,6 +1530,506 @@ export const adminService = {
       return { count: 0 };
     }
   },
+
+  // ===========================
+  // WHATSAPP MANAGEMENT
+  // ===========================
+
+  /**
+   * Get WhatsApp conversations with filtering
+   */
+  getWhatsAppConversations: async ({
+    page = 1,
+    limit = 25,
+    search = '',
+    state = null,
+    language = null
+  } = {}) => {
+    try {
+      let query = supabase
+        .from('whatsapp_conversations')
+        .select('*', { count: 'exact' })
+        .order('last_message_at', { ascending: false, nullsFirst: false });
+
+      // Apply search filter (phone or customer name)
+      if (search) {
+        const escapedSearch = escapeLikeWildcards(search);
+        query = query.or(`phone_number.ilike.%${escapedSearch}%,customer_name.ilike.%${escapedSearch}%`);
+      }
+
+      // Apply state filter
+      if (state) {
+        query = query.eq('current_state', state);
+      }
+
+      // Apply language filter
+      if (language) {
+        query = query.eq('language', language);
+      }
+
+      // Apply pagination
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        conversations: data?.map(conv => ({
+          id: conv.id,
+          phoneNumber: conv.phone_number,
+          phoneCountryCode: conv.phone_country_code,
+          customerName: conv.customer_name,
+          currentState: conv.current_state,
+          context: conv.context,
+          language: conv.language,
+          lastMessageAt: conv.last_message_at,
+          createdAt: conv.created_at,
+          updatedAt: conv.updated_at,
+        })) || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      };
+    } catch (error) {
+      logErrorDev('Error fetching WhatsApp conversations:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get conversation details with messages
+   */
+  getConversationDetails: async (conversationId) => {
+    try {
+      // Get conversation
+      const { data: conv, error: convError } = await supabase
+        .from('whatsapp_conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError) throw convError;
+
+      // Get messages for this conversation
+      const { data: messages, error: messagesError } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      return {
+        conversation: {
+          id: conv.id,
+          phoneNumber: conv.phone_number,
+          phoneCountryCode: conv.phone_country_code,
+          customerName: conv.customer_name,
+          currentState: conv.current_state,
+          context: conv.context,
+          language: conv.language,
+          lastMessageAt: conv.last_message_at,
+          createdAt: conv.created_at,
+          updatedAt: conv.updated_at,
+        },
+        messages: messages?.map(msg => ({
+          id: msg.id,
+          conversationId: msg.conversation_id,
+          whatsappMessageId: msg.whatsapp_message_id,
+          direction: msg.direction,
+          messageType: msg.message_type,
+          content: msg.content,
+          metadata: msg.metadata,
+          status: msg.status,
+          createdAt: msg.created_at,
+        })) || [],
+      };
+    } catch (error) {
+      logErrorDev('Error fetching conversation details:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get WhatsApp messages with filtering
+   */
+  getWhatsAppMessages: async ({
+    page = 1,
+    limit = 25,
+    conversationId = null,
+    direction = null,
+    status = null,
+    messageType = null
+  } = {}) => {
+    try {
+      let query = supabase
+        .from('whatsapp_messages')
+        .select(`
+          *,
+          conversation:conversation_id (
+            phone_number,
+            customer_name
+          )
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply conversation filter
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      }
+
+      // Apply direction filter
+      if (direction) {
+        query = query.eq('direction', direction);
+      }
+
+      // Apply status filter
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      // Apply message type filter
+      if (messageType) {
+        query = query.eq('message_type', messageType);
+      }
+
+      // Apply pagination
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        messages: data?.map(msg => ({
+          id: msg.id,
+          conversationId: msg.conversation_id,
+          whatsappMessageId: msg.whatsapp_message_id,
+          direction: msg.direction,
+          messageType: msg.message_type,
+          content: msg.content,
+          metadata: msg.metadata,
+          status: msg.status,
+          createdAt: msg.created_at,
+          phoneNumber: msg.conversation?.phone_number,
+          customerName: msg.conversation?.customer_name,
+        })) || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      };
+    } catch (error) {
+      logErrorDev('Error fetching WhatsApp messages:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a WhatsApp message (with audit log)
+   */
+  deleteWhatsAppMessage: async (messageId) => {
+    try {
+      // Get message details first for audit log
+      const { data: message, error: fetchError } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete the message
+      const { error: deleteError } = await supabase
+        .from('whatsapp_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (deleteError) throw deleteError;
+
+      // Create audit log
+      await adminService.createAuditLog({
+        actionType: 'whatsapp_message_deleted',
+        targetEntityType: 'whatsapp_message',
+        targetEntityId: messageId,
+        oldValues: {
+          conversationId: message.conversation_id,
+          direction: message.direction,
+          content: message.content?.substring(0, 200), // Truncate for audit
+          messageType: message.message_type,
+        },
+        metadata: { action: 'delete' },
+      });
+
+      return { success: true };
+    } catch (error) {
+      logErrorDev('Error deleting WhatsApp message:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get WhatsApp logs with filtering
+   */
+  getWhatsAppLogs: async ({
+    page = 1,
+    limit = 25,
+    conversationId = null,
+    logLevel = null,
+    eventType = null,
+    startDate = null,
+    endDate = null
+  } = {}) => {
+    try {
+      let query = supabase
+        .from('whatsapp_logs')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply conversation filter
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      }
+
+      // Apply log level filter
+      if (logLevel) {
+        query = query.eq('log_level', logLevel);
+      }
+
+      // Apply event type filter
+      if (eventType) {
+        query = query.eq('event_type', eventType);
+      }
+
+      // Apply date range
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+
+      if (endDate) {
+        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
+      }
+
+      // Apply pagination
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        logs: data?.map(log => ({
+          id: log.id,
+          conversationId: log.conversation_id,
+          phoneNumber: log.phone_number,
+          logLevel: log.log_level,
+          eventType: log.event_type,
+          message: log.message,
+          inboundMessage: log.inbound_message,
+          outboundMessage: log.outbound_message,
+          toolName: log.tool_name,
+          toolInput: log.tool_input,
+          toolOutput: log.tool_output,
+          errorCode: log.error_code,
+          errorMessage: log.error_message,
+          stackTrace: log.stack_trace,
+          contextSnapshot: log.context_snapshot,
+          executionTimeMs: log.execution_time_ms,
+          metadata: log.metadata,
+          createdAt: log.created_at,
+        })) || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      };
+    } catch (error) {
+      logErrorDev('Error fetching WhatsApp logs:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get WhatsApp stats for dashboard
+   */
+  getWhatsAppStats: async () => {
+    try {
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Parallel queries
+      const [
+        totalConversationsResult,
+        totalMessagesResult,
+        messagesTodayResult,
+        errorsResult,
+        messagesByDirectionResult,
+      ] = await Promise.all([
+        // Total conversations
+        supabase
+          .from('whatsapp_conversations')
+          .select('id', { count: 'exact', head: true }),
+        // Total messages
+        supabase
+          .from('whatsapp_messages')
+          .select('id', { count: 'exact', head: true }),
+        // Messages today
+        supabase
+          .from('whatsapp_messages')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', oneDayAgo.toISOString()),
+        // Errors in last 7 days
+        supabase
+          .from('whatsapp_logs')
+          .select('id', { count: 'exact', head: true })
+          .eq('log_level', 'error')
+          .gte('created_at', sevenDaysAgo.toISOString()),
+        // Messages by direction
+        supabase
+          .from('whatsapp_messages')
+          .select('direction'),
+      ]);
+
+      // Count messages by direction
+      const directionCounts = { inbound: 0, outbound: 0 };
+      messagesByDirectionResult.data?.forEach(msg => {
+        if (msg.direction) {
+          directionCounts[msg.direction] = (directionCounts[msg.direction] || 0) + 1;
+        }
+      });
+
+      return {
+        totalConversations: totalConversationsResult.count || 0,
+        totalMessages: totalMessagesResult.count || 0,
+        messagesToday: messagesTodayResult.count || 0,
+        errorsLast7Days: errorsResult.count || 0,
+        inboundMessages: directionCounts.inbound,
+        outboundMessages: directionCounts.outbound,
+      };
+    } catch (error) {
+      logErrorDev('Error fetching WhatsApp stats:', error);
+      return {
+        totalConversations: 0,
+        totalMessages: 0,
+        messagesToday: 0,
+        errorsLast7Days: 0,
+        inboundMessages: 0,
+        outboundMessages: 0,
+      };
+    }
+  },
+
+  /**
+   * Get distinct conversation states (for filter dropdown)
+   */
+  getWhatsAppConversationStates: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_conversations')
+        .select('current_state');
+
+      if (error) throw error;
+
+      // Get unique states
+      const states = [...new Set(data?.map(c => c.current_state).filter(Boolean))];
+      return states.sort();
+    } catch (error) {
+      logErrorDev('Error fetching conversation states:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get distinct log event types (for filter dropdown)
+   */
+  getWhatsAppEventTypes: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_logs')
+        .select('event_type');
+
+      if (error) throw error;
+
+      // Get unique event types
+      const types = [...new Set(data?.map(l => l.event_type).filter(Boolean))];
+      return types.sort();
+    } catch (error) {
+      logErrorDev('Error fetching event types:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Export WhatsApp logs (no pagination, for download)
+   */
+  exportWhatsAppLogs: async ({ format = 'json', logLevel = null, startDate = null, endDate = null } = {}) => {
+    try {
+      let query = supabase
+        .from('whatsapp_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000); // Safety limit
+
+      if (logLevel) {
+        query = query.eq('log_level', logLevel);
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+
+      if (endDate) {
+        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const logs = data?.map(log => ({
+        id: log.id,
+        conversationId: log.conversation_id,
+        phoneNumber: log.phone_number,
+        logLevel: log.log_level,
+        eventType: log.event_type,
+        message: log.message,
+        toolName: log.tool_name,
+        errorCode: log.error_code,
+        errorMessage: log.error_message,
+        executionTimeMs: log.execution_time_ms,
+        createdAt: log.created_at,
+      })) || [];
+
+      if (format === 'csv') {
+        const headers = ['ID', 'Timestamp', 'Level', 'Event Type', 'Phone', 'Message', 'Tool', 'Error Code'];
+        const rows = logs.map(log => [
+          sanitizeForCSV(log.id),
+          sanitizeForCSV(log.createdAt),
+          sanitizeForCSV(log.logLevel),
+          sanitizeForCSV(log.eventType || ''),
+          sanitizeForCSV(log.phoneNumber || ''),
+          sanitizeForCSV(log.message || ''),
+          sanitizeForCSV(log.toolName || ''),
+          sanitizeForCSV(log.errorCode || ''),
+        ]);
+        return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+      }
+
+      return logs;
+    } catch (error) {
+      logErrorDev('Error exporting WhatsApp logs:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;
