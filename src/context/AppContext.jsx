@@ -127,10 +127,9 @@ export function AppProvider({ children }) {
           .from('user_settings')
           .select('theme, language')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          // PGRST116 = no rows found (first time user)
+        if (error) {
           logger.error('Error loading user settings:', error);
           return;
         }
