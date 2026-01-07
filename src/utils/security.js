@@ -229,7 +229,7 @@ export const apiRateLimiter = createRateLimiter('api', 100, 60000, 60000); // 10
  * @returns {{ valid: boolean, role: string | null, error: string | null }}
  */
 export const validateUserRole = (role) => {
-  const validRoles = ['admin', 'manager', 'barber'];
+  const validRoles = ['admin', 'manager', 'barber', 'agent'];
 
   if (!role || typeof role !== 'string') {
     return { valid: false, role: null, error: 'Missing or invalid role' };

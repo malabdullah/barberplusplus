@@ -15,6 +15,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Phone,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
@@ -52,14 +54,39 @@ const StatusBadge = memo(function StatusBadge({ status, t }) {
 });
 
 // Message row component
-const MessageRow = memo(function MessageRow({ message, isExpanded, onToggle, onDelete, t, dateLocale }) {
+const MessageRow = memo(function MessageRow({
+  message,
+  isExpanded,
+  isSelected,
+  onToggle,
+  onSelect,
+  onDelete,
+  t,
+  dateLocale,
+}) {
   const truncatedContent = message.content?.length > 80
     ? message.content.substring(0, 80) + '...'
     : message.content;
 
+  const handleCheckboxClick = (e) => {
+    e.stopPropagation();
+    onSelect(message.id);
+  };
+
   return (
-    <div className={`audit-log-row ${isExpanded ? 'expanded' : ''}`}>
+    <div className={`audit-log-row ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}>
       <div className="audit-log-row-main" onClick={onToggle}>
+        <button
+          className="whatsapp-checkbox-btn"
+          type="button"
+          onClick={handleCheckboxClick}
+        >
+          {isSelected ? (
+            <CheckSquare size={18} className="whatsapp-checkbox checked" />
+          ) : (
+            <Square size={18} className="whatsapp-checkbox" />
+          )}
+        </button>
         <button className="audit-log-expand-btn" type="button">
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </button>
@@ -155,11 +182,15 @@ export default function WhatsAppMessages() {
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
   // Filters
   const [filters, setFilters] = useState({
     search: '',
     direction: '',
     status: '',
+    phoneNumber: '',
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -169,9 +200,13 @@ export default function WhatsAppMessages() {
   const [total, setTotal] = useState(0);
   const ITEMS_PER_PAGE = 25;
 
-  // Delete confirmation
+  // Delete confirmation (single)
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Bulk delete confirmation
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Load messages
   const loadMessages = useCallback(async () => {
@@ -182,17 +217,20 @@ export default function WhatsAppMessages() {
         limit: ITEMS_PER_PAGE,
         direction: filters.direction || null,
         status: filters.status || null,
+        phoneNumber: filters.phoneNumber || null,
       });
 
       setMessages(result.messages);
       setTotal(result.total);
       setTotalPages(result.totalPages);
+      // Clear selection when loading new data
+      setSelectedIds(new Set());
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters.direction, filters.status, filters.phoneNumber]);
 
   useEffect(() => {
     loadMessages();
@@ -211,31 +249,78 @@ export default function WhatsAppMessages() {
     });
   };
 
+  // Toggle selection
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Select all / deselect all
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredMessages.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredMessages.map((m) => m.id)));
+    }
+  };
+
   // Handle filter changes
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
+    if (key !== 'search') {
+      setPage(1);
+    }
   };
 
   // Clear filters
   const clearFilters = () => {
-    setFilters({ search: '', direction: '', status: '' });
+    setFilters({ search: '', direction: '', status: '', phoneNumber: '' });
     setPage(1);
   };
 
-  // Delete message
+  // Delete single message
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await adminService.deleteWhatsAppMessage(deleteTarget.id);
       setMessages((prev) => prev.filter((m) => m.id !== deleteTarget.id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
       setTotal((prev) => prev - 1);
       setDeleteTarget(null);
     } catch (error) {
       console.error('Error deleting message:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Bulk delete messages
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedIds);
+      await adminService.deleteWhatsAppMessages(idsToDelete);
+      setMessages((prev) => prev.filter((m) => !selectedIds.has(m.id)));
+      setTotal((prev) => prev - selectedIds.size);
+      setSelectedIds(new Set());
+      setShowBulkDeleteConfirm(false);
+    } catch (error) {
+      console.error('Error bulk deleting messages:', error);
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -248,8 +333,11 @@ export default function WhatsAppMessages() {
       )
     : messages;
 
-  const showingFrom = (page - 1) * ITEMS_PER_PAGE + 1;
+  const showingFrom = total > 0 ? (page - 1) * ITEMS_PER_PAGE + 1 : 0;
   const showingTo = Math.min(page * ITEMS_PER_PAGE, total);
+
+  const isAllSelected = filteredMessages.length > 0 && selectedIds.size === filteredMessages.length;
+  const isSomeSelected = selectedIds.size > 0 && selectedIds.size < filteredMessages.length;
 
   return (
     <div className="audit-page">
@@ -302,6 +390,19 @@ export default function WhatsAppMessages() {
       {showFilters && (
         <div className="audit-filters animate-fade-in-up">
           <div className="audit-filter-group">
+            <label>{t('admin.whatsapp.filterPhone')}</label>
+            <div className="audit-filter-input-wrapper">
+              <Phone size={16} className="audit-filter-input-icon" />
+              <input
+                type="text"
+                value={filters.phoneNumber}
+                onChange={(e) => handleFilterChange('phoneNumber', e.target.value)}
+                placeholder="965..."
+                className="form-input audit-filter-input-with-icon"
+              />
+            </div>
+          </div>
+          <div className="audit-filter-group">
             <label>{t('admin.whatsapp.filterDirection')}</label>
             <select
               value={filters.direction}
@@ -334,8 +435,42 @@ export default function WhatsAppMessages() {
         </div>
       )}
 
+      {/* Bulk Actions Bar */}
+      {filteredMessages.length > 0 && (
+        <div className="whatsapp-bulk-actions animate-fade-in-up stagger-2">
+          <button
+            className="whatsapp-select-all-btn"
+            onClick={toggleSelectAll}
+            type="button"
+          >
+            {isAllSelected ? (
+              <CheckSquare size={18} className="whatsapp-checkbox checked" />
+            ) : isSomeSelected ? (
+              <CheckSquare size={18} className="whatsapp-checkbox partial" />
+            ) : (
+              <Square size={18} className="whatsapp-checkbox" />
+            )}
+            <span>{t('admin.whatsapp.selectAll')}</span>
+          </button>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="whatsapp-selected-count">
+                {t('admin.whatsapp.selectedCount', { count: selectedIds.size })}
+              </span>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+              >
+                <Trash2 size={14} />
+                {t('admin.whatsapp.deleteSelected')}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Messages List */}
-      <div className="audit-logs-container animate-fade-in-up stagger-2">
+      <div className="audit-logs-container animate-fade-in-up stagger-3">
         {loading ? (
           <div className="audit-loading">
             <RefreshCw size={24} className="spin" />
@@ -355,7 +490,9 @@ export default function WhatsAppMessages() {
                   key={msg.id}
                   message={msg}
                   isExpanded={expandedIds.has(msg.id)}
+                  isSelected={selectedIds.has(msg.id)}
                   onToggle={() => toggleExpand(msg.id)}
+                  onSelect={toggleSelect}
                   onDelete={setDeleteTarget}
                   t={t}
                   dateLocale={dateLocale}
@@ -400,7 +537,7 @@ export default function WhatsAppMessages() {
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Single Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -410,6 +547,18 @@ export default function WhatsAppMessages() {
         confirmText={t('common.delete')}
         confirmVariant="danger"
         loading={deleting}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title={t('admin.whatsapp.deleteSelectedTitle')}
+        message={t('admin.whatsapp.deleteSelectedConfirm', { count: selectedIds.size })}
+        confirmText={t('common.delete')}
+        confirmVariant="danger"
+        loading={bulkDeleting}
       />
     </div>
   );

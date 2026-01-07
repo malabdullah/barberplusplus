@@ -351,3 +351,40 @@
 .admin-sidebar .sidebar-nav-indicator {
   background: #6366f1;
 }
+
+/* Agent Sidebar Styles (teal/cyan) */
+.agent-sidebar .agent-logo-icon {
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+}
+
+.agent-sidebar .agent-tagline {
+  color: #38bdf8;
+}
+
+.agent-sidebar .agent-diamond {
+  background: #0ea5e9;
+}
+
+.agent-sidebar .agent-avatar {
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+}
+
+.agent-sidebar .agent-role {
+  color: #38bdf8;
+}
+
+.agent-sidebar .sidebar-nav-item.active {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.agent-sidebar .sidebar-nav-item.active::before {
+  background: linear-gradient(180deg, #0ea5e9, #06b6d4);
+}
+
+.agent-sidebar .sidebar-nav-item.active .sidebar-nav-icon {
+  color: #38bdf8;
+}
+
+.agent-sidebar .sidebar-nav-indicator {
+  background: #0ea5e9;
+}

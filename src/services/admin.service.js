@@ -1663,9 +1663,34 @@ export const adminService = {
     conversationId = null,
     direction = null,
     status = null,
-    messageType = null
+    messageType = null,
+    phoneNumber = null
   } = {}) => {
     try {
+      // If phoneNumber filter is provided, first get matching conversation IDs
+      let conversationIds = null;
+      if (phoneNumber) {
+        const escapedPhone = escapeLikeWildcards(phoneNumber);
+        const { data: convs, error: convError } = await supabase
+          .from('whatsapp_conversations')
+          .select('id')
+          .ilike('phone_number', `%${escapedPhone}%`);
+
+        if (convError) throw convError;
+        conversationIds = convs?.map(c => c.id) || [];
+
+        // If no conversations match, return empty result
+        if (conversationIds.length === 0) {
+          return {
+            messages: [],
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          };
+        }
+      }
+
       let query = supabase
         .from('whatsapp_messages')
         .select(`
@@ -1676,6 +1701,11 @@ export const adminService = {
           )
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
+
+      // Apply phone number filter via conversation IDs
+      if (conversationIds) {
+        query = query.in('conversation_id', conversationIds);
+      }
 
       // Apply conversation filter
       if (conversationId) {
@@ -1770,6 +1800,55 @@ export const adminService = {
       return { success: true };
     } catch (error) {
       logErrorDev('Error deleting WhatsApp message:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete multiple WhatsApp messages (bulk delete with audit log)
+   */
+  deleteWhatsAppMessages: async (messageIds) => {
+    try {
+      if (!messageIds || messageIds.length === 0) {
+        return { success: true, deletedCount: 0 };
+      }
+
+      // Get messages for audit log
+      const { data: messages, error: fetchError } = await supabase
+        .from('whatsapp_messages')
+        .select('id, conversation_id, direction, content, message_type')
+        .in('id', messageIds);
+
+      if (fetchError) throw fetchError;
+
+      // Delete all messages
+      const { error: deleteError } = await supabase
+        .from('whatsapp_messages')
+        .delete()
+        .in('id', messageIds);
+
+      if (deleteError) throw deleteError;
+
+      // Create single audit log for bulk operation
+      await adminService.createAuditLog({
+        actionType: 'whatsapp_messages_bulk_deleted',
+        targetEntityType: 'whatsapp_message',
+        oldValues: {
+          messageIds,
+          count: messages?.length || 0,
+          messages: messages?.map(m => ({
+            id: m.id,
+            conversationId: m.conversation_id,
+            direction: m.direction,
+            contentPreview: m.content?.substring(0, 50),
+          })),
+        },
+        metadata: { action: 'bulk_delete', count: messages?.length || 0 },
+      });
+
+      return { success: true, deletedCount: messages?.length || 0 };
+    } catch (error) {
+      logErrorDev('Error bulk deleting WhatsApp messages:', error);
       throw error;
     }
   },

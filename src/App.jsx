@@ -45,6 +45,12 @@ import WhatsAppManagement from './pages/admin/WhatsAppManagement';
 import WhatsAppConversations from './pages/admin/WhatsAppConversations';
 import WhatsAppMessages from './pages/admin/WhatsAppMessages';
 import WhatsAppLogs from './pages/admin/WhatsAppLogs';
+// Agent Pages
+import AgentLayout from './components/Layout/AgentLayout';
+import AgentDashboard from './pages/agent/AgentDashboard';
+import AgentBookings from './pages/agent/AgentBookings';
+import AgentCustomers from './pages/agent/AgentCustomers';
+import AgentConversations from './pages/agent/AgentConversations';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -75,7 +81,8 @@ function ProtectedRoute({ children, allowedRole }) {
     const defaultRoutes = {
       admin: '/admin',
       manager: '/dashboard',
-      barber: '/barber'
+      barber: '/barber',
+      agent: '/agent'
     };
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
@@ -91,7 +98,8 @@ function AppRoutes() {
     const routes = {
       admin: '/admin',
       manager: '/dashboard',
-      barber: '/barber'
+      barber: '/barber',
+      agent: '/agent'
     };
     return routes[userRole] || '/dashboard';
   };
@@ -208,6 +216,23 @@ function AppRoutes() {
         <Route path="whatsapp/conversations" element={<WhatsAppConversations />} />
         <Route path="whatsapp/messages" element={<WhatsAppMessages />} />
         <Route path="whatsapp/logs" element={<WhatsAppLogs />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+
+      {/* Agent Routes */}
+      <Route
+        path="/agent"
+        element={
+          <ProtectedRoute allowedRole="agent">
+            <AgentLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AgentDashboard />} />
+        <Route path="bookings" element={<AgentBookings />} />
+        <Route path="customers" element={<AgentCustomers />} />
+        <Route path="conversations" element={<AgentConversations />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>

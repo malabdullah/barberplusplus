@@ -411,6 +411,131 @@
   background: var(--status-error);
 }
 
+/* Selection & Bulk Actions */
+.whatsapp-checkbox-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.whatsapp-checkbox-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.whatsapp-checkbox {
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast);
+}
+
+.whatsapp-checkbox-btn:hover .whatsapp-checkbox {
+  color: var(--text-secondary);
+}
+
+.whatsapp-checkbox.checked {
+  color: var(--accent-primary);
+}
+
+.audit-log-row.selected {
+  background: rgba(212, 168, 83, 0.05);
+}
+
+.audit-log-row.selected .audit-log-row-main {
+  background: rgba(212, 168, 83, 0.08);
+}
+
+/* Bulk Actions Bar */
+.whatsapp-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.15);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.whatsapp-select-all-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: 1px solid rgba(212, 168, 83, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.whatsapp-select-all-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.whatsapp-selected-count {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.whatsapp-bulk-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--status-error-bg);
+  border: 1px solid var(--status-error);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--status-error);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: auto;
+}
+
+.whatsapp-bulk-delete-btn:hover:not(:disabled) {
+  background: var(--status-error);
+  color: white;
+}
+
+.whatsapp-bulk-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Phone Number Filter */
+.audit-filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.audit-filter-input-with-icon {
+  padding-left: 36px;
+}
+
+.audit-filter-input-wrapper .input-icon {
+  position: absolute;
+  left: var(--space-sm);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .whatsapp-quick-stats {

@@ -60,6 +60,7 @@
     "barber": "حلاق",
     "manager": "مدير",
     "admin": "مسؤول",
+    "agent": "وكيل",
     "manage": "إدارة",
     "viewAll": "عرض الكل",
     "saveChanges": "حفظ التغييرات",
@@ -1059,6 +1060,12 @@
       "deleteMessage": "حذف الرسالة",
       "deleteMessageTitle": "حذف الرسالة",
       "deleteMessageConfirm": "هل أنت متأكد من حذف هذه الرسالة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "filterPhone": "رقم الهاتف",
+      "selectAll": "تحديد الكل",
+      "selectedCount": "{{count}} محدد",
+      "deleteSelected": "حذف المحدد",
+      "deleteSelectedTitle": "حذف الرسائل المحددة",
+      "deleteSelectedConfirm": "هل أنت متأكد من حذف {{count}} رسالة؟ لا يمكن التراجع عن هذا الإجراء.",
       "messageId": "معرف رسالة واتساب",
       "messageType": "نوع الرسالة",
       "phone": "الهاتف",
@@ -1209,6 +1216,62 @@
       "variables": "المتغيرات المتاحة",
       "insertVariable": "انقر لإدراج المتغير",
       "preview": "معاينة"
+    }
+  },
+  "agent": {
+    "nav": {
+      "dashboard": "لوحة التحكم",
+      "bookings": "الحجوزات",
+      "customers": "العملاء",
+      "conversations": "المحادثات",
+      "settings": "الإعدادات"
+    },
+    "dashboard": {
+      "title": "لوحة تحكم الوكيل",
+      "subtitle": "نظرة عامة على دعم عملاء واتساب",
+      "bookingsCreatedToday": "الحجوزات المنشأة اليوم",
+      "activeConversations": "المحادثات النشطة",
+      "customersHelped": "العملاء الذين تمت مساعدتهم",
+      "recentConversations": "المحادثات الأخيرة",
+      "noRecentConversations": "لا توجد محادثات حديثة"
+    },
+    "bookings": {
+      "title": "إدارة الحجوزات",
+      "subtitle": "إنشاء وتعديل حجوزات العملاء",
+      "selectBranch": "اختر الفرع",
+      "selectBranchDesc": "اختر فرعاً لعرض وإدارة حجوزاته"
+    },
+    "customers": {
+      "title": "العملاء",
+      "subtitle": "عرض ملفات العملاء وسجل الحجوزات",
+      "searchPlaceholder": "البحث بالهاتف أو الاسم...",
+      "searchHint": "أدخل 3 أحرف على الأقل للبحث",
+      "selectCustomer": "اختر عميلاً",
+      "selectCustomerDesc": "ابحث واختر عميلاً لعرض تفاصيله",
+      "noCustomersFound": "لم يتم العثور على عملاء",
+      "bookingHistory": "سجل الحجوزات",
+      "noBookings": "لا توجد حجوزات لهذا العميل",
+      "createBooking": "إنشاء حجز"
+    },
+    "conversations": {
+      "title": "محادثات واتساب",
+      "subtitle": "عرض وإدارة محادثات العملاء",
+      "selectConversation": "اختر محادثة",
+      "selectConversationDesc": "اختر محادثة لعرض الرسائل",
+      "createBooking": "إنشاء حجز",
+      "sendMessage": "إرسال",
+      "typeMessage": "اكتب رسالة...",
+      "sending": "جاري الإرسال...",
+      "messageSent": "تم إرسال الرسالة",
+      "sendFailed": "فشل إرسال الرسالة",
+      "agentTakeover": "استحواذ الوكيل",
+      "releaseToAI": "إرجاع للذكاء الاصطناعي",
+      "releaseToAIDesc": "إرجاع هذه المحادثة لبوت الذكاء الاصطناعي",
+      "takeover": "استلام المحادثة",
+      "takeoverDesc": "تولي السيطرة على هذه المحادثة",
+      "sentByAgent": "وكيل",
+      "composerHint": "اضغط Ctrl+Enter للإرسال",
+      "conversationReleased": "تم إرجاع المحادثة للذكاء الاصطناعي"
     }
   },
   "countries": {

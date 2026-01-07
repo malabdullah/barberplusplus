@@ -65,7 +65,64 @@
     "saveChanges": "Save Changes",
     "reset": "Reset",
     "saving": "Saving...",
-    "changesSaved": "Changes saved successfully"
+    "changesSaved": "Changes saved successfully",
+    "agent": "Agent"
+  },
+  "agent": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "bookings": "Bookings",
+      "customers": "Customers",
+      "conversations": "Conversations",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Agent Dashboard",
+      "subtitle": "WhatsApp customer support overview",
+      "bookingsCreatedToday": "Bookings Created Today",
+      "activeConversations": "Active Conversations",
+      "customersHelped": "Customers Helped",
+      "recentConversations": "Recent Conversations",
+      "noRecentConversations": "No recent conversations"
+    },
+    "bookings": {
+      "title": "Manage Bookings",
+      "subtitle": "Create and edit bookings for customers",
+      "selectBranch": "Select a Branch",
+      "selectBranchDesc": "Choose a branch to view and manage its bookings"
+    },
+    "customers": {
+      "title": "Customers",
+      "subtitle": "View customer profiles and booking history",
+      "searchPlaceholder": "Search by phone or name...",
+      "searchHint": "Enter at least 3 characters to search",
+      "selectCustomer": "Select a Customer",
+      "selectCustomerDesc": "Search and select a customer to view their details",
+      "noCustomersFound": "No customers found",
+      "bookingHistory": "Booking History",
+      "noBookings": "No bookings found for this customer",
+      "createBooking": "Create Booking"
+    },
+    "conversations": {
+      "title": "WhatsApp Conversations",
+      "subtitle": "View and manage customer conversations",
+      "selectConversation": "Select a Conversation",
+      "selectConversationDesc": "Choose a conversation to view messages",
+      "createBooking": "Create Booking",
+      "sendMessage": "Send",
+      "typeMessage": "Type a message...",
+      "sending": "Sending...",
+      "messageSent": "Message sent",
+      "sendFailed": "Failed to send message",
+      "agentTakeover": "Agent Takeover",
+      "releaseToAI": "Release to AI",
+      "releaseToAIDesc": "Return this conversation to the AI bot",
+      "takeover": "Take Over",
+      "takeoverDesc": "Take control of this conversation",
+      "sentByAgent": "Agent",
+      "composerHint": "Press Ctrl+Enter to send",
+      "conversationReleased": "Conversation released to AI"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1059,6 +1116,12 @@
       "deleteMessage": "Delete Message",
       "deleteMessageTitle": "Delete Message",
       "deleteMessageConfirm": "Are you sure you want to delete this message? This action cannot be undone.",
+      "filterPhone": "Phone Number",
+      "selectAll": "Select All",
+      "selectedCount": "{{count}} selected",
+      "deleteSelected": "Delete Selected",
+      "deleteSelectedTitle": "Delete Selected Messages",
+      "deleteSelectedConfirm": "Are you sure you want to delete {{count}} message(s)? This action cannot be undone.",
       "messageId": "WhatsApp Message ID",
       "messageType": "Message Type",
       "phone": "Phone",

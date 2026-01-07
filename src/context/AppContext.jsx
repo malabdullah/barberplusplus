@@ -1364,6 +1364,9 @@ export function AppProvider({ children }) {
   // Admin check
   const isAdmin = useMemo(() => userRole === 'admin', [userRole]);
 
+  // Agent check
+  const isAgent = useMemo(() => userRole === 'agent', [userRole]);
+
   // Barber-specific data - use fetched profile (not raw auth user)
   const currentBarber = userRole === 'barber' ? barberProfile : null;
   const barberBookings = useMemo(() => {
@@ -1419,6 +1422,7 @@ export function AppProvider({ children }) {
     user,
     userRole,
     isAdmin,
+    isAgent,
     manager,
     branches,
     barbers,
