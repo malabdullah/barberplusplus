@@ -310,6 +310,7 @@ export default function AgentBookings() {
           onCancel={() => setIsFormOpen(false)}
           barbers={barbers}
           services={services}
+          existingBookings={bookings}
           branchId={selectedBranchId}
         />
       </Modal>
@@ -327,6 +328,7 @@ export default function AgentBookings() {
             onCancel={() => setEditingBooking(null)}
             barbers={barbers}
             services={services}
+            existingBookings={bookings}
             branchId={selectedBranchId}
           />
         )}

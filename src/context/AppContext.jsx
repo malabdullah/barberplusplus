@@ -10,6 +10,7 @@ import {
   notificationsService,
   notificationPreferencesService,
 } from '../services';
+import { agentService } from '../services/agent.service';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts, checkExtensionConflicts } from '../utils/bookingConflicts';
 import { validateUserRole } from '../utils/security';
@@ -342,8 +343,13 @@ export function AppProvider({ children }) {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [branchesData, barbersData, servicesData, bookingsData] = await Promise.all([
-          branchesService.getAll(),
+        // Agents use agentService.getAllBranches() which fetches all active branches
+        // Other roles use branchesService which has RLS policies
+        const branchesData = userRole === 'agent'
+          ? await agentService.getAllBranches()
+          : await branchesService.getAll();
+
+        const [barbersData, servicesData, bookingsData] = await Promise.all([
           barbersService.getAll(),
           servicesService.getAll(),
           bookingsService.getAll(),
@@ -362,11 +368,11 @@ export function AppProvider({ children }) {
       }
     };
 
-    if (isAuthenticated) {
+    // Wait for both authentication AND role to be determined before loading data
+    if (isAuthenticated && userRole) {
       loadData();
     }
-    // Don't set loading=false here - auth initialization handles it
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userRole]);
 
   // Load barber profile when user is a barber
   useEffect(() => {
