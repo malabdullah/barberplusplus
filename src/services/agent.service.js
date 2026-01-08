@@ -668,7 +668,7 @@ export const agentService = {
           branches:branch_id (name),
           barbers:barber_id (name)
         `)
-        .eq('customer_phone', phone)
+        .eq('customer_phone', phoneOrId)
         .order('date', { ascending: false })
         .order('time', { ascending: false })
         .limit(50);
