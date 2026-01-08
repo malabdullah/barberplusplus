@@ -49,6 +49,8 @@ import WhatsAppLogs from './pages/admin/WhatsAppLogs';
 import AgentLayout from './components/Layout/AgentLayout';
 import AgentDashboard from './pages/agent/AgentDashboard';
 import AgentBookings from './pages/agent/AgentBookings';
+import AgentNewBooking from './pages/agent/AgentNewBooking';
+import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import AgentConversations from './pages/agent/AgentConversations';
 
@@ -231,6 +233,8 @@ function AppRoutes() {
       >
         <Route index element={<AgentDashboard />} />
         <Route path="bookings" element={<AgentBookings />} />
+        <Route path="bookings/new" element={<AgentNewBooking />} />
+        <Route path="bookings/:id/edit" element={<AgentEditBooking />} />
         <Route path="customers" element={<AgentCustomers />} />
         <Route path="conversations" element={<AgentConversations />} />
         <Route path="notifications" element={<Notifications />} />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Plus,
@@ -15,8 +16,6 @@ import { format, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import { agentService } from '../../services/agent.service';
-import Modal from '../../components/UI/Modal';
-import BookingForm from '../../components/Forms/BookingForm';
 import './AgentPages.css';
 
 // Status badge component
@@ -38,12 +37,12 @@ const StatusBadge = ({ status, t }) => {
 
 export default function AgentBookings() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
-  const { branches, selectedBranchId, setSelectedBranchId, user } = useApp();
+  const { selectedBranchId } = useApp();
 
   const [bookings, setBookings] = useState([]);
   const [barbers, setBarbers] = useState([]);
-  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filter state
@@ -51,10 +50,6 @@ export default function AgentBookings() {
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
-  // Modal state
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingBooking, setEditingBooking] = useState(null);
 
   // Load bookings and branch data
   useEffect(() => {
@@ -65,14 +60,12 @@ export default function AgentBookings() {
       }
       setLoading(true);
       try {
-        const [bookingsData, barbersData, servicesData] = await Promise.all([
+        const [bookingsData, barbersData] = await Promise.all([
           agentService.getBookings({ branchId: selectedBranchId }),
           agentService.getBarbers(selectedBranchId),
-          agentService.getServices(selectedBranchId),
         ]);
         setBookings(bookingsData.bookings || bookingsData);
         setBarbers(barbersData);
-        setServices(servicesData);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -100,39 +93,6 @@ export default function AgentBookings() {
     });
   }, [bookings, searchQuery, statusFilter, dateFilter]);
 
-  // Handle booking create
-  const handleCreateBooking = async (bookingData) => {
-    try {
-      const newBooking = await agentService.createBooking({
-        ...bookingData,
-        branchId: selectedBranchId,
-        agentUserId: user?.id,
-      });
-      setBookings((prev) => [newBooking, ...prev]);
-      setIsFormOpen(false);
-    } catch (error) {
-      console.error('Error creating booking:', error);
-    }
-  };
-
-  // Handle booking update
-  const handleUpdateBooking = async (bookingData) => {
-    if (!editingBooking) return;
-    try {
-      const updated = await agentService.updateBooking(
-        editingBooking.id,
-        bookingData,
-        user?.id
-      );
-      setBookings((prev) =>
-        prev.map((b) => (b.id === editingBooking.id ? updated : b))
-      );
-      setEditingBooking(null);
-    } catch (error) {
-      console.error('Error updating booking:', error);
-    }
-  };
-
   // Clear filters
   const clearFilters = () => {
     setSearchQuery('');
@@ -154,6 +114,16 @@ export default function AgentBookings() {
     }
   };
 
+  // Navigate to new booking page
+  const handleNewBooking = () => {
+    navigate('/agent/bookings/new');
+  };
+
+  // Navigate to edit booking page
+  const handleEditBooking = (bookingId) => {
+    navigate(`/agent/bookings/${bookingId}/edit`);
+  };
+
   return (
     <div className="agent-bookings">
       {/* Page Header */}
@@ -173,7 +143,7 @@ export default function AgentBookings() {
           </button>
           <button
             className="btn btn-primary"
-            onClick={() => setIsFormOpen(true)}
+            onClick={handleNewBooking}
             disabled={!selectedBranchId}
           >
             <Plus size={18} />
@@ -264,7 +234,7 @@ export default function AgentBookings() {
                 <div
                   key={booking.id}
                   className="agent-booking-card"
-                  onClick={() => setEditingBooking(booking)}
+                  onClick={() => handleEditBooking(booking.id)}
                 >
                   <div className="agent-booking-header">
                     <div className="agent-booking-customer">
@@ -298,41 +268,6 @@ export default function AgentBookings() {
           </div>
         </>
       )}
-
-      {/* New Booking Modal */}
-      <Modal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        title={t('bookings.newBooking')}
-      >
-        <BookingForm
-          onSubmit={handleCreateBooking}
-          onCancel={() => setIsFormOpen(false)}
-          barbers={barbers}
-          services={services}
-          existingBookings={bookings}
-          branchId={selectedBranchId}
-        />
-      </Modal>
-
-      {/* Edit Booking Modal */}
-      <Modal
-        isOpen={!!editingBooking}
-        onClose={() => setEditingBooking(null)}
-        title={t('bookings.editBooking')}
-      >
-        {editingBooking && (
-          <BookingForm
-            booking={editingBooking}
-            onSubmit={handleUpdateBooking}
-            onCancel={() => setEditingBooking(null)}
-            barbers={barbers}
-            services={services}
-            existingBookings={bookings}
-            branchId={selectedBranchId}
-          />
-        )}
-      </Modal>
     </div>
   );
 }

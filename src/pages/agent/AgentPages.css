@@ -1446,3 +1446,98 @@
   color: var(--text-tertiary);
   max-width: 300px;
 }
+
+/* ================================== */
+/* New/Edit Booking Page */
+/* ================================== */
+
+.agent-new-booking-page {
+  min-height: calc(100vh - var(--topbar-height));
+  padding: var(--space-lg);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.agent-new-booking-page .agent-page-header {
+  padding: 0;
+  margin-bottom: var(--space-xl);
+}
+
+.agent-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.agent-page-header-left .btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.agent-page-header-left .btn-ghost:hover {
+  background: var(--bg-elevated);
+  border-color: rgba(212, 168, 83, 0.2);
+  color: var(--text-primary);
+}
+
+.agent-booking-form-container {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(212, 168, 83, 0.08);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Error State */
+.agent-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xl);
+  margin: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.agent-error-state svg {
+  margin-bottom: var(--space-md);
+  color: #ef4444;
+  opacity: 0.6;
+}
+
+.agent-error-state h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+/* Responsive - New Booking Page */
+@media (max-width: 768px) {
+  .agent-new-booking-page {
+    padding: var(--space-md);
+  }
+
+  .agent-page-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .agent-booking-form-container {
+    padding: var(--space-lg);
+  }
+}
