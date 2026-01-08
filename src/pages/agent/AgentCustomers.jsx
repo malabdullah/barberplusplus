@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   User,
@@ -14,6 +14,7 @@ import {
   Trash2,
   Mail,
   Tag,
+  X,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
@@ -45,6 +46,7 @@ export default function AgentCustomers() {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const { user, branches } = useApp();
+  const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -60,6 +62,10 @@ export default function AgentCustomers() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+
+  // Booking management states
+  const [showCancelBookingConfirm, setShowCancelBookingConfirm] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
 
   // Load all barbers for preferred barber selector
   const [allBarbers, setAllBarbers] = useState([]);
@@ -194,6 +200,34 @@ export default function AgentCustomers() {
       setCustomerToDelete(null);
     } catch (error) {
       console.error('Error deleting customer:', error);
+      alert(t('common.error'));
+    }
+  };
+
+  // Edit booking - navigate to edit page
+  const handleEditBooking = (booking) => {
+    navigate(`/agent/bookings/${booking.id}/edit`);
+  };
+
+  // Cancel booking - show confirmation
+  const handleCancelBooking = (booking) => {
+    setBookingToCancel(booking);
+    setShowCancelBookingConfirm(true);
+  };
+
+  // Confirm cancel booking
+  const handleConfirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
+    try {
+      await agentService.updateBooking(bookingToCancel.id, { status: 'cancelled' }, user?.id);
+      // Update booking in list
+      setCustomerBookings(prev => prev.map(b =>
+        b.id === bookingToCancel.id ? { ...b, status: 'cancelled' } : b
+      ));
+      setShowCancelBookingConfirm(false);
+      setBookingToCancel(null);
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
       alert(t('common.error'));
     }
   };
@@ -429,6 +463,24 @@ export default function AgentCustomers() {
                             {booking.barber?.name || '—'}
                           </p>
                         </div>
+                        <div className="agent-booking-timeline-actions">
+                          <button
+                            className="agent-booking-action-btn"
+                            onClick={() => handleEditBooking(booking)}
+                            title={t('common.edit')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          {!['cancelled', 'completed', 'no_show'].includes(booking.status) && (
+                            <button
+                              className="agent-booking-action-btn cancel"
+                              onClick={() => handleCancelBooking(booking)}
+                              title={t('common.cancel')}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -480,6 +532,24 @@ export default function AgentCustomers() {
         message={t('agent.customers.deleteConfirmMessage', { name: customerToDelete?.name })}
         confirmText={t('common.delete')}
         cancelText={t('common.cancel')}
+        type="danger"
+      />
+
+      {/* Cancel Booking Confirmation */}
+      <ConfirmDialog
+        isOpen={showCancelBookingConfirm}
+        onClose={() => {
+          setShowCancelBookingConfirm(false);
+          setBookingToCancel(null);
+        }}
+        onConfirm={handleConfirmCancelBooking}
+        title={t('agent.customers.cancelBookingTitle')}
+        message={t('agent.customers.cancelBookingMessage', {
+          date: bookingToCancel ? format(parseISO(bookingToCancel.date), 'dd MMM yyyy', { locale: dateLocale }) : '',
+          time: bookingToCancel?.time || '',
+        })}
+        confirmText={t('common.cancel')}
+        cancelText={t('common.back')}
         type="danger"
       />
     </div>

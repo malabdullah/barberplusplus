@@ -838,6 +838,37 @@
   color: var(--text-tertiary);
 }
 
+.agent-booking-timeline-actions {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: flex-start;
+  padding-top: var(--space-sm);
+}
+
+.agent-booking-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agent-booking-action-btn:hover {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+}
+
+.agent-booking-action-btn.cancel:hover {
+  background: var(--status-error);
+  color: white;
+}
+
 /* ================================== */
 /* Conversations Page - Enhanced Design */
 /* ================================== */

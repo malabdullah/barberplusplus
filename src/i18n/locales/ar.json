@@ -1294,7 +1294,9 @@
         "totalBookings": "إجمالي الحجوزات",
         "lastVisit": "آخر زيارة",
         "memberSince": "عميل منذ"
-      }
+      },
+      "cancelBookingTitle": "إلغاء الحجز؟",
+      "cancelBookingMessage": "هل أنت متأكد من إلغاء الحجز في {{date}} الساعة {{time}}؟"
     },
     "conversations": {
       "title": "محادثات واتساب",

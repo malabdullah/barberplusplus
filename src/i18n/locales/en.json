@@ -142,7 +142,9 @@
         "totalBookings": "Total Bookings",
         "lastVisit": "Last Visit",
         "memberSince": "Member Since"
-      }
+      },
+      "cancelBookingTitle": "Cancel Booking?",
+      "cancelBookingMessage": "Are you sure you want to cancel the booking on {{date}} at {{time}}?"
     },
     "conversations": {
       "title": "WhatsApp Conversations",
