@@ -81,8 +81,8 @@ export default function AgentBookings() {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesName = booking.customer_name?.toLowerCase().includes(query);
-        const matchesPhone = booking.customer_phone?.includes(query);
+        const matchesName = booking.customerName?.toLowerCase().includes(query);
+        const matchesPhone = booking.customerPhone?.includes(query);
         if (!matchesName && !matchesPhone) return false;
       }
       // Status filter
@@ -239,14 +239,14 @@ export default function AgentBookings() {
                   <div className="agent-booking-header">
                     <div className="agent-booking-customer">
                       <User size={16} />
-                      <span>{booking.customer_name}</span>
+                      <span>{booking.customerName}</span>
                     </div>
                     <StatusBadge status={booking.status} t={t} />
                   </div>
                   <div className="agent-booking-details">
                     <div className="agent-booking-detail">
                       <Phone size={14} />
-                      <span>{booking.customer_phone}</span>
+                      <span>{booking.customerPhone}</span>
                     </div>
                     <div className="agent-booking-detail">
                       <Calendar size={14} />
@@ -260,7 +260,7 @@ export default function AgentBookings() {
                     </div>
                   </div>
                   <div className="agent-booking-barber">
-                    {barbers.find((b) => b.id === booking.barber_id)?.name || '—'}
+                    {barbers.find((b) => b.id === booking.barberId)?.name || '—'}
                   </div>
                 </div>
               ))
