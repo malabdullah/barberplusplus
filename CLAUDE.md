@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Barber++ is a barbershop manager dashboard built with React 18 and Vite. It provides role-based interfaces for managers (multi-branch operations) and barbers (personal schedule/bookings). The backend uses Supabase for authentication and PostgreSQL database.
 
+## Supabase Project
+
+- **Project ID**: `pqaidfykknoiqmosfvnb`
+- Use this ID for all Supabase MCP tool calls
+
 ## Commands
 
 ```bash
