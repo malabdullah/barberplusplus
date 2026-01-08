@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   MessageCircle,
   Search,
@@ -58,6 +58,7 @@ const StateBadge = ({ state, t }) => {
 
 export default function AgentConversations() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useApp();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const messagesEndRef = useRef(null);
@@ -240,6 +241,27 @@ export default function AgentConversations() {
     }
   };
 
+  // Handle create booking - navigate with customer data pre-filled
+  const handleCreateBooking = () => {
+    // Extract phone number without country code
+    const phoneNumber = conversationDetails?.phoneNumber || '';
+    const countryCode = conversationDetails?.phoneCountryCode || '';
+    const customerPhone = phoneNumber.startsWith(countryCode)
+      ? phoneNumber.slice(countryCode.length)
+      : phoneNumber;
+
+    navigate('/agent/bookings/new', {
+      state: {
+        customer: {
+          customerName: conversationDetails?.customerName || '',
+          customerPhone: customerPhone,
+          customerCountryCode: countryCode ? `+${countryCode}` : '',
+        },
+        fromConversation: conversationDetails?.id,
+      },
+    });
+  };
+
   // Handle search
   const handleSearch = () => {
     setPage(1);
@@ -400,10 +422,10 @@ export default function AgentConversations() {
                       {t('agent.conversations.takeover')}
                     </button>
                   )}
-                  <Link to="/agent/bookings" className="btn btn-primary">
+                  <button onClick={handleCreateBooking} className="btn btn-primary">
                     <Plus size={16} />
                     {t('agent.conversations.createBooking')}
-                  </Link>
+                  </button>
                 </div>
               </div>
 

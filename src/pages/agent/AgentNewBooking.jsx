@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -10,7 +10,11 @@ import './AgentPages.css';
 export default function AgentNewBooking() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { selectedBranchId, user } = useApp();
+
+  // Get pre-filled customer data from navigation state (e.g., from conversations page)
+  const prefilledCustomer = location.state?.customer || null;
 
   const [barbers, setBarbers] = useState([]);
   const [services, setServices] = useState([]);
@@ -105,6 +109,7 @@ export default function AgentNewBooking() {
           </div>
         ) : (
           <BookingForm
+            booking={prefilledCustomer}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             barbers={barbers}
