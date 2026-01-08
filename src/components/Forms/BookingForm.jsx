@@ -203,7 +203,11 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      const submitData = { ...formData };
+      const submitData = {
+        ...formData,
+        duration: totalDuration,
+        price: totalPrice,
+      };
       // In barber view, ensure barberId is set
       if (!isManagerView && currentBarber) {
         submitData.barberId = currentBarber.id;
