@@ -90,6 +90,48 @@ const serviceToFrontend = (service) => {
   };
 };
 
+// Convert customer to frontend format
+const customerToFrontend = (customer) => {
+  if (!customer) return null;
+  return {
+    id: customer.id,
+    name: customer.name,
+    nameAr: customer.name_ar,
+    countryCode: customer.country_code,
+    phone: customer.phone,
+    email: customer.email,
+    notes: customer.notes,
+    tags: customer.tags || [],
+    preferredBarberId: customer.preferred_barber_id,
+    preferredBranchId: customer.preferred_branch_id,
+    status: customer.status,
+    totalBookings: customer.total_bookings || 0,
+    lastBookingDate: customer.last_booking_date,
+    createdByType: customer.created_by_type,
+    createdByUserId: customer.created_by_user_id,
+    createdAt: customer.created_at,
+    updatedAt: customer.updated_at,
+  };
+};
+
+// Convert customer to database format
+const customerToDatabase = (data) => {
+  const result = {};
+  if (data.name !== undefined) result.name = data.name;
+  if (data.nameAr !== undefined) result.name_ar = data.nameAr;
+  if (data.countryCode !== undefined) result.country_code = data.countryCode;
+  if (data.phone !== undefined) result.phone = data.phone;
+  if (data.email !== undefined) result.email = data.email || null;
+  if (data.notes !== undefined) result.notes = data.notes || null;
+  if (data.tags !== undefined) result.tags = data.tags || [];
+  if (data.preferredBarberId !== undefined) result.preferred_barber_id = data.preferredBarberId || null;
+  if (data.preferredBranchId !== undefined) result.preferred_branch_id = data.preferredBranchId || null;
+  if (data.status !== undefined) result.status = data.status;
+  if (data.createdByType !== undefined) result.created_by_type = data.createdByType;
+  if (data.createdByUserId !== undefined) result.created_by_user_id = data.createdByUserId;
+  return result;
+};
+
 // Convert branch to frontend format
 const branchToFrontend = (branch) => {
   if (!branch) return null;
@@ -361,11 +403,159 @@ export const agentService = {
   },
 
   // ===========================
-  // CUSTOMERS
+  // CUSTOMERS - CRUD Operations
   // ===========================
 
   /**
-   * Search customers by phone number or name (from bookings)
+   * Get all customers with optional filters
+   * @param {object} options - { search, status, page, limit }
+   */
+  getAllCustomers: async ({ search, status, page = 1, limit = 50 } = {}) => {
+    try {
+      let query = supabase
+        .from('customers')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Status filter
+      if (status) {
+        query = query.eq('status', status);
+      } else {
+        // By default, show active customers
+        query = query.eq('status', 'active');
+      }
+
+      // Search filter (name or phone)
+      if (search && search.length >= 2) {
+        const escapedSearch = escapeLikeWildcards(search);
+        query = query.or(`name.ilike.%${escapedSearch}%,phone.ilike.%${escapedSearch}%`);
+      }
+
+      // Pagination
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        customers: (data || []).map(customerToFrontend),
+        total: count || 0,
+        page,
+        limit,
+      };
+    } catch (error) {
+      logErrorDev('Error fetching customers:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single customer by ID
+   * @param {string} customerId
+   */
+  getCustomerById: async (customerId) => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+
+      if (error) throw error;
+      return customerToFrontend(data);
+    } catch (error) {
+      logErrorDev('Error fetching customer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new customer
+   * @param {object} customerData
+   * @param {string} agentUserId
+   */
+  createCustomer: async (customerData, agentUserId) => {
+    try {
+      const dbData = customerToDatabase({
+        ...customerData,
+        createdByType: 'agent',
+        createdByUserId: agentUserId,
+      });
+
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([dbData])
+        .select()
+        .single();
+
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          throw new Error('PHONE_EXISTS');
+        }
+        throw error;
+      }
+      return customerToFrontend(data);
+    } catch (error) {
+      logErrorDev('Error creating customer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update an existing customer
+   * @param {string} customerId
+   * @param {object} customerData
+   */
+  updateCustomer: async (customerId, customerData) => {
+    try {
+      const dbData = customerToDatabase(customerData);
+
+      const { data, error } = await supabase
+        .from('customers')
+        .update(dbData)
+        .eq('id', customerId)
+        .select()
+        .single();
+
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          throw new Error('PHONE_EXISTS');
+        }
+        throw error;
+      }
+      return customerToFrontend(data);
+    } catch (error) {
+      logErrorDev('Error updating customer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a customer (soft delete by setting status to inactive)
+   * @param {string} customerId
+   */
+  deleteCustomer: async (customerId) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ status: 'inactive' })
+        .eq('id', customerId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      logErrorDev('Error deleting customer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Search customers by phone number or name (from customers table)
    * @param {string} query - Search query (min 3 chars)
    */
   searchCustomers: async (query) => {
@@ -376,29 +566,17 @@ export const agentService = {
 
       const escapedQuery = escapeLikeWildcards(query);
 
-      // Search bookings for matching customer details
       const { data, error } = await supabase
-        .from('bookings')
-        .select('customer_name, customer_phone, customer_country_code')
-        .or(`customer_name.ilike.%${escapedQuery}%,customer_phone.ilike.%${escapedQuery}%`)
-        .limit(100);
+        .from('customers')
+        .select('*')
+        .eq('status', 'active')
+        .or(`name.ilike.%${escapedQuery}%,phone.ilike.%${escapedQuery}%`)
+        .order('last_booking_date', { ascending: false, nullsFirst: false })
+        .limit(20);
 
       if (error) throw error;
 
-      // Deduplicate by phone number and aggregate
-      const customerMap = new Map();
-      (data || []).forEach(booking => {
-        const phone = booking.customer_phone;
-        if (!customerMap.has(phone)) {
-          customerMap.set(phone, {
-            name: booking.customer_name,
-            phone: booking.customer_phone,
-            countryCode: booking.customer_country_code,
-          });
-        }
-      });
-
-      return Array.from(customerMap.values()).slice(0, 20); // Max 20 results
+      return (data || []).map(customerToFrontend);
     } catch (error) {
       logErrorDev('Error searching customers:', error);
       throw error;
@@ -406,10 +584,10 @@ export const agentService = {
   },
 
   /**
-   * Get booking history for a customer
-   * @param {string} phone - Customer phone number
+   * Get booking history for a customer (by phone or customer ID)
+   * @param {string} phoneOrId - Customer phone number or customer ID
    */
-  getCustomerBookings: async (phone) => {
+  getCustomerBookings: async (phoneOrId) => {
     try {
       const { data, error } = await supabase
         .from('bookings')

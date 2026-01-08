@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -9,10 +9,19 @@ import {
   Clock,
   ArrowRight,
   RefreshCw,
+  Plus,
+  Edit2,
+  Trash2,
+  Mail,
+  Tag,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { agentService } from '../../services/agent.service';
+import { useApp } from '../../context/AppContext';
+import Modal from '../../components/UI/Modal';
+import ConfirmDialog from '../../components/UI/ConfirmDialog';
+import CustomerForm from '../../components/Forms/CustomerForm';
 import './AgentPages.css';
 
 // Status badge component
@@ -35,6 +44,7 @@ const StatusBadge = ({ status, t }) => {
 export default function AgentCustomers() {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
+  const { user, branches } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -42,21 +52,58 @@ export default function AgentCustomers() {
   const [customerBookings, setCustomerBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [totalCustomers, setTotalCustomers] = useState(0);
 
-  // Search customers
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() || searchQuery.length < 3) return;
+  // Modal states
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Load all barbers for preferred barber selector
+  const [allBarbers, setAllBarbers] = useState([]);
+
+  // Load initial customers on mount
+  useEffect(() => {
+    loadCustomers();
+    loadAllBarbers();
+  }, []);
+
+  // Load customers list
+  const loadCustomers = async (search = '') => {
     setLoading(true);
     try {
-      const results = await agentService.searchCustomers(searchQuery);
-      setCustomers(results);
-      setSelectedCustomer(null);
-      setCustomerBookings([]);
+      const result = await agentService.getAllCustomers({ search, limit: 100 });
+      setCustomers(result.customers);
+      setTotalCustomers(result.total);
     } catch (error) {
-      console.error('Error searching customers:', error);
+      console.error('Error loading customers:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Load all barbers from all branches
+  const loadAllBarbers = async () => {
+    try {
+      const barbersList = [];
+      for (const branch of branches) {
+        const branchBarbers = await agentService.getBarbers(branch.id);
+        barbersList.push(...branchBarbers.map(b => ({ ...b, branchId: branch.id })));
+      }
+      setAllBarbers(barbersList);
+    } catch (error) {
+      console.error('Error loading barbers:', error);
+    }
+  };
+
+  // Search customers
+  const handleSearch = useCallback(async () => {
+    if (searchQuery.trim().length < 2 && searchQuery.trim().length > 0) return;
+    loadCustomers(searchQuery.trim());
+    setSelectedCustomer(null);
+    setCustomerBookings([]);
   }, [searchQuery]);
 
   // Handle search on enter
@@ -81,6 +128,76 @@ export default function AgentCustomers() {
     }
   };
 
+  // Open modal for adding new customer
+  const handleAddCustomer = () => {
+    setEditingCustomer(null);
+    setShowCustomerModal(true);
+  };
+
+  // Open modal for editing customer
+  const handleEditCustomer = (customer, e) => {
+    e?.stopPropagation();
+    setEditingCustomer(customer);
+    setShowCustomerModal(true);
+  };
+
+  // Open delete confirmation
+  const handleDeleteCustomer = (customer, e) => {
+    e?.stopPropagation();
+    setCustomerToDelete(customer);
+    setShowDeleteConfirm(true);
+  };
+
+  // Submit customer form
+  const handleCustomerSubmit = async (formData) => {
+    setFormLoading(true);
+    try {
+      if (editingCustomer) {
+        // Update existing customer
+        const updated = await agentService.updateCustomer(editingCustomer.id, formData);
+        setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+        if (selectedCustomer?.id === updated.id) {
+          setSelectedCustomer(updated);
+        }
+      } else {
+        // Create new customer
+        const created = await agentService.createCustomer(formData, user?.id);
+        setCustomers(prev => [created, ...prev]);
+        setTotalCustomers(prev => prev + 1);
+      }
+      setShowCustomerModal(false);
+      setEditingCustomer(null);
+    } catch (error) {
+      if (error.message === 'PHONE_EXISTS') {
+        alert(t('agent.customers.validation.phoneExists'));
+      } else {
+        console.error('Error saving customer:', error);
+        alert(t('common.error'));
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+    try {
+      await agentService.deleteCustomer(customerToDelete.id);
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      setTotalCustomers(prev => prev - 1);
+      if (selectedCustomer?.id === customerToDelete.id) {
+        setSelectedCustomer(null);
+        setCustomerBookings([]);
+      }
+      setShowDeleteConfirm(false);
+      setCustomerToDelete(null);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      alert(t('common.error'));
+    }
+  };
+
   return (
     <div className="agent-customers">
       {/* Page Header */}
@@ -89,6 +206,10 @@ export default function AgentCustomers() {
           <h1 className="agent-page-title">{t('agent.customers.title')}</h1>
           <p className="agent-page-description">{t('agent.customers.subtitle')}</p>
         </div>
+        <button className="btn btn-primary" onClick={handleAddCustomer}>
+          <Plus size={18} />
+          {t('agent.customers.addCustomer')}
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -106,27 +227,35 @@ export default function AgentCustomers() {
           <button
             className="btn btn-primary"
             onClick={handleSearch}
-            disabled={loading || searchQuery.length < 3}
+            disabled={loading}
           >
             {loading ? <RefreshCw size={16} className="spin" /> : t('common.search')}
           </button>
         </div>
-        <p className="agent-search-hint">{t('agent.customers.searchHint')}</p>
+        <p className="agent-search-hint">
+          {totalCustomers > 0
+            ? t('agent.customers.totalCount', { count: totalCustomers })
+            : t('agent.customers.searchHint')}
+        </p>
       </div>
 
       <div className="agent-customers-layout">
         {/* Customers List */}
         <div className="agent-customers-list">
-          {customers.length === 0 ? (
+          {loading ? (
+            <div className="agent-loading">
+              <RefreshCw size={24} className="spin" />
+            </div>
+          ) : customers.length === 0 ? (
             <div className="agent-empty-state small">
               <User size={32} />
               <p>{t('agent.customers.noCustomersFound')}</p>
             </div>
           ) : (
-            customers.map((customer, index) => (
+            customers.map((customer) => (
               <div
-                key={`${customer.phone}-${index}`}
-                className={`agent-customer-card ${selectedCustomer?.phone === customer.phone ? 'selected' : ''}`}
+                key={customer.id}
+                className={`agent-customer-card ${selectedCustomer?.id === customer.id ? 'selected' : ''}`}
                 onClick={() => loadCustomerBookings(customer)}
               >
                 <div className="agent-customer-avatar">
@@ -138,6 +267,32 @@ export default function AgentCustomers() {
                     <Phone size={12} />
                     {customer.countryCode} {customer.phone}
                   </span>
+                  {customer.tags?.length > 0 && (
+                    <div className="agent-customer-tags">
+                      {customer.tags.slice(0, 2).map((tag, idx) => (
+                        <span key={idx} className="agent-customer-tag">{tag}</span>
+                      ))}
+                      {customer.tags.length > 2 && (
+                        <span className="agent-customer-tag more">+{customer.tags.length - 2}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="agent-customer-actions">
+                  <button
+                    className="agent-customer-action-btn"
+                    onClick={(e) => handleEditCustomer(customer, e)}
+                    title={t('common.edit')}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    className="agent-customer-action-btn delete"
+                    onClick={(e) => handleDeleteCustomer(customer, e)}
+                    title={t('common.delete')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
                 <ArrowRight size={16} className="agent-customer-arrow" />
               </div>
@@ -155,15 +310,86 @@ export default function AgentCustomers() {
                 </div>
                 <div className="agent-customer-header-info">
                   <h2>{selectedCustomer.name}</h2>
+                  {selectedCustomer.nameAr && (
+                    <p className="agent-customer-name-ar" dir="rtl">{selectedCustomer.nameAr}</p>
+                  )}
                   <p>
                     <Phone size={14} />
                     {selectedCustomer.countryCode} {selectedCustomer.phone}
                   </p>
+                  {selectedCustomer.email && (
+                    <p>
+                      <Mail size={14} />
+                      {selectedCustomer.email}
+                    </p>
+                  )}
                 </div>
-                <Link to="/agent/bookings" className="btn btn-primary">
-                  {t('agent.customers.createBooking')}
-                </Link>
+                <div className="agent-customer-header-actions">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={(e) => handleEditCustomer(selectedCustomer, e)}
+                  >
+                    <Edit2 size={16} />
+                    {t('common.edit')}
+                  </button>
+                  <Link
+                    to="/agent/bookings/new"
+                    state={{
+                      customerName: selectedCustomer.name,
+                      customerCountryCode: selectedCustomer.countryCode,
+                      customerPhone: selectedCustomer.phone,
+                    }}
+                    className="btn btn-primary"
+                  >
+                    {t('agent.customers.createBooking')}
+                  </Link>
+                </div>
               </div>
+
+              {/* Customer Stats */}
+              <div className="agent-customer-stats">
+                <div className="agent-customer-stat">
+                  <span className="stat-label">{t('agent.customers.stats.totalBookings')}</span>
+                  <span className="stat-value">{selectedCustomer.totalBookings || 0}</span>
+                </div>
+                <div className="agent-customer-stat">
+                  <span className="stat-label">{t('agent.customers.stats.lastVisit')}</span>
+                  <span className="stat-value">
+                    {selectedCustomer.lastBookingDate
+                      ? format(parseISO(selectedCustomer.lastBookingDate), 'dd MMM yyyy', { locale: dateLocale })
+                      : '—'}
+                  </span>
+                </div>
+                <div className="agent-customer-stat">
+                  <span className="stat-label">{t('agent.customers.stats.memberSince')}</span>
+                  <span className="stat-value">
+                    {format(parseISO(selectedCustomer.createdAt), 'dd MMM yyyy', { locale: dateLocale })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedCustomer.tags?.length > 0 && (
+                <div className="agent-customer-tags-section">
+                  <h4>
+                    <Tag size={16} />
+                    {t('agent.customers.form.tags')}
+                  </h4>
+                  <div className="agent-customer-tags large">
+                    {selectedCustomer.tags.map((tag, idx) => (
+                      <span key={idx} className="agent-customer-tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedCustomer.notes && (
+                <div className="agent-customer-notes-section">
+                  <h4>{t('agent.customers.form.notes')}</h4>
+                  <p>{selectedCustomer.notes}</p>
+                </div>
+              )}
 
               <div className="agent-customer-bookings">
                 <h3>{t('agent.customers.bookingHistory')}</h3>
@@ -218,6 +444,44 @@ export default function AgentCustomers() {
           )}
         </div>
       </div>
+
+      {/* Customer Form Modal */}
+      <Modal
+        isOpen={showCustomerModal}
+        onClose={() => {
+          setShowCustomerModal(false);
+          setEditingCustomer(null);
+        }}
+        title={editingCustomer ? t('agent.customers.editCustomer') : t('agent.customers.addCustomer')}
+        size="medium"
+      >
+        <CustomerForm
+          customer={editingCustomer}
+          branches={branches}
+          barbers={allBarbers}
+          onSubmit={handleCustomerSubmit}
+          onCancel={() => {
+            setShowCustomerModal(false);
+            setEditingCustomer(null);
+          }}
+          loading={formLoading}
+        />
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setCustomerToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title={t('agent.customers.deleteConfirmTitle')}
+        message={t('agent.customers.deleteConfirmMessage', { name: customerToDelete?.name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        type="danger"
+      />
     </div>
   );
 }
