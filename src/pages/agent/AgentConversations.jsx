@@ -244,10 +244,12 @@ export default function AgentConversations() {
   // Handle create booking - navigate with customer data pre-filled
   const handleCreateBooking = () => {
     // Extract phone number without country code
+    // Note: phoneCountryCode from DB already includes "+" (e.g., "+965")
     const phoneNumber = conversationDetails?.phoneNumber || '';
     const countryCode = conversationDetails?.phoneCountryCode || '';
-    const customerPhone = phoneNumber.startsWith(countryCode)
-      ? phoneNumber.slice(countryCode.length)
+    const countryCodeDigits = countryCode.replace('+', '');
+    const customerPhone = phoneNumber.startsWith(countryCodeDigits)
+      ? phoneNumber.slice(countryCodeDigits.length)
       : phoneNumber;
 
     navigate('/agent/bookings/new', {
@@ -255,7 +257,7 @@ export default function AgentConversations() {
         customer: {
           customerName: conversationDetails?.customerName || '',
           customerPhone: customerPhone,
-          customerCountryCode: countryCode ? `+${countryCode}` : '',
+          customerCountryCode: countryCode,  // Already has "+" from DB
         },
         fromConversation: conversationDetails?.id,
       },
