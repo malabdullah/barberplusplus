@@ -119,12 +119,12 @@ export default function AgentCustomers() {
     }
   };
 
-  // Load customer bookings
+  // Load customer bookings by customer ID
   const loadCustomerBookings = async (customer) => {
     setSelectedCustomer(customer);
     setLoadingBookings(true);
     try {
-      const bookings = await agentService.getCustomerBookings(customer.phone);
+      const bookings = await agentService.getCustomerBookings(customer.id);
       setCustomerBookings(bookings);
     } catch (error) {
       console.error('Error loading customer bookings:', error);

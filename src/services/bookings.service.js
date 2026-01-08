@@ -2,16 +2,27 @@ import { supabase } from '../lib/supabase';
 import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
 
 // Convert snake_case DB columns to camelCase for frontend
+// Customer data comes from joined customers table
 const toFrontend = (booking) => {
   if (!booking) return null;
+  const customer = booking.customer || {};
   return {
     id: booking.id,
     branchId: booking.branch_id,
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
-    customerName: booking.customer_name,
-    customerCountryCode: booking.customer_country_code,
-    customerPhone: booking.customer_phone,
+    customerId: booking.customer_id,
+    // Customer data from joined customers table
+    customer: customer.id ? {
+      id: customer.id,
+      name: customer.name,
+      countryCode: customer.country_code,
+      phone: customer.phone,
+    } : null,
+    // Backward compatibility - flatten customer fields
+    customerName: customer.name || null,
+    customerCountryCode: customer.country_code || null,
+    customerPhone: customer.phone || null,
     date: booking.date,
     time: booking.time,
     duration: booking.duration,
@@ -28,14 +39,14 @@ const toFrontend = (booking) => {
 };
 
 // Convert camelCase frontend data to snake_case for DB
+// Customer fields removed - use customer_id only
 const toDatabase = (data) => {
   const result = {};
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.barberId !== undefined) result.barber_id = data.barberId;
   if (data.serviceIds !== undefined) result.service_ids = data.serviceIds;
-  if (data.customerName !== undefined) result.customer_name = data.customerName;
-  if (data.customerCountryCode !== undefined) result.customer_country_code = data.customerCountryCode;
-  if (data.customerPhone !== undefined) result.customer_phone = data.customerPhone;
+  if (data.customerId !== undefined) result.customer_id = data.customerId;
+  // Customer name/phone/countryCode removed - stored in customers table only
   if (data.date !== undefined) result.date = data.date;
   if (data.time !== undefined) result.time = data.time;
   if (data.duration !== undefined) result.duration = data.duration;
@@ -56,7 +67,8 @@ export const bookingsService = {
    * @returns {Promise<Array>}
    */
   getAll: async (filters = {}) => {
-    let query = supabase.from('bookings').select('*');
+    // Join customers table to get customer details
+    let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone)');
     if (filters.branchId) query = query.eq('branch_id', filters.branchId);
     if (filters.barberId) query = query.eq('barber_id', filters.barberId);
     if (filters.date) query = query.eq('date', filters.date);
@@ -74,7 +86,7 @@ export const bookingsService = {
   getById: async (id) => {
     const { data, error } = await supabase
       .from('bookings')
-      .select('*')
+      .select('*, customer:customers(id, name, country_code, phone)')
       .eq('id', id)
       .single();
     if (error) throw error;
@@ -144,7 +156,7 @@ export const bookingsService = {
   getByDateRange: async (startDate, endDate, branchId = null) => {
     let query = supabase
       .from('bookings')
-      .select('*')
+      .select('*, customer:customers(id, name, country_code, phone)')
       .gte('date', startDate)
       .lte('date', endDate);
     if (branchId) query = query.eq('branch_id', branchId);

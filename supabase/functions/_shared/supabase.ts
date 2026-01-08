@@ -216,16 +216,19 @@ export async function updateMessageWhatsAppId(
 
 /**
  * Get pending reminders that need to be sent
+ * Customer data is fetched via join on customers table
  */
 export async function getPendingReminders(): Promise<Array<{
   id: string;
   booking_id: string;
   booking: {
-    customer_name: string;
-    customer_phone: string;
-    customer_country_code: string;
     date: string;
     time: string;
+    customer: {
+      name: string;
+      phone: string;
+      country_code: string;
+    };
     branch: { name: string; name_ar: string };
     barber: { name: string; name_ar: string };
   };
@@ -238,11 +241,9 @@ export async function getPendingReminders(): Promise<Array<{
       id,
       booking_id,
       booking:bookings (
-        customer_name,
-        customer_phone,
-        customer_country_code,
         date,
         time,
+        customer:customers (name, phone, country_code),
         branch:branches (name, name_ar),
         barber:barbers (name, name_ar)
       )

@@ -40,13 +40,14 @@ async function getReminderTemplate(): Promise<{
 
 /**
  * Format reminder message for WhatsApp
+ * Customer data comes from joined customers table
  */
 function formatReminderMessage(
   reminder: {
     booking: {
-      customer_name: string;
       date: string;
       time: string;
+      customer: { name: string; phone: string; country_code: string };
       branch: { name: string; name_ar: string };
       barber: { name: string; name_ar: string };
     };
@@ -54,6 +55,7 @@ function formatReminderMessage(
   language: 'en' | 'ar' = 'ar'
 ): string {
   const { booking } = reminder;
+  const customer = booking.customer;
   const branch = booking.branch;
   const barber = booking.barber;
 
@@ -73,11 +75,12 @@ function formatReminderMessage(
   const formattedTime = formatTime(booking.time, language);
   const branchName = language === 'ar' ? (branch.name_ar || branch.name) : branch.name;
   const barberName = language === 'ar' ? (barber.name_ar || barber.name) : barber.name;
+  const customerName = customer?.name || 'Customer';
 
   if (language === 'ar') {
     return `📅 تذكير بالموعد
 
-مرحباً ${booking.customer_name}! هذا تذكير بموعدك:
+مرحباً ${customerName}! هذا تذكير بموعدك:
 
 💈 ${barberName}
 📍 ${branchName}
@@ -89,7 +92,7 @@ function formatReminderMessage(
 
   return `📅 Booking Reminder
 
-Hi ${booking.customer_name}! This is a reminder for your appointment:
+Hi ${customerName}! This is a reminder for your appointment:
 
 💈 ${barberName}
 📍 ${branchName}
@@ -161,10 +164,19 @@ serve(async (req: Request) => {
         }
 
         const booking = reminder.booking;
+        const customer = booking.customer;
 
-        // Format phone number for WhatsApp API
-        const countryCode = booking.customer_country_code || '+965';
-        const phoneNumber = formatPhoneForApi(booking.customer_phone, countryCode);
+        // Skip if customer data is missing
+        if (!customer) {
+          console.error(`Reminder ${reminder.id}: Missing customer data`);
+          await updateReminderStatus(reminder.id, 'failed', 'Missing customer data');
+          failedCount++;
+          continue;
+        }
+
+        // Format phone number for WhatsApp API (customer data from joined customers table)
+        const countryCode = customer.country_code || '+965';
+        const phoneNumber = formatPhoneForApi(customer.phone, countryCode);
 
         // Detect language based on country code
         const language = detectLanguage(countryCode);

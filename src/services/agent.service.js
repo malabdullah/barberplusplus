@@ -7,18 +7,27 @@ import { getToday } from '../utils/dateHelpers';
  * Agents can create/edit bookings for any branch and view customer data
  */
 
-// Convert booking to frontend format
+// Convert booking to frontend format (customer data comes from joined customer object)
 const bookingToFrontend = (booking) => {
   if (!booking) return null;
+  const customer = booking.customer || {};
   return {
     id: booking.id,
     branchId: booking.branch_id,
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
     customerId: booking.customer_id,
-    customerName: booking.customer_name,
-    customerCountryCode: booking.customer_country_code,
-    customerPhone: booking.customer_phone,
+    // Customer data from joined customers table
+    customer: customer.id ? {
+      id: customer.id,
+      name: customer.name,
+      countryCode: customer.country_code,
+      phone: customer.phone,
+    } : null,
+    // Backward compatibility - flatten customer fields
+    customerName: customer.name || null,
+    customerCountryCode: customer.country_code || null,
+    customerPhone: customer.phone || null,
     date: booking.date,
     time: booking.time?.slice(0, 5), // "12:30:00" -> "12:30"
     duration: booking.duration,
@@ -34,16 +43,14 @@ const bookingToFrontend = (booking) => {
   };
 };
 
-// Convert booking to database format
+// Convert booking to database format (customer fields removed - use customer_id only)
 const bookingToDatabase = (data) => {
   const result = {};
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.barberId !== undefined) result.barber_id = data.barberId;
   if (data.serviceIds !== undefined) result.service_ids = data.serviceIds;
   if (data.customerId !== undefined) result.customer_id = data.customerId;
-  if (data.customerName !== undefined) result.customer_name = data.customerName;
-  if (data.customerCountryCode !== undefined) result.customer_country_code = data.customerCountryCode;
-  if (data.customerPhone !== undefined) result.customer_phone = data.customerPhone;
+  // Customer name/phone/countryCode removed - stored in customers table only
   if (data.date !== undefined) result.date = data.date;
   if (data.time !== undefined) result.time = data.time;
   if (data.duration !== undefined) result.duration = data.duration;
@@ -196,16 +203,17 @@ export const agentService = {
 
       if (convError) throw convError;
 
-      // Get unique customers helped by this agent (distinct customer phones from their bookings)
+      // Get unique customers helped by this agent (distinct customer_id from their bookings)
       const { data: customersHelped, error: customersError } = await supabase
         .from('bookings')
-        .select('customer_phone')
+        .select('customer_id')
         .eq('added_by_type', 'whatsapp_agent')
-        .eq('added_by_user_id', agentUserId);
+        .eq('added_by_user_id', agentUserId)
+        .not('customer_id', 'is', null);
 
       if (customersError) throw customersError;
 
-      const uniqueCustomers = new Set(customersHelped?.map(b => b.customer_phone) || []);
+      const uniqueCustomers = new Set(customersHelped?.map(b => b.customer_id) || []);
 
       return {
         bookingsCreatedToday: todayBookings?.length || 0,
@@ -232,9 +240,10 @@ export const agentService = {
    */
   getBookings: async ({ branchId, date, status, search, page = 1, limit = 50 } = {}) => {
     try {
+      // Join customers table to get customer details
       let query = supabase
         .from('bookings')
-        .select('*', { count: 'exact' })
+        .select('*, customer:customers(id, name, country_code, phone)', { count: 'exact' })
         .order('date', { ascending: false })
         .order('time', { ascending: false });
 
@@ -253,10 +262,24 @@ export const agentService = {
         query = query.eq('status', status);
       }
 
-      // Search filter (customer name or phone)
-      if (search) {
+      // Search filter - search via customer relation
+      // Note: Supabase doesn't support filtering on joined tables directly in .or()
+      // So we search customers separately and filter by customer_id
+      if (search && search.length >= 2) {
         const escapedSearch = escapeLikeWildcards(search);
-        query = query.or(`customer_name.ilike.%${escapedSearch}%,customer_phone.ilike.%${escapedSearch}%`);
+        // Get matching customer IDs first
+        const { data: matchingCustomers } = await supabase
+          .from('customers')
+          .select('id')
+          .or(`name.ilike.%${escapedSearch}%,phone.ilike.%${escapedSearch}%`);
+
+        if (matchingCustomers && matchingCustomers.length > 0) {
+          const customerIds = matchingCustomers.map(c => c.id);
+          query = query.in('customer_id', customerIds);
+        } else {
+          // No matching customers, return empty result
+          return { bookings: [], total: 0, page, limit };
+        }
       }
 
       // Pagination
@@ -288,7 +311,7 @@ export const agentService = {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*')
+        .select('*, customer:customers(id, name, country_code, phone)')
         .eq('id', bookingId)
         .single();
 
@@ -676,19 +699,20 @@ export const agentService = {
   },
 
   /**
-   * Get booking history for a customer (by phone or customer ID)
-   * @param {string} phoneOrId - Customer phone number or customer ID
+   * Get booking history for a customer by customer ID
+   * @param {string} customerId - Customer ID (UUID)
    */
-  getCustomerBookings: async (phoneOrId) => {
+  getCustomerBookings: async (customerId) => {
     try {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
           *,
+          customer:customers(id, name, country_code, phone),
           branches:branch_id (name),
           barbers:barber_id (name)
         `)
-        .eq('customer_phone', phoneOrId)
+        .eq('customer_id', customerId)
         .order('date', { ascending: false })
         .order('time', { ascending: false })
         .limit(50);
@@ -719,8 +743,16 @@ export const agentService = {
         branchName: booking.branches?.name,
         barberId: booking.barber_id,
         barber: booking.barbers ? { name: booking.barbers.name } : null,
-        customerName: booking.customer_name,
-        customerPhone: booking.customer_phone,
+        customerId: booking.customer_id,
+        customer: booking.customer ? {
+          id: booking.customer.id,
+          name: booking.customer.name,
+          countryCode: booking.customer.country_code,
+          phone: booking.customer.phone,
+        } : null,
+        // Backward compatibility
+        customerName: booking.customer?.name || null,
+        customerPhone: booking.customer?.phone || null,
         date: booking.date,
         time: booking.time?.slice(0, 5), // "12:30:00" -> "12:30"
         duration: booking.duration,
