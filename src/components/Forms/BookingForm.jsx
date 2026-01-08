@@ -47,6 +47,18 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
   const [dateError, setDateError] = useState(null);
 
+  // Sync form data when booking prop changes (for pre-fill from conversations)
+  useEffect(() => {
+    if (booking) {
+      setFormData(prev => ({
+        ...prev,
+        customerName: booking.customerName || prev.customerName,
+        customerCountryCode: booking.customerCountryCode || prev.customerCountryCode,
+        customerPhone: booking.customerPhone || prev.customerPhone,
+      }));
+    }
+  }, [booking]);
+
   // Get the currently selected barber
   const selectedBarber = useMemo(() => {
     if (!isManagerView) return currentBarber;
