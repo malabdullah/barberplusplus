@@ -47,7 +47,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
   const [dateError, setDateError] = useState(null);
 
-  // Sync form data when booking prop changes (for pre-fill from conversations)
+  // Sync form data when booking prop changes (for pre-fill and edit mode)
   useEffect(() => {
     if (booking) {
       setFormData(prev => ({
@@ -55,6 +55,12 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         customerName: booking.customerName || prev.customerName,
         customerCountryCode: booking.customerCountryCode || prev.customerCountryCode,
         customerPhone: booking.customerPhone || prev.customerPhone,
+        // Sync booking-specific fields for edit mode
+        barberId: booking.barberId || prev.barberId,
+        serviceIds: booking.serviceIds || prev.serviceIds,
+        date: booking.date || prev.date,
+        time: booking.time || prev.time,
+        notes: booking.notes || prev.notes,
       }));
     }
   }, [booking]);

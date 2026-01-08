@@ -11,7 +11,7 @@ export default function AgentEditBooking() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id: bookingId } = useParams();
-  const { selectedBranchId, user } = useApp();
+  const { user } = useApp();
 
   const [booking, setBooking] = useState(null);
   const [barbers, setBarbers] = useState([]);
@@ -20,44 +20,49 @@ export default function AgentEditBooking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [branchId, setBranchId] = useState(null);
 
   // Load booking and branch data
   useEffect(() => {
     const loadData = async () => {
-      if (!selectedBranchId || !bookingId) {
+      if (!bookingId) {
         setLoading(false);
         return;
       }
       setLoading(true);
       setError(null);
       try {
-        const [bookingsData, barbersData, servicesData] = await Promise.all([
-          agentService.getBookings({ branchId: selectedBranchId }),
-          agentService.getBarbers(selectedBranchId),
-          agentService.getServices(selectedBranchId),
-        ]);
-
-        const bookingsList = bookingsData.bookings || bookingsData;
-        const foundBooking = bookingsList.find(b => b.id === bookingId);
+        // First fetch the booking by ID
+        const foundBooking = await agentService.getBookingById(bookingId);
 
         if (!foundBooking) {
           setError(t('bookings.notFound'));
-        } else {
-          setBooking(foundBooking);
-          setExistingBookings(bookingsList);
+          setLoading(false);
+          return;
         }
 
+        setBooking(foundBooking);
+        setBranchId(foundBooking.branchId);
+
+        // Then load branch-specific data using the booking's branchId
+        const [bookingsData, barbersData, servicesData] = await Promise.all([
+          agentService.getBookings({ branchId: foundBooking.branchId }),
+          agentService.getBarbers(foundBooking.branchId),
+          agentService.getServices(foundBooking.branchId),
+        ]);
+
+        setExistingBookings(bookingsData.bookings || bookingsData);
         setBarbers(barbersData);
         setServices(servicesData);
       } catch (err) {
         console.error('Error loading data:', err);
-        setError(t('common.errorLoading'));
+        setError(t('bookings.notFound'));
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [selectedBranchId, bookingId, t]);
+  }, [bookingId, t]);
 
   // Handle booking update
   const handleSubmit = async (bookingData) => {
@@ -135,7 +140,7 @@ export default function AgentEditBooking() {
           barbers={barbers}
           services={services}
           existingBookings={existingBookings}
-          branchId={selectedBranchId}
+          branchId={branchId}
         />
       </div>
     </div>

@@ -20,7 +20,7 @@ const bookingToFrontend = (booking) => {
     customerCountryCode: booking.customer_country_code,
     customerPhone: booking.customer_phone,
     date: booking.date,
-    time: booking.time,
+    time: booking.time?.slice(0, 5), // "12:30:00" -> "12:30"
     duration: booking.duration,
     price: parseFloat(booking.price),
     status: booking.status,
@@ -276,6 +276,26 @@ export const agentService = {
       };
     } catch (error) {
       logErrorDev('Error fetching bookings:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single booking by ID
+   * @param {string} bookingId - The booking ID
+   */
+  getBookingById: async (bookingId) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single();
+
+      if (error) throw error;
+      return bookingToFrontend(data);
+    } catch (error) {
+      logErrorDev('Error fetching booking:', error);
       throw error;
     }
   },
@@ -702,7 +722,7 @@ export const agentService = {
         customerName: booking.customer_name,
         customerPhone: booking.customer_phone,
         date: booking.date,
-        time: booking.time,
+        time: booking.time?.slice(0, 5), // "12:30:00" -> "12:30"
         duration: booking.duration,
         price: parseFloat(booking.price),
         status: booking.status,
