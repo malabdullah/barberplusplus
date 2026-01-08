@@ -230,6 +230,43 @@
   color: var(--text-tertiary);
 }
 
+/* Branch Dropdown Search */
+.topbar-dropdown-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+}
+
+.topbar-dropdown-search:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.topbar-dropdown-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.topbar-dropdown-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.topbar-dropdown-empty {
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+}
+
 .topbar-dropdown-action {
   color: var(--accent-primary);
   font-size: 0.75rem;

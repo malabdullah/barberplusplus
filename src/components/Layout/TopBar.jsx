@@ -47,6 +47,7 @@ export default function TopBar({
   const navigate = useNavigate();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const [branchSearchQuery, setBranchSearchQuery] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activePreferenceDropdown, setActivePreferenceDropdown] = useState(null);
   const dropdownRef = useRef(null);
@@ -67,11 +68,22 @@ export default function TopBar({
     return visibleNotifications.filter(n => !n.isRead).length;
   }, [visibleNotifications]);
 
+  // Filter branches based on search query
+  const filteredBranches = useMemo(() => {
+    if (!branchSearchQuery.trim()) return branches;
+    const query = branchSearchQuery.toLowerCase();
+    return branches.filter(branch =>
+      branch.name?.toLowerCase().includes(query) ||
+      branch.address?.toLowerCase().includes(query)
+    );
+  }, [branches, branchSearchQuery]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setBranchDropdownOpen(false);
+        setBranchSearchQuery('');
         setNotificationsOpen(false);
         setActivePreferenceDropdown(null);
       }
@@ -92,6 +104,7 @@ export default function TopBar({
   const handleBranchSelect = (branchId) => {
     setSelectedBranchId(branchId);
     setBranchDropdownOpen(false);
+    setBranchSearchQuery('');
   };
 
   const handleNotificationClick = async (notification) => {
@@ -161,24 +174,41 @@ export default function TopBar({
                 <div className="topbar-dropdown-header">
                   <span>{t('branches.switchBranch')}</span>
                 </div>
+                <div className="topbar-dropdown-search">
+                  <Search size={16} strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    placeholder={t('branches.searchBranches')}
+                    value={branchSearchQuery}
+                    onChange={(e) => setBranchSearchQuery(e.target.value)}
+                    className="topbar-dropdown-search-input"
+                    autoFocus
+                  />
+                </div>
                 <div className="topbar-dropdown-list">
-                  {branches.map((branch) => (
-                    <button
-                      key={branch.id}
-                      className={`topbar-dropdown-item ${
-                        branch.id === currentBranch?.id ? 'active' : ''
-                      }`}
-                      onClick={() => handleBranchSelect(branch.id)}
-                    >
-                      <div className="topbar-dropdown-item-info">
-                        <span className="topbar-dropdown-item-name">{branch.name}</span>
-                        <span className="topbar-dropdown-item-address">{branch.address}</span>
-                      </div>
-                      {branch.id === currentBranch?.id && (
-                        <Check size={16} strokeWidth={2} className="topbar-dropdown-check" />
-                      )}
-                    </button>
-                  ))}
+                  {filteredBranches.length === 0 ? (
+                    <div className="topbar-dropdown-empty">
+                      <span>{t('branches.noResults')}</span>
+                    </div>
+                  ) : (
+                    filteredBranches.map((branch) => (
+                      <button
+                        key={branch.id}
+                        className={`topbar-dropdown-item ${
+                          branch.id === currentBranch?.id ? 'active' : ''
+                        }`}
+                        onClick={() => handleBranchSelect(branch.id)}
+                      >
+                        <div className="topbar-dropdown-item-info">
+                          <span className="topbar-dropdown-item-name">{branch.name}</span>
+                          <span className="topbar-dropdown-item-address">{branch.address}</span>
+                        </div>
+                        {branch.id === currentBranch?.id && (
+                          <Check size={16} strokeWidth={2} className="topbar-dropdown-check" />
+                        )}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}

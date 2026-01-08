@@ -279,6 +279,8 @@
     "deleteWarning": "This action cannot be undone. All associated data will be deleted.",
     "selectBranch": "Select Branch",
     "switchBranch": "Switch Branch",
+    "searchBranches": "Search branches...",
+    "noResults": "No branches found",
     "addNewBranch": "Add New Branch",
     "backToBranches": "Back to Branches",
     "branchNotFound": "Branch not found",

@@ -223,6 +223,8 @@
     "deleteWarning": "لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع البيانات المرتبطة.",
     "selectBranch": "اختر الفرع",
     "switchBranch": "تغيير الفرع",
+    "searchBranches": "البحث عن الفروع...",
+    "noResults": "لم يتم العثور على فروع",
     "addNewBranch": "إضافة فرع جديد",
     "backToBranches": "العودة للفروع",
     "branchNotFound": "الفرع غير موجود",
