@@ -134,7 +134,7 @@ export const agentService = {
       const { data: todayBookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('id')
-        .eq('added_by_type', 'agent')
+        .eq('added_by_type', 'whatsapp_agent')
         .eq('added_by_user_id', agentUserId)
         .gte('created_at', `${today}T00:00:00`)
         .lte('created_at', `${today}T23:59:59`);
@@ -156,7 +156,7 @@ export const agentService = {
       const { data: customersHelped, error: customersError } = await supabase
         .from('bookings')
         .select('customer_phone')
-        .eq('added_by_type', 'agent')
+        .eq('added_by_type', 'whatsapp_agent')
         .eq('added_by_user_id', agentUserId);
 
       if (customersError) throw customersError;
@@ -244,7 +244,7 @@ export const agentService = {
     try {
       const dbData = bookingToDatabase({
         ...bookingData,
-        addedByType: 'agent',
+        addedByType: 'whatsapp_agent',
         addedByUserId: bookingData.agentUserId,
       });
 
@@ -272,7 +272,7 @@ export const agentService = {
     try {
       const dbData = bookingToDatabase({
         ...bookingData,
-        modifiedByType: 'agent',
+        modifiedByType: 'whatsapp_agent',
         modifiedByUserId: agentUserId,
       });
 
