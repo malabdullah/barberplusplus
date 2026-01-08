@@ -74,6 +74,7 @@
 .modal-content {
   padding: var(--space-xl);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Confirm Dialog Styles */
