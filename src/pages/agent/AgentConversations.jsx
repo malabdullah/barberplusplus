@@ -368,7 +368,7 @@ export default function AgentConversations() {
                   <div className="agent-conversation-header-top">
                     <h2>
                       <Phone size={18} />
-                      {conversationDetails?.phoneCountryCode && `+${conversationDetails.phoneCountryCode} `}
+                      {conversationDetails?.phoneCountryCode && `${conversationDetails.phoneCountryCode} `}
                       {conversationDetails?.phoneNumber || selectedConversation.phoneNumber}
                     </h2>
                     {conversationDetails && (

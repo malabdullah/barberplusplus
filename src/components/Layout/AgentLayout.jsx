@@ -25,7 +25,7 @@ export default function AgentLayout() {
         <TopBar
           onMenuClick={handleMenuToggle}
           showBranchSelector={true}
-          searchPlaceholderKey="agent.searchCustomers"
+          searchPlaceholderKey="agent.customers.searchPlaceholder"
         />
         <main className="layout-content">
           <Outlet />
