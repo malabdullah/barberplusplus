@@ -15,6 +15,7 @@ const bookingToFrontend = (booking) => {
     branchId: booking.branch_id,
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
+    customerId: booking.customer_id,
     customerName: booking.customer_name,
     customerCountryCode: booking.customer_country_code,
     customerPhone: booking.customer_phone,
@@ -39,6 +40,7 @@ const bookingToDatabase = (data) => {
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.barberId !== undefined) result.barber_id = data.barberId;
   if (data.serviceIds !== undefined) result.service_ids = data.serviceIds;
+  if (data.customerId !== undefined) result.customer_id = data.customerId;
   if (data.customerName !== undefined) result.customer_name = data.customerName;
   if (data.customerCountryCode !== undefined) result.customer_country_code = data.customerCountryCode;
   if (data.customerPhone !== undefined) result.customer_phone = data.customerPhone;
@@ -279,13 +281,83 @@ export const agentService = {
   },
 
   /**
-   * Create a new booking (tracks agent as creator)
+   * Find or create a customer by phone number
+   * @param {string} countryCode - Country code (e.g., '+965')
+   * @param {string} phone - Phone number
+   * @param {string} name - Customer name
+   * @param {string} agentUserId - Agent's user ID for tracking
+   * @returns {object} Customer record
+   */
+  findOrCreateCustomer: async (countryCode, phone, name, agentUserId) => {
+    try {
+      // Try to find existing customer by country_code + phone
+      const { data: existing, error: findError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('country_code', countryCode)
+        .eq('phone', phone)
+        .single();
+
+      if (existing && !findError) {
+        return customerToFrontend(existing);
+      }
+
+      // Customer not found, create new one
+      const { data: created, error: createError } = await supabase
+        .from('customers')
+        .insert([{
+          name,
+          country_code: countryCode,
+          phone,
+          status: 'active',
+          created_by_type: 'agent',
+          created_by_user_id: agentUserId,
+        }])
+        .select()
+        .single();
+
+      if (createError) {
+        // Handle race condition - another request might have created the customer
+        if (createError.code === '23505') {
+          const { data: retry } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('country_code', countryCode)
+            .eq('phone', phone)
+            .single();
+          if (retry) return customerToFrontend(retry);
+        }
+        throw createError;
+      }
+
+      return customerToFrontend(created);
+    } catch (error) {
+      logErrorDev('Error in findOrCreateCustomer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new booking (tracks agent as creator, auto-links customer)
    * @param {object} bookingData
    */
   createBooking: async (bookingData) => {
     try {
+      // Find or create customer first
+      let customerId = null;
+      if (bookingData.customerPhone && bookingData.customerCountryCode) {
+        const customer = await agentService.findOrCreateCustomer(
+          bookingData.customerCountryCode,
+          bookingData.customerPhone,
+          bookingData.customerName,
+          bookingData.agentUserId
+        );
+        customerId = customer?.id;
+      }
+
       const dbData = bookingToDatabase({
         ...bookingData,
+        customerId,
         addedByType: 'whatsapp_agent',
         addedByUserId: bookingData.agentUserId,
       });
