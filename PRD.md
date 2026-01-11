@@ -3,10 +3,10 @@
 | **Document Info** | |
 |-------------------|---|
 | **Product Name** | Barber++ |
-| **Version** | 1.0.0 |
-| **Last Updated** | December 2024 |
+| **Version** | 2.0.0 |
+| **Last Updated** | January 2026 |
 | **Status** | Production |
-| **Platform** | Web Application (React SPA) |
+| **Platform** | Web Application (React SPA) + WhatsApp AI Integration |
 
 ---
 
@@ -16,14 +16,17 @@
 2. [Product Vision & Goals](#2-product-vision--goals)
 3. [User Personas](#3-user-personas)
 4. [Functional Requirements](#4-functional-requirements)
-5. [Barber-Specific Features](#5-barber-specific-features)
-6. [Data Models](#6-data-models)
-7. [UI/UX Specifications](#7-uiux-specifications)
-8. [Technical Architecture](#8-technical-architecture)
-9. [Non-Functional Requirements](#9-non-functional-requirements)
-10. [Routes & Navigation](#10-routes--navigation)
-11. [Business Logic Constants](#11-business-logic-constants)
-12. [Internationalization](#12-internationalization)
+5. [Admin Features](#5-admin-features)
+6. [Agent Features](#6-agent-features)
+7. [WhatsApp AI Integration](#7-whatsapp-ai-integration)
+8. [Barber-Specific Features](#8-barber-specific-features)
+9. [Data Models](#9-data-models)
+10. [UI/UX Specifications](#10-uiux-specifications)
+11. [Technical Architecture](#11-technical-architecture)
+12. [Non-Functional Requirements](#12-non-functional-requirements)
+13. [Routes & Navigation](#13-routes--navigation)
+14. [Business Logic Constants](#14-business-logic-constants)
+15. [Internationalization](#15-internationalization)
 
 ---
 
@@ -31,7 +34,9 @@
 
 ### 1.1 Product Overview
 
-**Barber++** is a comprehensive barbershop management dashboard designed for the GCC region (Kuwait, Saudi Arabia, UAE, Bahrain, Qatar, and Oman). The application provides role-based interfaces for barbershop managers and individual barbers, enabling efficient multi-branch operations, appointment scheduling, staff management, and business analytics.
+**Barber++** is a comprehensive barbershop management dashboard designed for the GCC region (Kuwait, Saudi Arabia, UAE, Bahrain, Qatar, and Oman). The application provides role-based interfaces for barbershop managers, individual barbers, platform administrators, and support agents, enabling efficient multi-branch operations, appointment scheduling, staff management, and business analytics.
+
+Barber++ now includes AI-powered WhatsApp booking integration, enabling customers to book appointments through conversational AI, and comprehensive admin tools for platform-wide management.
 
 ### 1.2 Problem Statement
 
@@ -42,16 +47,22 @@ Barbershop owners and managers face significant challenges in:
 - Tracking revenue and business performance metrics
 - Providing barbers with self-service schedule management
 - Supporting bilingual operations (English/Arabic) with RTL layouts
+- Handling customer booking requests across multiple channels (phone, walk-in, messaging)
+- Platform-wide visibility and compliance for multi-tenant operations
 
 ### 1.3 Solution
 
 Barber++ addresses these challenges through:
-- **Role-based access control** separating manager and barber interfaces
+- **Role-based access control** separating manager, barber, admin, and agent interfaces
 - **Multi-branch architecture** with branch-scoped data filtering
 - **Real-time booking management** with conflict detection
 - **Comprehensive dashboards** with KPIs and analytics
 - **Self-service barber portal** for availability and profile management
 - **Full Arabic support** with RTL layout and localization
+- **WhatsApp AI Agent ("Sulaiman")** for customer self-service booking via conversational AI
+- **Platform administration tools** for multi-tenant management and oversight
+- **Audit and compliance tracking** for enterprise accountability
+- **Customer support agent interface** for handling WhatsApp conversations and booking assistance
 
 ### 1.4 Target Users
 
@@ -59,6 +70,8 @@ Barber++ addresses these challenges through:
 |-----------|-------------|-------------------|
 | **Barbershop Manager** | Owner or manager of one or more barbershop locations | Branch management, staff oversight, booking management, revenue tracking |
 | **Barber** | Individual barber staff member | Personal schedule, availability management, booking status updates |
+| **Platform Admin** | System administrator for the platform | Platform monitoring, user management, system configuration, audit compliance |
+| **Support Agent** | Customer support staff | WhatsApp conversation handling, booking assistance, customer lookup |
 
 ---
 
@@ -158,6 +171,60 @@ To be the premier barbershop management solution for the GCC region, empowering 
 2. Weekly planning: Update availability schedule
 3. Time-off requests: Add recurring or one-time unavailability
 4. Profile updates: Modify services and contact info
+
+### 3.3 Admin Persona
+
+**Profile: Sarah Al-Mansour**
+- **Role**: Platform Administrator
+- **Age**: 30-45
+- **Tech Savvy**: High
+- **Scope**: All barbershops on platform
+
+**Goals:**
+- Monitor platform health and metrics across all barbershops
+- Manage manager and barber accounts (enable/disable)
+- Review audit logs for compliance and accountability
+- Configure system-wide settings and notification templates
+- Oversee WhatsApp AI agent operations
+
+**Pain Points Solved:**
+- Centralized visibility into all platform operations
+- User management without direct database access
+- Compliance and audit trail requirements for enterprise
+- System-wide configuration from a single interface
+
+**Key Workflows:**
+1. Morning check: Review platform metrics, alerts, and system health
+2. User management: Enable/disable accounts, review activity logs
+3. Compliance: Review audit logs, investigate security events
+4. Configuration: Update system settings, notification templates
+5. WhatsApp oversight: Monitor AI agent conversations and performance
+
+### 3.4 Agent Persona
+
+**Profile: Fatima Hassan**
+- **Role**: Customer Support Agent
+- **Age**: 22-35
+- **Tech Savvy**: High
+- **Focus**: WhatsApp customer interactions
+
+**Goals:**
+- Handle customer booking requests via WhatsApp when AI needs assistance
+- Assist customers who can't complete self-service booking
+- Manage bookings on behalf of customers across all branches
+- Track conversation history and customer interactions
+
+**Pain Points Solved:**
+- Quick access to customer booking history from conversation
+- Pre-filled booking forms from conversation context
+- Multi-branch booking capability without branch restrictions
+- Seamless handoff from AI agent to human support
+
+**Key Workflows:**
+1. Monitor conversations: Review incoming WhatsApp messages and AI responses
+2. Create bookings: Book appointments from conversation context with pre-filled data
+3. Customer lookup: Search and view customer history across all branches
+4. Edit bookings: Modify or cancel existing appointments on customer's behalf
 
 ---
 
@@ -671,13 +738,781 @@ For proposed booking:
 
 ---
 
-## 5. Barber-Specific Features
+## 5. Admin Features
 
-### 5.1 Barber Dashboard
+### 5.1 Admin Dashboard
+
+**Route:** `/admin`
+
+#### 5.1.1 KPI Metric Cards
+
+| Metric | Description | Display |
+|--------|-------------|---------|
+| Total Managers | Platform-wide manager count | Count + active status |
+| Total Barbers | All barbers across branches | Count + invite status breakdown |
+| Total Branches | Active branch locations | Count + status indicator |
+| Today's Bookings | Platform-wide today count | Count + status breakdown |
+| Weekly Revenue | Total revenue all branches | Amount + trend indicator |
+
+#### 5.1.2 Dashboard Sections
+
+1. **Platform Metrics Cards**
+   - Overview of key platform statistics
+   - Real-time updates from all branches
+   - Trend indicators vs previous period
+
+2. **Recent Activity Feed**
+   - Latest actions across the platform
+   - User registrations, bookings, changes
+   - Click to view details
+
+3. **Quick Actions**
+   - User Management
+   - Platform Analytics
+   - System Configuration
+   - WhatsApp Hub
+
+4. **System Health Indicators**
+   - API status
+   - WhatsApp webhook status
+   - Database performance
+
+---
+
+### 5.2 User Management
+
+**Routes:** `/admin/users/managers`, `/admin/users/barbers`
+
+#### 5.2.1 Manager List
+
+| Element | Description |
+|---------|-------------|
+| Search Bar | Filter by name, email |
+| Status Filter | Active, Inactive, All |
+| Manager Cards | Profile with branches info |
+| Actions | Enable/Disable, View Details |
+
+**Manager Card Content:**
+- Profile picture or initials
+- Manager name and email
+- Number of branches
+- Account status badge
+- Last activity timestamp
+- Action buttons: View, Enable/Disable
+
+#### 5.2.2 Barber List
+
+| Element | Description |
+|---------|-------------|
+| Search Bar | Filter by name, email |
+| Branch Filter | Filter by branch assignment |
+| Status Filter | Active, Inactive, Pending invite |
+| Barber Cards | Profile with branch info |
+
+**Barber Card Content:**
+- Profile picture or initials
+- Barber name and email
+- Assigned branch name
+- Invite status badge
+- Last activity timestamp
+- Action: View Profile
+
+---
+
+### 5.3 Platform Analytics
+
+**Route:** `/admin/analytics`
+
+#### 5.3.1 Date Range Picker
+
+| Option | Description |
+|--------|-------------|
+| Today | Current day metrics |
+| This Week | Monday to Sunday |
+| This Month | Current calendar month |
+| Last 30 Days | Rolling 30-day window |
+| Last 90 Days | Rolling 90-day window |
+| Custom | User-defined date range |
+
+#### 5.3.2 Analytics Metrics
+
+**Booking Metrics:**
+- Total bookings count
+- Completed bookings percentage
+- Cancelled bookings percentage
+- No-show rate
+- Average booking value
+
+**Revenue Metrics:**
+- Total revenue
+- Revenue by branch (chart)
+- Revenue trend over time
+- Comparison vs previous period
+
+**User Metrics:**
+- New manager registrations
+- New barber registrations
+- Active users count
+- User growth rate
+
+**Service Metrics:**
+- Most popular services
+- Service revenue breakdown
+- Average service duration
+
+#### 5.3.3 Export Capabilities
+
+| Format | Description |
+|--------|-------------|
+| CSV | Comma-separated values for spreadsheets |
+| Date Range | Export filtered by selected dates |
+
+---
+
+### 5.4 System Configuration
+
+**Routes:** `/admin/config/*`
+
+#### 5.4.1 Locations Configuration
+
+**Route:** `/admin/config/locations`
+
+| Element | Description |
+|---------|-------------|
+| Governorate List | All governorates with area counts |
+| Area Management | Add, edit, delete areas |
+| Bulk Import | Import locations from CSV |
+
+**Governorate Item:**
+- Name (English and Arabic)
+- Area count
+- Status (active/inactive)
+- Actions: Edit, View Areas
+
+**Area Item:**
+- Name (English and Arabic)
+- Parent governorate
+- Status
+- Actions: Edit, Delete
+
+#### 5.4.2 Notification Templates
+
+**Route:** `/admin/config/notifications`
+
+| Template Type | Description |
+|---------------|-------------|
+| Booking Confirmation | Sent when booking is created |
+| Booking Reminder | Sent before appointment |
+| Booking Cancellation | Sent when cancelled |
+| Barber Invitation | Email to invite barbers |
+| Password Reset | Password recovery email |
+
+**Template Editor:**
+- Title (English and Arabic)
+- Message body with variables
+- Preview in both languages
+- Enable/Disable toggle
+
+#### 5.4.3 Global Settings
+
+**Route:** `/admin/config/settings`
+
+| Setting | Description |
+|---------|-------------|
+| Platform Name | Displayed in UI and emails |
+| Support Email | Contact email for users |
+| Default Language | Platform default language |
+| Booking Lead Time | Minimum hours before booking |
+| Cancellation Policy | Hours before free cancellation |
+
+---
+
+### 5.5 Audit & Compliance
+
+**Routes:** `/admin/audit/logs`, `/admin/audit/security`
+
+#### 5.5.1 Audit Logs
+
+**Route:** `/admin/audit/logs`
+
+**Log Entry Fields:**
+- Timestamp
+- Admin user who performed action
+- Action type (user_enabled, config_changed, etc.)
+- Target entity type and ID
+- Old values (before change)
+- New values (after change)
+- IP address
+- User agent
+
+**Filtering Options:**
+- Date range
+- Admin user
+- Action type
+- Target entity type
+- Search by entity ID
+
+#### 5.5.2 Security Events
+
+**Route:** `/admin/audit/security`
+
+| Event Type | Description |
+|------------|-------------|
+| Failed Login | Authentication failures |
+| Role Change | User role modifications |
+| Password Reset | Password reset requests |
+| Account Lock | Accounts locked due to failures |
+| Suspicious Activity | Unusual patterns detected |
+
+**Event Display:**
+- Severity indicator (high/medium/low)
+- Event timestamp
+- User involved
+- IP address and location
+- Event details
+- Actions taken
+
+---
+
+### 5.6 WhatsApp Management Hub
+
+**Route:** `/admin/whatsapp`
+
+#### 5.6.1 Conversations Overview
+
+**Route:** `/admin/whatsapp/conversations`
+
+| Element | Description |
+|---------|-------------|
+| Search | Search by phone, name |
+| Date Filter | Filter by conversation date |
+| Status Filter | Active, Resolved, Pending |
+| Conversation List | All WhatsApp threads |
+
+**Conversation Item:**
+- Customer phone number
+- Customer name (if known)
+- Last message preview
+- Last message timestamp
+- Conversation status
+- Click to view thread
+
+#### 5.6.2 Messages Search
+
+**Route:** `/admin/whatsapp/messages`
+
+| Element | Description |
+|---------|-------------|
+| Search | Full-text search on messages |
+| Direction Filter | Inbound, Outbound, All |
+| Type Filter | Text, Interactive, Template |
+| Date Range | Filter by message date |
+
+**Message Item:**
+- Message content
+- Direction indicator
+- Timestamp
+- Conversation link
+- Message status
+
+#### 5.6.3 WhatsApp Analytics
+
+| Metric | Description |
+|--------|-------------|
+| Total Conversations | All-time conversation count |
+| Active Conversations | Currently open threads |
+| Messages Sent | Outbound message count |
+| Messages Received | Inbound message count |
+| Bookings via WhatsApp | Bookings created by AI agent |
+| Conversion Rate | Messages to bookings ratio |
+
+#### 5.6.4 Webhook Logs
+
+**Route:** `/admin/whatsapp/logs`
+
+| Log Field | Description |
+|-----------|-------------|
+| Timestamp | Event time |
+| Event Type | Message, Status Update, Error |
+| Payload | Request/response data |
+| Status | Success, Failed |
+| Error Details | If applicable |
+
+---
+
+## 6. Agent Features
+
+### 6.1 Agent Dashboard
+
+**Route:** `/agent`
+
+#### 6.1.1 KPI Metric Cards
+
+| Metric | Description | Display |
+|--------|-------------|---------|
+| Today's Bookings | Agent-created bookings today | Count |
+| This Week | Weekly booking count | Count + trend |
+| Active Conversations | Open WhatsApp threads | Count |
+| Customers Served | Unique customers helped | Count |
+
+#### 6.1.2 Dashboard Sections
+
+1. **Quick Actions**
+   - New Booking button
+   - View Conversations button
+   - Customer Search button
+
+2. **Recent Conversations Feed**
+   - Last 5 active conversations
+   - Customer name and phone
+   - Last message preview
+   - Click to continue conversation
+
+3. **Today's Appointments Created**
+   - Bookings created by agent today
+   - Customer name, time, branch
+   - Quick status view
+
+---
+
+### 6.2 Agent Bookings
+
+**Routes:** `/agent/bookings`, `/agent/bookings/new`, `/agent/bookings/:id/edit`
+
+#### 6.2.1 Booking List View
+
+| Element | Description |
+|---------|-------------|
+| Date Filter | Filter by booking date |
+| Branch Filter | Filter by branch |
+| Status Filter | Pending, Confirmed, Completed, Cancelled |
+| Search | Search by customer name or phone |
+| Booking Cards | Card layout with booking info |
+
+**Booking Card Content:**
+- Customer name and phone
+- Branch name
+- Barber name
+- Services booked
+- Date and time
+- Status badge
+- Actions: Edit, View Details
+
+#### 6.2.2 Create Booking (Full Page)
+
+**Route:** `/agent/bookings/new`
+
+Unlike manager bookings (modal), agent bookings use a full-page form for better usability:
+
+**Customer Section:**
+- Customer Name (required)
+- Country Code selector
+- Phone Number (required)
+- Customer search/autocomplete
+
+**Booking Details Section:**
+- Branch selector (ALL branches available)
+- Barber selector (filtered by branch)
+- Services multi-select
+- Date picker
+- Time slot selector
+- Notes textarea
+
+**Summary Section:**
+- Total duration display
+- Total price display
+- Conflict warnings (if any)
+
+**Pre-fill from Conversation:**
+When navigating from a conversation, the form is pre-populated with:
+- Customer name from conversation
+- Phone number and country code
+- Extracted preferences if any
+
+#### 6.2.3 Edit Booking
+
+**Route:** `/agent/bookings/:id/edit`
+
+Same form as create, with:
+- Pre-populated booking data
+- Original customer info (read-only or editable)
+- Status change capability
+- Cancel booking option
+
+---
+
+### 6.3 Agent Customers
+
+**Route:** `/agent/customers`
+
+#### 6.3.1 Customer List
+
+| Element | Description |
+|---------|-------------|
+| Search | Search by name, phone |
+| Sort | By name, last visit, booking count |
+| Customer Cards | Card layout with customer info |
+
+**Customer Card Content:**
+- Customer name
+- Phone number with country flag
+- Total booking count
+- Last visit date
+- Click to view details
+
+#### 6.3.2 Customer Details
+
+**Expanded View:**
+- Full customer information
+- Phone with country code
+- Location (if available)
+- Account created date
+
+**Booking History:**
+- List of all bookings
+- Each booking shows: date, time, branch, barber, services, status
+- Actions per booking:
+  - Edit (navigates to edit page)
+  - Cancel (for active bookings only, with confirmation)
+
+**Actions:**
+- Create New Booking button
+- Edit Customer Info button
+
+---
+
+### 6.4 Agent Conversations
+
+**Route:** `/agent/conversations`
+
+#### 6.4.1 Layout Structure
+
+**Sidebar (320px):**
+- Search input
+- Conversation list
+- Unread indicators
+- Last message preview
+
+**Main Area:**
+- Selected conversation thread
+- Message history
+- Customer info header
+- Actions bar
+
+#### 6.4.2 Conversation List Item
+
+| Element | Description |
+|---------|-------------|
+| Customer Name | Name or phone if unknown |
+| Phone Number | Formatted with country code |
+| Last Message | Preview text (truncated) |
+| Timestamp | Relative time (e.g., "5 min ago") |
+| Unread Indicator | Dot for unread messages |
+
+#### 6.4.3 Conversation Thread
+
+**Header:**
+- Customer name
+- Phone number
+- Create Booking button
+
+**Message Display:**
+- Customer messages: Left aligned, light background
+- Bot/Agent messages: Right aligned, accent background
+- Timestamps between messages
+- Message status indicators (sent/delivered/read)
+
+**Interactive Elements:**
+- Buttons rendered as clickable chips
+- List selections shown inline
+- Tool usage shown as system messages
+
+#### 6.4.4 Create Booking from Conversation
+
+**Flow:**
+1. Click "Create Booking" button in conversation
+2. Navigate to `/agent/bookings/new`
+3. Form pre-filled with:
+   - Customer name (extracted from conversation)
+   - Phone number (from conversation)
+   - Country code (parsed from phone)
+4. Agent completes remaining fields
+5. On save, returns to conversation with success notification
+
+---
+
+## 7. WhatsApp AI Integration
+
+### 7.1 Overview
+
+Barber++ integrates with Meta's WhatsApp Business API to provide AI-powered booking assistance through a virtual agent named **"Sulaiman"** (سليمان). The AI agent handles customer inquiries in both English and Arabic, guiding them through the booking process conversationally.
+
+### 7.2 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Customer WhatsApp                           │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Meta Cloud API                               │
+│                 (WhatsApp Business API)                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               Supabase Edge Function                            │
+│                 (whatsapp-webhook)                              │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  1. Verify webhook signature                             │   │
+│  │  2. Parse incoming message                               │   │
+│  │  3. Load conversation context                            │   │
+│  │  4. Call Claude AI with tools                            │   │
+│  │  5. Execute tool calls (booking operations)              │   │
+│  │  6. Send response via WhatsApp API                       │   │
+│  │  7. Log conversation and actions                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Supabase Database                            │
+│  ┌──────────────────┐  ┌──────────────────┐                    │
+│  │   conversations  │  │     messages     │                    │
+│  └──────────────────┘  └──────────────────┘                    │
+│  ┌──────────────────┐  ┌──────────────────┐                    │
+│  │    customers     │  │     bookings     │                    │
+│  └──────────────────┘  └──────────────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 AI Agent ("Sulaiman")
+
+#### 7.3.1 Agent Personality
+
+- **Name**: Sulaiman (سليمان)
+- **Tone**: Friendly, professional, helpful
+- **Languages**: Fluent in English and Arabic
+- **Behavior**: Detects language from customer's first message
+
+#### 7.3.2 Agent Capabilities
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `list_branches` | Show available branch locations | None |
+| `get_available_times` | Fetch open time slots | branch_id, barber_id, date, service_ids |
+| `list_services` | Show services with prices | branch_id |
+| `list_barbers` | Show available barbers | branch_id |
+| `create_booking` | Confirm a new appointment | branch_id, barber_id, date, time, service_ids, customer_id |
+| `reschedule_booking` | Change booking date/time | booking_id, new_date, new_time |
+| `cancel_booking` | Cancel an appointment | booking_id |
+| `get_booking_status` | Check appointment status | booking_id or customer_phone |
+| `get_customer_bookings` | Get customer's booking history | customer_phone |
+
+#### 7.3.3 Tool Response Handling
+
+Each tool returns:
+- **Data**: Requested information (branches, times, services, etc.)
+- **Message Content**: Human-readable message for the customer
+- **Interactive Elements**: Buttons or lists when appropriate
+
+### 7.4 Conversation Flow
+
+#### 7.4.1 New Customer Booking
+
+```
+1. Customer: "Hi, I want to book a haircut"
+
+2. Sulaiman: Greets customer, asks for name if not known
+
+3. Customer: Provides name
+
+4. Sulaiman: [list_branches] Shows available branches as list
+
+5. Customer: Selects branch
+
+6. Sulaiman: [list_services] Shows services with prices
+
+7. Customer: Selects service(s)
+
+8. Sulaiman: [list_barbers] Shows available barbers (optional)
+
+9. Customer: Selects barber or "Any"
+
+10. Sulaiman: [get_available_times] Shows date options (today, tomorrow, etc.)
+
+11. Customer: Selects date
+
+12. Sulaiman: Shows time slots (paginated if many)
+
+13. Customer: Selects time
+
+14. Sulaiman: Confirms booking details, asks for confirmation
+
+15. Customer: Confirms
+
+16. Sulaiman: [create_booking] Books appointment, sends confirmation
+```
+
+#### 7.4.2 Existing Customer Actions
+
+| Action | Flow |
+|--------|------|
+| Check Status | Customer asks → Agent looks up by phone → Shows upcoming bookings |
+| Reschedule | Customer requests → Agent shows current booking → New date/time selection |
+| Cancel | Customer requests → Agent confirms booking → Cancellation confirmation |
+
+### 7.5 Interactive Message Types
+
+#### 7.5.1 Button Messages
+
+Used for:
+- Yes/No confirmations
+- Simple choices (2-3 options)
+- Action triggers
+
+```
+┌───────────────────────────────────────┐
+│  Would you like to proceed?           │
+│                                       │
+│  [Yes, book it]    [Choose another]   │
+└───────────────────────────────────────┘
+```
+
+#### 7.5.2 List Messages
+
+Used for:
+- Branch selection
+- Service selection
+- Time slot selection (when many options)
+
+```
+┌───────────────────────────────────────┐
+│  Select a branch:                     │
+│                                       │
+│  ○ Salmiya Branch                     │
+│    Kuwait City, Block 5               │
+│                                       │
+│  ○ Hawally Branch                     │
+│    Hawally, Main Street               │
+│                                       │
+│  ○ Farwaniya Branch                   │
+│    Farwaniya, Area 3                  │
+└───────────────────────────────────────┘
+```
+
+### 7.6 Booking Reminders
+
+#### 7.6.1 Reminder Schedule
+
+| Reminder | Timing | Template |
+|----------|--------|----------|
+| 24-hour reminder | 24 hours before | booking_reminder_24h |
+| 1-hour reminder | 1 hour before | booking_reminder_1h |
+
+#### 7.6.2 Reminder Content
+
+**English Template:**
+```
+🗓️ Appointment Reminder
+
+Hi {customer_name}!
+
+This is a reminder for your appointment:
+📍 {branch_name}
+✂️ {service_names}
+🕐 {date} at {time}
+
+Reply "Yes" to confirm or "Reschedule" to change.
+```
+
+**Arabic Template:**
+```
+🗓️ تذكير بالموعد
+
+مرحباً {customer_name}!
+
+هذا تذكير بموعدك:
+📍 {branch_name}
+✂️ {service_names}
+🕐 {date} الساعة {time}
+
+رد بـ "نعم" للتأكيد أو "تغيير" لتعديل الموعد.
+```
+
+#### 7.6.3 Duplicate Prevention
+
+- Tracking table records sent reminders
+- Checks before sending: (booking_id, reminder_type)
+- Prevents multiple sends for same reminder
+
+### 7.7 Edge Functions
+
+#### 7.7.1 whatsapp-webhook
+
+**Trigger:** HTTP POST from Meta Cloud API
+
+**Request Handling:**
+1. Verify webhook signature (HMAC SHA-256)
+2. Handle challenge verification (GET requests)
+3. Parse incoming message or status update
+4. Route to appropriate handler
+
+**Message Processing:**
+1. Load/create conversation record
+2. Store incoming message
+3. Build conversation history for AI
+4. Call Claude API with system prompt and tools
+5. Execute any tool calls
+6. Send response to customer
+7. Store outgoing message
+
+#### 7.7.2 send-booking-reminders
+
+**Trigger:** Scheduled (cron job)
+
+**Process:**
+1. Query bookings needing reminders
+2. Filter by reminder type (24h or 1h)
+3. Check not already sent
+4. Send WhatsApp template message
+5. Record reminder as sent
+
+**Schedule:** Runs every 15 minutes
+
+#### 7.7.3 send-whatsapp-message
+
+**Trigger:** HTTP POST (internal use)
+
+**Parameters:**
+- to: Phone number
+- type: text | template | interactive
+- content: Message content or template data
+
+**Usage:**
+- Direct message sending from dashboard
+- Manual notifications
+- Testing
+
+#### 7.7.4 cleanup-notifications
+
+**Trigger:** Scheduled (daily)
+
+**Process:**
+1. Query notifications older than retention period
+2. Delete in batches
+3. Log cleanup results
+
+---
+
+## 8. Barber-Specific Features
+
+### 8.1 Barber Dashboard
 
 **Route:** `/barber`
 
-#### 5.1.1 KPI Metric Cards
+#### 8.1.1 KPI Metric Cards
 
 | Metric | Description | Display |
 |--------|-------------|---------|
@@ -686,7 +1521,7 @@ For proposed booking:
 | My Earnings This Week | Revenue from completed | Amount + 8% trend |
 | Completion Rate | Completed vs total | Percentage |
 
-#### 5.1.2 Dashboard Sections
+#### 8.1.2 Dashboard Sections
 
 1. **Welcome Section**
    - Time-based greeting with first name
@@ -715,11 +1550,11 @@ For proposed booking:
 
 ---
 
-### 5.2 My Bookings
+### 8.2 My Bookings
 
 **Route:** `/barber/bookings`
 
-#### 5.2.1 Calendar View
+#### 8.2.1 Calendar View
 
 **Week View Features:**
 - 7-day grid (Monday start)
@@ -733,7 +1568,7 @@ For proposed booking:
 - Bookings sorted chronologically
 - Unavailability blocks displayed
 
-#### 5.2.2 Unavailability Visualization
+#### 8.2.2 Unavailability Visualization
 
 | Block Type | Display | Color |
 |------------|---------|-------|
@@ -747,7 +1582,7 @@ For proposed booking:
 - Time range (for partial blocks)
 - Reason (if provided)
 
-#### 5.2.3 Barber Booking Operations
+#### 8.2.3 Barber Booking Operations
 
 **Create Booking:**
 - Same form as manager but:
@@ -758,18 +1593,18 @@ For proposed booking:
 - Same sidebar as manager
 - Can change status of own bookings
 
-#### 5.2.4 Legend
+#### 8.2.4 Legend
 
 - Booking status colors explained
 - Unavailability type indicators
 
 ---
 
-### 5.3 My Availability
+### 8.3 My Availability
 
 **Route:** `/barber/availability`
 
-#### 5.3.1 Tab Navigation
+#### 8.3.1 Tab Navigation
 
 | Tab | Badge | Description |
 |-----|-------|-------------|
@@ -777,7 +1612,7 @@ For proposed booking:
 | Time Off | Count | Manage recurring/one-time time-offs |
 | Vacations | Count | Manage vacation periods |
 
-#### 5.3.2 Weekly Schedule Tab
+#### 8.3.2 Weekly Schedule Tab
 
 **Summary Cards:**
 
@@ -804,7 +1639,7 @@ For proposed booking:
 - Reset button (reverts to saved state)
 - Success/error notifications
 
-#### 5.3.3 Time Off Tab
+#### 8.3.3 Time Off Tab
 
 **Add Time Off Form:**
 
@@ -832,7 +1667,7 @@ For proposed booking:
   - Delete button
 - Empty states for each section
 
-#### 5.3.4 Vacation Tab
+#### 8.3.4 Vacation Tab
 
 **Add Vacation Form:**
 
@@ -852,7 +1687,7 @@ For proposed booking:
   - Delete button (upcoming only)
 - Empty state with encouraging message
 
-#### 5.3.5 Tips Section
+#### 8.3.5 Tips Section
 
 Context-sensitive tips based on active tab:
 - Weekly Schedule: How to set up hours
@@ -861,11 +1696,11 @@ Context-sensitive tips based on active tab:
 
 ---
 
-### 5.4 My Profile
+### 8.4 My Profile
 
 **Route:** `/barber/profile`
 
-#### 5.4.1 Profile Card
+#### 8.4.1 Profile Card
 
 | Element | Description |
 |---------|-------------|
@@ -874,14 +1709,14 @@ Context-sensitive tips based on active tab:
 | Role | "Barber" label |
 | Branch | Branch location |
 
-#### 5.4.2 Basic Information Section
+#### 8.4.2 Basic Information Section
 
 | Field | Type | Required | Validation |
 |-------|------|----------|------------|
 | Full Name (English) | Text | Yes | Min 2 characters |
 | Name (Arabic) | Text | No | - |
 
-#### 5.4.3 Contact Information Section
+#### 8.4.3 Contact Information Section
 
 | Field | Type | Required | Validation |
 |-------|------|----------|------------|
@@ -889,7 +1724,7 @@ Context-sensitive tips based on active tab:
 | Country Code | Select | Yes | GCC countries |
 | Phone | Text | Yes | Country-specific |
 
-#### 5.4.4 Services Section
+#### 8.4.4 Services Section
 
 | Element | Description |
 |---------|-------------|
@@ -899,7 +1734,7 @@ Context-sensitive tips based on active tab:
 | Selected Highlight | Visual emphasis on selected |
 | Empty State | Message if no services at branch |
 
-#### 5.4.5 Profile Actions
+#### 8.4.5 Profile Actions
 
 - Save Changes button (disabled if no changes)
 - Loading state during submission
@@ -908,9 +1743,9 @@ Context-sensitive tips based on active tab:
 
 ---
 
-## 6. Data Models
+## 9. Data Models
 
-### 6.1 Users (Supabase Auth)
+### 9.1 Users (Supabase Auth)
 
 ```
 id: UUID (Primary Key, auto-generated)
@@ -919,19 +1754,21 @@ encrypted_password: string (managed by Supabase)
 user_metadata: {
   name: string
   phone: string
-  role: "manager" | "barber"
+  role: "manager" | "barber" | "admin" | "agent"
 }
 created_at: timestamp
 updated_at: timestamp
 ```
 
 **Role-Based Access:**
-- `manager`: Full access to manager routes
+- `manager`: Full access to manager routes, branch-scoped data
 - `barber`: Limited to barber routes, filtered to assigned branch
+- `admin`: Platform-wide access, user management, system configuration
+- `agent`: WhatsApp conversations, cross-branch booking access
 
 ---
 
-### 6.2 Branches
+### 9.2 Branches
 
 ```sql
 id: UUID (Primary Key)
@@ -967,7 +1804,7 @@ updated_at: timestamp (auto)
 
 ---
 
-### 6.3 Barbers
+### 9.3 Barbers
 
 ```sql
 id: UUID (Primary Key)
@@ -1019,7 +1856,7 @@ updated_at: timestamp (auto)
 
 ---
 
-### 6.4 Services
+### 9.4 Services
 
 ```sql
 id: UUID (Primary Key)
@@ -1040,22 +1877,46 @@ updated_at: timestamp (auto)
 
 ---
 
-### 6.5 Bookings
+### 9.5 Customers
+
+```sql
+id: UUID (Primary Key)
+phone: string (required)
+country_code: string (e.g., '+965')
+name: string (required)
+location: string (nullable, free text)
+created_at: timestamp (auto)
+updated_at: timestamp (auto)
+```
+
+**Relationships:**
+- One customer → Many bookings
+
+**Notes:**
+- Customers are identified by phone number
+- Created automatically when booking via WhatsApp
+- Location is optional free-text field
+
+---
+
+### 9.6 Bookings
 
 ```sql
 id: UUID (Primary Key)
 branch_id: UUID (Foreign Key → branches, required)
 barber_id: UUID (Foreign Key → barbers, required)
+customer_id: UUID (Foreign Key → customers, required)
 service_ids: UUID[] (array, min 1 required)
-customer_name: string (required)
-customer_country_code: string (e.g., '+965')
-customer_phone: string (required)
 date: date (YYYY-MM-DD format, required)
 time: string (HH:MM 24-hour format, required)
 duration: integer (minutes, calculated from services)
 price: decimal (calculated from services)
 status: string ('pending' | 'confirmed' | 'completed' | 'cancelled' | 'no-show')
 notes: string (nullable)
+added_by_type: string ('manager' | 'barber' | 'whatsapp_agent' | 'customer')
+added_by_user_id: UUID (nullable, Foreign Key → auth.users)
+modified_by_type: string (nullable)
+modified_by_user_id: UUID (nullable, Foreign Key → auth.users)
 created_at: timestamp (auto)
 updated_at: timestamp (auto)
 ```
@@ -1063,16 +1924,23 @@ updated_at: timestamp (auto)
 **Relationships:**
 - Many bookings → One branch
 - Many bookings → One barber
+- Many bookings → One customer
 - Booking references multiple services via service_ids
 
 **Indexes:**
 - `(branch_id, date)` for daily queries
 - `(barber_id, date)` for barber schedule
+- `(customer_id)` for customer history
 - `(status)` for filtering
+
+**Notes:**
+- Customer data accessed via customer_id join (normalized)
+- added_by_type tracks who created the booking
+- whatsapp_agent refers to AI agent bookings
 
 ---
 
-### 6.6 Notifications
+### 9.7 Notifications
 
 ```sql
 id: UUID (Primary Key)
@@ -1100,14 +1968,14 @@ system_alert, low_availability_warning
 
 ---
 
-### 6.7 Logs
+### 9.8 Logs
 
 ```sql
 id: UUID (Primary Key)
 level: string ('error' | 'warning' | 'info' | 'debug')
 log_type: string ('error' | 'action' | 'navigation' | 'system' | 'auth')
 user_id: UUID (Foreign Key → auth.users, nullable)
-user_role: string ('manager' | 'barber', nullable)
+user_role: string ('manager' | 'barber' | 'admin' | 'agent', nullable)
 branch_id: UUID (Foreign Key → branches, nullable)
 barber_id: UUID (Foreign Key → barbers, nullable)
 entity_type: string ('branch' | 'barber' | 'service' | 'booking', nullable)
@@ -1128,7 +1996,7 @@ created_at: timestamp (auto)
 
 ---
 
-### 6.8 User Notification Preferences
+### 9.9 User Notification Preferences
 
 ```sql
 id: UUID (Primary Key)
@@ -1160,7 +2028,78 @@ updated_at: timestamp (auto)
 
 ---
 
-### 6.9 Locations (Reference Data)
+### 9.10 Audit Logs
+
+```sql
+id: UUID (Primary Key)
+admin_user_id: UUID (Foreign Key → auth.users, required)
+action_type: string (user_enabled, user_disabled, config_changed, booking_modified, etc.)
+target_user_id: UUID (nullable, Foreign Key → auth.users)
+target_entity_type: string (user, branch, booking, config, etc.)
+target_entity_id: UUID (nullable)
+old_values: JSONB (nullable, state before change)
+new_values: JSONB (nullable, state after change)
+ip_address: string (nullable)
+user_agent: string (nullable)
+metadata: JSONB (nullable, additional context)
+created_at: timestamp (auto)
+```
+
+**Action Types:**
+- `user_enabled`, `user_disabled` - Account status changes
+- `role_changed` - User role modifications
+- `config_changed` - System configuration updates
+- `booking_modified` - Admin booking changes
+- `template_updated` - Notification template edits
+
+---
+
+### 9.11 WhatsApp Conversations
+
+```sql
+id: UUID (Primary Key)
+phone: string (required, customer phone number)
+phone_country_code: string (e.g., '+965')
+customer_name: string (nullable, learned from conversation)
+customer_id: UUID (nullable, Foreign Key → customers)
+last_message_at: timestamp
+last_message_preview: string (truncated message preview)
+is_active: boolean (default: true)
+metadata: JSONB (conversation context, preferences)
+created_at: timestamp (auto)
+updated_at: timestamp (auto)
+```
+
+**Relationships:**
+- One conversation → Many messages
+- One conversation → One customer (optional)
+
+---
+
+### 9.12 WhatsApp Messages
+
+```sql
+id: UUID (Primary Key)
+conversation_id: UUID (Foreign Key → whatsapp_conversations, required)
+direction: string ('inbound' | 'outbound')
+message_type: string ('text' | 'interactive' | 'template' | 'button_reply' | 'list_reply')
+content: string (message text or structured content)
+wa_message_id: string (WhatsApp message ID for tracking)
+status: string ('sent' | 'delivered' | 'read' | 'failed')
+metadata: JSONB (interactive elements, tool calls, etc.)
+created_at: timestamp (auto)
+```
+
+**Message Types:**
+- `text` - Plain text messages
+- `interactive` - Button or list messages
+- `template` - Pre-approved template messages
+- `button_reply` - Customer button click response
+- `list_reply` - Customer list selection response
+
+---
+
+### 9.13 Locations (Reference Data)
 
 **Governorates:**
 ```sql
@@ -1184,7 +2123,7 @@ name_ar: string
 
 ---
 
-### 6.10 Entity Relationship Diagram
+### 9.14 Entity Relationship Diagram
 
 ```
 ┌─────────────┐
@@ -1203,20 +2142,40 @@ name_ar: string
        ▼                                      ▼
 ┌─────────────┐                        ┌─────────────┐
 │   Services  │◄───────────────────────│   Bookings  │
-└─────────────┘    (service_ids[])     └─────────────┘
+└─────────────┘    (service_ids[])     └──────┬──────┘
+                                              │
+                                   (customer_id)
+                                              ▼
+                                       ┌─────────────┐
+                                       │  Customers  │
+                                       └──────┬──────┘
+                                              │
+                                    (phone)   │
+                                              ▼
+                                       ┌─────────────┐
+                                       │  WhatsApp   │
+                                       │Conversations│
+                                       └──────┬──────┘
+                                              │
+                                  (conversation_id)
+                                              ▼
+                                       ┌─────────────┐
+                                       │  WhatsApp   │
+                                       │  Messages   │
+                                       └─────────────┘
 
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│Notifications│    │    Logs     │    │ Preferences │
-└─────────────┘    └─────────────┘    └─────────────┘
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│Notifications│    │    Logs     │    │ Preferences │    │ Audit Logs  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ---
 
-## 7. UI/UX Specifications
+## 10. UI/UX Specifications
 
-### 7.1 Design System
+### 10.1 Design System
 
-#### 7.1.1 Color Palette
+#### 10.1.1 Color Palette
 
 **Dark Theme (Default):**
 
@@ -1260,7 +2219,7 @@ name_ar: string
 | `--slot-busy` | #5A3D3D | Booked time slots |
 | `--slot-vacation` | #3D4A5A | Vacation/time-off |
 
-#### 7.1.2 Typography
+#### 10.1.2 Typography
 
 **Font Families:**
 - **Display Font**: Cormorant Garamond (serif) - Headings, brand elements
@@ -1282,7 +2241,7 @@ name_ar: string
 - h1: 1.5rem on mobile
 - h2: 1.25rem on mobile
 
-#### 7.1.3 Spacing System
+#### 10.1.3 Spacing System
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -1294,7 +2253,7 @@ name_ar: string
 | `--space-2xl` | 48px | Major sections |
 | `--space-3xl` | 64px | Page-level spacing |
 
-#### 7.1.4 Border Radius
+#### 10.1.4 Border Radius
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -1304,7 +2263,7 @@ name_ar: string
 | `--radius-xl` | 16px | Modals, large containers |
 | `--radius-full` | 9999px | Circles, pills |
 
-#### 7.1.5 Shadows
+#### 10.1.5 Shadows
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -1315,9 +2274,9 @@ name_ar: string
 
 ---
 
-### 7.2 Component Library
+### 10.2 Component Library
 
-#### 7.2.1 Modal Component
+#### 10.2.1 Modal Component
 
 **Props:**
 - `isOpen`: boolean - Control visibility
@@ -1341,7 +2300,7 @@ name_ar: string
 - Mobile: Slides up from bottom, full-height on <380px
 - Drag handle indicator on mobile
 
-#### 7.2.2 ConfirmDialog Component
+#### 10.2.2 ConfirmDialog Component
 
 **Props:**
 - `isOpen`: boolean
@@ -1360,7 +2319,7 @@ name_ar: string
 | warning | AlertCircle | Amber | Irreversible actions |
 | info | Info | Blue | General confirmations |
 
-#### 7.2.3 NotificationToast Component
+#### 10.2.3 NotificationToast Component
 
 **Props:**
 - `message`: string
@@ -1376,7 +2335,7 @@ name_ar: string
 - Slide-in/out animations
 - Auto-dismisses after duration
 
-#### 7.2.4 ThemeSelector Component
+#### 10.2.4 ThemeSelector Component
 
 **Options:**
 - Dark theme (moon icon)
@@ -1388,7 +2347,7 @@ name_ar: string
 - Immediate application
 - Persistence to localStorage + database
 
-#### 7.2.5 LanguageSelector Component
+#### 10.2.5 LanguageSelector Component
 
 **Options:**
 - English (flag + "English")
@@ -1402,9 +2361,9 @@ name_ar: string
 
 ---
 
-### 7.3 Form Specifications
+### 10.3 Form Specifications
 
-#### 7.3.1 BarberForm
+#### 10.3.1 BarberForm
 
 **Sections:**
 
@@ -1430,7 +2389,7 @@ name_ar: string
    - Grid layout
    - Shows: name, duration, price per service
 
-#### 7.3.2 BranchForm
+#### 10.3.2 BranchForm
 
 **Sections:**
 
@@ -1450,7 +2409,7 @@ name_ar: string
    - Toggle + time inputs per day
    - Copy to all utility
 
-#### 7.3.3 BookingForm
+#### 10.3.3 BookingForm
 
 **Sections:**
 
@@ -1472,7 +2431,7 @@ name_ar: string
 
 ---
 
-### 7.4 Responsive Breakpoints
+### 10.4 Responsive Breakpoints
 
 | Breakpoint | Width | Description |
 |------------|-------|-------------|
@@ -1494,7 +2453,7 @@ name_ar: string
 
 ---
 
-### 7.5 Accessibility
+### 10.5 Accessibility
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -1508,7 +2467,7 @@ name_ar: string
 
 ---
 
-### 7.6 Animations
+### 10.6 Animations
 
 **Keyframe Animations:**
 
@@ -1533,22 +2492,23 @@ name_ar: string
 
 ---
 
-## 8. Technical Architecture
+## 11. Technical Architecture
 
-### 8.1 Technology Stack
+### 11.1 Technology Stack
 
 | Layer | Technology | Version |
 |-------|------------|---------|
 | Frontend Framework | React | 18.2.0 |
-| Build Tool | Vite | 5.0.0 |
+| Build Tool | Vite | 7.x |
 | Router | React Router | 6.20.0 |
 | Backend | Supabase | 2.89.0 |
+| AI | Anthropic Claude | claude-3-sonnet |
 | Styling | CSS Custom Properties | - |
 | i18n | i18next + react-i18next | 25.7.3 / 16.5.0 |
 | Icons | lucide-react | 0.294.0 |
 | Dates | date-fns | 2.30.0 |
 
-### 8.2 Supabase Services
+### 11.2 Supabase Services
 
 | Service | Usage |
 |---------|-------|
@@ -1556,9 +2516,9 @@ name_ar: string
 | Database | PostgreSQL for all data |
 | Realtime | Notification subscriptions |
 | Storage | Avatar and image uploads (`avatars` bucket) |
-| Edge Functions | Barber invitation emails |
+| Edge Functions | WhatsApp webhook, booking reminders, barber invitations |
 
-### 8.3 State Management
+### 11.3 State Management
 
 **AppContext (React Context):**
 
@@ -1566,7 +2526,7 @@ name_ar: string
 {
   // Authentication
   user: User | null,
-  userRole: 'manager' | 'barber',
+  userRole: 'manager' | 'barber' | 'admin' | 'agent',
   barberProfile: Barber | null,
 
   // Domain Data
@@ -1597,7 +2557,7 @@ name_ar: string
 const { user, branches, selectedBranchId } = useApp();
 ```
 
-### 8.4 Service Layer Pattern
+### 11.4 Service Layer Pattern
 
 **Structure:**
 ```
@@ -1612,6 +2572,8 @@ src/services/
 ├── logging.service.js
 ├── locations.service.js
 ├── storage.service.js
+├── admin.service.js
+├── agent.service.js
 └── index.js
 ```
 
@@ -1640,7 +2602,7 @@ export const entityService = {
 };
 ```
 
-### 8.5 File Upload (Storage Service)
+### 11.5 File Upload (Storage Service)
 
 **Configuration:**
 - Bucket: `avatars`
@@ -1655,11 +2617,43 @@ storageService.deleteImage(url);           // Delete existing
 storageService.replaceImage(oldUrl, file, path); // Replace
 ```
 
+### 11.6 Edge Functions
+
+```
+supabase/functions/
+├── _shared/
+│   ├── anthropic.ts      # Claude API client
+│   ├── whatsapp.ts       # WhatsApp API helpers
+│   ├── supabase.ts       # Database client
+│   ├── whatsapp-logger.ts # Message logging
+│   ├── utils.ts          # Date, language utilities
+│   └── types.ts          # TypeScript interfaces
+├── whatsapp-webhook/
+│   ├── index.ts          # Main handler
+│   ├── agent.ts          # AI agent logic
+│   ├── tools/            # Booking tools
+│   └── prompts/          # System prompts
+├── send-booking-reminders/
+│   └── index.ts
+├── send-whatsapp-message/
+│   └── index.ts
+└── cleanup-notifications/
+    └── index.ts
+```
+
+### 11.7 Third-Party Integrations
+
+| Service | Usage |
+|---------|-------|
+| Meta WhatsApp API | Customer messaging |
+| Anthropic Claude API | AI agent for booking assistance |
+| recharts | Analytics visualizations |
+
 ---
 
-## 9. Non-Functional Requirements
+## 12. Non-Functional Requirements
 
-### 9.1 Performance
+### 12.1 Performance
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -1669,7 +2663,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | Lazy Loading | Future: Route-based code splitting |
 | Image Optimization | Max 5MB, appropriate formats |
 
-### 9.2 Security
+### 12.2 Security
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -1680,7 +2674,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | Data Isolation | Branch-scoped queries, row-level security |
 | Session Management | Supabase session handling |
 
-### 9.3 Localization
+### 12.3 Localization
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -1691,7 +2685,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | Translation Keys | 714 keys across all features |
 | Persistence | localStorage for preference |
 
-### 9.4 Mobile Responsiveness
+### 12.4 Mobile Responsiveness
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -1702,7 +2696,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | Touch Feedback | Active state transforms |
 | Input Zoom Prevention | 16px font on inputs |
 
-### 9.5 Browser Support
+### 12.5 Browser Support
 
 | Browser | Minimum Version |
 |---------|-----------------|
@@ -1715,9 +2709,9 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 
 ---
 
-## 10. Routes & Navigation
+## 13. Routes & Navigation
 
-### 10.1 Public Routes
+### 13.1 Public Routes
 
 | Route | Component | Description |
 |-------|-----------|-------------|
@@ -1727,7 +2721,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | `/reset-password` | ResetPassword | Set new password |
 | `/accept-invite` | AcceptInvite | Barber invitation acceptance |
 
-### 10.2 Manager Routes (Protected)
+### 13.2 Manager Routes (Protected)
 
 | Route | Component | Description |
 |-------|-----------|-------------|
@@ -1745,7 +2739,7 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | `/notifications` | Notifications | Notification center |
 | `/settings` | Settings | User settings |
 
-### 10.3 Barber Routes (Protected)
+### 13.3 Barber Routes (Protected)
 
 | Route | Component | Description |
 |-------|-----------|-------------|
@@ -1757,7 +2751,40 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 | `/barber/notifications` | Notifications | Notifications |
 | `/barber/settings` | Settings | User settings |
 
-### 10.4 Route Protection
+### 13.4 Admin Routes (Protected)
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/admin` | AdminDashboard | Platform overview metrics |
+| `/admin/users/managers` | ManagersList | Manager user management |
+| `/admin/users/barbers` | BarbersList | Barber user management |
+| `/admin/analytics` | PlatformAnalytics | Platform-wide analytics |
+| `/admin/config/locations` | LocationsConfig | Governorate/area setup |
+| `/admin/config/notifications` | NotificationTemplates | Message templates |
+| `/admin/config/settings` | GlobalSettings | System configuration |
+| `/admin/audit/logs` | AuditLogs | Audit trail viewer |
+| `/admin/audit/security` | SecurityEvents | Security event log |
+| `/admin/whatsapp` | WhatsAppHub | WhatsApp management |
+| `/admin/whatsapp/conversations` | Conversations | All conversations |
+| `/admin/whatsapp/messages` | Messages | Message search |
+| `/admin/whatsapp/logs` | WhatsAppLogs | API logs |
+| `/admin/notifications` | Notifications | Admin notifications |
+| `/admin/settings` | Settings | Admin settings |
+
+### 13.5 Agent Routes (Protected)
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/agent` | AgentDashboard | Agent overview metrics |
+| `/agent/bookings` | AgentBookings | Booking list view |
+| `/agent/bookings/new` | AgentNewBooking | Create booking page |
+| `/agent/bookings/:id/edit` | AgentEditBooking | Edit booking page |
+| `/agent/customers` | AgentCustomers | Customer search/list |
+| `/agent/conversations` | AgentConversations | WhatsApp conversations |
+| `/agent/notifications` | Notifications | Agent notifications |
+| `/agent/settings` | Settings | Agent settings |
+
+### 13.6 Route Protection
 
 **ProtectedRoute Component:**
 ```jsx
@@ -1777,9 +2804,9 @@ storageService.replaceImage(oldUrl, file, path); // Replace
 
 ---
 
-## 11. Business Logic Constants
+## 14. Business Logic Constants
 
-### 11.1 Booking Statuses
+### 14.1 Booking Statuses
 
 ```javascript
 BOOKING_STATUS = {
@@ -1801,7 +2828,7 @@ BOOKING_STATUS = {
 | cancelled | XCircle | Cancelled | error |
 | no-show | XCircle | No Show | error |
 
-### 11.2 Time Configuration
+### 14.2 Time Configuration
 
 **Time Slots (Booking):**
 - Range: 7:00 AM - 8:30 PM
@@ -1820,7 +2847,7 @@ BOOKING_STATUS = {
 | Monday-Friday | 9:00 AM - 6:00 PM | 9:00 AM - 6:00 PM |
 | Saturday | 9:00 AM - 4:00 PM | 9:00 AM - 4:00 PM |
 
-### 11.3 GCC Countries
+### 14.3 GCC Countries
 
 | Country | Code | Phone Code | Phone Length | Format |
 |---------|------|------------|--------------|--------|
@@ -1831,7 +2858,7 @@ BOOKING_STATUS = {
 | Qatar | QA | +974 | 8 | XXXX XXXX |
 | Oman | OM | +968 | 8 | XXXX XXXX |
 
-### 11.4 Log Configuration
+### 14.4 Log Configuration
 
 **Log Levels:**
 - `error` - Application errors with stack traces
@@ -1852,16 +2879,16 @@ BOOKING_STATUS = {
 
 ---
 
-## 12. Internationalization
+## 15. Internationalization
 
-### 12.1 Supported Languages
+### 15.1 Supported Languages
 
 | Language | Code | Direction | Status |
 |----------|------|-----------|--------|
 | English | en | LTR | Complete |
 | Arabic | ar | RTL | Complete |
 
-### 12.2 Translation Structure
+### 15.2 Translation Structure
 
 ```
 src/i18n/
@@ -1871,7 +2898,7 @@ src/i18n/
     └── ar.json        # Arabic translations (714 keys)
 ```
 
-### 12.3 Translation Categories
+### 15.3 Translation Categories
 
 | Category | Key Count | Coverage |
 |----------|-----------|----------|
@@ -1893,7 +2920,7 @@ src/i18n/
 | months | 12 | Month names |
 | countries | 6 | GCC country names |
 
-### 12.4 RTL Implementation
+### 15.4 RTL Implementation
 
 **Document Level:**
 ```javascript
@@ -1909,7 +2936,7 @@ document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
 - Table text alignment reversed
 - Brand name locked to LTR
 
-### 12.5 Usage Pattern
+### 15.5 Usage Pattern
 
 ```javascript
 import { useTranslation } from 'react-i18next';
@@ -1931,18 +2958,32 @@ function Component() {
 ```
 src/
 ├── components/
+│   ├── Analytics/
+│   │   ├── AnalyticsMetricCard.jsx
+│   │   ├── SkeletonChart.jsx
+│   │   └── index.js
+│   ├── Bookings/
+│   │   └── ExtendBookingSection.jsx
 │   ├── Forms/
 │   │   ├── BarberForm.jsx
 │   │   ├── BranchForm.jsx
-│   │   └── BookingForm.jsx
+│   │   ├── BookingForm.jsx
+│   │   └── Forms.css
 │   ├── Layout/
 │   │   ├── Layout.jsx
 │   │   ├── BarberLayout.jsx
+│   │   ├── AdminLayout.jsx
+│   │   ├── AgentLayout.jsx
 │   │   ├── Sidebar.jsx
 │   │   ├── BarberSidebar.jsx
-│   │   └── TopBar.jsx
+│   │   ├── AdminSidebar.jsx
+│   │   ├── AgentSidebar.jsx
+│   │   ├── TopBar.jsx
+│   │   ├── LandingHeader.jsx
+│   │   └── LandingFooter.jsx
 │   ├── UI/
 │   │   ├── Modal.jsx
+│   │   ├── Modal.css
 │   │   ├── ConfirmDialog.jsx
 │   │   ├── NotificationToast.jsx
 │   │   ├── ThemeSelector.jsx
@@ -1960,20 +3001,50 @@ src/
 │   ├── EditBarber.jsx
 │   ├── Services.jsx
 │   ├── Bookings.jsx
+│   ├── Bookings.css
 │   ├── Logs.jsx
 │   ├── Notifications.jsx
 │   ├── Settings.jsx
 │   ├── Login.jsx
 │   ├── Signup.jsx
 │   ├── ForgotPassword.jsx
+│   ├── ForgotPassword.css
 │   ├── ResetPassword.jsx
 │   ├── AcceptInvite.jsx
-│   └── barber/
-│       ├── BarberDashboard.jsx
-│       ├── MyBookings.jsx
-│       ├── MyAvailability.jsx
-│       ├── MyProfile.jsx
-│       └── MyLogs.jsx
+│   ├── barber/
+│   │   ├── BarberDashboard.jsx
+│   │   ├── MyBookings.jsx
+│   │   ├── MyAvailability.jsx
+│   │   ├── MyProfile.jsx
+│   │   └── MyLogs.jsx
+│   ├── admin/
+│   │   ├── AdminDashboard.jsx
+│   │   ├── ManagersList.jsx
+│   │   ├── BarbersList.jsx
+│   │   ├── PlatformAnalytics.jsx
+│   │   ├── LocationsConfig.jsx
+│   │   ├── NotificationTemplates.jsx
+│   │   ├── GlobalSettings.jsx
+│   │   ├── AuditLogs.jsx
+│   │   ├── SecurityEvents.jsx
+│   │   ├── WhatsAppHub.jsx
+│   │   └── AdminPages.css
+│   ├── agent/
+│   │   ├── AgentDashboard.jsx
+│   │   ├── AgentBookings.jsx
+│   │   ├── AgentNewBooking.jsx
+│   │   ├── AgentEditBooking.jsx
+│   │   ├── AgentCustomers.jsx
+│   │   ├── AgentConversations.jsx
+│   │   └── AgentPages.css
+│   └── landing/
+│       ├── LandingPage.jsx
+│       ├── HeroSection.jsx
+│       ├── FeaturesSection.jsx
+│       ├── HowItWorksSection.jsx
+│       ├── BenefitsSection.jsx
+│       ├── CTASection.jsx
+│       └── LandingPage.css
 ├── services/
 │   ├── auth.service.js
 │   ├── branches.service.js
@@ -1985,6 +3056,8 @@ src/
 │   ├── logging.service.js
 │   ├── locations.service.js
 │   ├── storage.service.js
+│   ├── admin.service.js
+│   ├── agent.service.js
 │   └── index.js
 ├── context/
 │   └── AppContext.jsx
@@ -1995,6 +3068,7 @@ src/
 │   ├── validation.js
 │   ├── caseConverter.js
 │   ├── bookingConflicts.js
+│   ├── security.js
 │   ├── logger.js
 │   └── globalErrorHandler.js
 ├── constants/
@@ -2012,8 +3086,33 @@ src/
 │   └── supabase.js
 ├── styles/
 │   └── index.css
+├── templates/
+│   └── forgot-password-email.html
 ├── App.jsx
 └── main.jsx
+
+supabase/
+└── functions/
+    ├── _shared/
+    │   ├── anthropic.ts
+    │   ├── whatsapp.ts
+    │   ├── supabase.ts
+    │   ├── whatsapp-logger.ts
+    │   ├── utils.ts
+    │   └── types.ts
+    ├── whatsapp-webhook/
+    │   ├── index.ts
+    │   ├── agent.ts
+    │   ├── tools/
+    │   │   └── index.ts
+    │   └── prompts/
+    │       └── sulaiman.ts
+    ├── send-booking-reminders/
+    │   └── index.ts
+    ├── send-whatsapp-message/
+    │   └── index.ts
+    └── cleanup-notifications/
+        └── index.ts
 ```
 
 ---
@@ -2031,19 +3130,29 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 | Term | Definition |
 |------|------------|
-| Branch | A physical barbershop location |
+| Admin | Platform administrator role with system-wide access |
+| Agent | Customer support role for WhatsApp booking assistance |
+| Audit Log | Record of admin actions for compliance tracking |
+| Availability | Barber's weekly working schedule |
 | Barber | A staff member who provides services |
 | Booking | An appointment between customer and barber |
+| Branch | A physical barbershop location |
+| Customer | End user who books appointments (tracked by phone) |
+| Edge Function | Serverless function running on Supabase infrastructure |
+| GCC | Gulf Cooperation Council (Kuwait, Saudi, UAE, Bahrain, Qatar, Oman) |
+| JWT | JSON Web Token for authentication |
+| KPI | Key Performance Indicator |
+| Manager | User role with full barbershop administrative access |
+| RLS | Row-Level Security (PostgreSQL policy-based access control) |
+| RTL | Right-to-Left text direction (Arabic) |
 | Service | A type of service offered (haircut, beard, etc.) |
-| Availability | Barber's weekly working schedule |
+| Sulaiman | AI-powered WhatsApp booking agent name |
 | Time-Off | Temporary unavailability (recurring or one-time) |
 | Vacation | Extended unavailability period |
-| Manager | User role with full administrative access |
-| GCC | Gulf Cooperation Council (Kuwait, Saudi, UAE, Bahrain, Qatar, Oman) |
-| RTL | Right-to-Left text direction (Arabic) |
-| KPI | Key Performance Indicator |
+| Webhook | HTTP callback for real-time event notifications |
+| WhatsApp API | Meta's Business API for automated messaging |
 
 ---
 
 *Document generated from Barber++ codebase analysis*
-*Version 1.0.0 | December 2024*
+*Version 2.0.0 | January 2026*
