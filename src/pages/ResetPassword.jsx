@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { validatePassword } from '../utils/validation';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
@@ -46,25 +47,10 @@ export default function ResetPassword() {
   }, []);
 
   const validateForm = () => {
-    if (password.length < 8) {
-      setError(t('validation.passwordMin'));
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError(t('validation.passwordUppercase') || 'Password must contain at least one uppercase letter');
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setError(t('validation.passwordLowercase') || 'Password must contain at least one lowercase letter');
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError(t('validation.passwordNumber') || 'Password must contain at least one number');
-      return false;
-    }
-    // Check for special characters (matches Signup.jsx validation)
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      setError(t('validation.passwordSpecial') || 'Password must contain at least one special character');
+    // SECURITY: Use centralized password validation (12+ chars, complexity, common password check)
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.error);
       return false;
     }
     if (password !== confirmPassword) {
@@ -242,10 +228,10 @@ export default function ResetPassword() {
                   setPassword(e.target.value);
                   if (error) setError('');
                 }}
-                placeholder={t('auth.atLeast8Chars')}
+                placeholder={t('auth.atLeast12Chars')}
                 autoComplete="new-password"
                 required
-                minLength={8}
+                minLength={12}
               />
               <button
                 type="button"

@@ -5,6 +5,7 @@ import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
 
 export default function Login() {
@@ -35,23 +36,30 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    setError('');
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const role = await login(formData.email, formData.password);
 
-    const role = await login(formData.email, formData.password);
-
-    if (role) {
-      // Redirect based on role
-      if (role === 'barber') {
-        navigate('/barber');
-      } else if (role === 'admin') {
-        navigate('/admin');
+      if (role) {
+        // Redirect based on role
+        if (role === 'barber') {
+          navigate('/barber');
+        } else if (role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        navigate('/dashboard');
+        // Login returned null - this shouldn't happen if error was thrown
+        setError(t('auth.invalidCredentials'));
+        setIsLoading(false);
       }
-    } else {
-      setError(t('auth.invalidCredentials'));
+    } catch (error) {
+      logErrorSafely(error, 'Login.handleSubmit');
+      // Use errorMessages utility to get user-friendly message
+      const errorMessage = getErrorMessage(error, t('auth.invalidCredentials'));
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

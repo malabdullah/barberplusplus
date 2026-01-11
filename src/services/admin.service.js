@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { escapeLikeWildcards, sanitizeForCSV, sanitizeUUID, logErrorDev } from '../utils/security';
+import { escapeLikeWildcards, sanitizeForCSV, sanitizeUUID, logErrorDev, redactIP, redactEmail, redactPhone, redactPII } from '../utils/security';
 import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
 
 /**
@@ -813,7 +813,8 @@ export const adminService = {
 
       if (format === 'csv') {
         // Convert to CSV with sanitization to prevent CSV injection attacks
-        const headers = ['ID', 'Timestamp', 'Action', 'Admin User', 'Target Entity Type', 'Target Entity ID', 'IP Address'];
+        // SECURITY: Redact PII (IP addresses) in exported data
+        const headers = ['ID', 'Timestamp', 'Action', 'Admin User', 'Target Entity Type', 'Target Entity ID', 'IP Address (Redacted)'];
         const rows = logs.map(log => [
           sanitizeForCSV(log.id),
           sanitizeForCSV(log.createdAt),
@@ -821,7 +822,8 @@ export const adminService = {
           sanitizeForCSV(log.adminUserId || ''),
           sanitizeForCSV(log.targetEntityType || ''),
           sanitizeForCSV(log.targetEntityId || ''),
-          sanitizeForCSV(log.ipAddress || ''),
+          // SECURITY: Redact last octet of IP address for privacy
+          sanitizeForCSV(redactIP(log.ipAddress) || ''),
         ]);
         return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
       }
@@ -2089,13 +2091,15 @@ export const adminService = {
       })) || [];
 
       if (format === 'csv') {
-        const headers = ['ID', 'Timestamp', 'Level', 'Event Type', 'Phone', 'Message', 'Tool', 'Error Code'];
+        // SECURITY: Redact PII (phone numbers) in exported data
+        const headers = ['ID', 'Timestamp', 'Level', 'Event Type', 'Phone (Redacted)', 'Message', 'Tool', 'Error Code'];
         const rows = logs.map(log => [
           sanitizeForCSV(log.id),
           sanitizeForCSV(log.createdAt),
           sanitizeForCSV(log.logLevel),
           sanitizeForCSV(log.eventType || ''),
-          sanitizeForCSV(log.phoneNumber || ''),
+          // SECURITY: Redact phone number - show only last 4 digits
+          sanitizeForCSV(redactPhone(log.phoneNumber) || ''),
           sanitizeForCSV(log.message || ''),
           sanitizeForCSV(log.toolName || ''),
           sanitizeForCSV(log.errorCode || ''),

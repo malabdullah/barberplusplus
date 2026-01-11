@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AcceptInvite from './pages/AcceptInvite';
+import MFASetup from './pages/MFASetup';
 import Dashboard from './pages/Dashboard';
 import Branches from './pages/Branches';
 import AddBranch from './pages/AddBranch';
@@ -149,6 +150,10 @@ function AppRoutes() {
       <Route
         path="/reset-password"
         element={<ResetPassword />}
+      />
+      <Route
+        path="/mfa-setup"
+        element={<MFASetup />}
       />
 
       {/* Manager Routes */}

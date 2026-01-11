@@ -6,6 +6,7 @@ import {
   validateUserRole,
   validateRedirectUrl,
 } from '../utils/security';
+import { getErrorMessage } from '../utils/errorMessages';
 
 export const authService = {
   /**
@@ -25,7 +26,10 @@ export const authService = {
 
     if (error) {
       // Don't reset rate limit on failure
-      throw error;
+      // Map Supabase error to user-friendly message
+      const friendlyError = new Error(getErrorMessage(error, 'Invalid email or password'));
+      friendlyError.originalError = error;
+      throw friendlyError;
     }
 
     // Reset rate limit on successful login
@@ -62,7 +66,11 @@ export const authService = {
       }
     });
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      // Map Supabase error to user-friendly message
+      const friendlyError = getErrorMessage(error, 'Registration failed. Please try again.');
+      return { success: false, error: friendlyError };
+    }
 
     // Reset rate limit on success
     signupRateLimiter.reset(userData.email.toLowerCase());
@@ -96,7 +104,11 @@ export const authService = {
       redirectTo: safeRedirectUrl,
     });
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      // Map Supabase error to user-friendly message
+      const friendlyError = getErrorMessage(error, 'Failed to send reset email. Please try again.');
+      return { success: false, error: friendlyError };
+    }
 
     // Reset rate limit on success
     passwordResetRateLimiter.reset(email.toLowerCase());
@@ -120,6 +132,112 @@ export const authService = {
   onAuthStateChange: (callback) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);
     return () => subscription.unsubscribe();
+  },
+
+  // ============================================================
+  // MFA (Multi-Factor Authentication) Methods
+  // ============================================================
+
+  /**
+   * Get MFA factors for current user
+   * @returns {Promise<{totp: object[], phone: object[]}>}
+   */
+  getMfaFactors: async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Enroll a new TOTP factor
+   * @returns {Promise<{id: string, qr_code: string, secret: string, uri: string}>}
+   */
+  enrollTotp: async () => {
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'Authenticator App',
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Verify a TOTP factor during enrollment
+   * @param {string} factorId - The factor ID from enrollment
+   * @param {string} code - The 6-digit TOTP code
+   * @returns {Promise<boolean>}
+   */
+  verifyTotp: async (factorId, code) => {
+    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId,
+      code,
+    });
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Create MFA challenge for login verification
+   * @param {string} factorId - The factor ID to challenge
+   * @returns {Promise<{id: string}>}
+   */
+  createMfaChallenge: async (factorId) => {
+    const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Verify MFA challenge with TOTP code
+   * @param {string} factorId - The factor ID
+   * @param {string} challengeId - The challenge ID
+   * @param {string} code - The 6-digit TOTP code
+   * @returns {Promise<boolean>}
+   */
+  verifyMfaChallenge: async (factorId, challengeId, code) => {
+    const { data, error } = await supabase.auth.mfa.verify({
+      factorId,
+      challengeId,
+      code,
+    });
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Unenroll an MFA factor
+   * @param {string} factorId - The factor ID to remove
+   * @returns {Promise<boolean>}
+   */
+  unenrollMfa: async (factorId) => {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Check if user has MFA enabled
+   * @returns {Promise<{enabled: boolean, factors: object[]}>}
+   */
+  checkMfaStatus: async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) throw error;
+
+    const verifiedFactors = data.totp?.filter(f => f.status === 'verified') || [];
+    return {
+      enabled: verifiedFactors.length > 0,
+      factors: verifiedFactors,
+    };
+  },
+
+  /**
+   * Get assurance level after MFA
+   * @returns {Promise<{currentLevel: string, nextLevel: string | null}>}
+   */
+  getAssuranceLevel: async () => {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error) throw error;
+    return data;
   },
 };
 

@@ -107,6 +107,10 @@ export const getErrorMessage = (error, fallback = 'An error occurred. Please try
     'Failed to fetch': 'Unable to connect. Please check your internet connection.',
     'JWT expired': 'Your session has expired. Please log in again.',
     'permission denied': 'You do not have permission to perform this action.',
+    'Too many login attempts': 'Too many login attempts',
+    'Too many signup attempts': 'Too many signup attempts',
+    'Too many reset attempts': 'Too many reset attempts',
+    'Account has invalid role': 'Account configuration error. Please contact support.',
   };
 
   for (const [pattern, message] of Object.entries(directMappings)) {

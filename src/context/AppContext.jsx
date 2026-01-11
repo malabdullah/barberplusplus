@@ -195,6 +195,9 @@ export function AppProvider({ children }) {
           // Token refresh failed - session expired
           logger.warn('Session expired - token refresh failed');
           setSessionExpired(true);
+          setUser(null);
+          setUserRole(null);
+          setIsAuthenticated(false);
           setToastNotification({
             id: 'session-expired',
             type: 'session_expired',
@@ -203,6 +206,7 @@ export function AppProvider({ children }) {
             priority: 'high',
             persistent: true,
           });
+          return; // Exit early to prevent further processing
         }
 
         if (session?.user) {
@@ -407,16 +411,33 @@ export function AppProvider({ children }) {
 
   // Set logging context when user/role/branch changes
   useEffect(() => {
-    if (user && userRole) {
-      loggingService.setContext({
-        userId: user.id,
-        userRole,
-        branchId: selectedBranchId,
-        barberId: barberProfile?.id || null,
-      });
-    } else {
-      loggingService.clearContext();
-    }
+    const updateLoggingContext = async () => {
+      if (user && userRole) {
+        // SECURITY: Get session ID for audit trail
+        let sessionId = null;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          // Use the session's access token jti (JWT ID) if available, or generate from session
+          sessionId = session?.access_token
+            ? session.access_token.split('.')[1]?.slice(0, 36) // Use part of token as session identifier
+            : null;
+        } catch {
+          // Ignore session fetch errors
+        }
+
+        loggingService.setContext({
+          userId: user.id,
+          userRole,
+          branchId: selectedBranchId,
+          barberId: barberProfile?.id || null,
+          sessionId,
+        });
+      } else {
+        loggingService.clearContext();
+      }
+    };
+
+    updateLoggingContext();
   }, [user, userRole, selectedBranchId, barberProfile]);
 
   // Load notifications and setup realtime subscription
@@ -1311,8 +1332,10 @@ export function AppProvider({ children }) {
       return null;
     } catch (error) {
       logger.error('Login error:', error);
-      loggingService.logAuth('login', null, null, false, error.message);
-      return null;
+      const errorMessage = error?.message || error?.originalError?.message || 'Login failed';
+      loggingService.logAuth('login', null, null, false, errorMessage);
+      // Re-throw error so Login page can handle it properly
+      throw error;
     }
   }, []);
 
@@ -1328,8 +1351,10 @@ export function AppProvider({ children }) {
       return result;
     } catch (error) {
       logger.error('Signup error:', error);
-      loggingService.logAuth('signup', null, null, false, error.message);
-      return { success: false, error: error.message };
+      const errorMessage = error?.message || 'Signup failed';
+      loggingService.logAuth('signup', null, null, false, errorMessage);
+      // Return error in result format for Signup page to handle
+      return { success: false, error: errorMessage };
     }
   }, []);
 

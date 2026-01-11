@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
 import LanguageSelector from '../components/UI/LanguageSelector';
 import ThemeSelector from '../components/UI/ThemeSelector';
+import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
 import './Signup.css';
 
@@ -84,21 +85,30 @@ export default function Signup() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setError('');
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await signup({
+        name: formData.name,
+        email: formData.email,
+        phone: `${formData.countryCode} ${formData.phone}`,
+        password: formData.password,
+      });
 
-    const result = await signup({
-      name: formData.name,
-      email: formData.email,
-      phone: `${formData.countryCode} ${formData.phone}`,
-      password: formData.password,
-    });
-
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error || t('auth.registrationFailed'));
+      if (result.success) {
+        navigate('/');
+      } else {
+        // Use errorMessages utility to get user-friendly message
+        const errorMessage = result.error 
+          ? getErrorMessage(result.error, t('auth.registrationFailed'))
+          : t('auth.registrationFailed');
+        setError(errorMessage);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      logErrorSafely(error, 'Signup.handleSubmit');
+      const errorMessage = getErrorMessage(error, t('auth.registrationFailed'));
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

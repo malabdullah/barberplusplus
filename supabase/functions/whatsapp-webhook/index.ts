@@ -17,6 +17,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, X-Hub-Signature-256',
 };
 
+// SECURITY: Input limits to prevent abuse
+const MAX_REQUEST_SIZE = 100 * 1024; // 100KB max request body
+const MAX_MESSAGE_LENGTH = 4000; // Max characters per message to process
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -57,8 +61,28 @@ serve(async (req: Request) => {
     // POST - Incoming Messages and Status Updates
     // =============================================
     if (req.method === 'POST') {
+      // SECURITY: Check request size limit
+      const contentLength = parseInt(req.headers.get('Content-Length') || '0', 10);
+      if (contentLength > MAX_REQUEST_SIZE) {
+        console.error(`Request too large: ${contentLength} bytes`);
+        return new Response('Request too large', {
+          status: 413,
+          headers: corsHeaders,
+        });
+      }
+
       // Get raw body for signature verification
       const rawBody = await req.text();
+
+      // SECURITY: Double-check actual body size
+      if (rawBody.length > MAX_REQUEST_SIZE) {
+        console.error(`Body too large: ${rawBody.length} bytes`);
+        return new Response('Request too large', {
+          status: 413,
+          headers: corsHeaders,
+        });
+      }
+
       const signature = req.headers.get('X-Hub-Signature-256');
 
       // Verify webhook signature
@@ -122,11 +146,14 @@ serve(async (req: Request) => {
         // Parse phone number
         const { phone, countryCode } = parsePhoneFromWhatsApp(message.from);
 
+        // SECURITY: Sanitize and limit message text length
+        const sanitizedText = (message.text || 'Flow completed').slice(0, MAX_MESSAGE_LENGTH);
+
         // Process message with AI agent (include buttonId, listId, and flowResponse for interactive responses)
         const result = await processMessage(
           phone,
           countryCode,
-          message.text || 'Flow completed',
+          sanitizedText,
           message.profileName,
           message.messageId,
           message.buttonId,

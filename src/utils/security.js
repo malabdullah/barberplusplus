@@ -316,6 +316,149 @@ export const anonymizeUserAgent = (userAgent) => {
   return `${browser}/${os}`;
 };
 
+// ===========================
+// PII REDACTION FUNCTIONS
+// ===========================
+
+/**
+ * Redact email address for export/display
+ * Shows first 2 characters + domain
+ * @param {string} email - Email to redact
+ * @returns {string} - Redacted email (e.g., "jo***@example.com")
+ */
+export const redactEmail = (email) => {
+  if (!email || typeof email !== 'string') return '';
+
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return '***';
+
+  const localPart = email.substring(0, atIndex);
+  const domain = email.substring(atIndex);
+
+  if (localPart.length <= 2) {
+    return `${localPart[0] || '*'}***${domain}`;
+  }
+
+  return `${localPart.substring(0, 2)}***${domain}`;
+};
+
+/**
+ * Redact phone number for export/display
+ * Shows only last 4 digits
+ * @param {string} phone - Phone number to redact
+ * @returns {string} - Redacted phone (e.g., "***-***-1234")
+ */
+export const redactPhone = (phone) => {
+  if (!phone || typeof phone !== 'string') return '';
+
+  // Remove non-digits to get just the number
+  const digits = phone.replace(/\D/g, '');
+
+  if (digits.length < 4) return '****';
+
+  // Show last 4 digits only
+  return `***-***-${digits.slice(-4)}`;
+};
+
+/**
+ * Redact IP address for export/display
+ * Shows first 3 octets with last octet masked
+ * @param {string} ip - IP address to redact
+ * @returns {string} - Redacted IP (e.g., "192.168.1.xxx")
+ */
+export const redactIP = (ip) => {
+  if (!ip || typeof ip !== 'string') return '';
+
+  // Handle IPv4
+  const ipv4Match = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/);
+  if (ipv4Match) {
+    return `${ipv4Match[1]}.${ipv4Match[2]}.${ipv4Match[3]}.xxx`;
+  }
+
+  // Handle IPv6 (just mask last segment)
+  if (ip.includes(':')) {
+    const parts = ip.split(':');
+    if (parts.length > 1) {
+      return parts.slice(0, -1).join(':') + ':xxxx';
+    }
+  }
+
+  return '***';
+};
+
+/**
+ * Redact name (show first letter + asterisks)
+ * @param {string} name - Name to redact
+ * @returns {string} - Redacted name (e.g., "J*** D***")
+ */
+export const redactName = (name) => {
+  if (!name || typeof name !== 'string') return '';
+
+  return name.split(' ').map(part => {
+    if (part.length === 0) return '';
+    if (part.length === 1) return part[0];
+    return part[0] + '***';
+  }).join(' ');
+};
+
+/**
+ * Redact PII from an object based on field names
+ * Automatically detects and redacts common PII fields
+ * @param {object} obj - Object with potential PII
+ * @returns {object} - Object with redacted PII
+ */
+export const redactPII = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  const result = { ...obj };
+
+  // Field names that contain emails
+  const emailFields = ['email', 'mail', 'emailAddress', 'userEmail'];
+  // Field names that contain phone numbers
+  const phoneFields = ['phone', 'phoneNumber', 'mobile', 'cell', 'telephone'];
+  // Field names that contain IP addresses
+  const ipFields = ['ip', 'ipAddress', 'ip_address', 'clientIp', 'client_ip'];
+  // Field names that contain names
+  const nameFields = ['name', 'firstName', 'lastName', 'fullName', 'customerName', 'customer_name'];
+
+  for (const key of Object.keys(result)) {
+    const lowerKey = key.toLowerCase();
+
+    if (emailFields.some(f => lowerKey.includes(f.toLowerCase()))) {
+      result[key] = redactEmail(result[key]);
+    } else if (phoneFields.some(f => lowerKey.includes(f.toLowerCase()))) {
+      result[key] = redactPhone(result[key]);
+    } else if (ipFields.some(f => lowerKey.includes(f.toLowerCase()))) {
+      result[key] = redactIP(result[key]);
+    } else if (nameFields.some(f => lowerKey === f.toLowerCase())) {
+      // Only redact exact name field matches to avoid over-redacting
+      result[key] = redactName(result[key]);
+    } else if (typeof result[key] === 'object' && result[key] !== null) {
+      // Recursively redact nested objects
+      result[key] = redactPII(result[key]);
+    }
+  }
+
+  return result;
+};
+
+/**
+ * Redact PII from JSON string
+ * @param {string} jsonString - JSON string with potential PII
+ * @returns {string} - JSON string with redacted PII
+ */
+export const redactPIIFromJSON = (jsonString) => {
+  if (!jsonString || typeof jsonString !== 'string') return jsonString;
+
+  try {
+    const obj = JSON.parse(jsonString);
+    return JSON.stringify(redactPII(obj));
+  } catch {
+    // Not valid JSON, return as-is
+    return jsonString;
+  }
+};
+
 export default {
   escapeLikeWildcards,
   sanitizeForCSV,
@@ -334,4 +477,10 @@ export default {
   validateRedirectUrl,
   sanitizeUrlForLogging,
   anonymizeUserAgent,
+  redactEmail,
+  redactPhone,
+  redactIP,
+  redactName,
+  redactPII,
+  redactPIIFromJSON,
 };

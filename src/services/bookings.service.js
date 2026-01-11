@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
+import { validateBooking } from '../utils/schemaValidation';
 
 // Convert snake_case DB columns to camelCase for frontend
 // Customer data comes from joined customers table
@@ -99,6 +100,12 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   create: async (bookingData) => {
+    // SECURITY: Validate booking data before database operation
+    const validation = validateBooking(bookingData);
+    if (!validation.valid) {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
+
     const { data, error } = await supabase
       .from('bookings')
       .insert([toDatabase(bookingData)])
@@ -115,6 +122,42 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   update: async (id, bookingData) => {
+    // SECURITY: Validate booking data (partial validation for updates)
+    // Only validate fields that are present in the update
+    const fieldsToValidate = {};
+    if (bookingData.branchId) fieldsToValidate.branchId = bookingData.branchId;
+    if (bookingData.barberId) fieldsToValidate.barberId = bookingData.barberId;
+    if (bookingData.date) fieldsToValidate.date = bookingData.date;
+    if (bookingData.time) fieldsToValidate.time = bookingData.time;
+    if (bookingData.duration) fieldsToValidate.duration = bookingData.duration;
+    if (bookingData.price !== undefined) fieldsToValidate.price = bookingData.price;
+    if (bookingData.status) fieldsToValidate.status = bookingData.status;
+
+    // Validate with a schema that has no required fields (partial update)
+    const partialSchema = {
+      required: [],
+      types: {
+        branchId: 'uuid',
+        barberId: 'uuid',
+        date: 'date',
+        time: 'time',
+        duration: 'number',
+        price: 'number',
+        status: 'string',
+      },
+      constraints: {
+        duration: { min: 5, max: 480 },
+        price: { min: 0, max: 10000 },
+        status: { enum: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'] },
+      },
+    };
+
+    const { validateSchema } = await import('../utils/schemaValidation');
+    const validation = validateSchema(fieldsToValidate, partialSchema);
+    if (!validation.valid) {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
+
     const { data, error } = await supabase
       .from('bookings')
       .update(toDatabase(bookingData))

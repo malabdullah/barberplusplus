@@ -32,6 +32,8 @@ const toFrontend = (log) => {
     metadata: log.metadata,
     userAgent: log.user_agent,
     pageUrl: log.page_url,
+    sessionId: log.session_id,
+    requestId: log.request_id,
     createdAt: log.created_at,
   };
 };
@@ -55,6 +57,12 @@ const toDatabase = (logData) => ({
   user_agent: typeof navigator !== 'undefined' ? anonymizeUserAgent(navigator.userAgent) : null,
   // SECURITY: Strip query params from URL to prevent logging sensitive data
   page_url: typeof window !== 'undefined' ? sanitizeUrlForLogging(window.location.href) : null,
+  // SECURITY: Session tracking for audit trail
+  session_id: logData.sessionId || null,
+  // SECURITY: Request ID for log correlation
+  request_id: logData.requestId || null,
+  // SECURITY: Hashed IP for privacy-preserving security analysis
+  client_ip_hash: logData.clientIpHash || null,
 });
 
 // Batch queue for performance optimization
@@ -118,6 +126,31 @@ let currentContext = {
   userRole: null,
   branchId: null,
   barberId: null,
+  sessionId: null,
+};
+
+// SECURITY: Generate a unique request ID for log correlation
+const generateRequestId = () => {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+};
+
+// SECURITY: Hash IP address for privacy-preserving security analysis
+const hashForPrivacy = async (value) => {
+  if (!value || typeof crypto.subtle === 'undefined') return null;
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(value);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
 };
 
 export const loggingService = {
@@ -140,6 +173,7 @@ export const loggingService = {
       userRole: null,
       branchId: null,
       barberId: null,
+      sessionId: null,
     };
   },
 
@@ -180,6 +214,9 @@ export const loggingService = {
       action: options.action,
       stackTrace: options.stackTrace,
       metadata: options.metadata,
+      // SECURITY: Session and request tracking for audit
+      sessionId: options.sessionId || currentContext.sessionId,
+      requestId: options.requestId || generateRequestId(),
     };
 
     // Always log to console in development
