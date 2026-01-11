@@ -1,10 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { Bell, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import './NotificationToast.css';
 
-export default function NotificationToast({ notification, onClose, duration = 5000 }) {
+// PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
+const NotificationToast = memo(function NotificationToast({ notification, onClose, duration = 5000 }) {
   const [isExiting, setIsExiting] = useState(false);
+
+  // PERFORMANCE: Use ref to avoid effect re-running when onClose changes
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // PERFORMANCE: Memoize handleClose to avoid recreating on every render
+  const handleClose = useCallback(() => {
+    setIsExiting(true);
+    // Wait for exit animation before actually closing
+    setTimeout(() => {
+      setIsExiting(false);
+      onCloseRef.current();
+    }, 300);
+  }, []);
 
   useEffect(() => {
     if (!notification) return;
@@ -15,16 +30,7 @@ export default function NotificationToast({ notification, onClose, duration = 50
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [notification, duration]);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    // Wait for exit animation before actually closing
-    setTimeout(() => {
-      setIsExiting(false);
-      onClose();
-    }, 300);
-  };
+  }, [notification, duration, handleClose]);
 
   if (!notification) return null;
 
@@ -47,4 +53,6 @@ export default function NotificationToast({ notification, onClose, duration = 50
       </div>
     </div>
   );
-}
+});
+
+export default NotificationToast;

@@ -46,17 +46,18 @@ const ADDED_BY_ICONS = {
   system: Bot,
 };
 
+// PERFORMANCE: Moved outside component to avoid recreation on every render
+const STATUS_CONFIG = {
+  confirmed: { color: 'success', labelKey: 'bookings.status.confirmed' },
+  pending: { color: 'warning', labelKey: 'bookings.status.pending' },
+  completed: { color: 'muted', labelKey: 'bookings.status.completed' },
+  cancelled: { color: 'error', labelKey: 'bookings.status.cancelled' },
+  'no-show': { color: 'error', labelKey: 'bookings.status.noShow' },
+};
+
 const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onComplete }) {
   const { t } = useTranslation();
-  const statusConfig = {
-    confirmed: { color: 'success', labelKey: 'bookings.status.confirmed' },
-    pending: { color: 'warning', labelKey: 'bookings.status.pending' },
-    completed: { color: 'muted', labelKey: 'bookings.status.completed' },
-    cancelled: { color: 'error', labelKey: 'bookings.status.cancelled' },
-    'no-show': { color: 'error', labelKey: 'bookings.status.noShow' },
-  };
-
-  const status = statusConfig[booking.status] || statusConfig.pending;
+  const status = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
 
   return (
     <div className={`booking-card status-${status.color}`} onClick={() => onEdit(booking)}>

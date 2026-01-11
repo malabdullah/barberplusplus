@@ -1447,7 +1447,12 @@ export function AppProvider({ children }) {
     return branches.find(b => b.id === currentBarber.branchId);
   }, [currentBarber, branches]);
 
-  const value = {
+  // PERFORMANCE: Extract inline callbacks to prevent re-renders
+  const hideNotificationToast = useCallback(() => setToastNotification(null), []);
+  const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
+
+  // PERFORMANCE: Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     // State
     user,
     userRole,
@@ -1489,9 +1494,9 @@ export function AppProvider({ children }) {
     markAllNotificationsRead,
     reloadNotifications,
     toastNotification,
-    hideNotificationToast: () => setToastNotification(null),
+    hideNotificationToast,
     sessionExpired,
-    clearSessionExpired: () => setSessionExpired(false),
+    clearSessionExpired,
 
     // Actions
     setTheme,
@@ -1516,7 +1521,28 @@ export function AppProvider({ children }) {
     login,
     signup,
     logout,
-  };
+  }), [
+    // State dependencies
+    user, userRole, isAdmin, isAgent, manager,
+    branches, barbers, services, bookings,
+    selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
+    metrics, isAuthenticated, loading, theme, language,
+    // Barber state
+    currentBarber, barberBookings, barberMetrics, barberServices, barberBranch,
+    barberProfileLoading, barberProfileError,
+    // Notifications
+    notifications, unreadCount, notificationsLoading, notificationPreferences,
+    setNotificationPreferences, markNotificationRead, markAllNotificationsRead,
+    reloadNotifications, toastNotification, hideNotificationToast,
+    sessionExpired, clearSessionExpired,
+    // Actions (useCallback wrapped, stable references)
+    setTheme, setLanguage, setSelectedBranchId, reloadData,
+    addBranch, updateBranch, deleteBranch,
+    addBarber, updateBarber, deleteBarber, resendBarberInvite,
+    addService, updateService, deleteService,
+    addBooking, updateBooking, cancelBooking, extendBooking, changeBookingServices,
+    login, signup, logout,
+  ]);
 
   return (
     <AppContext.Provider value={value}>

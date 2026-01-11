@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,7 +26,8 @@ import './TopBar.css';
  * @param {boolean} props.showBranchSelector - Whether to show branch selector (manager) or just display branch name (barber)
  * @param {string} props.searchPlaceholderKey - Translation key for search placeholder
  */
-export default function TopBar({
+// PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
+const TopBar = memo(function TopBar({
   onMenuClick,
   showBranchSelector = true,
   searchPlaceholderKey = 'common.search',
@@ -92,32 +93,32 @@ export default function TopBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle preference dropdown toggle (close others when one opens)
-  const handlePreferenceDropdownToggle = (dropdownName) => {
+  // PERFORMANCE: Memoize handlers to prevent recreating on every render
+  const handlePreferenceDropdownToggle = useCallback((dropdownName) => {
     setActivePreferenceDropdown(dropdownName);
     if (dropdownName) {
       setBranchDropdownOpen(false);
       setNotificationsOpen(false);
     }
-  };
+  }, []);
 
-  const handleBranchSelect = (branchId) => {
+  const handleBranchSelect = useCallback((branchId) => {
     setSelectedBranchId(branchId);
     setBranchDropdownOpen(false);
     setBranchSearchQuery('');
-  };
+  }, [setSelectedBranchId]);
 
-  const handleNotificationClick = async (notification) => {
+  const handleNotificationClick = useCallback(async (notification) => {
     if (!notification.isRead) {
       await markNotificationRead(notification.id);
     }
-  };
+  }, [markNotificationRead]);
 
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = useCallback(async () => {
     await markAllNotificationsRead();
-  };
+  }, [markAllNotificationsRead]);
 
-  const handleViewAllNotifications = () => {
+  const handleViewAllNotifications = useCallback(() => {
     setNotificationsOpen(false);
     const routes = {
       admin: '/admin/notifications',
@@ -125,7 +126,20 @@ export default function TopBar({
       manager: '/notifications',
     };
     navigate(routes[userRole] || '/notifications');
-  };
+  }, [navigate, userRole]);
+
+  // PERFORMANCE: Memoize inline click handlers
+  const handleBranchDropdownToggle = useCallback(() => {
+    setBranchDropdownOpen(prev => !prev);
+    setNotificationsOpen(false);
+    setActivePreferenceDropdown(null);
+  }, []);
+
+  const handleNotificationsToggle = useCallback(() => {
+    setNotificationsOpen(prev => !prev);
+    setBranchDropdownOpen(false);
+    setActivePreferenceDropdown(null);
+  }, []);
 
   return (
     <header className="topbar">
@@ -152,11 +166,7 @@ export default function TopBar({
           <div className="topbar-branch-selector">
             <button
               className="topbar-branch-btn"
-              onClick={() => {
-                setBranchDropdownOpen(!branchDropdownOpen);
-                setNotificationsOpen(false);
-                setActivePreferenceDropdown(null);
-              }}
+              onClick={handleBranchDropdownToggle}
             >
               <Building2 size={18} strokeWidth={1.5} />
               <span className="topbar-branch-name">
@@ -229,11 +239,7 @@ export default function TopBar({
         <div className="topbar-notifications">
           <button
             className="topbar-icon-btn"
-            onClick={() => {
-              setNotificationsOpen(!notificationsOpen);
-              setBranchDropdownOpen(false);
-              setActivePreferenceDropdown(null);
-            }}
+            onClick={handleNotificationsToggle}
           >
             <Bell size={20} strokeWidth={1.5} />
             {visibleUnreadCount > 0 && (
@@ -297,4 +303,6 @@ export default function TopBar({
       </div>
     </header>
   );
-}
+});
+
+export default TopBar;

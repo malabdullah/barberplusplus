@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback, memo } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 
-export default function ConfirmDialog({
+// PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
+const ConfirmDialog = memo(function ConfirmDialog({
   isOpen,
   onClose,
   onConfirm,
@@ -12,10 +13,11 @@ export default function ConfirmDialog({
   cancelText = 'Cancel',
   variant = 'danger',
 }) {
-  const handleConfirm = () => {
+  // PERFORMANCE: Memoize handler to avoid recreating on every render
+  const handleConfirm = useCallback(() => {
     onConfirm();
     onClose();
-  };
+  }, [onConfirm, onClose]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="">
@@ -43,4 +45,6 @@ export default function ConfirmDialog({
       </div>
     </Modal>
   );
-}
+});
+
+export default ConfirmDialog;

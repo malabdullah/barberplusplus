@@ -1,8 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { X } from 'lucide-react';
 import './Modal.css';
 
-export default function Modal({ isOpen, onClose, title, children, size = 'default' }) {
+// PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
+const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'default' }) {
+  // PERFORMANCE: Use ref to avoid effect re-running when onClose changes
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -17,12 +22,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'defaul
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen]); // PERFORMANCE: Only depend on isOpen, use ref for onClose
 
   if (!isOpen) return null;
 
@@ -44,4 +49,6 @@ export default function Modal({ isOpen, onClose, title, children, size = 'defaul
       </div>
     </div>
   );
-}
+});
+
+export default Modal;

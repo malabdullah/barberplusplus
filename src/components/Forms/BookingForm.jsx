@@ -71,10 +71,15 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
     return barbers.find(b => b.id === formData.barberId) || null;
   }, [isManagerView, currentBarber, barbers, formData.barberId]);
 
-  // Calculate totals from selected services
-  const selectedServices = services.filter(s => formData.serviceIds.includes(s.id));
-  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  // PERFORMANCE: Memoize service calculations to avoid recomputing on every render
+  const { selectedServices, totalDuration, totalPrice } = useMemo(() => {
+    const selected = services.filter(s => formData.serviceIds.includes(s.id));
+    return {
+      selectedServices: selected,
+      totalDuration: selected.reduce((sum, s) => sum + s.duration, 0),
+      totalPrice: selected.reduce((sum, s) => sum + s.price, 0),
+    };
+  }, [services, formData.serviceIds]);
 
   // Update filtered time slots when date, barber, or duration changes
   useEffect(() => {
