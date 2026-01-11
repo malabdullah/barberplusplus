@@ -1,6 +1,14 @@
 import { supabase } from '../lib/supabase';
 import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
 import { validateBooking } from '../utils/schemaValidation';
+import logger from '../utils/logger';
+
+// Helper to check if a booking should be included based on filters
+const shouldIncludeBooking = (booking, filters) => {
+  if (filters.branchId && booking.branchId !== filters.branchId) return false;
+  if (filters.barberId && booking.barberId !== filters.barberId) return false;
+  return true;
+};
 
 // Convert snake_case DB columns to camelCase for frontend
 // Customer data comes from joined customers table
@@ -300,6 +308,80 @@ export const bookingsService = {
         .reduce((sum, b) => sum + parseFloat(b.price || 0), 0),
       completionRate: weekData.length > 0 ? Math.round((completedThisWeek / weekData.length) * 100) : 0,
     };
+  },
+
+  /**
+   * Subscribe to real-time booking changes
+   * @param {object} callbacks - { onInsert, onUpdate, onDelete }
+   * @param {object} filters - { branchId, barberId } for client-side filtering
+   * @returns {object} - Supabase channel (call .unsubscribe() to cleanup)
+   */
+  subscribe: (callbacks, filters = {}) => {
+    logger.debug('Setting up bookings realtime subscription');
+    const channel = supabase.channel('bookings-realtime');
+
+    // Subscribe to INSERT events
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'bookings',
+      },
+      async (payload) => {
+        logger.debug('Bookings realtime INSERT received', { id: payload.new.id });
+        try {
+          // Fetch full booking with customer join (payload.new lacks joined data)
+          const booking = await bookingsService.getById(payload.new.id);
+          if (booking && shouldIncludeBooking(booking, filters)) {
+            callbacks.onInsert?.(booking);
+          }
+        } catch (error) {
+          logger.error('Error fetching inserted booking:', error);
+        }
+      }
+    );
+
+    // Subscribe to UPDATE events
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'bookings',
+      },
+      async (payload) => {
+        logger.debug('Bookings realtime UPDATE received', { id: payload.new.id });
+        try {
+          const booking = await bookingsService.getById(payload.new.id);
+          if (booking && shouldIncludeBooking(booking, filters)) {
+            callbacks.onUpdate?.(booking);
+          }
+        } catch (error) {
+          logger.error('Error fetching updated booking:', error);
+        }
+      }
+    );
+
+    // Subscribe to DELETE events
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'bookings',
+      },
+      (payload) => {
+        logger.debug('Bookings realtime DELETE received', { id: payload.old.id });
+        callbacks.onDelete?.(payload.old.id);
+      }
+    );
+
+    channel.subscribe((status) => {
+      logger.debug('Bookings realtime subscription status', { status });
+    });
+
+    return channel;
   },
 };
 

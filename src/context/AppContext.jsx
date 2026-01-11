@@ -510,6 +510,51 @@ export function AppProvider({ children }) {
     };
   }, [isAuthenticated, user, userRole, branches]);
 
+  // Setup bookings realtime subscription
+  useEffect(() => {
+    let bookingsChannel = null;
+
+    const setupBookingsRealtimeSubscription = () => {
+      if (!user) return null;
+
+      // Build filters based on role
+      const filters = {};
+      if (userRole === 'barber' && barberProfile?.id) {
+        filters.barberId = barberProfile.id;
+      }
+      // Manager sees all bookings via RLS - no filter needed
+
+      return bookingsService.subscribe({
+        onInsert: (newBooking) => {
+          setBookings(prev => {
+            // Avoid duplicates (in case of optimistic update)
+            if (prev.some(b => b.id === newBooking.id)) return prev;
+            return [...prev, newBooking];
+          });
+        },
+        onUpdate: (updatedBooking) => {
+          setBookings(prev =>
+            prev.map(b => b.id === updatedBooking.id ? updatedBooking : b)
+          );
+        },
+        onDelete: (deletedId) => {
+          setBookings(prev => prev.filter(b => b.id !== deletedId));
+        },
+      }, filters);
+    };
+
+    if (isAuthenticated && user) {
+      bookingsChannel = setupBookingsRealtimeSubscription();
+    }
+
+    // Cleanup on unmount or auth change
+    return () => {
+      if (bookingsChannel) {
+        bookingsChannel.unsubscribe();
+      }
+    };
+  }, [isAuthenticated, user, userRole, barberProfile]);
+
   // Reload all data
   const reloadData = useCallback(async () => {
     try {
