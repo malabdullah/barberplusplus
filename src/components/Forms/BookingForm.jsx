@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check } from 'lucide-react';
+import { Check, UserPlus, UserCheck, Loader2 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { TIME_SLOTS } from '../../constants/time';
 import { getFilteredTimeSlots, getDateAvailability } from '../../utils/availabilityFiltering';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
+import { useCustomerLookup } from '../../hooks/useCustomerLookup';
 import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
+import CustomerSummaryCard from './CustomerSummaryCard';
 
 /**
  * Shared BookingForm component for both manager and barber views
@@ -47,6 +49,20 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
   const [dateError, setDateError] = useState(null);
 
+  // Customer lookup state
+  const [customerId, setCustomerId] = useState(booking?.customerId || null);
+
+  // Customer lookup hook - only active for new bookings (not edit mode)
+  const {
+    customer: foundCustomer,
+    loading: customerLoading,
+    isNewCustomer,
+  } = useCustomerLookup(
+    formData.customerCountryCode,
+    formData.customerPhone,
+    { debounceMs: 400 }
+  );
+
   // Sync form data when booking prop changes (for pre-fill and edit mode)
   useEffect(() => {
     if (booking) {
@@ -62,8 +78,27 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         time: booking.time || prev.time,
         notes: booking.notes || prev.notes,
       }));
+      // Set customerId for edit mode
+      if (booking.customerId) {
+        setCustomerId(booking.customerId);
+      }
     }
   }, [booking]);
+
+  // Auto-fill customer name when existing customer is found (new bookings only)
+  useEffect(() => {
+    if (foundCustomer && !booking) {
+      // Auto-fill name from found customer
+      setFormData(prev => ({
+        ...prev,
+        customerName: foundCustomer.name || prev.customerName,
+      }));
+      setCustomerId(foundCustomer.id);
+    } else if (isNewCustomer && !booking) {
+      // New customer - clear customerId
+      setCustomerId(null);
+    }
+  }, [foundCustomer, isNewCustomer, booking]);
 
   // Get the currently selected barber
   const selectedBarber = useMemo(() => {
@@ -230,6 +265,8 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         ...formData,
         duration: totalDuration,
         price: totalPrice,
+        customerId, // Pass existing customer ID (or null for new customer)
+        isNewCustomer, // Flag for AppContext to handle customer creation
       };
       // In barber view, ensure barberId is set
       if (!isManagerView && currentBarber) {
@@ -273,18 +310,47 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
                   </option>
                 ))}
               </select>
-              <input
-                type="tel"
-                name="customerPhone"
-                value={formData.customerPhone}
-                onChange={handleChange}
-                className={`form-input phone-number-input ${errors.customerPhone ? 'error' : ''}`}
-                placeholder={t('bookings.phonePlaceholder')}
-              />
+              <div className="phone-input-wrapper">
+                <input
+                  type="tel"
+                  name="customerPhone"
+                  value={formData.customerPhone}
+                  onChange={handleChange}
+                  className={`form-input phone-number-input ${errors.customerPhone ? 'error' : ''} ${foundCustomer ? 'customer-found' : ''}`}
+                  placeholder={t('bookings.phonePlaceholder')}
+                />
+                {/* Customer lookup status indicator */}
+                {!booking && formData.customerPhone.replace(/\s/g, '').length >= 6 && (
+                  <span className="phone-input-status">
+                    {customerLoading && (
+                      <Loader2 size={16} className="spinner" />
+                    )}
+                    {!customerLoading && foundCustomer && (
+                      <UserCheck size={16} className="status-icon status-found" />
+                    )}
+                    {!customerLoading && isNewCustomer && (
+                      <UserPlus size={16} className="status-icon status-new" />
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
             {errors.customerPhone && <span className="form-error">{errors.customerPhone}</span>}
           </div>
         </div>
+
+        {/* Customer summary card for returning customers */}
+        {!booking && foundCustomer && (
+          <CustomerSummaryCard customer={foundCustomer} />
+        )}
+
+        {/* New customer indicator */}
+        {!booking && isNewCustomer && formData.customerPhone.replace(/\s/g, '').length >= 6 && (
+          <div className="new-customer-badge">
+            <UserPlus size={16} />
+            <span>{t('bookings.newCustomer')}</span>
+          </div>
+        )}
       </div>
 
       <div className="form-section">

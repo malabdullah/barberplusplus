@@ -445,6 +445,16 @@
     },
     "noBarbersAvailable": "لا يوجد حلاقون متاحون لهذا الفرع",
     "noServicesAvailable": "لا توجد خدمات متاحة لهذا الفرع",
+    "newCustomer": "عميل جديد",
+    "existingCustomer": "عميل عائد",
+    "searchingCustomer": "جاري البحث...",
+    "customerSummary": {
+      "returningCustomer": "عميل عائد",
+      "totalVisits": "الزيارات",
+      "lastVisit": "آخر زيارة",
+      "preferredBarber": "المفضل",
+      "notes": "ملاحظات"
+    },
     "extend": {
       "title": "تمديد الحجز",
       "selectService": "اختر خدمة للإضافة",

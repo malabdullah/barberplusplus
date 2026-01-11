@@ -544,6 +544,16 @@
     },
     "noBarbersAvailable": "No barbers available for this branch",
     "noServicesAvailable": "No services available for this branch",
+    "newCustomer": "New customer",
+    "existingCustomer": "Returning customer",
+    "searchingCustomer": "Searching...",
+    "customerSummary": {
+      "returningCustomer": "Returning Customer",
+      "totalVisits": "Visits",
+      "lastVisit": "Last visit",
+      "preferredBarber": "Preferred",
+      "notes": "Notes"
+    },
     "extend": {
       "title": "Extend Booking",
       "selectService": "Select a service to add",

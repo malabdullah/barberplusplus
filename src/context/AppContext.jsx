@@ -11,6 +11,7 @@ import {
   notificationPreferencesService,
 } from '../services';
 import { agentService } from '../services/agent.service';
+import { customersService } from '../services/customers.service';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts, checkExtensionConflicts } from '../utils/bookingConflicts';
 import { validateUserRole } from '../utils/security';
@@ -926,6 +927,27 @@ export function AppProvider({ children }) {
         throw new Error(conflict.reason);
       }
 
+      // Handle customer creation/linking
+      let customerId = bookingData.customerId;
+
+      // If no customerId but we have phone info, find or create customer
+      if (!customerId && bookingData.customerPhone && bookingData.customerCountryCode) {
+        try {
+          const customer = await customersService.findOrCreate({
+            countryCode: bookingData.customerCountryCode,
+            phone: bookingData.customerPhone,
+            name: bookingData.customerName,
+            createdByType: userRole,
+            createdByUserId: user?.id,
+          });
+          customerId = customer?.id;
+          logger.debug('Customer linked to booking', { customerId, isNew: bookingData.isNewCustomer });
+        } catch (customerError) {
+          // Log but don't block booking creation if customer creation fails
+          logger.error('Error creating/finding customer', customerError);
+        }
+      }
+
       const newBooking = await bookingsService.create({
         ...bookingData,
         branchId: selectedBranchId,
@@ -933,6 +955,7 @@ export function AppProvider({ children }) {
         duration: totalDuration || 30,
         price: totalPrice || 0,
         status: 'confirmed',
+        customerId, // Link to customer record
         addedByType: userRole,
         addedByUserId: user?.id,
       });
