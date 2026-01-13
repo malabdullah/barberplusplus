@@ -117,7 +117,7 @@ export const bookingsService = {
     const { data, error } = await supabase
       .from('bookings')
       .insert([toDatabase(bookingData)])
-      .select()
+      .select('*, customer:customers(id, name, country_code, phone)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -170,7 +170,7 @@ export const bookingsService = {
       .from('bookings')
       .update(toDatabase(bookingData))
       .eq('id', id)
-      .select()
+      .select('*, customer:customers(id, name, country_code, phone)')
       .single();
     if (error) throw error;
     return toFrontend(data);
