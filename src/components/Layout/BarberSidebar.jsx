@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
@@ -44,7 +44,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <button className="sidebar-close-btn" onClick={onClose}>
             <X size={20} strokeWidth={2} />
           </button>
-          <div className="sidebar-logo">
+          <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
             <div className="sidebar-logo-icon">
               <Scissors size={24} strokeWidth={1.5} />
             </div>
@@ -52,7 +52,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
               <span className="sidebar-logo-name">Barber++</span>
               <span className="sidebar-logo-tagline">Barber</span>
             </div>
-          </div>
+          </Link>
           <div className="sidebar-divider">
             <div className="sidebar-divider-line"></div>
             <div className="sidebar-divider-diamond"></div>
@@ -76,7 +76,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <button className="sidebar-close-btn" onClick={onClose}>
             <X size={20} strokeWidth={2} />
           </button>
-          <div className="sidebar-logo">
+          <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
             <div className="sidebar-logo-icon">
               <Scissors size={24} strokeWidth={1.5} />
             </div>
@@ -84,7 +84,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
               <span className="sidebar-logo-name">Barber++</span>
               <span className="sidebar-logo-tagline">Barber</span>
             </div>
-          </div>
+          </Link>
           <div className="sidebar-divider">
             <div className="sidebar-divider-line"></div>
             <div className="sidebar-divider-diamond"></div>
@@ -111,7 +111,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <X size={20} strokeWidth={2} />
         </button>
       {/* Logo */}
-      <div className="sidebar-logo">
+      <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
         <div className="sidebar-logo-icon">
           <Scissors size={24} strokeWidth={1.5} />
         </div>
@@ -119,7 +119,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <span className="sidebar-logo-name">Barber++</span>
           <span className="sidebar-logo-tagline">Barber</span>
         </div>
-      </div>
+      </Link>
 
       {/* Decorative line */}
       <div className="sidebar-divider">

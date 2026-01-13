@@ -104,7 +104,7 @@ export default function ForgotPassword() {
         </div>
 
         {/* Logo */}
-        <div className="login-logo">
+        <Link to="/" className="login-logo" aria-label="Barber++ Home">
           <div className="login-logo-icon">
             <Scissors size={28} strokeWidth={1.5} />
           </div>
@@ -112,7 +112,7 @@ export default function ForgotPassword() {
             <span className="login-logo-name">Barber++</span>
             <span className="login-logo-tagline">Dashboard</span>
           </div>
-        </div>
+        </Link>
 
         {/* Decorative Line */}
         <div className="login-divider">

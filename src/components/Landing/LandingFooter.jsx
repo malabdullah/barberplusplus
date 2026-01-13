@@ -22,12 +22,12 @@ export default function LandingFooter() {
         <div className="footer-main">
           {/* Brand */}
           <div className="footer-brand">
-            <div className="footer-brand-logo">
+            <Link to="/" className="footer-brand-logo" aria-label="Barber++ Home">
               <div className="footer-logo-icon" aria-hidden="true">
                 <Scissors size={20} strokeWidth={1.5} />
               </div>
               <span className="footer-logo-name">Barber++</span>
-            </div>
+            </Link>
             <p className="footer-tagline">
               {t('landing.footer.tagline')}
             </p>

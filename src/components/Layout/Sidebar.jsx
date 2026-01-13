@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
@@ -49,7 +49,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </button>
 
         {/* Logo */}
-        <div className="sidebar-logo">
+        <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
         <div className="sidebar-logo-icon">
           <Scissors size={24} strokeWidth={1.5} />
         </div>
@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
           <span className="sidebar-logo-name">Barber++</span>
           <span className="sidebar-logo-tagline">Manager</span>
         </div>
-      </div>
+      </Link>
 
       {/* Decorative line */}
       <div className="sidebar-divider">

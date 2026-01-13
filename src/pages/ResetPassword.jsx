@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -97,11 +97,11 @@ export default function ResetPassword() {
           <div className="login-bg-pattern" />
         </div>
         <div className="login-container animate-scale-in">
-          <div className="login-logo">
+          <Link to="/" className="login-logo" aria-label="Barber++ Home">
             <div className="login-logo-icon">
               <Scissors size={28} strokeWidth={1.5} />
             </div>
-          </div>
+          </Link>
           <div className="login-welcome">
             <p>{t('common.loading')}</p>
           </div>
@@ -185,7 +185,7 @@ export default function ResetPassword() {
         </div>
 
         {/* Logo */}
-        <div className="login-logo">
+        <Link to="/" className="login-logo" aria-label="Barber++ Home">
           <div className="login-logo-icon">
             <Scissors size={28} strokeWidth={1.5} />
           </div>
@@ -193,7 +193,7 @@ export default function ResetPassword() {
             <span className="login-logo-name">Barber++</span>
             <span className="login-logo-tagline">Dashboard</span>
           </div>
-        </div>
+        </Link>
 
         {/* Decorative Line */}
         <div className="login-divider">
