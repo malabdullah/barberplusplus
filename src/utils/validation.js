@@ -38,26 +38,6 @@ export const validatePhoneNumber = (phone, countryCode) => {
 };
 
 /**
- * Validate an email address using RFC 5322 simplified pattern
- * @param {string} email - The email to validate
- * @returns {{ valid: boolean, error?: string }}
- */
-export const validateEmail = (email) => {
-  if (!email || !email.trim()) {
-    return { valid: false, error: 'Email is required' };
-  }
-
-  // RFC 5322 simplified pattern
-  const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-  if (!emailPattern.test(email)) {
-    return { valid: false, error: 'Please enter a valid email address' };
-  }
-
-  return { valid: true };
-};
-
-/**
  * Validate password strength
  * SECURITY: Uses OWASP recommendations (12+ chars, common password blacklist)
  * @param {string} password - The password to validate
@@ -111,19 +91,6 @@ export const validateRequired = (value, fieldName = 'This field') => {
 };
 
 /**
- * Validate an array has at least one item
- * @param {Array} arr - The array to validate
- * @param {string} fieldName - The field name for error message
- * @returns {{ valid: boolean, error?: string }}
- */
-export const validateArrayNotEmpty = (arr, fieldName = 'Selection') => {
-  if (!arr || !Array.isArray(arr) || arr.length === 0) {
-    return { valid: false, error: `Please select at least one ${fieldName.toLowerCase()}` };
-  }
-  return { valid: true };
-};
-
-/**
  * Validate a URL (http/https only)
  * @param {string} url - The URL to validate
  * @param {boolean} required - Whether the field is required
@@ -147,90 +114,4 @@ export const validateUrl = (url, required = false) => {
   } catch {
     return { valid: false, error: 'Please enter a valid URL' };
   }
-};
-
-/**
- * Validate a text field with length limits
- * @param {string} text - The text to validate
- * @param {Object} options - Validation options
- * @param {number} options.minLength - Minimum length (default: 0)
- * @param {number} options.maxLength - Maximum length (default: 500)
- * @param {boolean} options.required - Whether field is required
- * @param {string} options.fieldName - Field name for error messages
- * @returns {{ valid: boolean, error?: string }}
- */
-export const validateText = (text, options = {}) => {
-  const {
-    minLength = 0,
-    maxLength = 500,
-    required = false,
-    fieldName = 'This field',
-  } = options;
-
-  if (!text || !text.trim()) {
-    if (required) {
-      return { valid: false, error: `${fieldName} is required` };
-    }
-    return { valid: true };
-  }
-
-  const trimmed = text.trim();
-
-  if (trimmed.length < minLength) {
-    return { valid: false, error: `${fieldName} must be at least ${minLength} characters` };
-  }
-
-  if (trimmed.length > maxLength) {
-    return { valid: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
-  }
-
-  return { valid: true };
-};
-
-/**
- * Validate a name field (letters, spaces, hyphens, apostrophes only)
- * @param {string} name - The name to validate
- * @param {Object} options - Validation options
- * @param {boolean} options.required - Whether field is required
- * @param {number} options.maxLength - Maximum length (default: 100)
- * @param {string} options.fieldName - Field name for error messages
- * @returns {{ valid: boolean, error?: string }}
- */
-export const validateName = (name, options = {}) => {
-  const { required = false, maxLength = 100, fieldName = 'Name' } = options;
-
-  if (!name || !name.trim()) {
-    if (required) {
-      return { valid: false, error: `${fieldName} is required` };
-    }
-    return { valid: true };
-  }
-
-  const trimmed = name.trim();
-
-  if (trimmed.length > maxLength) {
-    return { valid: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
-  }
-
-  // Allow letters (including Arabic/international), spaces, hyphens, apostrophes
-  // eslint-disable-next-line no-misleading-character-class
-  if (!/^[\p{L}\s'\-]+$/u.test(trimmed)) {
-    return { valid: false, error: `${fieldName} contains invalid characters` };
-  }
-
-  return { valid: true };
-};
-
-/**
- * Sanitize a string by removing potentially dangerous characters
- * @param {string} input - The string to sanitize
- * @returns {string} - Sanitized string
- */
-export const sanitizeString = (input) => {
-  if (!input || typeof input !== 'string') return '';
-  // Remove HTML tags and potentially dangerous characters
-  return input
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/[<>'"&]/g, '') // Remove special HTML chars
-    .trim();
 };

@@ -126,13 +126,4 @@ export const storageService = {
 
     return newUrl;
   },
-
-  /**
-   * Check if a URL is a valid storage URL (not base64)
-   * @param {string} url - The URL to check
-   * @returns {boolean}
-   */
-  isStorageUrl: (url) => {
-    return url && !url.startsWith('data:') && url.includes('/storage/');
-  },
 };

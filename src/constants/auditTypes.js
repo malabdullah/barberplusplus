@@ -104,10 +104,3 @@ export const ACTION_CATEGORIES = {
   security: { label: 'Security', icon: 'Shield' },
   admin: { label: 'Admin Actions', icon: 'Activity' },
 };
-
-// Get actions by category
-export const getActionsByCategory = (category) => {
-  return Object.entries(AUDIT_ACTION_TYPES)
-    .filter(([_, config]) => config.category === category)
-    .map(([key]) => key);
-};

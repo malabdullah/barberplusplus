@@ -4,21 +4,6 @@ export const LOG_LEVELS = ['error', 'warning', 'info', 'debug'];
 // Types of log events
 export const LOG_TYPES = ['error', 'action', 'navigation', 'system', 'auth'];
 
-// Entity types that can be logged
-export const ENTITY_TYPES = ['branch', 'barber', 'service', 'booking'];
-
-// Actions that can be logged
-export const ACTIONS = [
-  'create',
-  'update',
-  'delete',
-  'view',
-  'login',
-  'logout',
-  'signup',
-  'navigate',
-];
-
 // Configuration for log level display
 export const LOG_LEVEL_CONFIG = {
   error: { color: 'error', label: 'Error', icon: 'AlertTriangle' },

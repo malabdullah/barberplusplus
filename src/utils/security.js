@@ -45,32 +45,6 @@ export const sanitizeForCSV = (value) => {
 };
 
 /**
- * Sanitize an entire row of values for CSV export
- * @param {Array} row - Array of values to sanitize
- * @returns {Array} - Array of sanitized values
- */
-export const sanitizeCSVRow = (row) => {
-  if (!Array.isArray(row)) return [];
-  return row.map(sanitizeForCSV);
-};
-
-/**
- * Convert an array of rows to a safe CSV string
- * @param {Array} headers - Array of header strings
- * @param {Array} rows - Array of row arrays
- * @returns {string} - Safe CSV string
- */
-export const toSafeCSV = (headers, rows) => {
-  const sanitizedHeaders = sanitizeCSVRow(headers);
-  const sanitizedRows = rows.map(sanitizeCSVRow);
-
-  return [
-    sanitizedHeaders.join(','),
-    ...sanitizedRows.map(row => row.join(','))
-  ].join('\n');
-};
-
-/**
  * Validate and sanitize a UUID string
  * @param {string} uuid - UUID to validate
  * @returns {string|null} - Valid UUID or null
@@ -83,42 +57,6 @@ export const sanitizeUUID = (uuid) => {
 
   const trimmed = uuid.trim().toLowerCase();
   return uuidRegex.test(trimmed) ? trimmed : null;
-};
-
-/**
- * Sanitize a string for safe use in Supabase filters
- * Removes any characters that could be used for filter injection
- * @param {string} input - Input string
- * @returns {string} - Sanitized string
- */
-export const sanitizeFilterValue = (input) => {
-  if (!input || typeof input !== 'string') return input;
-
-  // Remove characters that could break out of Supabase filter syntax
-  // Keep only alphanumeric, spaces, and common punctuation
-  return input.replace(/[^a-zA-Z0-9\s\-_@.]/g, '');
-};
-
-/**
- * Check if a string contains potentially malicious patterns
- * @param {string} input - Input to check
- * @returns {boolean} - True if suspicious patterns found
- */
-export const hasSuspiciousPatterns = (input) => {
-  if (!input || typeof input !== 'string') return false;
-
-  const suspiciousPatterns = [
-    /(\bOR\b|\bAND\b|\bUNION\b|\bSELECT\b|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b)/i,
-    /--/, // SQL comment
-    /;/, // Statement terminator
-    /\/\*/, // Block comment start
-    /\*\//, // Block comment end
-    /<script/i, // XSS attempt
-    /javascript:/i, // JavaScript protocol
-    /on\w+=/i, // Event handlers
-  ];
-
-  return suspiciousPatterns.some(pattern => pattern.test(input));
 };
 
 /**
@@ -442,31 +380,10 @@ export const redactPII = (obj) => {
   return result;
 };
 
-/**
- * Redact PII from JSON string
- * @param {string} jsonString - JSON string with potential PII
- * @returns {string} - JSON string with redacted PII
- */
-export const redactPIIFromJSON = (jsonString) => {
-  if (!jsonString || typeof jsonString !== 'string') return jsonString;
-
-  try {
-    const obj = JSON.parse(jsonString);
-    return JSON.stringify(redactPII(obj));
-  } catch {
-    // Not valid JSON, return as-is
-    return jsonString;
-  }
-};
-
 export default {
   escapeLikeWildcards,
   sanitizeForCSV,
-  sanitizeCSVRow,
-  toSafeCSV,
   sanitizeUUID,
-  sanitizeFilterValue,
-  hasSuspiciousPatterns,
   logErrorDev,
   createRateLimiter,
   authRateLimiter,
@@ -482,5 +399,4 @@ export default {
   redactIP,
   redactName,
   redactPII,
-  redactPIIFromJSON,
 };
