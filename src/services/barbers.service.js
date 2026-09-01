@@ -187,49 +187,42 @@ export const barbersService = {
       throw new Error('Not authenticated');
     }
 
-    // SECURITY: AbortController for request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT_MS);
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-barber`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ barberId, email, name, branchId, isResend }),
-          signal: controller.signal,
+      const { data, error, response } = await supabase.functions.invoke('invite-barber', {
+        body: { barberId, email, name, branchId, isResend },
+        timeout: EDGE_FUNCTION_TIMEOUT_MS,
+      });
+
+      if (error) {
+        if (error.context?.name === 'AbortError') {
+          throw error;
         }
-      );
 
-      clearTimeout(timeoutId);
+        let functionError = null;
+        try {
+          functionError = response ? await response.clone().json() : null;
+        } catch {
+          // The function may return a non-JSON error response.
+        }
 
-      const result = await response.json();
-
-      if (!response.ok) {
         // SECURITY: Log raw error for debugging, throw sanitized message
-        logErrorDev('Edge Function error:', result.error);
+        logErrorDev('Edge Function error:', functionError?.error || error);
         // Map specific known errors to user-friendly messages
-        if (response.status === 401) {
+        if (response?.status === 401) {
           throw new Error('Session expired. Please log in again.');
-        } else if (response.status === 403) {
+        } else if (response?.status === 403) {
           throw new Error('You do not have permission to perform this action.');
-        } else if (response.status === 429) {
+        } else if (response?.status === 429) {
           throw new Error('Too many requests. Please try again later.');
         }
         // Generic error for unknown cases (don't expose raw API errors)
         throw new Error('Failed to send invite. Please try again.');
       }
 
-      return result;
+      return data;
     } catch (error) {
-      clearTimeout(timeoutId);
-
       // Handle timeout specifically
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || error.context?.name === 'AbortError') {
         throw new Error('Request timed out. Please try again.');
       }
 

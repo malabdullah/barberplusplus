@@ -87,12 +87,26 @@ export const storageService = {
     // Skip if no URL or if it's a base64 data URL (legacy)
     if (!imageUrl || imageUrl.startsWith('data:')) return;
 
-    // Extract the file path from the URL
-    // URL format: https://xxx.supabase.co/storage/v1/object/public/avatars/folder/filename
-    const urlParts = imageUrl.split(`/storage/v1/object/public/${BUCKET_NAME}/`);
-    if (urlParts.length < 2) return;
+    // Extract by pathname so URLs from either hosted or self-hosted Supabase
+    // remain deletable throughout the rollback window.
+    const storagePathPrefix = `/storage/v1/object/public/${BUCKET_NAME}/`;
+    let filePath;
 
-    const filePath = urlParts[1];
+    try {
+      const imagePathname = new URL(imageUrl).pathname;
+      const prefixIndex = imagePathname.indexOf(storagePathPrefix);
+      if (prefixIndex === -1) return;
+
+      filePath = imagePathname
+        .slice(prefixIndex + storagePathPrefix.length)
+        .split('/')
+        .map((segment) => decodeURIComponent(segment))
+        .join('/');
+    } catch {
+      return;
+    }
+
+    if (!filePath) return;
 
     const { error } = await supabase.storage
       .from(BUCKET_NAME)

@@ -1,27 +1,66 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
 
-// In production, log warning instead of throwing to prevent app crash
-// In development, throw to catch misconfiguration early
-if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMessage = 'Missing Supabase credentials. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.\n' +
-    'Get these from: https://supabase.com/dashboard/project/YOUR_PROJECT/settings/api';
-  
-  if (import.meta.env.DEV) {
-    throw new Error(errorMessage);
-  } else {
-    console.error('[Supabase]', errorMessage);
-    // Create a dummy client to prevent app crash, but it won't work
-    // This allows the app to load and show error UI instead of crashing
+const getSupabaseUrl = () => {
+  if (!rawSupabaseUrl) {
+    throw new Error('Missing VITE_SUPABASE_URL. Configure the public URL of the self-hosted Supabase instance.');
   }
-}
 
-// Create client with fallback empty strings if env vars are missing (production only)
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(rawSupabaseUrl);
+  } catch {
+    throw new Error('VITE_SUPABASE_URL must be a valid HTTPS URL.');
+  }
+
+  if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) {
+    throw new Error('VITE_SUPABASE_URL must use HTTPS and must not contain credentials.');
+  }
+
+  if (parsedUrl.pathname !== '/' || parsedUrl.search || parsedUrl.hash) {
+    throw new Error('VITE_SUPABASE_URL must be an origin without a path, query, or fragment.');
+  }
+
+  return parsedUrl.origin;
+};
+
+const getSupabasePublishableKey = () => {
+  if (!supabasePublishableKey) {
+    throw new Error('Missing VITE_SUPABASE_PUBLISHABLE_KEY. Configure the browser-safe self-hosted Supabase key.');
+  }
+
+  if (supabasePublishableKey.startsWith('sb_publishable_')) {
+    return supabasePublishableKey;
+  }
+
+  // Older self-hosted stacks expose the browser-safe anon key as a JWT.
+  // Decode only to verify the declared role; JWT signature verification remains
+  // the responsibility of the Supabase gateway.
+  try {
+    const [, encodedPayload, signature] = supabasePublishableKey.split('.');
+    if (!encodedPayload || !signature) throw new Error('Malformed JWT');
+
+    const normalizedPayload = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(paddedPayload));
+
+    if (payload.role === 'anon') {
+      return supabasePublishableKey;
+    }
+  } catch {
+    // Fall through to the safe configuration error below.
+  }
+
+  throw new Error('VITE_SUPABASE_PUBLISHABLE_KEY must contain an sb_publishable_ key or a legacy anon-role JWT. Never expose a secret or service-role key in the browser.');
+};
+
+export const supabaseUrl = getSupabaseUrl();
+
 export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || '',
+  supabaseUrl,
+  getSupabasePublishableKey(),
   {
     auth: {
       persistSession: true,

@@ -61,11 +61,16 @@ A modern barbershop management dashboard built with React and Supabase. Manage m
    cp .env.example .env
    ```
 
-   Edit `.env` with your Supabase credentials:
+   Edit `.env` with the self-hosted Supabase public URL and publishable key:
    ```env
-   VITE_SUPABASE_URL=https://your-project-id.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key-here
+   VITE_SUPABASE_URL=https://supabase.malabdullah.cloud
+   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key-here
    ```
+
+   Retrieve the browser-safe key from the Supabase host. Modern
+   `sb_publishable_` keys and legacy self-hosted `anon` JWTs are supported.
+   Never place the secret or service-role key in a Vite environment variable
+   because Vite embeds it in the browser bundle.
 
 4. **Set up database**
 
