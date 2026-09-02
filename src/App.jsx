@@ -54,6 +54,7 @@ import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import AgentConversations from './pages/agent/AgentConversations';
+import EnvironmentBanner from './components/UI/EnvironmentBanner';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -254,6 +255,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
+      <EnvironmentBanner />
       <AppRoutes />
     </AppProvider>
   );
