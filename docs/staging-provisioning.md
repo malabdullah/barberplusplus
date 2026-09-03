@@ -87,13 +87,15 @@ restore rehearsal are still required before this lab can be treated as durable.
 - Cloudflare Tunnel, DNS, TLS, Access default-deny, CI service-token access, and
   exact webhook bypass checks have passed.
 - The GitHub `staging` environment and repository-scoped runner are configured.
-- The private repository is on GitHub Free, which rejected branch protection
-  and rulesets through the API. Therefore `main` is not protected and the
-  required staging promotion gate remains **NO-GO**. The smallest conforming
-  fix is GitHub Pro/Team branch protection or making the repository public;
-  neither is performed without explicit user authority.
-- GitHub environment protection rules are also unavailable on this plan. This
-  is acceptable for automatic staging only, never for production approval.
+- The repository is public on GitHub Free. `main` has server-side protection,
+  includes administrators, requires all five CI checks and one independent
+  approval, dismisses stale approvals, requires latest-push approval and
+  conversation resolution, and blocks force pushes and deletion.
+- PR #1 still requires an independent approval before the merge/deployment gate
+  can pass. Do not bypass or weaken the rule.
+- The `staging` environment has no approval rule because staging deploys
+  automatically after protected `main`; production still requires an
+  independent protected approval mechanism.
 - Local service ports other than the frontend remain broadly bound by the
   Supabase CLI and require loopback/firewall hardening.
 - Sandbox SMTP, Meta test credentials, restricted Anthropic credentials,

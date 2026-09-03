@@ -76,11 +76,11 @@ Protect `main` with:
 Protect `v*` tags from unauthorized creation, update, and deletion. Keep the
 production workflow's annotated-tag and strict semantic-version checks.
 
-The current private repository is on GitHub Free. Both repository rulesets and
-classic branch protection returned GitHub HTTP 403. This is a recorded hard
-block: do not merge/deploy until GitHub Pro/Team protection is enabled or the
-repository is intentionally made public. No workflow or local hook is treated
-as an equivalent server-side protection.
+The repository is public on GitHub Free so server-side branch protection is
+available. `main` requires the five checks above, one independent approval,
+latest-push approval, stale-review dismissal, conversation resolution, and an
+up-to-date branch. Administrators are included; force pushes and deletion are
+disabled. Do not weaken these rules to complete a release.
 
 ## GHCR and local staging runner
 
