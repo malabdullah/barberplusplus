@@ -1,0 +1,7 @@
+# Removed synthetic/structural false positives retained in this branch's
+# immutable review history. Current source remains fully scanned.
+e450135611e6b168a742b33b5276d699bbc5953b:.github/workflows/ci.yml:generic-api-key:37
+e450135611e6b168a742b33b5276d699bbc5953b:playwright.config.js:generic-api-key:23
+e450135611e6b168a742b33b5276d699bbc5953b:docs/staging-provisioning.md:generic-api-key:79
+e450135611e6b168a742b33b5276d699bbc5953b:supabase/functions/whatsapp-flow-endpoint/crypto.ts:private-key:127
+e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js:generic-api-key:4
