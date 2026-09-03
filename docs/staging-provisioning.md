@@ -80,14 +80,14 @@ Generate every Supabase credential fresh on the staging host. This includes
 passwords, JWT signing material, public and private API credentials, encryption
 material for Realtime and Vault, Storage access, and dashboard access. Set the
 staging Auth site and exact
-redirect URLs to `https://staging.barber.malabdullah.cloud`. Store only secret
+redirect URLs to `https://staging-barber.malabdullah.cloud`. Store only secret
 names and non-secret resource identifiers in documentation.
 
 ## Cloudflare boundary
 
 Create proxied DNS records, without changing any existing production record:
 
-- `staging.barber.malabdullah.cloud` -> staging reverse proxy
+- `staging-barber.malabdullah.cloud` -> staging reverse proxy
 - `supabase-staging.malabdullah.cloud` -> staging Supabase gateway
 
 Use Full (strict) TLS with an origin certificate. Put the frontend and Supabase
@@ -114,7 +114,7 @@ GitHub staging environment:
 - `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_APPLICATION_ID`
 - `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`
 - `ACCESS_CLIENT_ID`, `ACCESS_CLIENT_SECRET`
-- variable `APP_URL=https://staging.barber.malabdullah.cloud`
+- variable `APP_URL=https://staging-barber.malabdullah.cloud`
 - variable `SUPABASE_URL=https://supabase-staging.malabdullah.cloud`
 
 Frontend application runtime:
@@ -173,7 +173,7 @@ it prints no values.
 Run against staging with a Cloudflare Access service token:
 
 ```sh
-SMOKE_APP_URL=https://staging.barber.malabdullah.cloud \
+SMOKE_APP_URL=https://staging-barber.malabdullah.cloud \
 EXPECTED_ENV=staging EXPECTED_RELEASE=<commit-sha> \
 ACCESS_CLIENT_ID=<from-secret-store> \
 ACCESS_CLIENT_SECRET=<from-secret-store> \

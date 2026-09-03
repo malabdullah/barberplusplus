@@ -7,7 +7,7 @@ set -eu
 : "${ACCESS_CLIENT_ID:?ACCESS_CLIENT_ID is required}"
 : "${ACCESS_CLIENT_SECRET:?ACCESS_CLIENT_SECRET is required}"
 
-[ "$STAGING_APP_URL" = "https://staging.barber.malabdullah.cloud" ] || {
+[ "$STAGING_APP_URL" = "https://staging-barber.malabdullah.cloud" ] || {
   echo "Refusing to test a non-staging application hostname." >&2
   exit 1
 }

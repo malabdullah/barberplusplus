@@ -38,7 +38,7 @@ do
   require_var "$variable"
 done
 
-[ "$APP_URL" = "https://staging.barber.malabdullah.cloud" ] || fail \
+[ "$APP_URL" = "https://staging-barber.malabdullah.cloud" ] || fail \
   "APP_URL must be the dedicated staging hostname"
 [ "$STAGING_SUPABASE_URL" = "https://supabase-staging.malabdullah.cloud" ] || fail \
   "STAGING_SUPABASE_URL must be the dedicated staging hostname"

@@ -19,7 +19,7 @@ Dokploy supplies these frontend container values:
 | Value | Staging | Production |
 |-------|---------|------------|
 | `APP_ENV` | `staging` | `production` |
-| `APP_URL` | `https://staging.barber.malabdullah.cloud` | production origin |
+| `APP_URL` | `https://staging-barber.malabdullah.cloud` | production origin |
 | `SUPABASE_PUBLIC_URL` | `https://supabase-staging.malabdullah.cloud` | production API origin |
 | `SUPABASE_REALTIME_URL` | staging WSS origin | production WSS origin |
 | `SUPABASE_PUBLISHABLE_KEY` | staging browser key | production browser key |

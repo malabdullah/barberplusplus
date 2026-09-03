@@ -55,7 +55,7 @@ grep -Fx 'API_EXTERNAL_URL=https://supabase-staging.malabdullah.cloud/auth/v1' "
   echo "API_EXTERNAL_URL is not the staging Auth endpoint." >&2
   exit 1
 }
-grep -Fx 'SITE_URL=https://staging.barber.malabdullah.cloud' "$target/.env" >/dev/null || {
+grep -Fx 'SITE_URL=https://staging-barber.malabdullah.cloud' "$target/.env" >/dev/null || {
   echo "SITE_URL is not the staging application origin." >&2
   exit 1
 }
