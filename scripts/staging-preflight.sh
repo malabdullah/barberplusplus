@@ -24,15 +24,13 @@ require_var() {
   "supabase/schema.expected.sql is absent"
 [ -d supabase/tests ] || fail "supabase/tests is absent"
 
-require_command curl
-require_command jq
+for command_name in curl docker jq launchctl node npm npx plutil shasum; do
+  require_command "$command_name"
+done
 
 for variable in \
-  APP_URL STAGING_SUPABASE_URL STAGING_DB_URL \
-  STAGING_FUNCTION_DEPLOY_HOOK STAGING_FUNCTION_DEPLOY_SECRET \
-  STAGING_BACKUP_CHECK_URL STAGING_BACKUP_CHECK_TOKEN \
-  DOKPLOY_URL DOKPLOY_API_KEY DOKPLOY_APPLICATION_ID \
-  GHCR_PULL_USERNAME GHCR_PULL_TOKEN \
+  APP_URL STAGING_SUPABASE_URL DEPLOY_IMAGE DEPLOY_SHA \
+  STAGING_FUNCTION_ENV_FILE STAGING_FUNCTION_STATE_DIR STAGING_BACKUP_DIR \
   ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET
 do
   require_var "$variable"
@@ -43,24 +41,34 @@ done
 [ "$STAGING_SUPABASE_URL" = "https://supabase-staging.malabdullah.cloud" ] || fail \
   "STAGING_SUPABASE_URL must be the dedicated staging hostname"
 
-case "$DOKPLOY_URL" in https://*) ;; *) fail "DOKPLOY_URL must use HTTPS" ;; esac
-case "$STAGING_FUNCTION_DEPLOY_HOOK" in https://*) ;; *) fail "staging deploy hook must use HTTPS" ;; esac
-case "$STAGING_BACKUP_CHECK_URL" in https://*) ;; *) fail "staging backup check URL must use HTTPS" ;; esac
-case "$STAGING_DB_URL" in
-  *pqaidfykknoiqmosfvnb*|*supabase.malabdullah.cloud*)
-    fail "STAGING_DB_URL references a known production endpoint"
-    ;;
-  postgres://*|postgresql://*) ;;
-  *) fail "STAGING_DB_URL must be a PostgreSQL connection URL" ;;
+case "$DEPLOY_IMAGE" in
+  ghcr.io/malabdullah/barberplusplus@sha256:*) ;;
+  *) fail "DEPLOY_IMAGE must use the Barber++ GHCR repository and an immutable digest" ;;
 esac
+case "$DEPLOY_IMAGE" in
+  *supabase.malabdullah.cloud*|*pqaidfykknoiqmosfvnb*)
+    fail "DEPLOY_IMAGE references a known production endpoint"
+    ;;
+esac
+case "$DEPLOY_SHA" in
+  *[!0-9a-f]*|'') fail "DEPLOY_SHA must be a lowercase commit SHA" ;;
+esac
+[ "${#DEPLOY_SHA}" -eq 40 ] || fail "DEPLOY_SHA must contain 40 characters"
 
-if [ -n "${PRODUCTION_DB_URL:-}" ] && [ "$STAGING_DB_URL" = "$PRODUCTION_DB_URL" ]; then
-  fail "staging and production database URLs are identical"
-fi
-if [ -n "${PRODUCTION_DOKPLOY_APPLICATION_ID:-}" ] && \
-  [ "$DOKPLOY_APPLICATION_ID" = "$PRODUCTION_DOKPLOY_APPLICATION_ID" ]; then
-  fail "staging and production Dokploy application IDs are identical"
-fi
+runner_root=/Users/malabdullah/actions-runner-barber-staging
+case "$STAGING_FUNCTION_ENV_FILE" in
+  "$runner_root"/.secrets/*) ;;
+  *) fail "STAGING_FUNCTION_ENV_FILE must be inside the protected staging runner directory" ;;
+esac
+case "$STAGING_FUNCTION_STATE_DIR" in
+  "$runner_root"/_state/*) ;;
+  *) fail "STAGING_FUNCTION_STATE_DIR must be inside the staging runner state directory" ;;
+esac
+case "$STAGING_BACKUP_DIR" in
+  "$runner_root"/_backups) ;;
+  *) fail "STAGING_BACKUP_DIR must be the isolated local staging backup directory" ;;
+esac
+[ -f "$STAGING_FUNCTION_ENV_FILE" ] || fail "staging Edge Function environment file is absent"
 
 release=$(tr -d '[:space:]' < ops/supabase/self-hosted.release)
 case "$release" in self-hosted/v[0-9]*.[0-9]*.[0-9]*) ;; *) fail "invalid Supabase release pin" ;; esac
@@ -68,4 +76,8 @@ release_commit=$(tr -d '[:space:]' < ops/supabase/self-hosted.commit)
 case "$release_commit" in *[!0-9a-f]*|'') fail "invalid Supabase commit pin" ;; esac
 [ "${#release_commit}" -eq 40 ] || fail "Supabase commit pin must contain 40 characters"
 
-echo "staging preflight passed for isolated hosts; secrets were not printed"
+docker info >/dev/null 2>&1 || fail "Docker Desktop is not available to the staging runner"
+docker inspect supabase_db_barber-plus-plus >/dev/null 2>&1 || fail "isolated staging database container is absent"
+docker inspect supabase_storage_barber-plus-plus >/dev/null 2>&1 || fail "isolated staging Storage container is absent"
+
+echo "staging preflight passed for the isolated local Mac stack; secrets were not printed"

@@ -2,52 +2,50 @@
 
 ## Isolation contract
 
-Local, staging, and production must not share a database, Storage volume, JWT
+Local staging and production must not share a database, Storage volume, JWT
 secret, Vault secret, SMTP credential, WhatsApp application/number, Anthropic
 key, or infrastructure credential. Production data must never be restored into
-local or staging.
+the local staging lab.
 
-Local runs from the pinned npm Supabase CLI and `supabase/config.toml`. Staging
-runs on its own hardened VPS with a separate pinned self-hosted Supabase stack.
-Production retains its existing database and Storage and replaces only the
-frontend deployment with the immutable Nginx image.
+Staging runs on the dedicated Docker Desktop stack on the approved Mac. GitHub
+Actions uses the repository-scoped `barber-staging-mac` runner only for the
+deployment job; CI and image construction remain on GitHub-hosted runners.
+Production remains on its existing self-hosted Supabase and Dokploy services.
 
 ## Runtime values
 
-Dokploy supplies these frontend container values:
+The local staging deploy helper and production Dokploy supply these frontend
+container values:
 
 | Value | Staging | Production |
 |-------|---------|------------|
 | `APP_ENV` | `staging` | `production` |
 | `APP_URL` | `https://staging-barber.malabdullah.cloud` | production origin |
 | `SUPABASE_PUBLIC_URL` | `https://supabase-staging.malabdullah.cloud` | production API origin |
-| `SUPABASE_REALTIME_URL` | staging WSS origin | production WSS origin |
-| `SUPABASE_PUBLISHABLE_KEY` | staging browser key | production browser key |
+| `SUPABASE_REALTIME_URL` | derived staging WSS origin | production WSS origin |
+| `SUPABASE_PUBLISHABLE_KEY` | local staging browser key | production browser key |
 
 The image supplies `APP_RELEASE` from the source commit. The startup script
 rejects missing, insecure, or non-browser configuration and generates
 `runtime-config.js` and the environment-specific CSP before Nginx starts.
 
-Server-only values belong in the environment's Edge Function secret store:
-`APP_ENV`, `APP_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`CRON_SHARED_SECRET`, SMTP credentials, WhatsApp credentials, Anthropic key,
-and `OUTBOUND_RECIPIENT_ALLOWLIST`. Never use a `VITE_` name for these values.
+Server-only staging values are stored at owner-only permissions below the
+runner root, outside Git, and are read only by the Edge Functions service.
+Production values remain in the production secret store. Never use a `VITE_`
+name for server-only values.
 
 ## Staging boundary
 
-Provision 4 vCPU, 8 GB RAM, and 100 GB SSD initially. Enable unattended security
-updates, SSH keys only, a default-deny firewall, non-root administration, disk
-and resource alerts, and off-host backups. Pin every Supabase component image;
-test version upgrades here for at least 72 hours.
+Cloudflare Tunnel exposes only the frontend on local port `8080` and the
+Supabase gateway on local port `54321`. Cloudflare Access defaults to deny and
+permits the owner identity and the CI service token. Bypass rules apply only to
+the exact Meta webhook and Flow paths; those handlers still validate their
+staging-specific signatures and encrypted payload requirements.
 
-Place the frontend, API, and Studio behind Cloudflare Access. Create explicit
-bypass rules only for the exact Meta webhook and Flow paths. Those endpoints
-must still verify Meta signatures and staging-specific verification secrets.
-Use a dedicated WhatsApp test number, sandbox SMTP account, recipient allowlist,
-test Flow IDs, and restricted Anthropic key.
-
-Configure SMTP itself with a staging recipient allowlist or sink transport; the
-application phone allowlist is not a substitute for mail-provider enforcement.
+The lab contains deterministic synthetic data only. Sandbox or sink credentials
+and recipient allowlists are required before testing outbound email, WhatsApp,
+or Anthropic behavior. The database, Studio, Mailpit, Kong, and analytics port
+bindings must be restricted to loopback as a separate host-hardening task.
 
 ## Local production guard
 

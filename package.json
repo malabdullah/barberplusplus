@@ -28,6 +28,9 @@
     "check:domains": "sh scripts/check-hardcoded-domains.sh",
     "check:migrations": "sh scripts/verify-migration-names.sh",
     "check:staging-preflight": "sh scripts/staging-preflight.sh",
+    "backup:staging-local": "sh scripts/backup-local-staging.sh",
+    "deploy:staging-functions-local": "sh scripts/deploy-local-staging-functions.sh",
+    "deploy:staging-frontend-local": "sh scripts/deploy-local-staging-frontend.sh",
     "check:staging-boundary": "sh scripts/validate-staging-boundary.sh",
     "check": "npm run lint && npm run lint:functions && npm run check:functions && npm run test:functions && npm run test && npm run test:cicd && npm run test:release && npm run build && npm run check:domains"
   },
