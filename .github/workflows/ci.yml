@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run lint:functions
+      - run: npm run check:functions
+      - run: npm run test:functions
+      - run: npm run test
+      - run: npm run test:cicd
+      - run: npm run test:release
+      - run: npm run build
+        env:
+          VITE_APP_ENV: development
+          VITE_APP_URL: http://127.0.0.1:4173
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJub25lIn0.eyJyb2xlIjoiYW5vbiJ9.signature
+      - run: npm run check:domains
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - run: npm ci
+      - name: Require authoritative baseline gate
+        id: baseline
+        run: |
+          if [ -f supabase/.baseline-ready ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::Database replay is gated until docs/database-baseline.md is completed.'
+          fi
+      - name: Verify migration names
+        if: steps.baseline.outputs.ready == 'true'
+        run: npm run check:migrations
+      - name: Start and replay clean database
+        if: steps.baseline.outputs.ready == 'true'
+        run: >-
+          npx supabase start
+          --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          && npx supabase db reset --local
+      - name: Run database tests
+        if: steps.baseline.outputs.ready == 'true'
+        run: npx supabase test db
+      - name: Reject schema drift
+        if: steps.baseline.outputs.ready == 'true'
+        run: sh scripts/check-schema-drift.sh
+      - name: Stop local Supabase
+        if: always() && steps.baseline.outputs.ready == 'true'
+        run: npx supabase stop --no-backup
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

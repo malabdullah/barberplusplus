@@ -163,7 +163,7 @@ export const apiRateLimiter = createRateLimiter('api', 100, 60000, 60000); // 10
 
 /**
  * Validate user role from JWT metadata
- * @param {string} role - Role from user_metadata
+ * @param {string} role - Trusted role from app_metadata
  * @returns {{ valid: boolean, role: string | null, error: string | null }}
  */
 export const validateUserRole = (role) => {

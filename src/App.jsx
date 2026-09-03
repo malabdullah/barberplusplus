@@ -54,6 +54,7 @@ import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import AgentConversations from './pages/agent/AgentConversations';
+import EnvironmentBanner from './components/EnvironmentBanner';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -78,8 +79,8 @@ function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Only check role if userRole is set (not null)
-  if (allowedRole && userRole && userRole !== allowedRole) {
+  // Missing or mismatched trusted roles must never enter a protected route.
+  if (allowedRole && userRole !== allowedRole) {
     // Redirect to role-appropriate dashboard
     const defaultRoutes = {
       admin: '/admin',
@@ -253,8 +254,11 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppRoutes />
-    </AppProvider>
+    <>
+      <EnvironmentBanner />
+      <AppProvider>
+        <AppRoutes />
+      </AppProvider>
+    </>
   );
 }

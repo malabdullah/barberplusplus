@@ -1,12 +1,12 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2.89.0";
+import { assertOutboundRecipientAllowed, getAppUrl, getTrustedRole } from "../_shared/environment.ts";
 
 interface SendMessageRequest {
   conversationId: string;
   phoneNumber: string;
   phoneCountryCode: string;
   content: string;
-  agentUserId: string;
 }
 
 interface WhatsAppApiResponse {
@@ -16,7 +16,8 @@ interface WhatsAppApiResponse {
 }
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": getAppUrl(),
+  "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Check if user is an agent
-    const userRole = user.user_metadata?.role;
+    const userRole = getTrustedRole(user);
     if (userRole !== "agent" && userRole !== "admin") {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized: Only agents can send messages" }),
@@ -80,7 +81,7 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body: SendMessageRequest = await req.json();
-    const { conversationId, phoneNumber, phoneCountryCode, content, agentUserId } = body;
+    const { conversationId, phoneNumber, phoneCountryCode, content } = body;
 
     // Validate required fields
     if (!conversationId || !phoneNumber || !content) {
@@ -102,6 +103,7 @@ Deno.serve(async (req: Request) => {
 
     // Format phone number for WhatsApp (remove + and any spaces/dashes)
     const formattedPhone = `${phoneCountryCode}${phoneNumber}`.replace(/[\s\-\+]/g, "");
+    assertOutboundRecipientAllowed(formattedPhone);
 
     // Send message via WhatsApp Cloud API
     const whatsappResponse = await fetch(
@@ -150,7 +152,7 @@ Deno.serve(async (req: Request) => {
         status: "sent",
         metadata: {
           sent_by: "agent",
-          agent_user_id: agentUserId || user.id,
+          agent_user_id: user.id,
           agent_email: user.email,
           sent_at: new Date().toISOString(),
         },
@@ -194,7 +196,7 @@ Deno.serve(async (req: Request) => {
       message: `Agent sent message to ${formattedPhone}`,
       outbound_message: sanitizedContent,
       metadata: {
-        agent_user_id: agentUserId || user.id,
+        agent_user_id: user.id,
         whatsapp_message_id: whatsappMessageId,
         message_length: sanitizedContent.length,
       },

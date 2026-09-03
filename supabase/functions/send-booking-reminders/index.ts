@@ -4,6 +4,7 @@ import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { getPendingReminders, updateReminderStatus, getSupabaseClient } from '../_shared/supabase.ts';
 import { sendTextMessage, formatPhoneForApi } from '../_shared/whatsapp.ts';
 import { formatTime } from '../_shared/utils.ts';
+import { hasValidSharedSecret } from '../_shared/environment.ts';
 
 // CORS headers
 const corsHeaders = {
@@ -124,6 +125,13 @@ serve(async (req: Request) => {
     return new Response('Method not allowed', {
       status: 405,
       headers: corsHeaders
+    });
+  }
+
+  if (!(await hasValidSharedSecret(req))) {
+    return new Response('Unauthorized', {
+      status: 401,
+      headers: corsHeaders,
     });
   }
 

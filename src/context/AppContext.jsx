@@ -166,7 +166,7 @@ export function AppProvider({ children }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           // SECURITY: Validate role instead of defaulting to 'manager'
-          const roleValidation = validateUserRole(session.user.user_metadata?.role);
+          const roleValidation = validateUserRole(session.user.app_metadata?.role);
           if (roleValidation.valid) {
             setUser(session.user);
             setUserRole(roleValidation.role);
@@ -212,7 +212,7 @@ export function AppProvider({ children }) {
 
         if (session?.user) {
           // SECURITY: Validate role instead of defaulting to 'manager'
-          const roleValidation = validateUserRole(session.user.user_metadata?.role);
+          const roleValidation = validateUserRole(session.user.app_metadata?.role);
           if (roleValidation.valid) {
             setUser(session.user);
             setUserRole(roleValidation.role);

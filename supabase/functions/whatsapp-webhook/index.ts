@@ -38,7 +38,7 @@ serve(async (req: Request) => {
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
 
-      console.log('Webhook verification request:', { mode, token });
+      console.log('Webhook verification request:', { mode, hasToken: Boolean(token) });
 
       const result = verifyWebhookChallenge(mode, token, challenge);
 
