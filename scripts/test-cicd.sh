@@ -28,7 +28,8 @@ fi
 
 mock_bin=$(mktemp -d)
 github_output=$(mktemp)
-trap 'rm -rf "$mock_bin"; rm -f "$github_output"' EXIT
+migration_evidence=$(mktemp)
+trap 'rm -rf "$mock_bin"; rm -f "$github_output" "$migration_evidence"' EXIT
 
 sed \
   -e "s|__RELEASE_SHA__|$release_sha|g" \
@@ -70,5 +71,46 @@ RELEASE_SHA="$release_sha" \
 sh scripts/resolve-accepted-release.sh
 
 grep -Fx "digest=$accepted_digest" "$github_output" >/dev/null
+
+cat > "$mock_bin/npx" <<'MOCK_NPX'
+#!/bin/sh
+[ "$1 $2 $3" = 'supabase migration list' ] || exit 1
+case "${MOCK_MIGRATION_HISTORY:-safe}" in
+  safe)
+    printf '%s\n' '{"migrations":[{"local":"20260901000000","remote":"20260901000000","time":"2026-09-01 00:00:00"},{"local":"20260903111635","remote":null,"time":"2026-09-03 11:16:35"}]}'
+    ;;
+  missing-baseline)
+    printf '%s\n' '{"migrations":[{"local":"20260901000000","remote":null,"time":"2026-09-01 00:00:00"}]}'
+    ;;
+  remote-only)
+    printf '%s\n' '{"migrations":[{"local":"20260901000000","remote":"20260901000000","time":"2026-09-01 00:00:00"},{"local":null,"remote":"20200101000000","time":"2020-01-01 00:00:00"}]}'
+    ;;
+esac
+MOCK_NPX
+chmod +x "$mock_bin/npx"
+
+PATH="$mock_bin:$PATH" \
+SUPABASE_DB_URL=postgresql://production.invalid/database \
+MIGRATION_HISTORY_EVIDENCE="$migration_evidence" \
+sh scripts/verify-production-migration-history.sh >/dev/null
+jq -e '.verified_baseline == "20260901000000" and .decision == "PASS"' "$migration_evidence" >/dev/null
+
+if PATH="$mock_bin:$PATH" \
+  MOCK_MIGRATION_HISTORY=missing-baseline \
+  SUPABASE_DB_URL=postgresql://production.invalid/database \
+  MIGRATION_HISTORY_EVIDENCE="$migration_evidence" \
+  sh scripts/verify-production-migration-history.sh >/dev/null 2>&1; then
+  echo 'Migration history check accepted a missing production baseline.' >&2
+  exit 1
+fi
+
+if PATH="$mock_bin:$PATH" \
+  MOCK_MIGRATION_HISTORY=remote-only \
+  SUPABASE_DB_URL=postgresql://production.invalid/database \
+  MIGRATION_HISTORY_EVIDENCE="$migration_evidence" \
+  sh scripts/verify-production-migration-history.sh >/dev/null 2>&1; then
+  echo 'Migration history check accepted an unexpected remote-only migration.' >&2
+  exit 1
+fi
 
 echo 'CI/CD helper tests passed.'

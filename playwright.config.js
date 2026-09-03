@@ -26,7 +26,7 @@ export default defineConfig({
       VITE_APP_ENV: 'development',
       VITE_APP_URL: 'http://127.0.0.1:4173',
       VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
-      VITE_SUPABASE_PUBLISHABLE_KEY: localAnonKey,
+      VITE_SUPABASE_PUBLISHABLE_KEY: process.env.VITE_SUPABASE_PUBLISHABLE_KEY || localAnonKey,
     },
   },
 });

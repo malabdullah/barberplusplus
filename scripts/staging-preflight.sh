@@ -23,8 +23,9 @@ require_var() {
 [ -f supabase/schema.expected.sql ] || fail \
   "supabase/schema.expected.sql is absent"
 [ -d supabase/tests ] || fail "supabase/tests is absent"
+[ -x scripts/check-local-staging-functions.sh ] || fail "staging Function health helper is not executable"
 
-for command_name in curl docker jq launchctl node npm npx plutil shasum; do
+for command_name in cmp curl diff docker jq launchctl node npm npx plutil rsync shasum; do
   require_command "$command_name"
 done
 

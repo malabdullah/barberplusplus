@@ -46,8 +46,20 @@ jobs:
           node-version: 24.20.0
           cache: npm
       - run: npm ci
+      - name: Start isolated Supabase with synthetic role fixtures
+        run: |
+          npx supabase start
+          npx supabase db reset --local
+          npx supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          . "$RUNNER_TEMP/supabase.env"
+          test -n "${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
+          echo "VITE_SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY:-$ANON_KEY}" >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/supabase.env"
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup
 
   database:
     runs-on: ubuntu-latest

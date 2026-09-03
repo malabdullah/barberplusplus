@@ -79,6 +79,11 @@ exact repair on the isolated restore first. Apply only later backward-compatible
 migrations. Force user session refresh/reauthentication after trusted role claims
 move to `app_metadata`.
 
+Production promotion enforces this condition before even previewing a migration:
+`scripts/verify-production-migration-history.sh` requires the repaired baseline
+on both sides of the CLI history and rejects every unknown remote-only version.
+The sanitized version-only result is retained with the dry-run artifact.
+
 All future migrations must be created with `npx supabase migration new <name>`.
 Use expand/migrate/contract releases for destructive changes and never delete a
 column or constraint in the same release that stops using it.

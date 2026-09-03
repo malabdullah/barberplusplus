@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: staging
@@ -22,6 +21,9 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
       digest: ${{ steps.image.outputs.digest }}
     steps:
@@ -47,6 +49,12 @@ jobs:
   deploy:
     needs: build
     runs-on: [self-hosted, macOS, ARM64, barber-staging]
+    defaults:
+      run:
+        working-directory: release-source
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: staging
       url: ${{ vars.APP_URL }}
@@ -58,18 +66,21 @@ jobs:
       STAGING_FUNCTION_ENV_FILE: /Users/malabdullah/actions-runner-barber-staging/.secrets/functions.env
       STAGING_FUNCTION_STATE_DIR: /Users/malabdullah/actions-runner-barber-staging/_state/functions
       STAGING_BACKUP_DIR: /Users/malabdullah/actions-runner-barber-staging/_backups
-      ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
-      ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          path: release-source
       - uses: actions/setup-node@v4
         with:
           node-version: 24.20.0
           cache: npm
+          cache-dependency-path: release-source/package-lock.json
       - run: npm ci
       - name: Validate isolated local staging configuration
+        env:
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
         run: npm run check:staging-preflight
       - name: Log in to GHCR
         env:
@@ -93,15 +104,21 @@ jobs:
           SMOKE_APP_URL: ${{ vars.APP_URL }}
           EXPECTED_ENV: staging
           EXPECTED_RELEASE: ${{ github.event.workflow_run.head_sha }}
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
         run: sh scripts/smoke-environment.sh
       - name: Validate staging security boundary
         env:
           STAGING_APP_URL: ${{ vars.APP_URL }}
           EXPECTED_RELEASE: ${{ github.event.workflow_run.head_sha }}
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
         run: npm run check:staging-boundary
       - name: Run staging browser journeys
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.APP_URL }}
+          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
         run: |
           npx playwright install chromium
           npm run test:e2e
@@ -115,15 +132,22 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: accepted-release-${{ github.event.workflow_run.head_sha }}
-          path: accepted-release.json
+          path: release-source/accepted-release.json
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: staging-backup-${{ github.event.workflow_run.head_sha }}
           path: ${{ runner.temp }}/staging-backup-evidence.json
           retention-days: 30
-      - name: Finalize accepted staging frontend
-        run: sh scripts/finalize-local-staging-frontend.sh
-      - name: Restore previous frontend after rejection
-        if: failure()
-        run: sh scripts/rollback-local-staging-frontend.sh
+      - name: Mark staging acceptance complete
+        id: acceptance
+        run: echo 'accepted=true' >> "$GITHUB_OUTPUT"
+      - name: Finalize accepted staging release
+        run: |
+          sh scripts/finalize-local-staging-frontend.sh
+          sh scripts/finalize-local-staging-functions.sh
+      - name: Restore previous release after rejection
+        if: failure() && steps.acceptance.outcome != 'success'
+        run: |
+          sh scripts/rollback-local-staging-frontend.sh
+          sh scripts/rollback-local-staging-functions.sh

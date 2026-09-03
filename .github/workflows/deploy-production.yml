@@ -93,6 +93,11 @@ jobs:
           ACCESS_CLIENT_ID: ${{ secrets.STAGING_ACCESS_CLIENT_ID }}
           ACCESS_CLIENT_SECRET: ${{ secrets.STAGING_ACCESS_CLIENT_SECRET }}
         run: sh scripts/smoke-environment.sh
+      - name: Verify repaired production migration history
+        env:
+          SUPABASE_DB_URL: ${{ secrets.PRODUCTION_DB_URL }}
+          MIGRATION_HISTORY_EVIDENCE: production-migration-history.json
+        run: sh scripts/verify-production-migration-history.sh
       - name: Preview the reviewed production migrations
         env:
           SUPABASE_DB_URL: ${{ secrets.PRODUCTION_DB_URL }}
@@ -156,6 +161,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: production-migration-preflight-${{ github.ref_name }}
-          path: production-migration-dry-run.txt
+          path: |
+            production-migration-history.json
+            production-migration-dry-run.txt
           if-no-files-found: error
           retention-days: 30

@@ -71,11 +71,12 @@ After a successful `CI` push run on `main`:
 3. It creates owner-only custom-format Postgres and compressed Storage backups
    below the runner root. Only checksums, sizes, and identifiers are uploaded.
 4. It dry-runs and applies local migrations with `--skip-vault`.
-5. It replaces the persistent local Edge Functions launch service.
+5. It copies the reviewed Edge Functions and pinned CLI into commit/version
+   addressed directories, then replaces the persistent launch service.
 6. It deploys the frontend by digest while retaining the prior container.
 7. Smoke, boundary, and Playwright checks run through Cloudflare Access.
-8. Success uploads the accepted release and backup evidence, then removes the
-   retained frontend. Failure restores the prior frontend container.
+8. Success uploads the accepted release and backup evidence, then finalizes the
+   retained frontend and Function state. Failure restores both prior runtimes.
 
 Backups currently remain on the same Mac. An encrypted off-device copy and a
 restore rehearsal are still required before this lab can be treated as durable.

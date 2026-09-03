@@ -32,10 +32,11 @@ commands or repository URLs.
 A successful CI run on `main` builds one image tagged by commit SHA on a
 GitHub-hosted runner and pushes it to GHCR. The dedicated Mac runner backs up the
 local database and Storage, applies local migrations, starts Edge Functions as a
-persistent launch service, and deploys the frontend by immutable digest. It
-retains the previous frontend until smoke, security-boundary, and Playwright
-checks pass. The accepted manifest records the complete migration set. Migration
-pushes use `--skip-vault`; secrets are never changed as a schema side effect.
+persistent launch service from a commit-addressed immutable directory, and
+deploys the frontend by immutable digest. It retains both previous runtimes until
+smoke, security-boundary, and Playwright checks pass. The accepted manifest
+records the complete migration set. Migration pushes use `--skip-vault`; secrets
+are never changed as a schema side effect.
 
 Do not merge to `main` when its required pull-request and CI protection rules
 are unavailable. A private GitHub Free repository does not satisfy this gate.
@@ -48,19 +49,20 @@ are unavailable. A private GitHub Free repository does not satisfy this gate.
    `git tag -a vX.Y.Z <commit> -m "Release vX.Y.Z"`.
 3. Push the tag. The protected production environment pauses for approval.
 4. The workflow verifies the exact commit is still running in staging, confirms
-   the complete migration set still matches the staging artifact, confirms
-   backup freshness, runs a non-mutating migration dry run, applies reviewed
-   compatible migrations/functions, and promotes the existing GHCR digest
-   without rebuilding.
+   the complete migration set still matches the staging artifact, verifies the
+   repaired baseline is already present in production migration history and that
+   no unknown remote-only migrations exist, confirms backup freshness, runs a
+   non-mutating migration dry run, applies reviewed compatible migrations and
+   functions, and promotes the existing GHCR digest without rebuilding.
 5. Complete non-destructive admin, manager, agent, and barber smoke journeys.
 
 ## Rollback
 
-For staging, a failed acceptance run invokes
-`scripts/rollback-local-staging-frontend.sh` to restore the retained container.
-Do not reverse a destructive migration; restore the protected local backup or
-apply a reviewed forward fix. Edge Function failures must be corrected and the
-accepted commit redeployed.
+For staging, a failed acceptance run invokes the frontend and Edge Function
+rollback helpers. The function helper restores the exact retained launch-agent
+configuration; a first deployment is stopped and removed if it has no prior
+release. Do not reverse a destructive migration; restore the protected local
+backup or apply a reviewed forward fix.
 
 The production workflow captures the previous Dokploy image reference before
 every deployment and retains it as a protected artifact. For an application

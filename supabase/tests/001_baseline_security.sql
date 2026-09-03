@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 
-select plan(15);
+select plan(32);
 
 select has_schema('public', 'public schema exists');
 select has_schema('private', 'private authorization schema exists');
@@ -35,7 +35,7 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  119::bigint,
+  120::bigint,
   'all baseline and trusted-role RLS policies are present'
 );
 
@@ -164,6 +164,127 @@ select is(
   0::bigint,
   'the clean replay contains no production Vault values'
 );
+
+select ok(
+  exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'is_agent'
+      and not p.prosecdef
+      and 'search_path=""' = any (p.proconfig)
+      and pg_get_functiondef(p.oid) ilike '%app_metadata%'
+      and pg_get_functiondef(p.oid) not ilike '%user_metadata%'
+  ),
+  'is_agent is a hardened invoker helper using only app_metadata'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'is_manager'
+      and not p.prosecdef
+      and 'search_path=""' = any (p.proconfig)
+      and pg_get_functiondef(p.oid) ilike '%app_metadata%'
+      and pg_get_functiondef(p.oid) not ilike '%user_metadata%'
+  ),
+  'is_manager is a hardened invoker helper using only app_metadata'
+);
+
+select is(
+  (
+    select count(*)
+    from pg_policies
+    where schemaname = 'public'
+      and policyname in (
+        'Service role can manage whatsapp_logs',
+        'Service role full access to reminders'
+      )
+      and roles = array['service_role']::name[]
+  ),
+  2::bigint,
+  'unconditional operational policies target only service_role'
+);
+
+select is(
+  (
+    select count(*)
+    from information_schema.routine_privileges
+    where routine_schema = 'public'
+      and routine_name in ('get_managers', 'get_manager_by_id')
+      and grantee in ('PUBLIC', 'anon')
+      and privilege_type = 'EXECUTE'
+  ),
+  0::bigint,
+  'anonymous roles cannot execute manager PII RPCs'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","app_metadata":{},"user_metadata":{"role":"agent"}}',
+  true
+);
+
+select is(public.is_agent(), false, 'forged user_metadata cannot grant the agent role');
+select is(public.is_manager(), false, 'forged user_metadata cannot grant the manager role');
+select throws_ok('select * from public.get_managers()', '42501');
+select throws_ok(
+  $$select * from public.get_manager_by_id('00000000-0000-4000-8000-000000000002')$$,
+  '42501'
+);
+select is(
+  (select count(*) from public.whatsapp_logs),
+  0::bigint,
+  'forged user_metadata cannot read WhatsApp logs'
+);
+select throws_ok('select * from public.booking_reminders', '42501');
+select throws_ok(
+  $$insert into public.whatsapp_logs (log_level, event_type, message)
+    values ('info', 'forged_role', 'must be denied')$$,
+  '42501'
+);
+select throws_ok(
+  $$insert into public.booking_reminders (booking_id, scheduled_at)
+    values ('50000000-0000-4000-8000-000000000001', '2030-01-02 07:00:00+00')$$,
+  '42501'
+);
+
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select throws_ok('select * from public.whatsapp_logs', '42501');
+select throws_ok('select * from public.booking_reminders', '42501');
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"},"user_metadata":{}}',
+  true
+);
+select is(
+  (select count(*) from public.get_managers()),
+  2::bigint,
+  'administrators can enumerate synthetic managers'
+);
+select is(
+  (
+    select email
+    from public.get_manager_by_id('00000000-0000-4000-8000-000000000002')
+  ),
+  'manager@barber.test',
+  'administrators can fetch a manager by ID'
+);
+select is(
+  (select count(*) from public.whatsapp_logs),
+  1::bigint,
+  'administrators retain read-only WhatsApp log access'
+);
+
+reset role;
 
 select * from finish();
 rollback;

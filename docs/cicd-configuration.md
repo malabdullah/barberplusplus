@@ -98,7 +98,12 @@ healthy, and the Cloudflare tunnel must be connected before merging.
 The deployment keeps the previous frontend container stopped but recoverable
 until all checks and evidence uploads succeed. Failure restores it. Database
 migrations use the isolated local connection, and the staging Edge Functions
-service is managed by a dedicated macOS launch agent.
+service is managed by a dedicated macOS launch agent. Actions checks out the
+candidate into a separate release-source directory so it cannot mutate the live
+legacy bundle during the first cutover. Each Function release is then copied out
+of that checkout into a commit-addressed directory; the pinned Supabase CLI
+binary is copied to a version-addressed tool path. Failed health or acceptance
+checks restore the retained launch-agent configuration.
 
 ## Evidence
 

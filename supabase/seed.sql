@@ -3,6 +3,7 @@
 
 insert into auth.users (
   id,
+  instance_id,
   aud,
   role,
   email,
@@ -16,6 +17,7 @@ insert into auth.users (
 values
   (
     '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
     'admin@barber.test',
@@ -28,6 +30,7 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000002',
+    '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
     'manager@barber.test',
@@ -40,6 +43,7 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000003',
+    '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
     'agent@barber.test',
@@ -52,6 +56,7 @@ values
   ),
   (
     '00000000-0000-4000-8000-000000000004',
+    '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
     'barber@barber.test',
@@ -61,7 +66,30 @@ values
     '{"name":"Synthetic Barber"}',
     '2030-01-01 08:00:00+00',
     '2030-01-01 08:00:00+00'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000005',
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated',
+    'authenticated',
+    'manager-two@barber.test',
+    extensions.crypt('LocalOnly123!', extensions.gen_salt('bf')),
+    '2030-01-01 08:00:00+00',
+    '{"provider":"email","providers":["email"],"role":"manager"}',
+    '{"name":"Synthetic Manager Two"}',
+    '2030-01-01 08:00:00+00',
+    '2030-01-01 08:00:00+00'
   );
+
+-- GoTrue scans these legacy token fields as strings during password login.
+-- Direct SQL fixtures must populate them even though they are unused locally.
+update auth.users
+set
+  confirmation_token = '',
+  recovery_token = '',
+  email_change_token_new = '',
+  email_change = ''
+where email like '%@barber.test';
 
 insert into auth.identities (
   id,
@@ -109,20 +137,35 @@ insert into public.branches (
   area_id,
   number_of_barbers
 )
-values (
-  '10000000-0000-4000-8000-000000000001',
-  '00000000-0000-4000-8000-000000000002',
-  'Synthetic Branch',
-  'فرع تجريبي',
-  'Synthetic address',
-  'Kuwait City',
-  'Kuwait',
-  '50000001',
-  'branch@barber.test',
-  9001,
-  9001,
-  1
-);
+values
+  (
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    'Synthetic Branch',
+    'فرع تجريبي',
+    'Synthetic address',
+    'Kuwait City',
+    'Kuwait',
+    '50000001',
+    'branch@barber.test',
+    9001,
+    9001,
+    1
+  ),
+  (
+    '10000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000005',
+    'Other Tenant Branch',
+    'فرع مستأجر آخر',
+    'Other synthetic address',
+    'Kuwait City',
+    'Kuwait',
+    '50000004',
+    'other-branch@barber.test',
+    9001,
+    9001,
+    0
+  );
 
 insert into public.services (
   id,

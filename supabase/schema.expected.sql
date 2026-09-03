@@ -418,18 +418,25 @@ ALTER FUNCTION "public"."get_barber_branch_id"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") RETURNS TABLE("id" "uuid", "email" "text", "name" "text", "phone" "text", "created_at" timestamp with time zone)
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'auth'
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
     AS $$
-  SELECT
-    u.id,
-    u.email::text,
-    COALESCE(u.raw_user_meta_data->>'name', split_part(u.email::text, '@', 1))::text as name,
-    (u.raw_user_meta_data->>'phone')::text as phone,
-    u.created_at
-  FROM auth.users u
-  WHERE u.id = manager_id
-    AND u.raw_user_meta_data->>'role' = 'manager';
+begin
+  if coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+    raise insufficient_privilege using message = 'Administrator role required';
+  end if;
+
+  return query
+  select
+    users.id,
+    users.email::text,
+    coalesce(users.raw_user_meta_data ->> 'name', pg_catalog.split_part(users.email::text, '@', 1))::text,
+    (users.raw_user_meta_data ->> 'phone')::text,
+    users.created_at
+  from auth.users
+  where users.id = manager_id
+    and users.raw_app_meta_data ->> 'role' = 'manager';
+end;
 $$;
 
 
@@ -437,17 +444,24 @@ ALTER FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") OWNER TO "postg
 
 
 CREATE OR REPLACE FUNCTION "public"."get_managers"() RETURNS TABLE("id" "uuid", "email" "text", "name" "text", "phone" "text", "created_at" timestamp with time zone)
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'auth'
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
     AS $$
-  SELECT
-    u.id,
-    u.email::text,
-    COALESCE(u.raw_user_meta_data->>'name', split_part(u.email::text, '@', 1))::text as name,
-    (u.raw_user_meta_data->>'phone')::text as phone,
-    u.created_at
-  FROM auth.users u
-  WHERE u.raw_user_meta_data->>'role' = 'manager';
+begin
+  if coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+    raise insufficient_privilege using message = 'Administrator role required';
+  end if;
+
+  return query
+  select
+    users.id,
+    users.email::text,
+    coalesce(users.raw_user_meta_data ->> 'name', pg_catalog.split_part(users.email::text, '@', 1))::text,
+    (users.raw_user_meta_data ->> 'phone')::text,
+    users.created_at
+  from auth.users
+  where users.raw_app_meta_data ->> 'role' = 'manager';
+end;
 $$;
 
 
@@ -495,10 +509,10 @@ ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_agent"() RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
     AS $$
-  SELECT coalesce(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'agent'
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'agent';
 $$;
 
 
@@ -520,9 +534,10 @@ ALTER FUNCTION "public"."is_barber"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_manager"() RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
     AS $$
-  SELECT coalesce(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'manager'
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'manager';
 $$;
 
 
@@ -1837,6 +1852,10 @@ CREATE POLICY "Admins view templates" ON "public"."notification_templates" FOR S
 
 
 
+CREATE POLICY "Admins view whatsapp_logs" ON "public"."whatsapp_logs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 CREATE POLICY "Agents and admins can insert conversations" ON "public"."whatsapp_conversations" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_agent"() OR "public"."is_admin"()));
 
 
@@ -2023,7 +2042,7 @@ CREATE POLICY "Public read access" ON "public"."governorates" FOR SELECT USING (
 
 
 
-CREATE POLICY "Service role can manage whatsapp_logs" ON "public"."whatsapp_logs" USING (true) WITH CHECK (true);
+CREATE POLICY "Service role can manage whatsapp_logs" ON "public"."whatsapp_logs" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -2055,7 +2074,7 @@ CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits
 
 
 
-CREATE POLICY "Service role full access to reminders" ON "public"."booking_reminders" USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access to reminders" ON "public"."booking_reminders" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -2279,13 +2298,13 @@ GRANT ALL ON FUNCTION "public"."get_barber_branch_id"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") TO "anon";
+REVOKE ALL ON FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."get_managers"() TO "anon";
+REVOKE ALL ON FUNCTION "public"."get_managers"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_managers"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_managers"() TO "service_role";
 
@@ -2309,7 +2328,7 @@ GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."is_agent"() TO "anon";
+REVOKE ALL ON FUNCTION "public"."is_agent"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_agent"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_agent"() TO "service_role";
 
@@ -2321,7 +2340,7 @@ GRANT ALL ON FUNCTION "public"."is_barber"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."is_manager"() TO "anon";
+REVOKE ALL ON FUNCTION "public"."is_manager"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 
@@ -2387,8 +2406,6 @@ GRANT ALL ON TABLE "public"."barbers" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."booking_reminders" TO "anon";
-GRANT ALL ON TABLE "public"."booking_reminders" TO "authenticated";
 GRANT ALL ON TABLE "public"."booking_reminders" TO "service_role";
 
 
@@ -2471,9 +2488,8 @@ GRANT ALL ON TABLE "public"."whatsapp_conversations" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."whatsapp_logs" TO "anon";
-GRANT ALL ON TABLE "public"."whatsapp_logs" TO "authenticated";
 GRANT ALL ON TABLE "public"."whatsapp_logs" TO "service_role";
+GRANT SELECT ON TABLE "public"."whatsapp_logs" TO "authenticated";
 
 
 
