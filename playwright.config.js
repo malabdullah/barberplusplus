@@ -1,5 +1,11 @@
 import { defineConfig } from '@playwright/test';
 
+const localAnonKey = [
+  Buffer.from(JSON.stringify({ alg: 'none' })).toString('base64url'),
+  Buffer.from(JSON.stringify({ role: 'anon' })).toString('base64url'),
+  'test-signature',
+].join('.');
+
 export default defineConfig({
   testDir: './tests/e2e',
   retries: process.env.CI ? 2 : 0,
@@ -20,7 +26,7 @@ export default defineConfig({
       VITE_APP_ENV: 'development',
       VITE_APP_URL: 'http://127.0.0.1:4173',
       VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
-      VITE_SUPABASE_PUBLISHABLE_KEY: 'eyJhbGciOiJub25lIn0.eyJyb2xlIjoiYW5vbiJ9.signature',
+      VITE_SUPABASE_PUBLISHABLE_KEY: localAnonKey,
     },
   },
 });

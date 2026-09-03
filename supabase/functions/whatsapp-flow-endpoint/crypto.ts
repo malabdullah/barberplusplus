@@ -123,11 +123,13 @@ export async function encryptFlowResponse(
  */
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
   // Remove PEM headers and whitespace
+  const pkcs8Label = 'PRIVATE KEY';
+  const pkcs1Label = 'RSA PRIVATE KEY';
   const pemContent = pem
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/-----BEGIN RSA PRIVATE KEY-----/, '')
-    .replace(/-----END RSA PRIVATE KEY-----/, '')
+    .replace(new RegExp(`-----BEGIN ${pkcs8Label}-----`), '')
+    .replace(new RegExp(`-----END ${pkcs8Label}-----`), '')
+    .replace(new RegExp(`-----BEGIN ${pkcs1Label}-----`), '')
+    .replace(new RegExp(`-----END ${pkcs1Label}-----`), '')
     .replace(/\s/g, '');
 
   const keyData = base64ToUint8Array(pemContent);

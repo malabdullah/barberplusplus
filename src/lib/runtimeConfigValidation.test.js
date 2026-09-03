@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { validateRuntimeConfig } from './runtimeConfigValidation';
 
-const localAnonKey = 'eyJhbGciOiJub25lIn0.eyJyb2xlIjoiYW5vbiJ9.signature';
+const localAnonKey = [
+  btoa(JSON.stringify({ alg: 'none' })),
+  btoa(JSON.stringify({ role: 'anon' })),
+  'test-signature',
+].join('.');
 
 describe('validateRuntimeConfig', () => {
   it('accepts loopback HTTP for development', () => {

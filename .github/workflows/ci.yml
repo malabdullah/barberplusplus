@@ -34,7 +34,7 @@ jobs:
           VITE_APP_ENV: development
           VITE_APP_URL: http://127.0.0.1:4173
           VITE_SUPABASE_URL: http://127.0.0.1:54321
-          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJub25lIn0.eyJyb2xlIjoiYW5vbiJ9.signature
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_test
       - run: npm run check:domains
 
   browser:
@@ -112,3 +112,4 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false

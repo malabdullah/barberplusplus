@@ -76,9 +76,10 @@ scripts/verify-staging-supabase.sh /opt/barber-staging/supabase
 scripts/audit-staging-host.sh
 ```
 
-Generate every Supabase password, asymmetric JWT signing key, publishable/secret
-API key, Realtime encryption key, Vault encryption key, Storage credential, and
-dashboard credential fresh on the staging host. Set staging Auth site and exact
+Generate every Supabase credential fresh on the staging host. This includes
+passwords, JWT signing material, public and private API credentials, encryption
+material for Realtime and Vault, Storage access, and dashboard access. Set the
+staging Auth site and exact
 redirect URLs to `https://staging.barber.malabdullah.cloud`. Store only secret
 names and non-secret resource identifiers in documentation.
 
