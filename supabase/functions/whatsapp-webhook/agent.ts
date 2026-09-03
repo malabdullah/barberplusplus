@@ -339,7 +339,7 @@ export async function processMessage(
         branch_id: branchId,
         barber_id: barberId,
         service_ids: serviceIds,
-        customer_name: conversation.customer_name || profileName || 'Customer',
+        customer_name: conversation.customerName || profileName || 'Customer',
         customer_phone: phoneNumber,
         customer_country_code: phoneCountryCode,
         date,
@@ -1110,16 +1110,12 @@ When customer says a relative date like "باجر" or "tomorrow", convert it to 
       'السبت الجاي': nextSaturdayStr,
       'السبت الياي': nextSaturdayStr,
       // Kuwaiti short forms (without final ء)
-      'الاحد الجاي': nextSundayStr,
-      'الاحد الياي': nextSundayStr,
       'الثنين الجاي': nextMondayStr,
       'الثنين الياي': nextMondayStr,
       'الثلاثا الجاي': nextTuesdayStr,
       'الثلاثا الياي': nextTuesdayStr,
       'الاربعا الجاي': nextWednesdayStr,
       'الاربعا الياي': nextWednesdayStr,
-      'الجمعه الجاي': nextFridayStr,
-      'الجمعه الياي': nextFridayStr,
       // Day + "الاسبوع الجاي/الياي" (day + next week)
       'الأحد الاسبوع الجاي': nextSundayStr,
       'الاحد الاسبوع الجاي': nextSundayStr,
@@ -1726,7 +1722,7 @@ We look forward to seeing you! 🙏`
       const context = conversation.context as Record<string, unknown>;
       // Use conversation language (established from previous messages) instead of detected language
       // This prevents "12:00" being detected as English and sending English fallback to Arabic speakers
-      const fallbackLanguage = conversation.language || 'ar';
+      const fallbackLanguage: 'en' | 'ar' = conversation.language === 'en' ? 'en' : 'ar';
 
       // PRIORITY: If there's a tool error, handle it first before context-based fallbacks
       // This prevents wrong messages like "select time" when the customer already selected a time

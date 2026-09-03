@@ -36,12 +36,25 @@ A modern barbershop management dashboard built with React and Supabase. Manage m
 | Icons | lucide-react |
 | Charts | recharts |
 
+## Environments
+
+Barber++ uses one codebase and three isolated environments:
+
+| Environment | Frontend | Supabase | Data |
+|-------------|----------|----------|------|
+| Local | Vite | Local CLI stack | Deterministic synthetic fixtures |
+| Staging | Immutable Docker image on Dokploy | Separate self-hosted stack | Synthetic only |
+| Production | The staging-tested image digest on Dokploy | Existing self-hosted stack | Live customer data |
+
+Runtime browser configuration is injected when the Nginx container starts. A
+frontend image never contains staging or production credentials or origins.
+
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Supabase account
+- Node.js 24.20.0+
+- npm
+- Docker Desktop or another Docker-compatible runtime
 
 ### Installation
 
@@ -51,42 +64,32 @@ A modern barbershop management dashboard built with React and Supabase. Manage m
    cd barberplusplus
    ```
 
-2. **Install dependencies**
+2. **Bootstrap the complete local environment**
    ```bash
-   npm install
+   cp .env.local.example .env.local
+   cp supabase/functions/.env.example supabase/functions/.env.local
+   npm run local:bootstrap
    ```
 
-3. **Configure environment**
+3. **Start Supabase, Edge Functions, and Vite**
    ```bash
-   cp .env.example .env
+   npm run local:start
    ```
 
-   Edit `.env` with the self-hosted Supabase public URL and publishable key:
-   ```env
-   VITE_SUPABASE_URL=https://supabase.malabdullah.cloud
-   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key-here
-   ```
-
-   Retrieve the browser-safe key from the Supabase host. Modern
-   `sb_publishable_` keys and legacy self-hosted `anon` JWTs are supported.
-   Never place the secret or service-role key in a Vite environment variable
-   because Vite embeds it in the browser bundle.
-
-4. **Set up database**
-
-   Run the migrations in `supabase/migrations/` in your Supabase SQL editor.
-
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
+The bootstrap intentionally stops until the authoritative production schema
+baseline has been reviewed and committed. See
+[`docs/database-baseline.md`](docs/database-baseline.md) for that one-time gate.
 
 ## Scripts
 
 ```bash
 npm run dev      # Start development server
+npm run local:bootstrap # Install and rebuild the complete local stack
+npm run local:start     # Start Supabase, Edge Functions, and Vite
 npm run build    # Production build
 npm run preview  # Preview production build
+npm run check    # Lint, unit tests, build, and domain safety checks
+npm run test:e2e # Browser journeys
 ```
 
 ## Project Structure
@@ -129,7 +132,15 @@ CSS custom properties are defined in `src/styles/index.css`.
 - SQL injection prevention via parameterized queries
 - CSV injection protection in exports
 - Session expiration notifications
-- Role validation (no privilege escalation)
+- Roles are read from administrator-controlled `app_metadata`
+- Row-level security remains the authoritative authorization boundary
+- Non-production communication is restricted by recipient allowlists
+- Cron calls use a dedicated shared secret stored in each environment's Vault
+
+Operational setup and release instructions are in
+[`docs/environments.md`](docs/environments.md),
+[`docs/deployment-runbook.md`](docs/deployment-runbook.md), and
+[`docs/backup-restore.md`](docs/backup-restore.md).
 
 ## License
 

@@ -179,6 +179,20 @@ img {
   display: block;
 }
 
+.environment-banner {
+  position: sticky;
+  top: 0;
+  z-index: 10000;
+  padding: 0.4rem 1rem;
+  background: #8a4b08;
+  color: #fff8e8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 /* ================================
    TYPOGRAPHY
    ================================ */

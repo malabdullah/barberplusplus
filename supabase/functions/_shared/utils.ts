@@ -14,7 +14,6 @@ export function detectLanguage(text: string): 'en' | 'ar' {
 
   return 'en';
 }
-
 /**
  * Check if text contains Kuwaiti dialect markers
  */
@@ -176,6 +175,63 @@ export function isWithinBookingWindow(date: string, maxDays: number): boolean {
 }
 
 /**
+ * Check if a given date and time is in the past (Kuwait timezone)
+ * @param date - Date string in YYYY-MM-DD format
+ * @param time - Time string in HH:MM format (24-hour)
+ * @param bufferMinutes - Optional buffer in minutes (default: 0)
+ *                        e.g., 30 means slot must be at least 30 min in the future
+ * @returns true if the date/time is in the past (or within buffer period)
+ */
+export function isDateTimeInPast(
+  date: string,
+  time: string,
+  bufferMinutes: number = 0
+): boolean {
+  const now = getKuwaitDate();
+  const todayStr = formatDateString(now);
+
+  // If date is before today, it's definitely in the past
+  if (date < todayStr) {
+    return true;
+  }
+
+  // If date is after today, it's definitely in the future
+  if (date > todayStr) {
+    return false;
+  }
+
+  // Date is today - compare times
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const targetMinutes = timeToMinutes(time);
+
+  // Check if target time (minus buffer) has already passed
+  return targetMinutes <= currentMinutes + bufferMinutes;
+}
+
+/**
+ * Filter out past time slots from an array (for today's date)
+ * @param date - The date for these slots (YYYY-MM-DD)
+ * @param slots - Array of time slots in HH:MM format
+ * @param bufferMinutes - Minimum minutes from now (default: 30)
+ * @returns Filtered array with only future slots
+ */
+export function filterPastSlots(
+  date: string,
+  slots: string[],
+  bufferMinutes: number = 30
+): string[] {
+  const todayStr = formatDateString(getKuwaitDate());
+
+  // If not today, all slots are valid
+  if (date !== todayStr) {
+    return slots;
+  }
+
+  // Filter out past slots for today
+  return slots.filter((slot) => !isDateTimeInPast(date, slot, bufferMinutes));
+}
+
+/**
  * Check if a date falls within a vacation period
  */
 export function isOnVacation(
@@ -204,15 +260,117 @@ export function generateBookingReference(bookingId: string): string {
   return bookingId.substring(0, 8).toUpperCase();
 }
 
+// ===========================================
+// SECURITY: Input Validation Functions
+// ===========================================
+
 /**
- * Sanitize user input
+ * Validate UUID format (v4)
+ */
+export function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+/**
+ * Validate date format YYYY-MM-DD
+ */
+export function isValidDateFormat(str: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+
+  const [year, month, day] = str.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.getFullYear() === year &&
+         date.getMonth() === month - 1 &&
+         date.getDate() === day;
+}
+
+/**
+ * Validate time format HH:MM or HH:MM:SS (24-hour)
+ */
+export function isValidTimeFormat(str: string): boolean {
+  // Accept HH:MM or HH:MM:SS (PostgreSQL stores with seconds)
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(str)) return false;
+
+  const [hours, minutes] = str.split(':').map(Number);
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+}
+
+// ===========================================
+// SECURITY: Prompt Injection Detection
+// ===========================================
+
+/**
+ * Patterns that indicate prompt injection attempts
+ */
+const INJECTION_PATTERNS: RegExp[] = [
+  // Instruction override attempts
+  /ignore\s+(all\s+)?(previous|prior|above)\s+instructions?/i,
+  /forget\s+(all\s+)?(previous|prior|your)\s+instructions?/i,
+  /disregard\s+(all\s+)?(previous|prior)\s+instructions?/i,
+  /override\s+(your\s+)?instructions?/i,
+  /new\s+instructions?:/i,
+  /you\s+are\s+now\s+/i,
+  /pretend\s+(you\s+are|to\s+be)/i,
+  /act\s+as\s+(if\s+you\s+are|a)/i,
+  /roleplay\s+as/i,
+
+  // System prompt extraction attempts
+  /what\s+(are\s+)?your\s+(system\s+)?instructions?/i,
+  /show\s+(me\s+)?your\s+(system\s+)?prompt/i,
+  /reveal\s+your\s+(system\s+)?prompt/i,
+  /print\s+your\s+(system\s+)?prompt/i,
+  /output\s+(your\s+)?instructions?/i,
+  /repeat\s+(your\s+)?(system\s+)?instructions?/i,
+
+  // Jailbreak patterns
+  /\bDAN\b/,  // "Do Anything Now"
+  /jailbreak/i,
+  /bypass\s+(your\s+)?(safety|restrictions?|filters?)/i,
+
+  // Code/XML injection
+  /<\/?system>/i,
+  /<\/?user>/i,
+  /<\/?assistant>/i,
+  /```(system|prompt|instructions)/i,
+
+  // Arabic variants
+  /تجاهل\s+(كل\s+)?التعليمات/,  // ignore instructions
+  /انسى\s+التعليمات/,  // forget instructions
+  /ما\s+هي\s+تعليماتك/,  // what are your instructions
+];
+
+/**
+ * Check if input contains prompt injection attempts
+ */
+export function detectPromptInjection(input: string): {
+  detected: boolean;
+  pattern?: string;
+} {
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(input)) {
+      return { detected: true, pattern: pattern.source };
+    }
+  }
+  return { detected: false };
+}
+
+// ===========================================
+// SECURITY: Input Sanitization
+// ===========================================
+
+/**
+ * Sanitize user input - enhanced version with injection protection
  */
 export function sanitizeInput(input: string): string {
-  // Remove any potentially dangerous characters
   return input
     .trim()
-    .replace(/[<>]/g, '') // Remove HTML-like brackets
-    .substring(0, 1000); // Limit length
+    .replace(/[<>]/g, '')  // Remove HTML-like brackets
+    .replace(/```[\s\S]*?```/g, '[code removed]')  // Remove code blocks
+    .replace(/\[SYSTEM\][\s\S]*?\[\/SYSTEM\]/gi, '')  // Remove fake system tags
+    .replace(/\[INST\][\s\S]*?\[\/INST\]/gi, '')  // Remove fake instruction tags
+    .substring(0, 1000);  // Limit length
 }
 
 /**
