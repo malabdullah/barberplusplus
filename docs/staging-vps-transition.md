@@ -104,7 +104,11 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
 - Configure an isolated VPS tunnel/origin with no direct-origin bypass; cut over
   only the two staging DNS records after service health is verified.
 - Complete encrypted off-device backups and a restore rehearsal. Same-host
-  legacy archives do not satisfy this gate.
+  legacy archives do not satisfy this gate. The owner selected the Mac folder
+  `/Users/malabdullah/BarberBackups/staging`; private destination directories are
+  created. Encryption, verified SSH transfer and synthetic-file recovery now
+  pass. Real DB/Storage/config capture, key recovery-copy custody and a full
+  stack restore remain open. See `staging-backups.md` for evidence and limits.
 - Run clean migration replay, pgTAP, synthetic seed verification, all service
   smoke checks, authenticated Access checks, signature/Flow failure paths,
   outbound containment, load checks, and complete E2E on the VPS.

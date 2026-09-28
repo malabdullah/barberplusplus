@@ -92,9 +92,37 @@ These use synthetic keys and stub workers, not the deployed app or Meta service.
    and test Auth against the private mail sink.
 4. Configure dedicated Meta/Flow and restricted Anthropic test credentials;
    keep outbound calls disabled until allowlist/limit checks pass.
-5. Establish encrypted off-device backup storage and rehearse restoration.
+5. Implement encrypted backup transfer to the owner's selected Mac destination
+   below and rehearse restoration.
 6. Obtain release-specific owner approval, then cut over only staging DNS and
    complete VPS smoke, E2E, isolation, security and load acceptance.
 
 Sources: [Mailpit runtime configuration](https://mailpit.axllent.org/docs/configuration/runtime-options/),
 [self-hosted Supabase functions](https://supabase.com/docs/guides/self-hosting/self-hosted-functions).
+
+## Owner-selected backup destination — September 28
+
+The owner selected their own computer instead of a cloud-storage account.
+Use `/Users/malabdullah/BarberBackups/staging`, outside the repository, for
+encrypted **staging-only** backup archives. The folder and its parent were
+created with mode 0700, owned by `malabdullah`. The disk had approximately
+280 GiB available at the destination check; check capacity again before transfer.
+
+This is a separate-device destination for the staging VPS, not an always-online
+backup service. The Mac must be awake and connected when retrieving a backup.
+Prefer Mac-initiated retrieval over authenticated SSH; do not expose a new
+inbound service on the Mac. Do not give the VPS the backup decryption key.
+Use a separate staging backup encryption key, protect it outside Git, and
+arrange a recoverable second copy before relying on these archives.
+
+Destination permissions, age encryption, authenticated SSH pull, ciphertext
+checksum/authentication checks and synthetic-file recovery are now verified.
+See `staging-backups.md` for paths, commands and evidence. A separate recovery
+copy of the private key, consistent DB/Storage/config capture, scheduling,
+freshness reporting and a full database/Storage restore rehearsal are **not
+complete**. No automatic backup schedule has been created. Require
+verified off-VPS backup evidence before any operation that needs a recoverable
+backup; an offline Mac must not be reported as a successful transfer. No
+production data or credentials belong in this folder. No live staging backup
+exists yet because the new VPS stack is not deployed. The retained `fixture-`
+archive is explicitly a synthetic transport test, never a real backup.

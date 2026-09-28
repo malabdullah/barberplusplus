@@ -24,6 +24,8 @@
     "test:cicd": "sh scripts/test-cicd.sh",
     "test:release": "node --test scripts/release-manifest.node-test.mjs",
     "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs",
+    "test:staging-backup": "node --test scripts/staging-backup.node-test.mjs && bash -n scripts/probe-staging-backup.sh",
+    "backup:staging-pull": "node scripts/pull-staging-backup.mjs",
     "test:staging-gateway": "deno lint ops/staging-vps/functions && deno check --frozen ops/staging-vps/functions/main/index.ts && deno test --frozen --allow-read=supabase ops/staging-vps/functions",
     "check:supabase-pin": "node scripts/check-supabase-pin.mjs",
     "test:watch": "vitest",

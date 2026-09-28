@@ -31,6 +31,11 @@ jobs:
       - run: npm run test:release
       - run: npm run test:staging-vps
       - run: npm run test:staging-gateway
+      - name: Test staging backup encryption and safety checks
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends age
+          npm run test:staging-backup
       - run: npm run check:supabase-pin
       - name: Validate isolated VPS mail sink with synthetic mail
         shell: bash
