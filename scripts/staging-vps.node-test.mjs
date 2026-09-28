@@ -95,3 +95,35 @@ for (const [name, change] of Object.entries(unsafeChanges)) {
     assert.throws(() => validateCompose(config));
   });
 }
+
+function compiledFixture() {
+  const config = fixture();
+  delete config.volumes['deno-cache'];
+  Object.assign(config.services.functions, {
+    image: 'ghcr.io/malabdullah/barberplusplus-functions@sha256:' + 'a'.repeat(64),
+    volumes: [], command: ['start', '--main-service', '/home/deno/bundles/main.eszip'],
+    user: '10001:10001', read_only: true, cap_drop: ['ALL'], security_opt: ['no-new-privileges:true'],
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700'],
+    mem_limit: 805306368, cpus: 1, pids_limit: 256,
+  });
+  return config;
+}
+test('compiled-only gate rejects the old source-mounted configuration', () => {
+  assert.throws(() => validateCompose(fixture(), { requireCompiledFunctions: true }));
+  validateCompose(compiledFixture(), { requireCompiledFunctions: true });
+});
+for (const [name, mutate] of Object.entries({
+  tag: (s) => { s.image = 'ghcr.io/malabdullah/barberplusplus-functions:latest'; },
+  registry: (s) => { s.image = 'outside.invalid/image@sha256:' + 'a'.repeat(64); },
+  root: (s) => { s.user = '0:0'; },
+  writable: (s) => { s.read_only = false; },
+  sourceMount: (s) => { s.volumes = fixture().services.functions.volumes; },
+  command: (s) => { s.command = ['start', '--main-service', '/home/deno/functions/main']; },
+  entrypoint: (s) => { s.entrypoint = ['sh']; },
+  privileges: (s) => { s.security_opt = []; },
+})) {
+  test(`compiled-only gate rejects ${name}`, () => {
+    const config = compiledFixture(); mutate(config.services.functions);
+    assert.throws(() => validateCompose(config, { requireCompiledFunctions: true }));
+  });
+}

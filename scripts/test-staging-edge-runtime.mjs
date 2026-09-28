@@ -106,8 +106,8 @@ try {
   docker('network', 'create', '--internal', '--label', 'barber.purpose=edge-runtime-test', offline); createdNetworks.push(offline);
   docker('create', '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', offline,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
-    '--memory', '768m', '--cpus', '2', '--pids-limit', '256',
-    '--tmpfs', '/tmp:rw,nosuid,size=128m,uid=10001,gid=10001,mode=0700',
+    '--memory', '768m', '--cpus', '1', '--pids-limit', '256',
+    '--tmpfs', '/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700',
     '-e', 'APP_ENV=staging', '-e', 'APP_URL=https://staging-barber.malabdullah.cloud',
     '-e', `JWT_SECRET=${jwtSecret}`, '-e', `CRON_SHARED_SECRET=${cron}`,
     '-e', `WHATSAPP_APP_SECRET=${meta}`, '-e', `WHATSAPP_VERIFY_TOKEN=${verify}`,

@@ -48,8 +48,13 @@ completed VPS target. No production resources are part of this transition.
    inventory, JWT verification, cron secrets, and Meta HMAC checks on both POST
    endpoints. Signed Flow payloads still pass through the application's
    encryption validation. Unknown, suffix, and encoded-alias routes are denied.
-   Function source is mounted read-only. Installation and actual Edge Runtime
-   compatibility are still deployment gates, not completed by these unit tests.
+   Compiled function packaging and local offline Edge Runtime checks are now
+   implemented (see item 7); actual VPS/Envoy checks remain deployment gates.
+7. Added a commit-addressed, secret-excluding source packager and a digest-pinned
+   ESZIP function image. All eight real workers passed local offline startup,
+   authentication boundaries and encrypted Flow ping/tamper checks. Deployment
+   must add `compose.functions-image.yml` and use the compiled-only validator;
+   the old source-mounted layer alone cannot run the new main service.
 
 ## Configuration-only verification
 
@@ -83,9 +88,9 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
   merged and no release was approved by this policy change.
 - The GitHub deployment workflow still targets the Mac. The Linux deployment
   executor, private Dokploy integration, backups, migration/seed procedure,
-  Edge Runtime packaging/compatibility and rollback wiring must
-  be implemented and reviewed before switching the workflow. The main-service
-  authentication logic is now implemented and unit tested. Do not merely
+  function-image publication and rollback wiring must
+  be implemented and reviewed before switching the workflow. Local compiled
+  runtime compatibility passes; AMD64/VPS/Envoy checks remain. Do not merely
   relabel the runner or merge the Mac workflow as a VPS solution.
 - Independently generate staging DB/Auth/JWT/Vault/Storage/Function credentials.
   No production secrets or data may be copied. The validated migration baseline

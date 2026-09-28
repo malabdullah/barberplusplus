@@ -50,11 +50,78 @@ It does not test Auth's invitation/reset flow; that needs the deployed stack.
 
 ## Self-hosted function gateway
 
-`ops/staging-vps/functions/main/` must replace the upstream example `main`
-directory in the release's staged function bundle. Include all eight actual
-function directories and `_shared`, excluding every `.env*` file and test file.
-Do not mutate a running release in place. The release packaging/deployment and
-rollback scripts still need implementation and a real Edge Runtime rehearsal.
+The custom gateway and all eight workers are now packaged from an explicit Git
+commit, compiled to ESZIP archives, and included in a separate function image.
+Do not copy the new main service into the old source-mounted Compose service:
+it requires `/home/deno/bundles/*.eszip` and disables remote worker imports.
+The Linux release executor, GHCR publication and rollback wiring remain open.
+
+### Immutable function artifact
+
+```sh
+# Use a full reviewed commit and a new absolute directory, outside a live stack.
+npm run package:staging-functions -- <full-commit-sha> /absolute/new/functions
+docker build -f ops/staging-vps/Dockerfile.functions \
+  -t barber-functions:reviewed /absolute/new/functions
+```
+
+The packager reads committed blobs only, never the working copy. It rejects
+symlinks, unknown function directories, missing entrypoints and existing output
+directories. Environment/dotfiles and test files are excluded without reading
+their contents. Its manifest binds source commit, file SHA-256s and tree hash;
+the verifier also rejects extra files and altered content. These checksums are
+not a signature or a substitute for the protected release workflow.
+
+The source app lock includes frontend/tooling dependencies that stalled the
+standalone runtime. Packaging derives a function-only dependency closure,
+retaining selected versions, dependency records and integrity hashes unchanged.
+It preserves the original committed lock under `source-lock/deno.lock` and
+recomputes the closure during verification. Missing/ambiguous references fail
+closed. No dependency upgrade or lock-disable switch is used.
+
+`ops/staging-vps/edge-runtime.image` and the Dockerfile pin the upstream
+v1.74.0 image by OCI index digest
+`sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120`.
+The build downloads dependencies without any application credentials, then
+bundles the gateway and every worker. The final image contains compiled
+archives and the source manifest, runs as UID/GID 10001 and needs no source
+mount or dependency download to start. Preserve the previous image digest for
+rollback; never rebuild an already accepted release during promotion.
+
+Before deployment, layer `compose.functions-image.yml` after the upstream file
+and `compose.override.yml`, set `STAGING_FUNCTIONS_IMAGE` to the reviewed
+`ghcr.io/malabdullah/barberplusplus-functions@sha256:...` digest, and pipe the
+rendered configuration to `node scripts/check-vps-compose.mjs --compiled-functions`.
+Missing image values, tags, another repository, root/writable operation and
+source mounts fail this gate. The new layer overrides the upstream command and
+removes its source/cache mounts. The older topology check alone is insufficient.
+No GHCR function image has been published or deployed yet.
+
+### Real runtime evidence — September 28
+
+`npm run test:staging-edge-runtime` builds from committed source and starts a
+disposable, non-root, read-only container on an internal-only network with no
+published ports or host-data mounts. It uses freshly generated synthetic JWT,
+Meta and RSA keys only; no DB/Auth credentials, Meta access token, Anthropic key
+or real recipient data enters the build or container. Test containers/networks
+and temporary source bundles are removed; the local compiled test image is
+retained. This command is now part of application CI.
+
+Commit `c9c5f2eedd1d03663577bd252befe76faad69bbb` passed a cold-start offline
+rehearsal on local ARM64. Its tree hash was
+`fa47e87e474972d4f2bdac1410695cd4ad4de92a3554ce1b69d25df499a9d6a2`,
+and local image ID was
+`sha256:ef02d6cbac27862c447615d02eb37ee6d0931d5ea747e94bf7231673699b66fb`.
+All eight real workers booted. JWT/cron denials, exact paths, CORS, Meta GET and
+signed POST, plaintext Flow rejection, encrypted RSA/AES Flow ping round-trip,
+and signed-but-tampered ciphertext rejection passed. Expected missing-credential
+responses verified worker boot without touching a database or sending messages.
+The test found and fixed a real runtime issue: rebuilt, HMAC-verified requests
+must retain Supabase dispatch metadata using `EdgeRuntime.applySupabaseTag`.
+Unit tests now verify context is copied only after successful authentication.
+
+This is not Envoy/Cloudflare integration, Linux AMD64 or VPS acceptance, a live
+Meta end-to-end test, a component vulnerability scan, or a full service restore.
 
 The explicit gateway policy is:
 
@@ -86,14 +153,14 @@ These use synthetic keys and stub workers, not the deployed app or Meta service.
 ## Remaining gates
 
 1. Select and scan a compatible patched Supabase image set.
-2. Complete immutable function packaging and real Edge Runtime compatibility,
-   Linux/Dokploy deployment, backup and rollback implementation.
+2. Complete Linux AMD64/VPS and Envoy checks for the compiled function image,
+   plus Linux/Dokploy deployment, backup and rollback implementation.
 3. Provision unique staging secrets, initialize the baseline and synthetic seed,
    and test Auth against the private mail sink.
 4. Configure dedicated Meta/Flow and restricted Anthropic test credentials;
    keep outbound calls disabled until allowlist/limit checks pass.
-5. Implement encrypted backup transfer to the owner's selected Mac destination
-   below and rehearse restoration.
+5. Implement consistent live DB/Storage capture and rehearse restoration;
+   encrypted transfer and recovery-key custody are already verified.
 6. Obtain release-specific owner approval, then cut over only staging DNS and
    complete VPS smoke, E2E, isolation, security and load acceptance.
 
@@ -117,8 +184,9 @@ arrange a recoverable second copy before relying on these archives.
 
 Destination permissions, age encryption, authenticated SSH pull, ciphertext
 checksum/authentication checks and synthetic-file recovery are now verified.
-See `staging-backups.md` for paths, commands and evidence. A separate recovery
-copy of the private key, consistent DB/Storage/config capture, scheduling,
+See `staging-backups.md` for paths, commands and evidence. Apple Passwords
+recovery-copy storage, sync and synthetic decryption are verified. Consistent
+DB/Storage/config capture, scheduling,
 freshness reporting and a full database/Storage restore rehearsal are **not
 complete**. No automatic backup schedule has been created. Require
 verified off-VPS backup evidence before any operation that needs a recoverable

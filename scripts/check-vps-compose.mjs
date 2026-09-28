@@ -12,9 +12,10 @@ export const MAILPIT_ENV = {
 
 // Accept rendered Compose JSON on stdin; never echo it (it may contain secrets).
 // This validates topology, not credentials, application health, or readiness.
-export function validateCompose(config) {
+export function validateCompose(config, { requireCompiledFunctions = false } = {}) {
   const fail = (message) => { throw new Error(message); };
   if (config.name !== 'barber-staging') fail('Unexpected project name');
+  const compiled = requireCompiledFunctions || config.services?.functions?.image?.startsWith('ghcr.io/malabdullah/barberplusplus-functions');
   const names = ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor', 'mailpit'];
   if (Object.keys(config.services || {}).sort().join() !== [...names].sort().join()) fail('Unexpected service inventory');
   for (const [name, service] of Object.entries(config.services)) {
@@ -58,7 +59,7 @@ export function validateCompose(config) {
     || Number(sink.mem_limit) !== 268435456 || Number(sink.cpus) !== 0.5 || sink.pids_limit !== 100) fail('Unsafe mail sink configuration');
   if (Object.keys(sink.environment || {}).sort().join() !== Object.keys(MAILPIT_ENV).sort().join()
     || Object.entries(MAILPIT_ENV).some(([key, value]) => sink.environment[key] !== value)) fail('Unsafe mail sink environment');
-  if (Object.keys(config.volumes || {}).sort().join() !== 'db-config,deno-cache') fail('Unexpected volumes');
+  if (Object.keys(config.volumes || {}).sort().join() !== (compiled ? 'db-config' : 'db-config,deno-cache')) fail('Unexpected volumes');
   for (const [name, volume] of Object.entries(config.volumes)) {
     if (volume.external || volume.name !== `barber-staging-${name}` || volume.driver_opts) fail('Unexpected or shared volume');
   }
@@ -77,14 +78,32 @@ export function validateCompose(config) {
     || functions.VERIFY_JWT !== 'true'
     || functions.OUTBOUND_RECIPIENT_ALLOWLIST !== '' || functions.WHATSAPP_ACCESS_TOKEN !== ''
     || functions.ANTHROPIC_API_KEY !== '') fail('Initial integration quarantine is not enabled');
-  const codeMount = config.services.functions.volumes?.find((mount) => mount.target === '/home/deno/functions');
-  if (!codeMount || codeMount.type !== 'bind' || codeMount.read_only !== true
-    || codeMount.source !== '/opt/barber-staging/supabase/volumes/functions') fail('Function code must use the read-only staging mount');
+  const service = config.services.functions;
+  if (compiled) {
+    validateCompiledFunctions(service);
+  } else {
+    const codeMount = service.volumes?.find((mount) => mount.target === '/home/deno/functions');
+    if (!codeMount || codeMount.type !== 'bind' || codeMount.read_only !== true
+      || codeMount.source !== '/opt/barber-staging/supabase/volumes/functions') fail('Function code must use the read-only staging mount');
+  }
+}
+
+export function validateCompiledFunctions(service) {
+  if (!/^ghcr\.io\/malabdullah\/barberplusplus-functions@sha256:[a-f0-9]{64}$/.test(service.image)
+    || service.volumes?.length || service.entrypoint || service.configs?.length || service.secrets?.length
+    || service.user !== '10001:10001' || service.read_only !== true
+    || service.cap_drop?.join() !== 'ALL' || service.security_opt?.join() !== 'no-new-privileges:true'
+    || service.command?.join() !== 'start,--main-service,/home/deno/bundles/main.eszip'
+    || service.tmpfs?.join() !== '/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700'
+    || Number(service.mem_limit) !== 805306368 || Number(service.cpus) !== 1 || service.pids_limit !== 256) {
+    throw new Error('Compiled functions require the approved digest, non-root read-only runtime and no source mounts');
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    validateCompose(JSON.parse(readFileSync(0, 'utf8')));
+    if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--compiled-functions')) throw new Error('Unknown Compose validation option');
+    validateCompose(JSON.parse(readFileSync(0, 'utf8')), { requireCompiledFunctions: process.argv[2] === '--compiled-functions' });
     console.log('VPS Compose topology passed; credentials and deployment readiness remain separate gates.');
   } catch (error) {
     // Do not print input, parser errors, or environment values.
