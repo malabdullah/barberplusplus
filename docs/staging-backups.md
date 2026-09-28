@@ -26,11 +26,38 @@ database restoration and does not authorize a merge, migration or deployment.
 
 The dedicated X25519 key is different from both SSH keys and all application
 secrets. Only its public recipient was transferred to the staging VPS. Protect a
-second copy of the private key before relying on backups. The owner chose a
-password manager; its product and secure import are still pending. The recovery
-copy has **not** been stored or verified yet.
+second copy of the private key before relying on backups. On 2026-09-28, the
+owner reported saving the key in Apple Passwords under
+`Barber++ staging backup recovery` and confirmed that the entry appeared on
+another trusted Apple device. This is owner-confirmed storage and sync evidence,
+not a decryption test using the password-manager copy. No private key value or
+screenshot was collected. Recovery using that saved copy remains untested.
 Never overwrite/delete the current key during a later rotation: older archives
 still require the identity they were encrypted for.
+
+### Checking the Apple Passwords recovery copy
+
+Run locally in an interactive terminal (never paste a key into a command or chat):
+
+```sh
+npm run backup:staging-test-recovery -- fixture-20260928T085615Z-e6a0a7eb
+```
+
+Copy the Password field from the saved Apple Passwords entry, paste it at the
+hidden prompt, and press Return. Do not use `identity.txt` for this test: it must
+exercise the saved recovery copy. The prompt disables echo; the key passes to
+age through stdin, not command arguments, environment variables or a temporary
+key file. No working identity is read or overwritten. Decrypted output is
+discarded. Clear the clipboard afterward by copying harmless text.
+
+The check first validates the private, size-limited synthetic fixture and its
+checksum. A successful age authentication writes a new private
+`recovery-key-check-<uuid>.json` beside that fixture. A wrong key, corrupted
+archive or invalid metadata produces no success receipt. The evidence proves
+that the supplied key decrypted the fixture; the owner identifies its source
+as Apple Passwords. It does not prove DB/Storage restoration or future Apple
+account recoverability. The owner's saved-copy test remains pending until this
+receipt exists; automated tests use unrelated, disposable keys.
 
 ## Pulling a prepared encrypted export
 
@@ -93,13 +120,20 @@ contains `payload.tar.age`, `manifest.json`, `receipt.json` and
   fields, size limits, private permissions, symlinks, wrong keys, tampering,
   positive receipt publication, duplicate protection, interrupted SSH/streams,
   overlong transfers and truncation. All passed locally. CI runs the same tests.
+- Five additional recovery-helper tests pass locally: fresh-key recovery without
+  an identity file, wrong/malformed keys, tampering with an altered manifest,
+  fixture/permission/size restrictions, and rejection of non-interactive input.
+  These are not evidence that the owner's Apple Passwords copy was tested.
 
 Run `npm run test:staging-backup` to repeat synthetic local crypto/transport tests.
 These create and remove only their own temporary fixtures and keys.
 
 ## Still required before real backup acceptance
 
-1. Owner stores and verifies a separate recovery copy of the decryption key.
+1. Test the owner-confirmed Apple Passwords recovery copy against the retained
+   synthetic encrypted fixture without printing the key or overwriting the
+   existing local identity. Storage and cross-device sync are confirmed; this
+   cryptographic recovery check remains pending.
 2. After isolated Supabase provisioning, implement consistent capture of DB
    (including Auth/Vault needed for restoration), Storage objects and encrypted
    staging-only configuration. Retain immutable image/release/migration metadata.
