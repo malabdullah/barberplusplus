@@ -65,8 +65,11 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
 
 ## Still blocking deployment
 
-- PR #1 remains `REVIEW_REQUIRED`. A second account controlled by the same
-  person is not independent review. Do not weaken branch protection.
+- The owner explicitly approved a shared-main solo-owner policy on 2026-09-28.
+  A second account is unnecessary: retain PRs and CI, record a separate code
+  review, and require owner release-specific approval plus GitHub staging
+  environment approval. See `staging-owner-approval.md`. Neither PR has been
+  merged and no release was approved by this policy change.
 - The GitHub deployment workflow still targets the Mac. The Linux deployment
   executor, private Dokploy integration, backups, migration/seed procedure,
   Edge Runtime entrypoint/per-function JWT enforcement and rollback wiring must

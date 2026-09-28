@@ -31,6 +31,17 @@ post-CI staging deployment job.
 
 ### `staging`
 
+Deployment approval is now enforced by the GitHub environment (2026-09-28):
+`malabdullah` is its sole required reviewer and may approve a run they triggered.
+Only protected branches may deploy. Policy-change approval is not approval of a
+particular release. The owner must review and approve each staging deployment.
+The existing workflow already references `environment: staging`; no workflow
+edit or deployment was needed to enable this gate. See
+[owner approval policy](staging-owner-approval.md) for the explicitly approved
+shared-main policy. Main requires PRs and all five checks, but no second-person
+approval. A recorded code review and owner release-specific approval are still
+required by the deployment procedure.
+
 Variables:
 
 | Name | Meaning |
@@ -70,8 +81,9 @@ workflows request only the additional package/action access they require.
 
 Protect `main` with:
 
-- pull requests and at least one approval;
-- stale-approval dismissal and approval of the latest reviewable push;
+- pull requests, with zero required second-person approvals under the explicitly
+  approved solo-owner policy;
+- stale-review dismissal retained, but no separate latest-push approval;
 - resolved conversations and an up-to-date branch;
 - blocked force pushes and deletion; and
 - required GitHub Actions checks `application`, `browser`, `database`,
@@ -81,10 +93,12 @@ Protect `v*` tags from unauthorized creation, update, and deletion. Keep the
 production workflow's annotated-tag and strict semantic-version checks.
 
 The repository is public on GitHub Free so server-side branch protection is
-available. `main` requires the five checks above, one independent approval,
-latest-push approval, stale-review dismissal, conversation resolution, and an
-up-to-date branch. Administrators are included; force pushes and deletion are
-disabled. Do not weaken these rules to complete a release.
+available. `main` requires the five app-bound checks above, stale-review
+dismissal, conversation resolution, and an up-to-date branch. Administrators are
+included; force pushes and deletion are disabled. On 2026-09-28 the owner
+explicitly approved removing only the independent PR approval count and
+latest-push approval from this shared branch. All other fields were verified
+unchanged. Do not further weaken controls to complete a release.
 
 ## GHCR and local staging runner
 
