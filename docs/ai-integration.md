@@ -73,12 +73,56 @@ Source commit `ee5be09c4c47dc162ede045ba2b732c2be119b4f`:
   `1ae5b835359d5489a82eb110a5cc85579c8f18f90b54a9b8e5199477baa1ef12`.
 - `git diff --check`: passed. No dependencies or migrations changed.
 
-Pending: live Luna/key/model-access/cost/Arabic quality checks, data-backed
-booking/cancellation/reschedule acceptance, new Linux AMD64 CI and actual VPS
+Pending: Arabic/Kuwaiti conversational-quality review, data-backed
+booking/cancellation/reschedule acceptance, new Linux AMD64 deployment validation and actual VPS
 deployment. No existing local database was reset or bootstrapped for this
 adapter-only change; the eventual data-backed tests must use a fresh isolated
 synthetic database. Production was not accessed. Existing frontend chunk-size
 warnings remain.
+
+## Supervised provider smoke — 2026-09-28
+
+- Dedicated OpenAI project: `Barber Staging` / `proj_aPs8X84uA1M6AtgJltBudKJS`.
+  Only `gpt-6-luna` is allowed; other current/future models are blocked.
+- Owner approved a USD 1 monthly enforced project cap and up to USD 1 of
+  existing credit for synthetic testing. Billing and auto-recharge were not
+  changed. Provider enforcement can lag slightly; the cap is not a guarantee
+  against a small overrun. No unattended/public AI use is approved.
+- Restricted replacement key: `barber-staging-luna-tests-v2`, tracking ID
+  `key_0hoS6FGEUCOwDFnM`, expiry 2026-10-28; Responses API permissions only.
+  The original key was accidentally captured by browser tooling and was
+  confirmed revoked before testing. No secret values belong in this record.
+- Secret recovery copy: owner reports saved in Apple Passwords. Temporary
+  local test copy is outside Git, in a mode-0700 directory with mode-0600 file.
+  Not installed on the staging VPS and not injected into any running service.
+- Tested source `5d1b76d` using the existing `callAgent` and
+  `continueWithToolResults` adapter, from 11:42:47 to 11:43:06 UTC.
+  Deno was permitted to contact only `api.openai.com:443`; no database or
+  WhatsApp credentials/access were provided. Outbound opt-in existed only
+  inside this test process and was removed at exit.
+- Six requests, all HTTP 200 and returned Luna: English text, Arabic text,
+  Kuwaiti-dialect prompt with Arabic-script output, relative-date fixture call,
+  second correlated fixture-tool call, and final response preserving both
+  tool results. These use synthetic prompts/tools, not the full booking-agent
+  prompt or real booking handlers. Script-level assertions passed; this is
+  not human linguistic-quality or business-authorization acceptance.
+- Reported usage: 1,048 input and 119 output tokens. Conservative estimate
+  USD 0.0001905 using the published cache-write input rate for every input token
+  and standard output rate; final provider billing is authoritative.
+  Observed request latencies: 1.372–8.823 seconds.
+- Harness enforced at most eight attempts, 20 KB per request, 1,024 output
+  tokens, fixed model/endpoint, function-only tools and `store: false`.
+  Receipts contain metrics/check names only, not keys, prompts or outputs.
+- CI run `36414313700` for `5d1b76d` finished successfully: application,
+  browser, database, dependency-review and secret-scan. No merge or deployment
+  occurred as part of the smoke test.
+- After the smoke, `npm run check`, all five loopback `npm run test:e2e`
+  tests, and `git diff --check` passed again. Existing bundle-size warnings
+  remain unchanged; no application source was modified for this evidence update.
+
+Still required: full synthetic booking/cancellation/reschedule and abuse/error
+journeys, real test-recipient delivery, VPS secret injection through the reviewed
+integration configuration, and application-side quotas before unattended use.
 
 ## Official references
 
