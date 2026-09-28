@@ -89,6 +89,29 @@ Deno.test('Meta payload size is bounded even without Content-Length', async () =
     headers: { 'x-hub-signature-256': await signed(body) } }))).status, 413);
 });
 
+Deno.test('authenticated Meta replacements preserve worker context; invalid signatures never copy it', async () => {
+  const body = '{"synthetic":true}';
+  const contexts = new WeakMap<Request, string>();
+  let copies = 0;
+  const withContext = createGateway(config, async (_, req) => {
+    assert.equal(contexts.get(req), 'synthetic-runtime-tag');
+    assert.equal(await req.text(), body);
+    return new Response('ok');
+  }, (original, replacement) => {
+    copies++;
+    assert.equal(original.bodyUsed, true);
+    assert.equal(contexts.get(original), 'synthetic-runtime-tag');
+    contexts.set(replacement, contexts.get(original)!);
+  });
+  for (const name of ['whatsapp-webhook', 'whatsapp-flow-endpoint']) {
+    const req = request(name, { method: 'POST', body, headers: { 'x-hub-signature-256': await signed(body) } });
+    contexts.set(req, 'synthetic-runtime-tag');
+    assert.equal((await withContext(req)).status, 200);
+    assert.equal((await withContext(request(name, { method: 'POST', body, headers: { 'x-hub-signature-256': await signed(body, 'wrong') } }))).status, 401);
+  }
+  assert.equal(copies, 2);
+});
+
 Deno.test('Meta challenge is fail closed; Flow GET remains disabled', async () => {
   assert.equal((await gate(request('whatsapp-webhook'))).status, 403);
   assert.equal((await gate(request(`whatsapp-webhook?hub.mode=subscribe&hub.verify_token=${config.metaVerifyToken}&hub.challenge=fixture`))).status, 200);

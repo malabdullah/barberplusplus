@@ -36,7 +36,8 @@ async function equalSecret(expected: string | undefined, supplied: string | null
   return diff === 0;
 }
 
-export function createGateway(settings: Settings, dispatch: Dispatch) {
+export function createGateway(settings: Settings, dispatch: Dispatch,
+  copyRequestContext?: (original: Request, replacement: Request) => void) {
   // Bad configured JWKS is a startup error, never a reason to skip verification.
   const jwks = settings.jwks ? createLocalJWKSet(JSON.parse(settings.jwks) as JSONWebKeySet) : undefined;
   const reply = (status: number, message: string) => new Response(JSON.stringify({ message }), {
@@ -98,7 +99,11 @@ export function createGateway(settings: Settings, dispatch: Dispatch) {
         const key = await crypto.subtle.importKey('raw', encoder.encode(settings.metaAppSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
         const bytes = Uint8Array.from(signature.slice(7).match(/../g)!, (hex) => parseInt(hex, 16));
         if (!await crypto.subtle.verify('HMAC', key, bytes, body)) return reply(401, 'Unauthorized');
-        request = new Request(request.url, { method: request.method, headers: request.headers, body });
+        const verifiedRequest = new Request(request.url, { method: request.method, headers: request.headers, body });
+        // The self-hosted runtime tags incoming requests for worker dispatch.
+        // Preserve that context only after authenticating the original bytes.
+        copyRequestContext?.(request, verifiedRequest);
+        request = verifiedRequest;
       }
     } catch {
       // Never log tokens, signatures, secrets, or parser exception details.

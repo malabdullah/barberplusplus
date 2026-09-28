@@ -1,6 +1,7 @@
 import { createGateway } from './gateway.ts';
 
 declare const EdgeRuntime: {
+  applySupabaseTag(original: Request, replacement: Request): void;
   userWorkers: {
     create(options: {
       servicePath: string; memoryLimitMb: number; workerTimeoutMs: number;
@@ -25,5 +26,5 @@ const handler = createGateway({
     envVars: Object.entries(Deno.env.toObject()),
   });
   return await worker.fetch(request);
-});
+}, (original, replacement) => EdgeRuntime.applySupabaseTag(original, replacement));
 Deno.serve(handler);
