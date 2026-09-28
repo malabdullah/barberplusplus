@@ -1,7 +1,7 @@
 // Opt-in, synthetic-only compatibility test. No DB, Auth or integration keys.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHmac, generateKeyPairSync, randomUUID } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -14,17 +14,20 @@ const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', std
 const root = mkdtempSync(join(tmpdir(), 'barber-edge-test-'));
 const bundle = join(root, 'functions');
 const name = `barber-edge-test-${randomUUID()}`;
-const online = `${name}-imports`; const offline = `${name}-offline`;
+const offline = `${name}-offline`;
 const createdNetworks = []; let createdContainer = false;
 const jwtSecret = randomUUID() + randomUUID();
 const cron = randomUUID(); const meta = randomUUID(); const verify = randomUUID();
+const flowKeys = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const flowPrivate = flowKeys.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+const flowPublic = flowKeys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
 const encode = (data) => Buffer.from(JSON.stringify(data)).toString('base64url');
 const unsigned = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ role: 'anon', exp: Math.floor(Date.now() / 1000) + 1200 })}`;
 const token = unsigned + '.' + createHmac('sha256', jwtSecret).update(unsigned).digest('base64url');
 
 async function probe(settings) {
   const { default: assert } = await import('node:assert/strict');
-  const { createHmac } = await import('node:crypto');
+  const { createHmac, randomBytes, publicEncrypt, createCipheriv, createDecipheriv } = await import('node:crypto');
   const { setTimeout: delay } = await import('node:timers/promises');
   const base = 'http://127.0.0.1:9000';
   const call = (path, init = {}) => fetch(base + path, { ...init, signal: AbortSignal.timeout(45000) });
@@ -65,12 +68,31 @@ async function probe(settings) {
   const challenge = await call(`/whatsapp-webhook?hub.mode=subscribe&hub.verify_token=${settings.verify}&hub.challenge=synthetic-runtime-check`);
   assert.equal(challenge.status, 200, 'Webhook worker');
   assert.equal(await challenge.text(), 'synthetic-runtime-check');
+  const sign = (body) => ({ 'content-type': 'application/json', 'x-hub-signature-256': 'sha256=' + createHmac('sha256', settings.meta).update(body).digest('hex') });
+  const emptyWebhook = JSON.stringify({ object: 'whatsapp_business_account', entry: [] });
+  assert.equal((await call('/whatsapp-webhook', { method: 'POST', headers: sign(emptyWebhook), body: emptyWebhook })).status, 200);
   const body = JSON.stringify({ action: 'ping' });
   const signature = 'sha256=' + createHmac('sha256', settings.meta).update(body).digest('hex');
   const flow = await call('/whatsapp-flow-endpoint', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': signature }, body });
   assert.equal(flow.status, 200, 'Flow uses an error envelope with HTTP 200');
   assert.ok((await flow.text()).includes('encrypted'), 'Flow worker must boot and enforce encryption');
-  console.log('PASS: all eight real workers boot; JWT, cron, Meta, exact paths, CORS and plaintext Flow rejection.');
+  const aes = randomBytes(16); const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-128-gcm', aes, iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify({ version: '3.0', action: 'ping' })), cipher.final(), cipher.getAuthTag()]);
+  const payload = JSON.stringify({ encrypted_flow_data: encrypted.toString('base64'),
+    encrypted_aes_key: publicEncrypt({ key: settings.flowPublic, oaepHash: 'sha256' }, aes).toString('base64'), initial_vector: iv.toString('base64') });
+  const ping = await call('/whatsapp-flow-endpoint', { method: 'POST', headers: sign(payload), body: payload });
+  assert.equal(ping.status, 200);
+  const answer = Buffer.from(await ping.text(), 'base64');
+  const decipher = createDecipheriv('aes-128-gcm', aes, iv.map((byte) => byte ^ 255));
+  decipher.setAuthTag(answer.subarray(-16));
+  const recovered = JSON.parse(Buffer.concat([decipher.update(answer.subarray(0, -16)), decipher.final()]).toString());
+  assert.equal(recovered.data.status, 'active', 'Encrypted Flow ping must round-trip');
+  const corrupted = JSON.parse(payload); corrupted.encrypted_flow_data = Buffer.alloc(32).toString('base64');
+  const badBody = JSON.stringify(corrupted);
+  const bad = await call('/whatsapp-flow-endpoint', { method: 'POST', headers: sign(badBody), body: badBody });
+  assert.equal((await bad.json()).data.error, true, 'Bad ciphertext must be rejected despite valid HMAC');
+  console.log('PASS: all eight workers; JWT, cron, Meta, exact paths, CORS, encrypted Flow round-trip and tamper rejection.');
 }
 
 try {
@@ -78,36 +100,37 @@ try {
   const manifest = packageFunctions(resolve('.'), commit, bundle);
   verifyFunctionBundle(bundle);
   docker('pull', image); docker('pull', probeImage);
-  docker('network', 'create', '--label', 'barber.purpose=edge-runtime-test', online); createdNetworks.push(online);
+  const compiledImage = `barber-staging-functions-check:${commit}-${name.slice(-8)}`;
+  console.log('Compiling immutable function artifacts; no credentials enter the build.');
+  docker('build', '--build-arg', `EDGE_RUNTIME_IMAGE=${image}`, '-f', 'ops/staging-vps/Dockerfile.functions', '-t', compiledImage, bundle);
   docker('network', 'create', '--internal', '--label', 'barber.purpose=edge-runtime-test', offline); createdNetworks.push(offline);
-  docker('create', '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', online,
+  docker('create', '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', offline,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
     '--memory', '768m', '--cpus', '2', '--pids-limit', '256',
-    '--tmpfs', '/tmp:rw,nosuid,size=64m', '--tmpfs', '/root/.cache:rw,nosuid,size=256m',
-    '--mount', `type=bind,src=${bundle},dst=/home/deno/functions,readonly`,
+    '--tmpfs', '/tmp:rw,nosuid,size=128m,uid=10001,gid=10001,mode=0700',
     '-e', 'APP_ENV=staging', '-e', 'APP_URL=https://staging-barber.malabdullah.cloud',
     '-e', `JWT_SECRET=${jwtSecret}`, '-e', `CRON_SHARED_SECRET=${cron}`,
     '-e', `WHATSAPP_APP_SECRET=${meta}`, '-e', `WHATSAPP_VERIFY_TOKEN=${verify}`,
+    '-e', `WHATSAPP_FLOW_PRIVATE_KEY=${flowPrivate}`,
     '-e', 'OUTBOUND_RECIPIENT_ALLOWLIST=', '-e', 'WHATSAPP_ACCESS_TOKEN=', '-e', 'ANTHROPIC_API_KEY=',
-    image, 'start', '--main-service', '/home/deno/functions/main');
+    compiledImage);
   createdContainer = true;
   docker('start', name);
-  const input = `await (${probe.toString()})(${JSON.stringify({ token, cron, meta, verify })});`;
+  const input = `await (${probe.toString()})(${JSON.stringify({ token, cron, meta, verify, flowPublic })});`;
   const runProbe = () => execFileSync('docker', ['run', '--rm', '-i', '--name', `${name}-probe`, '--network', `container:${name}`,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', probeImage, 'node', '--input-type=module'],
   { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 180000 });
-  // Import downloads only; no operational credentials or real recipient data.
-  console.log('Warming pinned runtime imports with synthetic-only requests.');
-  console.log(runProbe().trim());
-  docker('network', 'connect', offline, name);
-  docker('network', 'disconnect', online, name);
   const state = JSON.parse(docker('inspect', name))[0];
   assert.deepEqual(Object.keys(state.NetworkSettings.Networks), [offline]);
   assert.ok(Object.values(state.NetworkSettings.Ports).every((p) => !p?.length));
   assert.equal(JSON.parse(docker('network', 'inspect', offline))[0].Internal, true);
-  console.log('Repeating without external network access.');
+  assert.equal(state.Config.User, '10001:10001');
+  assert.equal(state.HostConfig.ReadonlyRootfs, true);
+  assert.ok(state.Mounts.every((mount) => mount.Type === 'tmpfs' && mount.Destination === '/tmp'), 'No host mounts or persistent volumes may enter the test');
+  console.log('Cold-starting compiled functions without external network access.');
   console.log(runProbe().trim());
-  console.log(JSON.stringify({ sourceCommit: commit, treeSha256: manifest.treeSha256, runtimeImage: image, scope: 'local-runtime-compatibility-not-VPS-acceptance' }));
+  console.log(JSON.stringify({ sourceCommit: commit, treeSha256: manifest.treeSha256, runtimeImage: image, compiledImage,
+    imageId: docker('image', 'inspect', compiledImage, '--format', '{{.Id}}'), scope: 'local-runtime-compatibility-not-VPS-acceptance' }));
 } catch (error) {
   // Only this disposable container has synthetic credentials. Still suppress
   // command arguments and any environment values from diagnostics.
@@ -115,7 +138,7 @@ try {
     const state = JSON.parse(docker('inspect', name))[0];
     console.error(JSON.stringify({ running: state.State.Running, exitCode: state.State.ExitCode, oomKilled: state.State.OOMKilled }));
     const logs = spawnSync('docker', ['logs', '--tail', '35', name], { encoding: 'utf8', timeout: 10000 });
-    console.error((logs.stdout + logs.stderr).replaceAll(jwtSecret, '[test-key]').replaceAll(cron, '[test-key]').replaceAll(meta, '[test-key]').replaceAll(verify, '[test-key]'));
+    console.error((logs.stdout + logs.stderr).replaceAll(flowPrivate, '[test-key]').replaceAll(jwtSecret, '[test-key]').replaceAll(cron, '[test-key]').replaceAll(meta, '[test-key]').replaceAll(verify, '[test-key]'));
   }
   console.error(error.stderr?.toString().replaceAll(token, '[test-token]').replaceAll(verify, '[test-key]') || 'Edge Runtime compatibility test failed');
   process.exitCode = 1;
