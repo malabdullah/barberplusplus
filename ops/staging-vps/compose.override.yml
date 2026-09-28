@@ -1,0 +1,62 @@
+# Preparation only. Apply after review, secret provisioning, and readiness gates.
+# Compose >= 2.24.4 is required for !override. Always combine with the pinned
+# upstream docker-compose.yml; never use this file as a standalone stack.
+name: barber-staging
+services:
+  studio:
+    container_name: barber-staging-studio
+  api-gw:
+    container_name: barber-staging-api-gw
+    ports: !override
+      - "127.0.0.1:18000:8000"
+  auth:
+    container_name: barber-staging-auth
+    environment:
+      GOTRUE_SITE_URL: https://staging-barber.malabdullah.cloud
+      API_EXTERNAL_URL: https://supabase-staging.malabdullah.cloud/auth/v1
+      GOTRUE_URI_ALLOW_LIST: https://staging-barber.malabdullah.cloud/reset-password,https://staging-barber.malabdullah.cloud/accept-invite
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "false"
+      # Email is deliberately unavailable until a reviewed sink-only SMTP
+      # service is added. Never inherit an old provider credential by accident.
+      GOTRUE_SMTP_HOST: smtp-disabled.invalid
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+  rest:
+    container_name: barber-staging-rest
+  realtime:
+    # Keep the upstream tenant prefix, but avoid every legacy container name.
+    container_name: realtime-dev.barber-staging-realtime
+  storage:
+    container_name: barber-staging-storage
+  imgproxy:
+    container_name: barber-staging-imgproxy
+  meta:
+    container_name: barber-staging-meta
+  functions:
+    container_name: barber-staging-functions
+    environment:
+      APP_ENV: staging
+      APP_URL: https://staging-barber.malabdullah.cloud
+      OUTBOUND_RECIPIENT_ALLOWLIST: ""
+      # Fail closed until dedicated test integrations are configured separately.
+      WHATSAPP_ACCESS_TOKEN: ""
+      ANTHROPIC_API_KEY: ""
+  db:
+    container_name: barber-staging-db
+    ports: !override
+      - "127.0.0.1:15432:5432"
+  supavisor:
+    container_name: barber-staging-pooler
+    ports: !override []
+networks:
+  default:
+    name: barber-staging-internal
+volumes:
+  db-config:
+    name: barber-staging-db-config
+  deno-cache:
+    name: barber-staging-deno-cache

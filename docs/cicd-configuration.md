@@ -1,5 +1,9 @@
 # CI/CD Configuration
 
+> The Mac-targeted workflow below is retained until its reviewed VPS replacement
+> is ready. See [VPS transition](staging-vps-transition.md); do not merge/deploy
+> this legacy workflow as if it targets the new VPS.
+
 This document records credential names and trust boundaries, never values.
 Staging and production configuration must remain separate.
 

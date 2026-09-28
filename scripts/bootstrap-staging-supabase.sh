@@ -48,7 +48,7 @@ trap cleanup EXIT INT TERM
 git clone --quiet --filter=blob:none --no-checkout \
   https://github.com/supabase/supabase.git "$work_dir/source"
 git -C "$work_dir/source" fetch --quiet --depth 1 origin "refs/tags/$release:refs/tags/$release"
-resolved_commit=$(git -C "$work_dir/source" rev-list -n 1 "$release")
+resolved_commit=$(git -C "$work_dir/source" rev-parse "$release^{commit}")
 [ "$resolved_commit" = "$expected_commit" ] || {
   echo "Pinned Supabase tag no longer resolves to the reviewed commit." >&2
   exit 1

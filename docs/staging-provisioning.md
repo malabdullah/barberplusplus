@@ -1,5 +1,9 @@
 # Staging Provisioning Record
 
+> Migration in progress: the approved target is now the Hostinger staging VPS.
+> See [VPS transition](staging-vps-transition.md) for current state and gates.
+> The Mac record below is historical and does not certify VPS readiness.
+
 Last reviewed: 2026-09-03. This document contains identifiers and secret names
 only. Never add credential values, private keys, tokens, recipient addresses, or
 phone numbers.

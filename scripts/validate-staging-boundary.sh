@@ -24,6 +24,7 @@ trap cleanup EXIT INT TERM
 
 request_status() {
   curl --silent --show-error \
+    --connect-timeout 10 --max-time 30 \
     --dump-header "$tmp_dir/headers" \
     --output "$tmp_dir/body" \
     --write-out '%{http_code}' "$@"
@@ -51,6 +52,11 @@ expect_access_block() {
 expect_access_block "$STAGING_APP_URL/runtime-config.js"
 expect_access_block "$STAGING_SUPABASE_URL/rest/v1/"
 expect_access_block "$STAGING_SUPABASE_URL/functions/v1/send-whatsapp-message"
+for endpoint in whatsapp-webhook whatsapp-flow-endpoint; do
+  for suffix in / /child /child/deeper -other; do
+    expect_access_block "$STAGING_SUPABASE_URL/functions/v1/$endpoint$suffix"
+  done
+done
 
 SMOKE_APP_URL=$STAGING_APP_URL \
 EXPECTED_ENV=staging \
