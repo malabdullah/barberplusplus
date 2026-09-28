@@ -34,11 +34,22 @@ completed VPS target. No production resources are part of this transition.
    Bind data is confined to `/opt/barber-staging/supabase/volumes/`.
 3. Added a secret-safe rendered-Compose validator and adversarial unit tests.
    The network name is not a claim of egress isolation: it is an ordinary
-   staging-only bridge. SMTP is disabled; WhatsApp and Anthropic credentials
-   and recipient allowlist are empty during initial preparation. This is not
-   functional sandbox integration acceptance.
+   staging-only bridge. A separate internal-only bridge now connects Auth to a
+   pinned Mailpit sink. WhatsApp and Anthropic credentials and recipient
+   allowlist remain empty during initial preparation. This is not VPS sandbox
+   integration acceptance.
 4. Added trailing-slash, child-path, and adjacent-name checks to the full
    Cloudflare acceptance script.
+5. Added a non-root, read-only Mailpit v1.31.3 container pinned by digest. It has
+   no published ports, relay, forwarding, webhook, or default external route.
+   SMTP accepts only `@barber.test` recipients. Its size-limited temporary inbox
+   is deliberately disposable on restart. See `staging-vps-runtime.md`.
+6. Added a staging-only Edge Runtime main service with an exact function
+   inventory, JWT verification, cron secrets, and Meta HMAC checks on both POST
+   endpoints. Signed Flow payloads still pass through the application's
+   encryption validation. Unknown, suffix, and encoded-alias routes are denied.
+   Function source is mounted read-only. Installation and actual Edge Runtime
+   compatibility are still deployment gates, not completed by these unit tests.
 
 ## Configuration-only verification
 
@@ -72,8 +83,9 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
   merged and no release was approved by this policy change.
 - The GitHub deployment workflow still targets the Mac. The Linux deployment
   executor, private Dokploy integration, backups, migration/seed procedure,
-  Edge Runtime entrypoint/per-function JWT enforcement and rollback wiring must
-  be implemented and reviewed before switching the workflow. Do not merely
+  Edge Runtime packaging/compatibility and rollback wiring must
+  be implemented and reviewed before switching the workflow. The main-service
+  authentication logic is now implemented and unit tested. Do not merely
   relabel the runner or merge the Mac workflow as a VPS solution.
 - Independently generate staging DB/Auth/JWT/Vault/Storage/Function credentials.
   No production secrets or data may be copied. The validated migration baseline
@@ -81,9 +93,13 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
 - Review component security patches before choosing the deployable digest set.
   The retained v0.8.0 snapshot uses Postgres 17.6.1.136; Supabase's September 25
   advisory describes fixes in 17.11. The pin correction is not a security-upgrade
-  approval. Test a compatible snapshot before public exposure.
-- Add a pinned sink-only SMTP service, dedicated Meta test IDs/secrets and Flow
-  keys, and a budget/rate-limited Anthropic key. Keep outbound integrations
+  approval. On September 28, v0.8.2 still pins 17.6.1.136, and the standard
+  `supabase/postgres` 17.6.1.178 source still declares PostgreSQL 17.6. The
+  separately named OrioleDB 17.11 release is not a drop-in approval for this
+  stack. A compatible patched standard-Postgres image remains unresolved;
+  do not claim the stack is patched or substitute engines without review.
+- Deploy and verify the prepared sink-only SMTP service with Auth, add dedicated
+  Meta test IDs/secrets and Flow keys, and a budget/rate-limited Anthropic key. Keep outbound integrations
   disabled until their restrictions pass tests.
 - Configure an isolated VPS tunnel/origin with no direct-origin bypass; cut over
   only the two staging DNS records after service health is verified.
@@ -116,6 +132,39 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
 No VPS acceptance, full-stack image vulnerability scan, full restore rehearsal,
 authenticated Cloudflare probe, or outbound integration test is claimed here.
 
+## September 28 continuation
+
+- Read-only SSH confirmed the target is still `srv1207055`, with 43 GB disk
+  available, Dokploy running, and no new `/opt/barber-staging/supabase` stack.
+  Neither production nor legacy data was changed.
+- Prior commit `ed565a5`: all five GitHub checks passed. That result does not
+  certify subsequent changes.
+- New local checks: all 37 topology/pin tests and 19 gateway tests passed;
+  `npm run check` passed, including lint, function checks, existing tests and
+  frontend build. Actual upstream Compose rendering passed.
+- The digest-pinned Mailpit container passed a real isolated Docker protocol
+  test: one synthetic message captured, both outside-domain and suffix-spoofed
+  recipients rejected, no published ports or IPv4/IPv6 default route. Temporary
+  test containers/network were removed; no user data was involved. These tests
+  are now included in the application CI job.
+- These remain preparation changes on `codex/staging-vps`, not a deployed or
+  accepted release. No owner deployment approval was consumed.
+- Local frontend image build and a disposable loopback runtime passed health,
+  staging configuration/release marker, CSP, `noindex`, `no-store` and UID 101
+  checks. The test container was removed; the local image remains available.
+- Browser rerun: four of five journeys passed initially; the manager's branch
+  list appeared empty during its five-second assertion. That same journey
+  passed on a targeted rerun without source or database changes. Treat this as
+  an unresolved intermittent acceptance issue, not an unqualified E2E pass.
+- A separate code-review pass checked the exact-route policy, signature-before-
+  dispatch ordering, missing-secret behavior, JWT algorithm/key separation,
+  secret-safe error responses, read-only mounts, mail relay restrictions, and
+  temporary resource cleanup. This was an AI code-review pass, not an
+  independent human review. Real worker/Envoy integration remains unverified.
+
 Sources: [Supabase Docker deployment](https://supabase.com/docs/guides/self-hosting/docker),
 [Envoy transition](https://supabase.com/changelog/48048-self-hosted-supabase-envoy-becomes-the-default-api-gateway-b),
 [Postgres security advisory](https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes).
+Version evidence:
+[standard Postgres 17.6.1.178 source](https://github.com/supabase/postgres/blob/d3e9cb6b33b089f5185e5aca42257391dd631207/nix/config.nix),
+[Supabase v0.8.2 Compose](https://github.com/supabase/supabase/blob/564eab8ad7840b13324f68b1bfac074ef8d51c21/docker/docker-compose.yml).

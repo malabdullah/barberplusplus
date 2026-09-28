@@ -1,12 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+export const MAILPIT_IMAGE = 'axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d';
+export const MAILPIT_ENV = {
+  MP_DATABASE: '/tmp/mailpit.db', MP_MAX_MESSAGES: '1000', MP_MAX_AGE: '7d',
+  MP_MAX_MESSAGE_SIZE: '5', MP_SMTP_ALLOWED_RECIPIENTS: '^[A-Za-z0-9._+-]+@barber\\.test\\z',
+  MP_SMTP_DISABLE_RDNS: 'true', MP_DISABLE_VERSION_CHECK: 'true',
+  MP_BLOCK_REMOTE_CSS_AND_FONTS: 'true', MP_ENABLE_SPAMASSASSIN: 'false',
+  MP_LABEL: 'Barber++ staging — synthetic mail only',
+};
+
 // Accept rendered Compose JSON on stdin; never echo it (it may contain secrets).
 // This validates topology, not credentials, application health, or readiness.
 export function validateCompose(config) {
   const fail = (message) => { throw new Error(message); };
   if (config.name !== 'barber-staging') fail('Unexpected project name');
-  const names = ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor'];
+  const names = ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor', 'mailpit'];
   if (Object.keys(config.services || {}).sort().join() !== [...names].sort().join()) fail('Unexpected service inventory');
   for (const [name, service] of Object.entries(config.services)) {
     const expectedName = name === 'realtime' ? 'realtime-dev.barber-staging-realtime'
@@ -16,7 +25,8 @@ export function validateCompose(config) {
       || /:latest$/.test(service.image)) fail(`Unpinned image: ${name}`);
     if (service.privileged || service.network_mode || service.pid || service.cap_add?.length
       || service.devices?.length) fail(`Unexpected elevated access: ${name}`);
-    if (Object.keys(service.networks || {}).join() !== 'default') fail(`Unexpected network: ${name}`);
+    const expectedNetworks = name === 'mailpit' ? 'mail-sink' : name === 'auth' ? 'default,mail-sink' : 'default';
+    if (Object.keys(service.networks || {}).sort().join() !== expectedNetworks) fail(`Unexpected network: ${name}`);
     const ports = service.ports || [];
     const expectedPort = name === 'api-gw' ? [18000, 8000] : name === 'db' ? [15432, 5432] : null;
     if (ports.length !== (expectedPort ? 1 : 0)) fail(`Unexpected published ports: ${name}`);
@@ -33,9 +43,21 @@ export function validateCompose(config) {
       }
     }
   }
-  if (Object.keys(config.networks || {}).join() !== 'default'
+  if (Object.keys(config.networks || {}).sort().join() !== 'default,mail-sink'
     || config.networks.default.name !== 'barber-staging-internal'
     || config.networks.default.external) fail('Unexpected or shared network');
+  const sinkNetwork = config.networks['mail-sink'];
+  if (sinkNetwork.name !== 'barber-staging-mail-sink' || sinkNetwork.internal !== true
+    || sinkNetwork.external || sinkNetwork.driver_opts || sinkNetwork.driver) fail('Mail sink network is not isolated');
+  const sink = config.services.mailpit;
+  if (sink.image !== MAILPIT_IMAGE || sink.user !== '10001:10001' || sink.read_only !== true
+    || sink.cap_drop?.join() !== 'ALL' || sink.security_opt?.join() !== 'no-new-privileges:true'
+    || sink.volumes?.length || sink.command || sink.entrypoint || sink.env_file
+    || sink.configs?.length || sink.secrets?.length || sink.extra_hosts || sink.dns
+    || sink.tmpfs?.join() !== '/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700'
+    || Number(sink.mem_limit) !== 268435456 || Number(sink.cpus) !== 0.5 || sink.pids_limit !== 100) fail('Unsafe mail sink configuration');
+  if (Object.keys(sink.environment || {}).sort().join() !== Object.keys(MAILPIT_ENV).sort().join()
+    || Object.entries(MAILPIT_ENV).some(([key, value]) => sink.environment[key] !== value)) fail('Unsafe mail sink environment');
   if (Object.keys(config.volumes || {}).sort().join() !== 'db-config,deno-cache') fail('Unexpected volumes');
   for (const [name, volume] of Object.entries(config.volumes)) {
     if (volume.external || volume.name !== `barber-staging-${name}` || volume.driver_opts) fail('Unexpected or shared volume');
@@ -46,13 +68,18 @@ export function validateCompose(config) {
     || auth.GOTRUE_DISABLE_SIGNUP !== 'true'
     || auth.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED !== 'false'
     || auth.GOTRUE_EXTERNAL_PHONE_ENABLED !== 'false'
-    || auth.GOTRUE_SMTP_HOST !== 'smtp-disabled.invalid'
+    || auth.GOTRUE_SMTP_HOST !== 'mailpit'
     || auth.GOTRUE_SMTP_PORT !== '1025'
+    || auth.GOTRUE_SMTP_ADMIN_EMAIL !== 'no-reply@barber.test'
     || auth.GOTRUE_SMTP_USER !== '' || auth.GOTRUE_SMTP_PASS !== '') fail('Unsafe staging Auth configuration');
   const functions = config.services.functions.environment;
   if (functions.APP_ENV !== 'staging' || functions.APP_URL !== 'https://staging-barber.malabdullah.cloud'
+    || functions.VERIFY_JWT !== 'true'
     || functions.OUTBOUND_RECIPIENT_ALLOWLIST !== '' || functions.WHATSAPP_ACCESS_TOKEN !== ''
     || functions.ANTHROPIC_API_KEY !== '') fail('Initial integration quarantine is not enabled');
+  const codeMount = config.services.functions.volumes?.find((mount) => mount.target === '/home/deno/functions');
+  if (!codeMount || codeMount.type !== 'bind' || codeMount.read_only !== true
+    || codeMount.source !== '/opt/barber-staging/supabase/volumes/functions') fail('Function code must use the read-only staging mount');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

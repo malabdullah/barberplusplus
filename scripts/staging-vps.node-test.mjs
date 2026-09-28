@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveRelease } from './check-supabase-pin.mjs';
-import { validateCompose } from './check-vps-compose.mjs';
+import { MAILPIT_ENV, MAILPIT_IMAGE, validateCompose } from './check-vps-compose.mjs';
 
 test('annotated releases resolve to source commits, not tag objects', () => {
   const tag = 'a'.repeat(40);
@@ -22,20 +22,32 @@ function fixture() {
   }
   services['api-gw'].ports = [{ host_ip: '127.0.0.1', published: '18000', target: 8000, protocol: 'tcp' }];
   services.db.ports = [{ host_ip: '127.0.0.1', published: '15432', target: 5432, protocol: 'tcp' }];
+  services.auth.networks['mail-sink'] = null;
+  services.mailpit = {
+    container_name: 'barber-staging-mailpit', image: MAILPIT_IMAGE,
+    networks: { 'mail-sink': null }, user: '10001:10001', read_only: true,
+    cap_drop: ['ALL'], security_opt: ['no-new-privileges:true'],
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700'],
+    mem_limit: 268435456, cpus: 0.5, pids_limit: 100,
+    ports: [],
+    environment: { ...MAILPIT_ENV },
+  };
   services.auth.environment = {
     GOTRUE_SITE_URL: 'https://staging-barber.malabdullah.cloud',
     API_EXTERNAL_URL: 'https://supabase-staging.malabdullah.cloud/auth/v1',
     GOTRUE_DISABLE_SIGNUP: 'true', GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: 'false',
     GOTRUE_EXTERNAL_PHONE_ENABLED: 'false',
-    GOTRUE_SMTP_HOST: 'smtp-disabled.invalid', GOTRUE_SMTP_PORT: '1025',
+    GOTRUE_SMTP_HOST: 'mailpit', GOTRUE_SMTP_PORT: '1025', GOTRUE_SMTP_ADMIN_EMAIL: 'no-reply@barber.test',
     GOTRUE_SMTP_USER: '', GOTRUE_SMTP_PASS: '',
   };
   services.functions.environment = {
     APP_ENV: 'staging', APP_URL: 'https://staging-barber.malabdullah.cloud',
+    VERIFY_JWT: 'true',
     OUTBOUND_RECIPIENT_ALLOWLIST: '', WHATSAPP_ACCESS_TOKEN: '', ANTHROPIC_API_KEY: '',
   };
+  services.functions.volumes = [{ type: 'bind', source: '/opt/barber-staging/supabase/volumes/functions', target: '/home/deno/functions', read_only: true }];
   return { name: 'barber-staging', services,
-    networks: { default: { name: 'barber-staging-internal' } },
+    networks: { default: { name: 'barber-staging-internal' }, 'mail-sink': { name: 'barber-staging-mail-sink', internal: true } },
     volumes: { 'db-config': { name: 'barber-staging-db-config' }, 'deno-cache': { name: 'barber-staging-deno-cache' } } };
 }
 
@@ -57,7 +69,24 @@ const unsafeChanges = {
   'wrong Auth origin': (c) => { c.services.auth.environment.GOTRUE_SITE_URL = 'https://production.invalid'; },
   'anonymous signup': (c) => { c.services.auth.environment.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED = 'true'; },
   'external SMTP provider': (c) => { c.services.auth.environment.GOTRUE_SMTP_HOST = 'smtp.production.invalid'; },
+  'SMTP provider credential': (c) => { c.services.auth.environment.GOTRUE_SMTP_PASS = 'synthetic-secret'; },
+  'public mail inbox': (c) => { c.services.mailpit.ports.push({ host_ip: '0.0.0.0', published: '18025', target: 8025 }); },
+  'published SMTP': (c) => { c.services.mailpit.ports.push({ published: '1025' }); },
+  'mail sink default network': (c) => { c.services.mailpit.networks.default = null; },
+  'mail sink external routing': (c) => { c.networks['mail-sink'].internal = false; },
+  'mail sink shared network': (c) => { c.networks['mail-sink'].external = true; },
+  'mail sink root user': (c) => { c.services.mailpit.user = '0:0'; },
+  'mail sink mutable image': (c) => { c.services.mailpit.image = 'axllent/mailpit:v1.31.3'; },
+  'mail sink all recipients': (c) => { c.services.mailpit.environment.MP_SMTP_ALLOWED_RECIPIENTS = '.*'; },
+  'mail sink relay': (c) => { c.services.mailpit.environment.MP_SMTP_RELAY_HOST = 'smtp.example.invalid'; },
+  'mail sink forwarding': (c) => { c.services.mailpit.environment.MP_SMTP_FORWARD_CONFIG = '/tmp/relay'; },
+  'mail sink webhook': (c) => { c.services.mailpit.environment.MP_WEBHOOK_URL = 'https://example.invalid'; },
+  'mail sink config override': (c) => { c.services.mailpit.command = ['--smtp-relay-all']; },
+  'mail sink mounted config': (c) => { c.services.mailpit.volumes = [{ type: 'volume', source: 'db-config' }]; },
+  'mail sink alternate entrypoint': (c) => { c.services.mailpit.entrypoint = ['sh']; },
   'live integration credential': (c) => { c.services.functions.environment.ANTHROPIC_API_KEY = 'not-a-real-key'; },
+  'global JWT bypass': (c) => { c.services.functions.environment.VERIFY_JWT = 'false'; },
+  'writable function source': (c) => { c.services.functions.volumes[0].read_only = false; },
   'unknown service': (c) => { c.services.unknown = c.services.db; },
 };
 for (const [name, change] of Object.entries(unsafeChanges)) {
