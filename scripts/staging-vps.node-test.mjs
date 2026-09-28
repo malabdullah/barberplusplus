@@ -43,7 +43,7 @@ function fixture() {
   services.functions.environment = {
     APP_ENV: 'staging', APP_URL: 'https://staging-barber.malabdullah.cloud',
     VERIFY_JWT: 'true',
-    OUTBOUND_RECIPIENT_ALLOWLIST: '', WHATSAPP_ACCESS_TOKEN: '', ANTHROPIC_API_KEY: '',
+    OUTBOUND_RECIPIENT_ALLOWLIST: '', WHATSAPP_ACCESS_TOKEN: '', OPENAI_API_KEY: '', AI_OUTBOUND_ENABLED: 'false',
   };
   services.functions.volumes = [{ type: 'bind', source: '/opt/barber-staging/supabase/volumes/functions', target: '/home/deno/functions', read_only: true }];
   return { name: 'barber-staging', services,
@@ -84,7 +84,9 @@ const unsafeChanges = {
   'mail sink config override': (c) => { c.services.mailpit.command = ['--smtp-relay-all']; },
   'mail sink mounted config': (c) => { c.services.mailpit.volumes = [{ type: 'volume', source: 'db-config' }]; },
   'mail sink alternate entrypoint': (c) => { c.services.mailpit.entrypoint = ['sh']; },
-  'live integration credential': (c) => { c.services.functions.environment.ANTHROPIC_API_KEY = 'not-a-real-key'; },
+  'live integration credential': (c) => { c.services.functions.environment.OPENAI_API_KEY = 'not-a-real-key'; },
+  'AI outbound enabled': (c) => { c.services.functions.environment.AI_OUTBOUND_ENABLED = 'true'; },
+  'legacy AI credential': (c) => { c.services.functions.environment.ANTHROPIC_API_KEY = 'not-a-real-key'; },
   'global JWT bypass': (c) => { c.services.functions.environment.VERIFY_JWT = 'false'; },
   'writable function source': (c) => { c.services.functions.volumes[0].read_only = false; },
   'unknown service': (c) => { c.services.unknown = c.services.db; },

@@ -112,7 +112,7 @@ try {
     '-e', `JWT_SECRET=${jwtSecret}`, '-e', `CRON_SHARED_SECRET=${cron}`,
     '-e', `WHATSAPP_APP_SECRET=${meta}`, '-e', `WHATSAPP_VERIFY_TOKEN=${verify}`,
     '-e', `WHATSAPP_FLOW_PRIVATE_KEY=${flowPrivate}`,
-    '-e', 'OUTBOUND_RECIPIENT_ALLOWLIST=', '-e', 'WHATSAPP_ACCESS_TOKEN=', '-e', 'ANTHROPIC_API_KEY=',
+    '-e', 'OUTBOUND_RECIPIENT_ALLOWLIST=', '-e', 'WHATSAPP_ACCESS_TOKEN=', '-e', 'OPENAI_API_KEY=', '-e', 'AI_OUTBOUND_ENABLED=false',
     compiledImage);
   createdContainer = true;
   docker('start', name);

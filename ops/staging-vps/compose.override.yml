@@ -80,7 +80,8 @@ services:
       OUTBOUND_RECIPIENT_ALLOWLIST: ""
       # Fail closed until dedicated test integrations are configured separately.
       WHATSAPP_ACCESS_TOKEN: ""
-      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+      AI_OUTBOUND_ENABLED: "false"
   db:
     container_name: barber-staging-db
     ports: !override

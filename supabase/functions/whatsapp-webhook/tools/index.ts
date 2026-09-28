@@ -1658,7 +1658,7 @@ async function sendTimeSlotPicker(
     const textResult = await sendTextMessage(phoneNumber, fallbackMessage);
 
     if (!textResult.success) {
-      // Even on complete failure, include slots data so Claude doesn't hallucinate
+      // Even on complete failure, include slots data so AI assistant doesn't hallucinate
       return {
         success: false,
         error: textResult.error,
@@ -1957,7 +1957,7 @@ async function sendBarberPicker(
 
     const textResult = await sendTextMessage(phoneNumber, fallbackMessage);
     if (!textResult.success) {
-      // Even on complete failure, include barber data so Claude doesn't hallucinate
+      // Even on complete failure, include barber data so AI assistant doesn't hallucinate
       return {
         success: false,
         error: textResult.error,
@@ -2118,7 +2118,7 @@ Confirm your booking?`
     const textResult = await sendTextMessage(phoneNumber, fallbackMessage);
 
     if (!textResult.success) {
-      // Even on complete failure, include booking summary so Claude doesn't hallucinate
+      // Even on complete failure, include booking summary so AI assistant doesn't hallucinate
       return {
         success: false,
         error: textResult.error,

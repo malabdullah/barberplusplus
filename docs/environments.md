@@ -3,7 +3,7 @@
 ## Isolation contract
 
 Local staging and production must not share a database, Storage volume, JWT
-secret, Vault secret, SMTP credential, WhatsApp application/number, Anthropic
+secret, Vault secret, SMTP credential, WhatsApp application/number, OpenAI
 key, or infrastructure credential. Production data must never be restored into
 the local staging lab.
 
@@ -44,7 +44,7 @@ staging-specific signatures and encrypted payload requirements.
 
 The lab contains deterministic synthetic data only. Sandbox or sink credentials
 and recipient allowlists are required before testing outbound email, WhatsApp,
-or Anthropic behavior. The database, Studio, Mailpit, Kong, and analytics port
+or OpenAI behavior. The database, Studio, Mailpit, Kong, and analytics port
 bindings must be restricted to loopback as a separate host-hardening task.
 
 ## Local production guard

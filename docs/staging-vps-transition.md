@@ -35,7 +35,7 @@ completed VPS target. No production resources are part of this transition.
 3. Added a secret-safe rendered-Compose validator and adversarial unit tests.
    The network name is not a claim of egress isolation: it is an ordinary
    staging-only bridge. A separate internal-only bridge now connects Auth to a
-   pinned Mailpit sink. WhatsApp and Anthropic credentials and recipient
+   pinned Mailpit sink. WhatsApp and OpenAI credentials and recipient
    allowlist remain empty during initial preparation. This is not VPS sandbox
    integration acceptance.
 4. Added trailing-slash, child-path, and adjacent-name checks to the full
@@ -104,7 +104,7 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
   stack. A compatible patched standard-Postgres image remains unresolved;
   do not claim the stack is patched or substitute engines without review.
 - Deploy and verify the prepared sink-only SMTP service with Auth, add dedicated
-  Meta test IDs/secrets and Flow keys, and a budget/rate-limited Anthropic key. Keep outbound integrations
+  Meta test IDs/secrets and Flow keys, and a budget/rate-limited OpenAI key. Keep outbound integrations
   disabled until their restrictions pass tests.
 - Configure an isolated VPS tunnel/origin with no direct-origin bypass; cut over
   only the two staging DNS records after service health is verified.

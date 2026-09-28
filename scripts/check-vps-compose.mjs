@@ -77,7 +77,8 @@ export function validateCompose(config, { requireCompiledFunctions = false } = {
   if (functions.APP_ENV !== 'staging' || functions.APP_URL !== 'https://staging-barber.malabdullah.cloud'
     || functions.VERIFY_JWT !== 'true'
     || functions.OUTBOUND_RECIPIENT_ALLOWLIST !== '' || functions.WHATSAPP_ACCESS_TOKEN !== ''
-    || functions.ANTHROPIC_API_KEY !== '') fail('Initial integration quarantine is not enabled');
+    || functions.OPENAI_API_KEY !== '' || functions.AI_OUTBOUND_ENABLED !== 'false'
+    || functions.ANTHROPIC_API_KEY) fail('Initial integration quarantine is not enabled');
   const service = config.services.functions;
   if (compiled) {
     validateCompiledFunctions(service);
