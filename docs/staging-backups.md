@@ -29,9 +29,12 @@ secrets. Only its public recipient was transferred to the staging VPS. Protect a
 second copy of the private key before relying on backups. On 2026-09-28, the
 owner reported saving the key in Apple Passwords under
 `Barber++ staging backup recovery` and confirmed that the entry appeared on
-another trusted Apple device. This is owner-confirmed storage and sync evidence,
-not a decryption test using the password-manager copy. No private key value or
-screenshot was collected. Recovery using that saved copy remains untested.
+another trusted Apple device. The owner then reported PASS from the hidden-input
+recovery test; its private receipt was verified at 09:23:08 UTC on 2026-09-28,
+including the fixture checksum and synthetic-only scope. Storage/sync and the
+key's Apple Passwords source are owner-confirmed; the receipt independently
+records successful decryption with the supplied key. No private key value or
+screenshot was collected.
 Never overwrite/delete the current key during a later rotation: older archives
 still require the identity they were encrypted for.
 
@@ -56,8 +59,10 @@ checksum. A successful age authentication writes a new private
 archive or invalid metadata produces no success receipt. The evidence proves
 that the supplied key decrypted the fixture; the owner identifies its source
 as Apple Passwords. It does not prove DB/Storage restoration or future Apple
-account recoverability. The owner's saved-copy test remains pending until this
-receipt exists; automated tests use unrelated, disposable keys.
+account recoverability. The owner's saved-copy test passed, with receipt
+`recovery-key-check-1f5732ca-ffdb-4f9d-b12b-b6dcea8c183f.json` retained beside
+fixture `fixture-20260928T085615Z-e6a0a7eb`. Automated helper tests use unrelated,
+disposable keys.
 
 ## Pulling a prepared encrypted export
 
@@ -130,22 +135,18 @@ These create and remove only their own temporary fixtures and keys.
 
 ## Still required before real backup acceptance
 
-1. Test the owner-confirmed Apple Passwords recovery copy against the retained
-   synthetic encrypted fixture without printing the key or overwriting the
-   existing local identity. Storage and cross-device sync are confirmed; this
-   cryptographic recovery check remains pending.
-2. After isolated Supabase provisioning, implement consistent capture of DB
+1. After isolated Supabase provisioning, implement consistent capture of DB
    (including Auth/Vault needed for restoration), Storage objects and encrypted
    staging-only configuration. Retain immutable image/release/migration metadata.
    Do not mix production or retired legacy data into this stream.
-3. Quiesce writes or use a verified snapshot strategy so DB references and
+2. Quiesce writes or use a verified snapshot strategy so DB references and
    Storage objects form a consistent recovery point. Never archive a live
    PostgreSQL data directory as a substitute for a supported database backup.
-4. Encrypt before publishing on the VPS, then pull and verify on the Mac before
+3. Encrypt before publishing on the VPS, then pull and verify on the Mac before
    a protected change proceeds. Capture failure must prevent export publication.
-5. Restore into disposable isolated services and verify schema, synthetic users,
+4. Restore into disposable isolated services and verify schema, synthetic users,
    RLS, Vault access and Storage objects. Do not overwrite running environments.
-6. Agree recovery-point/retention requirements, then configure scheduling and
+5. Agree recovery-point/retention requirements, then configure scheduling and
    stale/missed-transfer reporting. An offline Mac must fail the transfer gate.
 
 Reference: [age encryption and key usage](https://github.com/FiloSottile/age).

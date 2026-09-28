@@ -108,9 +108,10 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
   `/Users/malabdullah/BarberBackups/staging`; private destination directories are
   created. Encryption, verified SSH transfer and synthetic-file recovery now
   pass. The owner confirmed saving the recovery key in Apple Passwords and
-  seeing the entry on another trusted device. Testing that saved key, real
-  DB/Storage/config capture and a full stack restore remain open. See
-  `staging-backups.md` for evidence and limits.
+  seeing the entry on another trusted device. The saved-key decryption test
+  passed, with a matching private synthetic-fixture receipt verified on
+  2026-09-28. Real DB/Storage/config capture and a full stack restore remain
+  open. See `staging-backups.md` for evidence and limits.
 - Run clean migration replay, pgTAP, synthetic seed verification, all service
   smoke checks, authenticated Access checks, signature/Flow failure paths,
   outbound containment, load checks, and complete E2E on the VPS.
