@@ -54,8 +54,6 @@ No database migrations, production secret changes or production deployment are
 part of this change. Unit fixtures and offline runtime checks cannot establish
 Luna quality or real WhatsApp/DB end-to-end acceptance.
 
-## References
-
 ## Local validation — 2026-09-28
 
 Source commit `ee5be09c4c47dc162ede045ba2b732c2be119b4f`:
