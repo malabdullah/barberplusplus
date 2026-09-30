@@ -6,10 +6,11 @@ import { readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseEnv } from 'node:util';
 import { validateCompose } from './check-vps-compose.mjs';
+import { inspectCandidate, inspectPlatformImage } from './staging-postgres-candidate.mjs';
 
 const upstream = realpathSync(process.argv[2] || 'missing-upstream-directory');
 const platform = process.argv[3] || 'linux/amd64';
-assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 4);
+assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 5);
 const project = `barber-core-probe-${randomBytes(8).toString('hex')}`;
 const label = 'barber.staging.core-probe';
 const env = { PATH: process.env.PATH, HOME: process.env.HOME };
@@ -58,6 +59,7 @@ try {
     '-f', resolve('ops/staging-vps/compose.override.yml'), 'config', '--format', 'json'],
   { env: { ...env, ...variables } }));
   validateCompose(rendered);
+  const candidateId = process.argv[4] ? inspectCandidate(docker, process.argv[4], platform) : null;
   const services = ['db', 'auth', 'rest', 'storage', 'imgproxy', 'mailpit'];
   model = { name: project, services: {},
     networks: { default: { name: project, internal: true, labels: { [label]: project } } },
@@ -91,9 +93,17 @@ try {
   }
   stage = 'candidate image pulls';
   for (const [name, service] of Object.entries(model.services)) {
+    if (name === 'db' && candidateId) {
+      service.image = candidateId;
+      service.pull_policy = 'never';
+      console.log(`db: locally validated candidate ${candidateId}`);
+      continue;
+    }
     console.log(`Preparing ${name} (${platform})`);
+    stage = `image pull (${name})`;
     docker(['pull', '--platform', platform, service.image], { timeout: 300000 });
-    const [metadata] = JSON.parse(docker(['image', 'inspect', '--platform', platform, service.image]));
+    stage = `image metadata (${name})`;
+    const metadata = inspectPlatformImage(docker, service.image, platform);
     const repository = service.image.split('@')[0].replace(/:[^/]+$/, '');
     const immutable = metadata.RepoDigests.find((ref) => ref.startsWith(`${repository}@sha256:`));
     assert.ok(immutable, 'Missing immutable image identity');
@@ -171,7 +181,7 @@ try {
   if (stage.startsWith('isolation inspection')) {
     console.error(error instanceof assert.AssertionError ? error.message.split('\n')[0] : 'Inspection command failed');
   }
-  if (stage === 'isolated core startup') {
+  if (stage === 'isolated core startup' || stage.startsWith('image pull') || stage.startsWith('image metadata')) {
     // Compose diagnostics only; never dump service logs or rendered configuration.
     let diagnostic = String(error.stderr || '').split('\n').slice(-12).join('\n');
     for (const secret of redactions) diagnostic = diagnostic.replaceAll(secret, '[REDACTED]');

@@ -60,7 +60,11 @@ jobs:
             -f ops/staging-vps/compose.override.yml config --format json \
             | node scripts/test-staging-mail-sink.mjs
           # Separate disposable core; no deployment credentials or public ports.
-          npm run test:staging-supabase-core -- "$upstream" linux/amd64
+          docker build --provenance=false --platform linux/amd64 --tag barber-postgres:ci-candidate \
+            - < ops/staging-vps/Dockerfile.postgres
+          candidate="$(docker image inspect --format '{{.Id}}' barber-postgres:ci-candidate)"
+          npm run test:staging-postgres -- linux/amd64 "$candidate"
+          npm run test:staging-supabase-core -- "$upstream" linux/amd64 "$candidate"
       - run: npm run build
         env:
           VITE_APP_ENV: development

@@ -4,10 +4,11 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { POSTGRES_IMAGE } from './check-vps-compose.mjs';
+import { inspectCandidate, inspectPlatformImage } from './staging-postgres-candidate.mjs';
 
 const platform = process.argv[2] || 'linux/amd64';
-if (!['linux/amd64', 'linux/arm64'].includes(platform) || process.argv.length > 3) {
-  throw new Error('Usage: node scripts/test-staging-postgres.mjs [linux/amd64|linux/arm64]');
+if (!['linux/amd64', 'linux/arm64'].includes(platform) || process.argv.length > 4) {
+  throw new Error('Usage: node scripts/test-staging-postgres.mjs [linux/amd64|linux/arm64] [local-image-id]');
 }
 const name = `barber-pg-contract-${randomBytes(8).toString('hex')}`;
 const label = 'barber.staging.postgres-contract';
@@ -23,8 +24,13 @@ const docker = (args, options = {}) => execFileSync('docker', args, {
   stdio: ['pipe', 'pipe', 'pipe'], env, ...options,
 });
 try {
+  const context = docker(['context', 'show']).trim();
+  const [contextInfo] = JSON.parse(docker(['context', 'inspect', context]));
+  assert.ok(contextInfo.Endpoints.docker.Host.startsWith('unix://'), 'Local Docker only');
+  assert.ok(!env.DOCKER_HOST && !env.DOCKER_CONTEXT, 'Docker environment overrides forbidden');
+  const imageRef = process.argv[3] ? inspectCandidate(docker, process.argv[3], platform) : POSTGRES_IMAGE;
   // Fail if the exact platform image is not already downloaded. Never pull a tag.
-  const [image] = JSON.parse(docker(['image', 'inspect', '--platform', platform, POSTGRES_IMAGE]));
+  const image = inspectPlatformImage(docker, imageRef, platform);
   assert.deepEqual(image.Config.Entrypoint, ['docker-entrypoint.sh']);
   stage = 'container creation';
   docker(['create', '--name', name, '--label', `${label}=true`, '--platform', platform,
@@ -34,7 +40,7 @@ try {
     // Keep packaged /etc/postgresql-custom files in the disposable container
     // layer. An empty tmpfs there masks configuration required for startup.
     '-e', 'POSTGRES_PASSWORD', '-e', 'JWT_SECRET', '-e', 'JWT_EXP=3600',
-    '-e', 'POSTGRES_DB=postgres', POSTGRES_IMAGE,
+    '-e', 'POSTGRES_DB=postgres', imageRef,
     'postgres', '-c', 'config_file=/etc/postgresql/postgresql.conf',
     '-c', 'log_min_messages=fatal']);
   created = true;
@@ -58,6 +64,15 @@ try {
     }
   }
   assert.ok(ready, 'Candidate did not initialize within the bounded readiness window');
+  stage = 'gosu privilege-drop contract';
+  assert.match(docker(['exec', name, 'gosu', '--version']), /^1\.19 /);
+  const postgresUid = docker(['exec', name, 'id', '-u', 'postgres']).trim();
+  assert.notEqual(postgresUid, '0');
+  assert.equal(docker(['exec', name, 'gosu', 'postgres', 'id', '-u']).trim(), postgresUid);
+  assert.equal(docker(['exec', name, 'gosu', '12345:23456', 'id', '-u']).trim(), '12345');
+  assert.equal(docker(['exec', name, 'gosu', '12345:23456', 'id', '-g']).trim(), '23456');
+  assert.throws(() => docker(['exec', name, 'gosu', 'barber-user-does-not-exist', 'id']));
+  assert.throws(() => docker(['exec', '-u', 'postgres', name, 'gosu', 'root', 'id']));
   stage = 'server version query';
   const query = (sql) => docker(['exec', '-i', '-u', 'postgres', name,
     'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-d', 'postgres'], { input: sql }).trim();

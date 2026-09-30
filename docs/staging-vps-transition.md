@@ -292,11 +292,84 @@ Version evidence:
   `6541ecef0345b4a39ae9ebbca75eff3c613d51ce8b147aaa29d559d2c4910686`.
   No permanent scanner installation, Docker account, API key or new Dokploy
   member was created. Temporary analysis tools/reports remain on the owner Mac.
-- **Deployment remains NO-GO.** Owner decision requested: authorize preparation
-  of a staging-only derived PostgreSQL image with an updated helper (and accept
-  its maintenance obligation), or wait for a suitable upstream image. Do not
-  create/publish that new database image or grant a vulnerability exception by
-  inference. Preparation approval would not be release/deployment approval.
+- The owner subsequently approved **preparation only** of a staging-only derived
+  PostgreSQL image. The local candidate and evidence are below. This is not
+  permission to publish, merge, deploy, or grant a vulnerability exception.
+
+### Staging-only helper patch (September 30)
+
+`ops/staging-vps/Dockerfile.postgres` retains the exact PostgreSQL base above.
+It rebuilds gosu 1.19 from the same source commit, using digest-pinned Go 1.27.1
+and unchanged checksummed Go modules. The downloaded source archive is also
+SHA-256 pinned. No credentials or repository files enter the empty build context.
+The final image retains upstream runtime configuration and every base layer;
+the only added regular file is `/usr/local/bin/gosu`, root-owned mode 0755.
+The layer also contains its three parent directory entries; no database binary,
+extension, configuration, entrypoint or OS package was replaced.
+
+Local Linux AMD64 evidence (not registry publication):
+
+- Image manifest / local single-platform ID:
+  `sha256:b8aebc0a7bdcfd3eadc557f0d19999ee5f5d4a29590e03ba34d90acf783cbd92`.
+- Image config digest:
+  `sha256:eda7a340ce152feebe93910bdf326ce86e50600cc7602f27784c7767528637f8`.
+  Docker's classic store and containerd store can expose different kinds of
+  local image IDs; obtain the ID with `docker image inspect`, not build-log guessing.
+- Patched helper SHA-256:
+  `867f368c2279a8f2cbf22dd987d1bd4fd65f312696f0d63fe09f607b930a1790`.
+  `go version -m` confirms Go 1.27.1, Linux AMD64, CGO disabled, and the same
+  moby/sys/user 0.1.0 and x/sys 0.1.0 dependencies as the original helper.
+- Trivy 0.74.0 HIGH/CRITICAL rescan: **zero findings** in its recognized Alpine,
+  Node, Cargo-lock and Go-binary targets, versus 20 HIGH in the original helper.
+  JSON report SHA-256:
+  `6488b69d0f51aabf65b951a2e08a2895abe85190176f8eb67ed3c37f37489492`.
+  `govulncheck` 1.8.0 binary/symbol analysis: **no vulnerabilities found**, exit 0.
+  Neither result certifies complete Nix package coverage or the other stack images.
+- Contract probe passed initialization, PostgreSQL 17.11, required extensions,
+  pgcrypto, named/numeric user and group switching, missing-user rejection and
+  denial of an unprivileged attempt to become root.
+- The patched six-service core passed all four migrations, 32 pgTAP assertions,
+  synthetic login/invite to Mailpit, private Storage round-trip and anonymous
+  denial. Cron stayed disabled, Vault empty, network internal-only and ports
+  unpublished. Probe containers, network and synthetic volumes were removed.
+- `npm run check` and migration-name checks passed. The new candidate validator
+  adds 16 tests, for 70 combined staging topology/candidate tests. It rejects
+  mutable identifiers, other platforms, changed base layers/runtime settings,
+  incorrect patch provenance and extra layers. The candidate option exists only
+  in local probes; the actual VPS Compose image allowlist is unchanged.
+- All five local Playwright journeys passed on a sequential rerun. The initial
+  run, concurrent with another build in the same directory, missed the manager's
+  branch card; build interference is suspected, not proven. Browser tests use
+  the retained local development database, not the patched disposable core.
+- Separate agent code review checked immutable inputs, unchanged runtime/base,
+  exact helper payload, candidate opt-in isolation, cleanup guards and no-push CI.
+  This is not independent human review or owner release approval.
+
+Reproduce locally (no publish or deployment):
+
+```sh
+docker build --provenance=false --platform linux/amd64 \
+  --tag barber-staging-postgres:gosu-patch-local - < ops/staging-vps/Dockerfile.postgres
+candidate="$(docker image inspect --format '{{.Id}}' barber-staging-postgres:gosu-patch-local)"
+npm run test:staging-postgres -- linux/amd64 "$candidate"
+npm run test:staging-supabase-core -- /path/to/verified/upstream linux/amd64 "$candidate"
+```
+
+`--provenance=false` is for this local single-platform rehearsal only, avoiding
+an extra attestation index that some local scanner/image-ID paths cannot address.
+Any future registry publication must produce and record build provenance/SBOM,
+verify the pushed digest and rerun the acceptance gates on that exact artifact.
+CI now builds this candidate without registry credentials and runs both probes.
+The previous run `36705580765` failed during image preparation; its other four
+jobs passed. A passing replacement run is required, not inferred from local tests.
+
+Maintenance obligation: keep this patch small and staging-only; pin and review
+every Go/source/base update, repeat layer inspection, vulnerability scans and
+compatibility probes, and retire the override when an upstream image supplies
+a suitably patched helper. Do not automatically roll back to the vulnerable
+base or suppress findings. Full-stack compatibility, Nix coverage review,
+VPS fixture/secrets setup, backup/restore, routing, load and owner release approval
+remain open. **Deployment remains NO-GO.**
 
 Security references: [Vitest advisory](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9),
 [brace-expansion advisories](https://github.com/juliangruber/brace-expansion/security/advisories).
