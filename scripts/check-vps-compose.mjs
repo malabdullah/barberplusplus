@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const MAILPIT_IMAGE = 'axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d';
+export const POSTGRES_IMAGE = 'supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53';
+export const POSTGRES_COMMAND = ['postgres', '-c', 'config_file=/etc/postgresql/postgresql.conf', '-c', 'log_min_messages=fatal', '-c', 'cron.launch_active_jobs=off'];
 export const MAILPIT_ENV = {
   MP_DATABASE: '/tmp/mailpit.db', MP_MAX_MESSAGES: '1000', MP_MAX_AGE: '7d',
   MP_MAX_MESSAGE_SIZE: '5', MP_SMTP_ALLOWED_RECIPIENTS: '^[A-Za-z0-9._+-]+@barber\\.test\\z',
@@ -18,6 +20,8 @@ export function validateCompose(config, { requireCompiledFunctions = false } = {
   const compiled = requireCompiledFunctions || config.services?.functions?.image?.startsWith('ghcr.io/malabdullah/barberplusplus-functions');
   const names = ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor', 'mailpit'];
   if (Object.keys(config.services || {}).sort().join() !== [...names].sort().join()) fail('Unexpected service inventory');
+  if (config.services.db.image !== POSTGRES_IMAGE) fail('Database must use the reviewed standard PostgreSQL security patch digest');
+  if (JSON.stringify(config.services.db.command) !== JSON.stringify(POSTGRES_COMMAND)) fail('Initial database cron execution must remain disabled');
   for (const [name, service] of Object.entries(config.services)) {
     const expectedName = name === 'realtime' ? 'realtime-dev.barber-staging-realtime'
       : `barber-staging-${name === 'supavisor' ? 'pooler' : name}`;

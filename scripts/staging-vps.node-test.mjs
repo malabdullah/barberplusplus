@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveRelease } from './check-supabase-pin.mjs';
-import { MAILPIT_ENV, MAILPIT_IMAGE, validateCompose } from './check-vps-compose.mjs';
+import { MAILPIT_ENV, MAILPIT_IMAGE, POSTGRES_COMMAND, POSTGRES_IMAGE, validateCompose } from './check-vps-compose.mjs';
 
 test('annotated releases resolve to source commits, not tag objects', () => {
   const tag = 'a'.repeat(40);
@@ -22,6 +22,8 @@ function fixture() {
   }
   services['api-gw'].ports = [{ host_ip: '127.0.0.1', published: '18000', target: 8000, protocol: 'tcp' }];
   services.db.ports = [{ host_ip: '127.0.0.1', published: '15432', target: 5432, protocol: 'tcp' }];
+  services.db.image = POSTGRES_IMAGE;
+  services.db.command = [...POSTGRES_COMMAND];
   services.auth.networks['mail-sink'] = null;
   services.mailpit = {
     container_name: 'barber-staging-mailpit', image: MAILPIT_IMAGE,
@@ -53,6 +55,12 @@ function fixture() {
 
 test('accepts the isolated initial topology', () => validateCompose(fixture()));
 const unsafeChanges = {
+  'missing cron quarantine': (c) => { delete c.services.db.command; },
+  'cron execution enabled': (c) => { c.services.db.command[c.services.db.command.length - 1] = 'cron.launch_active_jobs=on'; },
+  'old database image': (c) => { c.services.db.image = 'supabase/postgres:17.6.1.136'; },
+  'mutable database patch tag': (c) => { c.services.db.image = 'supabase/postgres:17.11.0.002'; },
+  'different database digest': (c) => { c.services.db.image = POSTGRES_IMAGE.replace(/sha256:.*/, 'sha256:' + 'a'.repeat(64)); },
+  'different database engine': (c) => { c.services.db.image = POSTGRES_IMAGE.replace('17.11.0.002@', '17.11.0.002-orioledb@'); },
   'wildcard API binding': (c) => { c.services['api-gw'].ports[0].host_ip = '0.0.0.0'; },
   'IPv6 public binding': (c) => { c.services.db.ports[0].host_ip = '::'; },
   'extra pooler binding': (c) => { c.services.supavisor.ports = [{ published: '6543' }]; },

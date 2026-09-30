@@ -59,6 +59,8 @@ jobs:
             -f "$upstream/docker-compose.yml" \
             -f ops/staging-vps/compose.override.yml config --format json \
             | node scripts/test-staging-mail-sink.mjs
+          # Separate disposable core; no deployment credentials or public ports.
+          npm run test:staging-supabase-core -- "$upstream" linux/amd64
       - run: npm run build
         env:
           VITE_APP_ENV: development

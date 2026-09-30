@@ -1,6 +1,6 @@
 # VPS staging transition — preparation, not deployment acceptance
 
-Updated 2026-09-28. This document supersedes the Mac hosting target in the older
+Updated 2026-09-30. This document supersedes the Mac hosting target in the older
 staging runbooks; those describe the retained legacy implementation, not the
 completed VPS target. No production resources are part of this transition.
 
@@ -95,14 +95,13 @@ alone cannot establish filesystem ownership or secret isolation. Use Compose
 - Independently generate staging DB/Auth/JWT/Vault/Storage/Function credentials.
   No production secrets or data may be copied. The validated migration baseline
   remains unchanged and has not been applied on the VPS.
-- Review component security patches before choosing the deployable digest set.
-  The retained v0.8.0 snapshot uses Postgres 17.6.1.136; Supabase's September 25
-  advisory describes fixes in 17.11. The pin correction is not a security-upgrade
-  approval. On September 28, v0.8.2 still pins 17.6.1.136, and the standard
-  `supabase/postgres` 17.6.1.178 source still declares PostgreSQL 17.6. The
-  separately named OrioleDB 17.11 release is not a drop-in approval for this
-  stack. A compatible patched standard-Postgres image remains unresolved;
-  do not claim the stack is patched or substitute engines without review.
+- Complete component security review and full-stack compatibility testing.
+  On September 29, upstream released standard Postgres `17.11.0.002`.
+  The staging overlay now independently pins its immutable index digest;
+  local AMD64 startup, extension inventory and a SQL query pass (details below).
+  This resolves image availability, not full-stack security or acceptance.
+  Fresh application migration replay, Auth/Storage integration, image scanning,
+  VPS-native execution and restore remain gates. No database engine was changed.
 - Deploy and verify the prepared sink-only SMTP service with Auth, add dedicated
   Meta test IDs/secrets and Flow keys, and a budget/rate-limited OpenAI key. Keep outbound integrations
   disabled until their restrictions pass tests.
@@ -180,3 +179,113 @@ Sources: [Supabase Docker deployment](https://supabase.com/docs/guides/self-host
 Version evidence:
 [standard Postgres 17.6.1.178 source](https://github.com/supabase/postgres/blob/d3e9cb6b33b089f5185e5aca42257391dd631207/nix/config.nix),
 [Supabase v0.8.2 Compose](https://github.com/supabase/supabase/blob/564eab8ad7840b13324f68b1bfac074ef8d51c21/docker/docker-compose.yml).
+
+## September 30 continuation
+
+- With explicit owner approval, replaced the stale SSH source in Hostinger
+  staging firewall `367995` with the owner's current single IPv4 `/32` and
+  synchronized it. TCP 22 remains single-source; 80/443 and default-drop rules
+  were unchanged. Do not store the owner's IP in this public runbook.
+- Authenticated SSH again verified `srv1207055`, healthy Dokploy, 59 GB free,
+  and no `/opt/barber-staging/supabase` directory. Existing n8n/Ollama services
+  were preserved. The loopback-only Dokploy SSH tunnel was restored.
+- GitHub CI run `36417742224` passed for committed baseline
+  `fe0b3594dce4d08d516bbbd46de0a710ddb4e942`. That result does not certify
+  subsequent September 30 edits.
+- Standard PostgreSQL candidate: `supabase/postgres:17.11.0.002`, source commit
+  `b36165476f28c34448acbcc712a05d26213183ed`. Source declares PostgreSQL 17.11;
+  registry index digest is
+  `sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53`.
+  AMD64 manifest:
+  `sha256:4bfbe2e6d7909bd386b1b774683899deb12efa04a3eebaa141f164ffd04ada1d`.
+- The opt-in `npm run test:staging-postgres -- linux/amd64` probe passed locally
+  using that exact image. It verifies initialization, server version 170011,
+  availability of pg_cron, pg_net, pgcrypto, pgtap, supabase_vault and uuid-ossp,
+  and a transactional pgcrypto query. No network, published ports, host mounts,
+  real data or real credentials enter the probe. Its container and in-memory
+  data are removed afterward. The image remains cached for repeatable testing.
+  An initial harness failure was corrected: mounting an empty tmpfs over
+  `/etc/postgresql-custom` hid packaged configuration. The final probe retains
+  those files in its disposable container layer. This is not full-stack replay.
+- The rendered upstream/VPS overlay passes the topology validator, which now
+  rejects the old DB version, mutable patch tag, changed digest and OrioleDB
+  substitution. Local `npm run check` and all five browser journeys passed;
+  browser evidence uses the existing local synthetic DB, not the patched probe.
+- Dedicated Meta app `Barber++ Staging Messaging`, ID `1628853515549372`, is
+  linked to portfolio `1554900579775003`. Test WhatsApp account
+  `3357959367924998` and test phone-number ID `1359666910563890` were created.
+  The owner verified their test recipient and generated a temporary token.
+  One Meta dashboard Hello World message was reported delivered. Billing showed
+  a test account, no payment method and $0.00 current balance despite a billable
+  flag in the delivery event; no additional sends or billing changes were made.
+  No token or recipient identifier is saved here. No Meta credential has been
+  installed on the VPS, and this is not an application/webhook/Flow E2E result.
+- Dokploy's owner profile currently reports no API keys. Deployment automation
+  still needs a least-privilege credential setup; creating a separate member
+  was deferred following the owner's question. Manual preparation can use the
+  existing login. No new member or owner-wide key was generated. The staging
+  project remains empty.
+
+### Dependency security and core rehearsal
+
+- Patched Vitest from 3.2.7 to 4.1.11 and the transitive brace-expansion from
+  5.0.9 to 5.0.12. Refreshed npm and Deno lockfiles; no runtime application
+  dependency version changed. `npm audit` and the clean Docker `npm ci`
+  reported zero known vulnerabilities. This is not a container-image scan.
+- `npm run check`, all five local Playwright journeys, migration-name checks,
+  and function packaging tests passed. Frozen Deno checks remain enabled.
+- Rebuilt the local frontend image; health, release injection, CSP/security
+  headers, cache policy, UID 101, rendered staging banner and robots directives
+  passed. The probe exposed only an ephemeral loopback port and blocked all
+  external browser requests. Its container was removed afterward. This image
+  is a local test artifact, not a published or accepted release.
+- Added `npm run test:staging-supabase-core -- <verified-upstream-directory>
+  linux/amd64`. It renders and validates the proposed VPS overlay, then derives
+  a **local-only six-service** rehearsal: DB, Auth, REST, Storage, imgproxy and
+  Mailpit. It resolves and records immutable image references, generates new
+  synthetic credentials in memory, and uses a unique internal-only network,
+  no published ports and uniquely named disposable data/config/Storage volumes.
+  Only the upstream SQL initialization files are mounted from the host, read-only.
+  Cleanup checks ownership labels; unrelated containers and volumes are preserved.
+- The Linux AMD64 core rehearsal passed PostgreSQL 17.11 initialization, all
+  four application migrations, local synthetic seed, all 32 pgTAP security
+  assertions, Auth login, Auth invitation delivered only to the private mail
+  sink, private Storage upload/download and anonymous denial. The rehearsal is
+  also wired into application CI; the remote result must be checked separately.
+  Docker Desktop's `/host_mnt` path mapping required an exact-path adjustment
+  to the harness. It did not require weakening the proposed VPS isolation.
+- Cron execution is disabled throughout the disposable rehearsal. One historical
+  migration contains a production URL before a later migration replaces it;
+  neither that intermediate job nor any other outbound job may execute during
+  a fresh VPS replay. Keep integrations quarantined and cron inactive until the
+  complete replay and environment-specific Vault configuration are verified.
+  The actual initial VPS overlay now also enforces `cron.launch_active_jobs=off`;
+  its validator rejects missing or enabled cron settings (54 topology tests pass).
+- `supabase/seed.sql` explicitly permits **local/CI only** and uses published
+  test passwords. Do not apply it verbatim on the VPS. A separate staging
+  fixture procedure with newly generated passwords is still required.
+- This does not certify Realtime, Studio, Envoy, pooler, compiled Functions,
+  full-stack schema drift/restore, VPS-native execution, public routing, load
+  or release acceptance. Existing local browser E2E results still use the
+  retained development database, not this disposable core.
+- Separate code-review pass: reviewed secret flow, local Docker restriction,
+  exact read-only SQL mounts, no-port/internal-network enforcement, image identity,
+  cleanup ownership checks, migration/seed scope and CI placement. Corrected the
+  Docker Desktop mount mapping and added the cron quarantine above. This is an
+  agent code review, not independent human review or owner release approval.
+- Trivy 0.74.0 scanned the exact AMD64 PostgreSQL image on September 30 with
+  telemetry disabled. Its binary checksum was verified against the official
+  release asset. The high/critical report contains 20 HIGH findings, all in the
+  Go 1.26.1 standard-library version recorded in `/usr/local/bin/gosu`; no
+  CRITICAL findings were reported. These are version matches, not proven
+  reachable vulnerabilities. The gosu maintainers require function-level
+  analysis; that assessment remains pending. Do not silently suppress them or
+  describe the image as vulnerability-free. Nix-packaged components also need
+  coverage review; a successful scanner exit alone is not approval.
+
+Security references: [Vitest advisory](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9),
+[brace-expansion advisories](https://github.com/juliangruber/brace-expansion/security/advisories).
+
+New version evidence:
+[17.11.0.002 release](https://github.com/supabase/postgres/releases/tag/17.11.0.002),
+[exact source version declaration](https://github.com/supabase/postgres/blob/b36165476f28c34448acbcc712a05d26213183ed/nix/config.nix).

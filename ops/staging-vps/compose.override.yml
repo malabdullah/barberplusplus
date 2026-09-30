@@ -84,6 +84,12 @@ services:
       AI_OUTBOUND_ENABLED: "false"
   db:
     container_name: barber-staging-db
+    # Standard PostgreSQL 17.11, not OrioleDB. Independent security patch pin;
+    # full-stack replay and VPS acceptance remain required before deployment.
+    image: supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53
+    # Historical migrations temporarily register an old production URL. Never
+    # execute jobs during replay or before staging-only Vault setup is approved.
+    command: [postgres, -c, config_file=/etc/postgresql/postgresql.conf, -c, log_min_messages=fatal, -c, cron.launch_active_jobs=off]
     ports: !override
       - "127.0.0.1:15432:5432"
   supavisor:

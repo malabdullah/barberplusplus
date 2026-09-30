@@ -24,6 +24,8 @@
     "test:cicd": "sh scripts/test-cicd.sh",
     "test:release": "node --test scripts/release-manifest.node-test.mjs",
     "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs",
+    "test:staging-postgres": "node scripts/test-staging-postgres.mjs",
+    "test:staging-supabase-core": "node scripts/test-staging-supabase-core.mjs",
     "test:staging-functions-package": "node --test scripts/staging-functions-package.node-test.mjs",
     "test:staging-edge-runtime": "node scripts/test-staging-edge-runtime.mjs",
     "package:staging-functions": "node scripts/package-staging-functions.mjs",
@@ -69,6 +71,6 @@
     "jsdom": "26.1.0",
     "supabase": "2.116.0",
     "vite": "^7.3.0",
-    "vitest": "3.2.7"
+    "vitest": "4.1.11"
   }
 }
