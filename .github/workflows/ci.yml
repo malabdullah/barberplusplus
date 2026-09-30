@@ -60,6 +60,9 @@ jobs:
             -f ops/staging-vps/compose.override.yml config --format json \
             | node scripts/test-staging-mail-sink.mjs
           # Separate disposable core; no deployment credentials or public ports.
+          base="$(node --input-type=module -e 'import { POSTGRES_IMAGE } from "./scripts/check-vps-compose.mjs"; console.log(POSTGRES_IMAGE)')"
+          # BuildKit's build cache is not necessarily an inspectable local image.
+          docker pull --platform linux/amd64 "$base"
           docker build --provenance=false --platform linux/amd64 --tag barber-postgres:ci-candidate \
             - < ops/staging-vps/Dockerfile.postgres
           candidate="$(docker image inspect --format '{{.Id}}' barber-postgres:ci-candidate)"

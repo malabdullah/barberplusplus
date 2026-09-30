@@ -348,6 +348,8 @@ Local Linux AMD64 evidence (not registry publication):
 Reproduce locally (no publish or deployment):
 
 ```sh
+base="$(node --input-type=module -e 'import { POSTGRES_IMAGE } from "./scripts/check-vps-compose.mjs"; console.log(POSTGRES_IMAGE)')"
+docker pull --platform linux/amd64 "$base"
 docker build --provenance=false --platform linux/amd64 \
   --tag barber-staging-postgres:gosu-patch-local - < ops/staging-vps/Dockerfile.postgres
 candidate="$(docker image inspect --format '{{.Id}}' barber-staging-postgres:gosu-patch-local)"
