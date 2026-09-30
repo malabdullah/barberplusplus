@@ -278,10 +278,25 @@ Version evidence:
   release asset. The high/critical report contains 20 HIGH findings, all in the
   Go 1.26.1 standard-library version recorded in `/usr/local/bin/gosu`; no
   CRITICAL findings were reported. These are version matches, not proven
-  reachable vulnerabilities. The gosu maintainers require function-level
-  analysis; that assessment remains pending. Do not silently suppress them or
+  reachable vulnerabilities. Follow-up `govulncheck` 1.8.0 binary/symbol analysis
+  of the extracted AMD64 helper returned exit 3 and flagged 28 standard-library
+  advisories (including severities outside the Trivy filter). It did **not** clear
+  the findings. Binary analysis alone does not prove remote exploitability.
+  Do not silently suppress them or
   describe the image as vulnerability-free. Nix-packaged components also need
   coverage review; a successful scanner exit alone is not approval.
+  Helper SHA-256:
+  `d34df779907c05a8d2e67cc088095bba4dd9212156bebf747554019705dfd34b`;
+  embedded source: gosu `6456aaa0f3c854d199d0f037f068eb97515b7513`, Go 1.26.1.
+  Trivy JSON report SHA-256:
+  `6541ecef0345b4a39ae9ebbca75eff3c613d51ce8b147aaa29d559d2c4910686`.
+  No permanent scanner installation, Docker account, API key or new Dokploy
+  member was created. Temporary analysis tools/reports remain on the owner Mac.
+- **Deployment remains NO-GO.** Owner decision requested: authorize preparation
+  of a staging-only derived PostgreSQL image with an updated helper (and accept
+  its maintenance obligation), or wait for a suitable upstream image. Do not
+  create/publish that new database image or grant a vulnerability exception by
+  inference. Preparation approval would not be release/deployment approval.
 
 Security references: [Vitest advisory](https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9),
 [brace-expansion advisories](https://github.com/juliangruber/brace-expansion/security/advisories).
