@@ -1,10 +1,9 @@
 // AI Agent - Main orchestration logic
 import {
-  callClaude,
+  callAgent,
   continueWithToolResults,
   buildMessagesFromHistory,
-  buildMessagesWithToolUse,
-} from '../_shared/anthropic.ts';
+} from '../_shared/ai.ts';
 import {
   getOrCreateConversation,
   updateConversation,
@@ -820,7 +819,7 @@ export async function processMessage(
           };
           delete bookingContext.customer_bookings;
           await updateConversation(conversation.id, { context: bookingContext });
-          // Fall through to Claude to ask what to change
+          // Fall through to AI assistant to ask what to change
         }
       }
     }
@@ -885,10 +884,10 @@ export async function processMessage(
           return { success: true, response: msg };
         } else {
           console.error('Auto-reschedule: reschedule_booking failed:', result.error);
-          // Fall through to Claude to handle error
+          // Fall through to AI assistant to handle error
         }
       }
-      // If no time detected, fall through to Claude (customer might say "الوقت" first)
+      // If no time detected, fall through to AI assistant (customer might say "الوقت" first)
     }
 
     // Detect language
@@ -918,7 +917,7 @@ export async function processMessage(
 
     // AUTO-MATCH BARBER: If customer typed a barber name after seeing barber picker,
     // match it from available_barbers and set barber_id automatically.
-    // This helps Claude proceed to service picker without needing to look up the ID.
+    // This helps AI assistant proceed to service picker without needing to look up the ID.
     const context = conversation.context as Record<string, unknown>;
     if (context.available_barbers && !context.barber_id) {
       const barbers = context.available_barbers as Array<{ id: string; name: string; name_ar: string }>;
@@ -1005,7 +1004,7 @@ export async function processMessage(
     // If this is a new conversation, add a greeting context
     let systemPrompt = SULAIMAN_SYSTEM_PROMPT;
 
-    // Add current date reference so Claude can calculate relative dates
+    // Add current date reference so AI assistant can calculate relative dates
     // Use Kuwait timezone (Asia/Kuwait, UTC+3) for all date calculations
     const today = getKuwaitDate();
     const todayStr = formatDateString(today); // YYYY-MM-DD in Kuwait time
@@ -1272,7 +1271,7 @@ When customer says a relative date like "باجر" or "tomorrow", convert it to 
             }
           }
         }
-        // If date not recognized, fall through to Claude to ask again
+        // If date not recognized, fall through to AI assistant to ask again
       }
     }
 
@@ -1318,7 +1317,7 @@ When customer says a relative date like "باجر" or "tomorrow", convert it to 
 
       if (!slotsResult.success) {
         console.error('Auto-date-select: get_available_slots failed:', slotsResult.error);
-        // Fall through to Claude
+        // Fall through to AI assistant
       } else {
         const slotsData = slotsResult.data as { slots: string[] };
         if (slotsData.slots && slotsData.slots.length > 0) {
@@ -1364,7 +1363,7 @@ When customer says a relative date like "باجر" or "tomorrow", convert it to 
     }
 
     // AUTO-CONFIRM: If pending_confirmation exists and customer confirms via button or text,
-    // directly call create_booking without waiting for Claude
+    // directly call create_booking without waiting for AI assistant
 
     // Check for explicit button click first (more reliable than text pattern matching)
     const isConfirmButton = buttonId === 'confirm_booking';
@@ -1465,7 +1464,7 @@ We look forward to seeing you! 🙏`
         return { success: true, response: successMsg };
       } else {
         console.error('Auto-confirm booking failed:', bookingResult.error);
-        // Fall through to Claude to handle the error
+        // Fall through to AI assistant to handle the error
       }
     }
 
@@ -1558,18 +1557,18 @@ We look forward to seeing you! 🙏`
       }
     }
 
-    // Build messages for Claude
+    // Build messages for AI assistant
     // Remove the last message from history since we're adding it as the current message
     const previousMessages = history.slice(0, -1);
     const messages = buildMessagesFromHistory(previousMessages, cleanMessage);
-    console.log('8. Messages built for Claude, count:', messages.length);
+    console.log('8. Messages built for AI assistant, count:', messages.length);
 
-    // Call Claude with tools
-    console.log('9. Calling Claude API...');
-    let response = await callClaude(systemPrompt, messages, AGENT_TOOLS);
-    console.log('10. Claude response received:', { stopReason: response.stopReason, hasResponse: !!response.response, toolCallCount: response.toolCalls.length });
+    // Call AI assistant with tools
+    console.log('9. Calling AI assistant API...');
+    let response = await callAgent(systemPrompt, messages, AGENT_TOOLS);
+    console.log('10. AI assistant response received:', { stopReason: response.stopReason, hasResponse: !!response.response, toolCallCount: response.toolCalls.length });
     let iterations = 0;
-    // Don't capture text as final response when Claude is making tool calls
+    // Don't capture text as final response when AI assistant is making tool calls
     // That text is just "thinking/narration" before tools execute (e.g., "Now, I'll check...")
     let finalResponse = response.stopReason === 'tool_use' ? null : response.response;
     // Track if a tool sends a message directly (like send_time_slot_picker)
@@ -1643,23 +1642,15 @@ We look forward to seeing you! 🙏`
         }
       }
 
-      // Build messages with tool use and results
-      const messagesWithTools = buildMessagesWithToolUse(
-        previousMessages,
-        cleanMessage,
-        response.toolCalls,
-        response.response || undefined
-      );
-
-      // Continue conversation with tool results
+      // Preserve every previous call/result pair across all iterations.
       response = await continueWithToolResults(
         systemPrompt,
-        messagesWithTools,
+        response,
         AGENT_TOOLS,
         toolResults
       );
 
-      // Capture final text response ONLY when Claude is done with all tool calls
+      // Capture final text response ONLY when AI assistant is done with all tool calls
       // Text with stopReason='tool_use' is just thinking/narration, not the final answer
       if (response.response && response.stopReason !== 'tool_use') {
         finalResponse = response.response;
@@ -1706,13 +1697,13 @@ We look forward to seeing you! 🙏`
       return { success: true, response: savedContent };
     }
 
-    // If Claude generated placeholder text (copied from history), reject it
-    // This happens when a picker tool fails and Claude sees placeholders in history
+    // If AI assistant generated placeholder text (copied from history), reject it
+    // This happens when a picker tool fails and AI assistant sees placeholders in history
     // Use regex to catch ALL placeholder variations like:
     // [Interactive list sent], [Barber picker sent - customer should select a barber], etc.
     const placeholderRegex = /\[(?:Interactive|Confirmation|Booking|Service|Time|Barber|Services|picker|list|buttons|slots).*?(?:sent|picker|list|summary|select|waiting|shown).*?\]/i;
     if (finalResponse && placeholderRegex.test(finalResponse)) {
-      console.log('WARNING: Claude generated placeholder text, rejecting:', finalResponse);
+      console.log('WARNING: AI assistant generated placeholder text, rejecting:', finalResponse);
       finalResponse = null; // Force fallback message
     }
 
@@ -1746,7 +1737,7 @@ We look forward to seeing you! 🙏`
           ? "Please select a barber from the list, or type their name."
           : "اختر الحلاق من القائمة، أو اكتب اسمه.";
       } else if (context.barber_id && !context.available_services) {
-        // Customer selected barber but Claude didn't call send_service_picker
+        // Customer selected barber but AI assistant didn't call send_service_picker
         // Actually call the service picker as a fallback
         console.log('Fallback: Calling send_service_picker for barber_id:', context.barber_id);
         const servicePickerResult = await executeTool('send_service_picker', {
@@ -1935,7 +1926,7 @@ async function updateContextFromToolResult(
         currentContext.barber_name = toolInput.barber_name;
         currentContext.barber_name_ar = toolInput.barber_name_ar;
       }
-      // Store all slots for pagination (when Claude calls this tool)
+      // Store all slots for pagination (when AI assistant calls this tool)
       if (toolInput.slots && Array.isArray(toolInput.slots)) {
         currentContext.all_slots = toolInput.slots;
         currentContext.slots_page = toolInput.page || 0;

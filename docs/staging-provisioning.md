@@ -1,5 +1,9 @@
 # Staging Provisioning Record
 
+> Migration in progress: the approved target is now the Hostinger staging VPS.
+> See [VPS transition](staging-vps-transition.md) for current state and gates.
+> The Mac record below is historical and does not certify VPS readiness.
+
 Last reviewed: 2026-09-03. This document contains identifiers and secret names
 only. Never add credential values, private keys, tokens, recipient addresses, or
 phone numbers.
@@ -88,15 +92,18 @@ restore rehearsal are still required before this lab can be treated as durable.
 - Cloudflare Tunnel, DNS, TLS, Access default-deny, CI service-token access, and
   exact webhook bypass checks have passed.
 - The GitHub `staging` environment and repository-scoped runner are configured.
-- The repository is public on GitHub Free. `main` has server-side protection,
-  includes administrators, requires all five CI checks and one independent
-  approval, dismisses stale approvals, requires latest-push approval and
-  conversation resolution, and blocks force pushes and deletion.
-- PR #1 still requires an independent approval before the merge/deployment gate
-  can pass. Do not bypass or weaken the rule.
-- The `staging` environment has no approval rule because staging deploys
-  automatically after protected `main`; production still requires an
-  independent protected approval mechanism.
+- The repository is public on GitHub Free. Under the solo-owner policy approved
+  on 2026-09-28, `main` still requires PRs, all five app-bound CI checks,
+  administrator enforcement, stale-review dismissal, up-to-date branches and
+  conversation resolution, and blocks force pushes/deletion. Only independent
+  PR approval count and latest-push approval were removed, with explicit owner
+  authorization covering shared main and its future production source role.
+- PR #1 remains unmerged. A recorded code-review pass, owner release-specific
+  approval, and all infrastructure/readiness gates are still required.
+- Updated 2026-09-28: the `staging` environment now requires the owner
+  `malabdullah` to approve each deployment and permits only protected branches.
+  See `staging-owner-approval.md`. Production still requires its separate independent
+  approval mechanism; no production GitHub environment is currently configured.
 - Local service ports other than the frontend remain broadly bound by the
   Supabase CLI and require loopback/firewall hardening.
 - Sandbox SMTP, Meta test credentials, restricted Anthropic credentials,

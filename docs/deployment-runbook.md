@@ -2,7 +2,9 @@
 
 ## One-time GitHub and hosting setup
 
-Protect `main` with pull-request review and all CI jobs. Stop using `dev` as an
+Protect `main` with pull requests and all CI jobs under the approved solo-owner
+policy in `staging-owner-approval.md`. Record a separate code-review pass and
+obtain owner release-specific approval. Stop using `dev` as an
 environment branch only after comparing it with `main` and preserving every
 unique commit and working-tree change. Protect `v*` tags and configure GitHub
 environments named `staging` and `production`; production requires an approver.
@@ -28,6 +30,13 @@ The hook secret is environment-specific. It must never accept arbitrary shell
 commands or repository URLs.
 
 ## Staging release
+
+Before the deployment job starts, the owner must approve the specific run in
+the GitHub `staging` environment. This gate was enabled on 2026-09-28; it allows
+the owner to approve a run they triggered. The owner explicitly authorized
+removing main's independent PR approval requirement, not its PR or CI
+requirements. See `staging-owner-approval.md`. Approval of that policy is not
+permission to merge or deploy any particular release.
 
 A successful CI run on `main` builds one image tagged by commit SHA on a
 GitHub-hosted runner and pushes it to GHCR. The dedicated Mac runner backs up the

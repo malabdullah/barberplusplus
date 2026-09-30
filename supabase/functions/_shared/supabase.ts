@@ -221,7 +221,7 @@ export async function getRecentMessages(
     throw new Error(`Failed to get messages: ${error.message}`);
   }
 
-  // Reverse to get chronological order and map to Claude format
+  // Reverse to get chronological order and map to AI assistant format
   return (data || []).reverse().map((msg) => ({
     role: msg.direction === 'inbound' ? 'user' as const : 'assistant' as const,
     content: msg.content,
