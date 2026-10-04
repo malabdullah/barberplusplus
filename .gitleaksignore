@@ -5,3 +5,6 @@ e450135611e6b168a742b33b5276d699bbc5953b:playwright.config.js:generic-api-key:23
 e450135611e6b168a742b33b5276d699bbc5953b:docs/staging-provisioning.md:generic-api-key:79
 e450135611e6b168a742b33b5276d699bbc5953b:supabase/functions/whatsapp-flow-endpoint/crypto.ts:private-key:127
 e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js:generic-api-key:4
+# Verified SHA-256 of public Trivy GoTrue report auth.json, not a credential.
+# Exact historical finding only; current documentation wording is corrected.
+976970319c0a4ff82c66258b9c142ae57b98656d:docs/staging-component-security-2026-10-04.md:generic-api-key:294

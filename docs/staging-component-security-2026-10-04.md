@@ -291,7 +291,7 @@ disposable compatibility/recovery rehearsal before replacing a pin.
 Raw evidence: `/private/tmp/barber-auth-storage-scan.WKWMlO/`.
 Combined summary SHA-256:
 `cd6e61fe7a4504532919d2f6024dfba7cb70c52c8c105567a568864530c427ed`.
-Auth report SHA-256:
+GoTrue scan report checksum (SHA-256):
 `244b7e0f722fe81df718233072b99a01c700ff062fa59cbf43f7f5b7177f4d91`.
 Storage report SHA-256:
 `f738a937bcde56606c726495217193fbdfb071e880830e46d8ce3a798e3ce99c`.
