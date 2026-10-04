@@ -192,9 +192,73 @@ attempts temporary-file removal, reporting failure rather than claiming cleanup.
 The final CORS container rerun and all five Playwright journeys passed after
 that cleanup fix. The browser journeys use the retained local synthetic database,
 not the candidate gateway or VPS, and therefore do not certify CORS browser E2E.
+All five required GitHub jobs then passed for CORS commit
+`fe2fb0dc242ab458f25b207d66e51070ca130b94` in
+[CI run 37189276664](https://github.com/malabdullah/barberplusplus/actions/runs/37189276664),
+including both isolated Envoy variants and clean synthetic database replay.
 
 This is candidate evidence, not browser/Cloudflare acceptance. Real websocket
 handshakes, Storage uploads/resumable headers, Access cookie/preflight behavior,
 actual Auth/Function responses and the live origin boundary still need end-to-end
 verification before this transform can enter a deployment. No application,
 database, public DNS, production resource or live credential was changed.
+
+## Five further official candidates — scan-only evidence
+
+The same verified Trivy 0.74.0 and vulnerability database scanned five more
+explicit AMD64 manifests remotely. No candidate was executed or promoted, and
+no finding was suppressed. Counts remain package/advisory occurrences, not
+proven reachable vulnerabilities; applicability and source-provenance review
+remain required. Merely choosing a newer version does not clear the gate.
+
+| Candidate | HIGH | CRITICAL | Scanner coverage |
+| --- | ---: | ---: | --- |
+| Studio 2026.09.28-sha-5e59b60 | 303 | 16 | Debian 12.15: 171 packages; Node: 869 |
+| Realtime 2.140.7 | 137 | 3 | Debian 13.6: 157 packages; no Erlang application coverage |
+| Postgres-meta 0.99.0 | 93 | 6 | Debian 12.15: 91 packages; Node: 402 |
+| Supavisor 2.9.13 | 418 | 21 | Debian 12.12: 263 packages; no Erlang application coverage |
+| Imgproxy 4.0.17 | 0 | 0 | Ubuntu 24.04: 100 packages; Go binary: 193 packages |
+
+Exact candidate references:
+
+```text
+supabase/studio@sha256:846f64ef85d0a97d3aad3b165d4ef3ffe7fdcc720ae12220af5b0f5f6edb7470
+supabase/realtime@sha256:482868126f20243547d2d2cb03f78d78eeb318435c48198a1a43f8c491433864
+supabase/postgres-meta@sha256:09b00cdd401f830cc8db5c7da14468e99d04a63900371b1ec06463674ac4877e
+supabase/supavisor@sha256:c57b1222f3ca21a3180c202dea14806cc0be67cda633eb62bcc6481efc0e7a95
+darthsim/imgproxy@sha256:be64f14896476c8613ebac98db241d152064256981f8149dd9e2f2f155e22dd1
+```
+
+Imgproxy's zero count is not full native-codec coverage or compatibility approval:
+this is a major v3-to-v4 change, and its scan logs include third-party SBOM trust
+warnings. Studio's dated official registry tag has a short source suffix that
+could not be resolved through the official GitHub commit API; no source-revision
+image label supplied the missing linkage. Do not call that provenance verified.
+Supavisor moves off the previous Debian 11 base, but retains unresolved findings.
+New Realtime migrations/tenant behavior and Meta's worker-based formatting need
+disposable replay and compatibility tests, not a wholesale Compose update.
+
+Primary version references:
+[Realtime 2.140.7](https://github.com/supabase/realtime/releases/tag/v2.140.7),
+[Meta 0.99.0](https://github.com/supabase/postgres-meta/releases/tag/v0.99.0),
+[Supavisor 2.9.13](https://github.com/supabase/supavisor/releases/tag/v2.9.13),
+[Imgproxy 4.0.17](https://github.com/imgproxy/imgproxy/releases/tag/v4.0.17),
+[official Studio image tags](https://hub.docker.com/r/supabase/studio/tags).
+
+Raw reports: `/private/tmp/barber-latest-component-scan.c2bR05/`.
+Combined `summary.json` SHA-256:
+`c6258c8bfd64aef15f56917c298294a92d21919909b0643227907218447ee322`.
+Individual report SHA-256 values in component order above:
+
+```text
+4c44dc23c6830e56bb035b698bef4a102119a1f2341af5961907e00cc2d999f5
+b35b50cd8db783d570c39ebbcde34284152982b4bf68a4a005420f91a0a42997
+982e73900f01bf66dcc210081d53e70b339ddc4a75d12c8de370951fe49bf73c
+990cfddde3565b0349ee052acfb14994f0c7fb632687651f8c228bfae28f3da6
+bcf6c24e8f78da73568e178b15b8ac50cbe40912ba52803acb6a096212b65995
+```
+
+The owner has been asked whether initial staging may omit optional Studio/meta,
+Supavisor and image transformation services. No answer or removal is assumed.
+That choice cannot clear the remaining Auth, Storage, Realtime and full-stack
+readiness gates, and does not change production or authorize deployment.
