@@ -26,6 +26,15 @@ the later update below records its verified fix. Fresh GitHub CI and
 release-specific owner approval remain separate gates. No branch protection,
 workflow approval or runtime gate was waived.
 
+GitHub run `37200815679` subsequently flagged `generic-api-key` in historical
+commit `3a4ba829a522ff6e11c6686cf624e27be72f9c1b`, Auth dependency patch line 28.
+That unchanged patch-context line is the public Go `h1` checksum for
+`golang.org/x/oauth2 v0.36.0`, verified byte-for-byte against
+[Go's checksum database](https://sum.golang.org/lookup/golang.org/x/oauth2@v0.36.0).
+`.gitleaksignore` records only that exact commit/path/rule/line fingerprint.
+It is not a credential, rule/path exclusion, or vulnerability/CVE suppression;
+the dependency patch bytes and their reviewed SHA-256 remain unchanged.
+
 ### Storage 1.79.31 downstream runtime candidate
 
 `ops/staging-vps/Dockerfile.storage-candidate` retains the compiled application,
