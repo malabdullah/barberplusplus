@@ -137,11 +137,20 @@ These create and remove only their own temporary fixtures and keys.
 
 1. After isolated Supabase provisioning, implement consistent capture of DB
    (including Auth/Vault needed for restoration), Storage objects and encrypted
-   staging-only configuration. Retain immutable image/release/migration metadata.
+   staging-only configuration. Include the separate `db-config` named volume:
+   `/etc/postgresql-custom/pgsodium_root.key` is required to decrypt Vault data.
+   The Compose `VAULT_ENC_KEY` variable alone is not a backup of that root key.
+   Never print the key, commit it, or save it as unencrypted recovery evidence.
+   Retain immutable image/release/migration metadata.
    Do not mix production or retired legacy data into this stream.
 2. Quiesce writes or use a verified snapshot strategy so DB references and
    Storage objects form a consistent recovery point. Never archive a live
    PostgreSQL data directory as a substitute for a supported database backup.
+   The file Storage backend also needs extended attributes (content type, cache
+   control and etag), ownership and permissions. Plain `docker cp` archives are
+   insufficient: the local recovery test reproduced HTTP 500 after that copy.
+   GNU tar with `--xattrs --xattrs-include=user.* --acls --numeric-owner` on both
+   capture and restore preserved these attributes and passed API verification.
 3. Encrypt before publishing on the VPS, then pull and verify on the Mac before
    a protected change proceeds. Capture failure must prevent export publication.
 4. Restore into disposable isolated services and verify schema, synthetic users,
@@ -150,3 +159,16 @@ These create and remove only their own temporary fixtures and keys.
    stale/missed-transfer reporting. An offline Mac must fail the transfer gate.
 
 Reference: [age encryption and key usage](https://github.com/FiloSottile/age).
+
+Supabase documents the independent root-key volume in its
+[Postgres 17 backup guidance](https://supabase.com/docs/guides/self-hosting/postgres-upgrade-17).
+The local core rehearsal now exercises this recovery requirement using only
+fresh disposable synthetic services. It is not a live VPS capture, off-host
+receipt, owner-key recovery proof, retention policy or deployment authorization.
+
+On October 4, the six-service Linux AMD64 local rehearsal passed encrypted
+round-trip/tamper rejection, restore into new volumes, Auth login, Vault
+decryption, cross-tenant RLS denial, private Storage content/type and anonymous
+denial. It uses a temporary synthetic age identity, never the owner's real key.
+Only the labeled probe containers, networks, synthetic volumes and temporary
+identity directory were removed. The existing development database was retained.

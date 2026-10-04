@@ -23,7 +23,7 @@
     "test": "vitest run",
     "test:cicd": "sh scripts/test-cicd.sh",
     "test:release": "node --test scripts/release-manifest.node-test.mjs",
-    "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs",
+    "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs scripts/staging-fixtures.node-test.mjs scripts/staging-core-recovery.node-test.mjs",
     "test:staging-postgres": "node scripts/test-staging-postgres.mjs",
     "test:staging-supabase-core": "node scripts/test-staging-supabase-core.mjs",
     "test:staging-functions-package": "node --test scripts/staging-functions-package.node-test.mjs",
@@ -48,7 +48,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "date-fns": "^2.30.0",
-    "dompurify": "3.4.13",
+    "dompurify": "3.4.16",
     "i18next": "^25.7.3",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",

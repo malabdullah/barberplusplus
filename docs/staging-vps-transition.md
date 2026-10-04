@@ -379,3 +379,55 @@ Security references: [Vitest advisory](https://github.com/vitest-dev/vitest/secu
 New version evidence:
 [17.11.0.002 release](https://github.com/supabase/postgres/releases/tag/17.11.0.002),
 [exact source version declaration](https://github.com/supabase/postgres/blob/b36165476f28c34448acbcc712a05d26213183ed/nix/config.nix).
+
+### October 4 continuation — local recovery passes, live acceptance still blocked
+
+- Owner-approved staging SSH `/32` replacement was saved and synchronized on
+  Hostinger firewall `367995`. SSH to `srv1207055` succeeded; Dokploy and its
+  dependencies were healthy. Production and all other provider rules were left
+  unchanged. `/opt/barber-staging/supabase` was still absent: no live stack exists
+  at the planned target yet. The original user worktrees were preserved.
+- New separate fixture preparation generates five unique random passwords in
+  memory. Synthetic entity IDs/data remain deterministic; the public development
+  seed is unchanged. The staging template refuses nonempty Auth, Vault, Storage
+  or application tables and requires cron disabled. A Vault-only negative test
+  and duplicate-seed test require the exact guard error, not any SQL failure.
+  This prepares SQL only; it is not a live installer or baseline authorization.
+- The disposable six-service AMD64 rehearsal passed all four migrations,
+  32 pgTAP assertions, random fixtures, Auth login/invite into Mailpit, Storage
+  upload/download, and explicit anonymous denial (not a server error).
+- Recovery now encrypts DB dump, Storage archive, the separate DB-config/root-key
+  archive and runtime configuration together. Fresh labeled volumes recover
+  accounts, Vault decryption, cross-tenant RLS and private file content/type.
+  GNU tar preserves Storage xattrs; the earlier plain-copy attempt reproduced
+  HTTP 500. Missing root-key data had independently prevented Vault decryption.
+  The final corrected rehearsal and ciphertext-tampering rejection passed.
+  Temporary identities and only the labeled probe resources were removed.
+- DOMPurify was patched from 3.4.13 to 3.4.16 after a new npm advisory. The
+  application uses string sanitization, not the advisory's IN_PLACE usage; this
+  is maintenance, not a claim of a proven application exploit. The template
+  sanitization regression test and locked-install audit (zero findings) passed.
+- Final `npm run check` passed: 14 function tests, 7 frontend unit tests, CI/CD
+  helper checks, 4 release tests, 77 staging topology/candidate/fixture/recovery
+  tests, 20 gateway tests, build and domain checks. Migration names and all five
+  local Playwright journeys passed. Known chunk-size/dynamic-import build warnings
+  remain. Browser journeys use the existing local development DB, not the VPS.
+- Local AMD64 frontend Docker build and network-disabled runtime probe passed
+  health, SPA fallback, synthetic runtime config, security headers, no-store and
+  noindex. No registry publication or release acceptance was performed.
+- Separate agent review identified and corrected permissive denial/duplicate
+  tests, archive-helper cleanup and empty-input test weaknesses. This is not
+  independent human review or owner release approval.
+- Eight pinned component scans and three newer-candidate scans retain unresolved
+  HIGH/CRITICAL findings. See [security inventory](staging-component-security-2026-10-04.md)
+  for identities, scope limits and compatibility cautions. No silent upgrades or
+  security exceptions were applied.
+
+Env 4 runs in its own worktree on `codex/env4-cicd`. Its Linux/VPS workflow is
+deliberately fail-closed. The proposed constrained deployment broker, dedicated
+project-scoped Dokploy identity, unprivileged runner, GHCR pull identity, first
+empty-stack bootstrap and real VPS backup/recovery remain unimplemented/gated.
+Local synthetic recovery cannot satisfy a live backup receipt or release gate.
+Security remediation, full-stack tests, live secrets/integrations, routing,
+outbound controls, load gate and owner-specific release approval remain open.
+**Env 3 and Env 4 are both NOT COMPLETE; deployment remains NO-GO.**

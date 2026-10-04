@@ -7,6 +7,8 @@ import { resolve } from 'node:path';
 import { parseEnv } from 'node:util';
 import { validateCompose } from './check-vps-compose.mjs';
 import { inspectCandidate, inspectPlatformImage } from './staging-postgres-candidate.mjs';
+import { prepareStagingFixtures } from './staging-fixtures.mjs';
+import { isPrivateStorageDenied, rehearseCoreRecovery } from './rehearse-staging-core-recovery.mjs';
 
 const upstream = realpathSync(process.argv[2] || 'missing-upstream-directory');
 const platform = process.argv[3] || 'linux/amd64';
@@ -138,9 +140,28 @@ try {
     sql(readFileSync(`supabase/migrations/${migration}`, 'utf8'));
     console.log(`Replayed ${migration}`);
   }
-  stage = 'local synthetic seed';
-  // This seed contains documented local-only passwords. Never use it on the VPS.
-  sql(readFileSync('supabase/seed.sql', 'utf8'));
+  stage = 'random-password staging fixture rehearsal';
+  const fixtures = prepareStagingFixtures();
+  redactions.push(...fixtures.accounts.map((account) => account.password));
+  // A Vault-only blocker must reject before any seed insert. Without the guard,
+  // this would succeed (no duplicate fixture keys), so it tests the actual gate.
+  let rejectedVaultOnly = false;
+  try {
+    sql(`BEGIN; SELECT vault.create_secret('synthetic-guard-only', 'fixture_guard_probe');\n${fixtures.sql}`);
+  } catch (error) {
+    rejectedVaultOnly = String(error.stderr || '').includes('ERROR:  Fixture gate: database must be empty');
+  }
+  assert.ok(rejectedVaultOnly, 'Fixture must reject a Vault-only nonempty target');
+  assert.equal(sql('SELECT count(*) FROM auth.users;'), '0');
+  assert.equal(sql('SELECT count(*) FROM vault.secrets;'), '0');
+  sql(fixtures.sql);
+  // Refuse a second seed, preserving the first run and its credentials.
+  let rejectedDuplicate = false;
+  try { sql(fixtures.sql); } catch (error) {
+    rejectedDuplicate = String(error.stderr || '').includes('ERROR:  Fixture gate: database must be empty');
+  }
+  assert.ok(rejectedDuplicate, 'Fixture must refuse nonempty databases');
+  assert.equal(sql('SELECT count(*) FROM auth.users;'), '5');
   assert.equal(sql('SELECT count(*) FROM vault.secrets;'), '0');
   stage = 'database security tests';
   const tap = sql(readFileSync('supabase/tests/001_baseline_security.sql', 'utf8'));
@@ -153,7 +174,7 @@ try {
   const health = await fetch('http://auth:9999/health'); assert(health.status === 200);
   const login = await fetch('http://auth:9999/token?grant_type=password', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:'admin@barber.test',password:'LocalOnly123!'})
+    body:JSON.stringify({email:'admin@barber.test',password:input.password})
   }); assert(login.status === 200); const session = await login.json();
   assert(session.user.app_metadata.role === 'admin' && !!session.access_token);
   const headers = {Authorization:'Bearer '+input.key,'Content-Type':'application/json'};
@@ -170,14 +191,21 @@ try {
   const download = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {headers});
   assert(download.status === 200 && await download.text() === 'synthetic-only');
   const denied = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {
-    headers:{Authorization:'Bearer '+input.anon}}); assert(denied.status >= 400);
+    headers:{Authorization:'Bearer '+input.anon}});
+  const denial = await denied.json();
+  assert((${isPrivateStorageDenied.toString()})(denied.status, denial));
   console.log('PASS: synthetic Auth login/invite to mail sink, private Storage upload/download and anonymous denial');`;
   console.log(docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module', '-e', probe],
-    { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY }) }).trim());
-  console.log('PASS: patched Postgres + Auth/REST/Storage core, four migration replay, local seed, 32 pgTAP checks.');
-  console.log('Not full-stack, VPS, restore, public routing or release acceptance.');
+    { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY,
+      password: fixtures.accounts.find((account) => account.email === 'admin@barber.test').password }) }).trim());
+  console.log('PASS: patched Postgres + Auth/REST/Storage core, four migration replay, random staging fixtures, duplicate-seed refusal, 32 pgTAP checks.');
+  stage = 'local recovery rehearsal';
+  await rehearseCoreRecovery({ model, upstream, docker, compose, accounts: fixtures.accounts,
+    key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY });
+  console.log('Not full-stack, VPS, public routing or release acceptance.');
 } catch (error) {
   console.error(`Core compatibility probe FAILED at ${stage}; no deployment acceptance.`);
+  if (stage === 'local recovery rehearsal' && /^Local synthetic recovery rehearsal failed at [a-zA-Z, /-]+$/.test(error.message)) console.error(error.message);
   if (stage.startsWith('isolation inspection')) {
     console.error(error instanceof assert.AssertionError ? error.message.split('\n')[0] : 'Inspection command failed');
   }
