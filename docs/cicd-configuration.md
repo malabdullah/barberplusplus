@@ -157,7 +157,10 @@ The approved default architecture is GitHub-hosted CI plus a restricted
 server-side pull/deployment mechanism that consumes only a verified commit and
 immutable digests after the protected staging approval. It must use the
 constrained broker contract, cannot accept arbitrary commands or repository
-code execution, and keeps Dokploy/database credentials on the server.
+code execution, and keeps Dokploy/database credentials on the server. The
+versioned envelope, authenticity, expiry, replay ledger, and observation-only
+first installation stage are specified in
+[VPS deployment adapter contract](staging-vps-deployment-adapters.md#approved-release-pull-protocol-proposed-v1).
 
 Do not register the checked-in `barber-staging-vps` runner. Keeping
 `STAGING_VPS_AUTOMATION_READY` false and retaining the deliberate workflow stop
