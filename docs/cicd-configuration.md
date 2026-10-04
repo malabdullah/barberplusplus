@@ -76,8 +76,10 @@ Before enabling automation, implement and review the three versioned adapters
 proposed in [VPS deployment adapter contract](staging-vps-deployment-adapters.md):
 
 1. Backup capture: quiesce the isolated stack and capture Database, Auth, Vault,
-   Storage, and encrypted configuration; bind evidence to commit, image digests,
-   and migration tree; verify off-VPS receipt and a restore rehearsal.
+   Storage, encrypted configuration, and the complete PostgreSQL `db-config`
+   volume containing `pgsodium_root.key`; restore that volume before PostgreSQL
+   starts; bind evidence to commit, image digests, and migration tree; verify
+   off-VPS receipt and a Vault-inclusive restore rehearsal.
 2. Migration apply: validate history, run the exact candidate dry-run, then
    apply with `--skip-vault`; never seed/reset a nonempty staging database.
 3. Rollback/recovery: retain prior immutable frontend and Functions digests;

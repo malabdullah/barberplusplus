@@ -66,11 +66,16 @@ bootstrap evidence and the first accepted release are independently recorded.
 ### `scripts/staging-vps-backup-adapter.sh`
 
 The adapter must quiesce the isolated staging workload and capture Database,
-Auth, Vault, Storage objects, and encrypted runtime configuration. Its evidence
-records the release identifiers, migration-tree hash, component checksums and
-sizes, capture time, encrypted off-VPS receipt confirmation, and successful
-restore-rehearsal evidence reference. It returns success only after all five
-components, off-VPS receipt, and restore verification pass.
+Auth, Vault, Storage objects, encrypted runtime configuration, and the complete
+PostgreSQL `db-config` volume. The latter includes
+`/etc/postgresql-custom/pgsodium_root.key`; `VAULT_ENC_KEY` or a database dump
+alone cannot restore Vault. The `db-config` archive must be encrypted separately,
+bound to the same release evidence, and restored before the target PostgreSQL
+service starts. Its evidence records the release identifiers, migration-tree
+hash, component checksums and sizes, capture time, encrypted off-VPS receipt
+confirmation, root-key-volume restoration order, and successful Vault-inclusive
+restore-rehearsal evidence reference. It returns success only after every
+component, off-VPS receipt, and restore verification passes.
 
 An encrypted transfer by itself is not a verified backup. Existing probe/pull
 helpers and local restore tests do not satisfy this contract.
@@ -104,10 +109,12 @@ Before these proposed names become workflow dependencies:
    and audit output are tested independently.
 3. The isolated live stack passes backup, restore, migration, and recovery
    rehearsal without production data or credentials.
-4. The owner reviews the implementation and a separate first-bootstrap plan.
-5. A dedicated Dokploy identity/token is limited to the Barber++ staging project
+4. Every pinned AMD64 runtime image passes the approved security threshold; any
+   unresolved High or Critical finding keeps the stack blocked.
+5. The owner reviews the implementation and a separate first-bootstrap plan.
+6. A dedicated Dokploy identity/token is limited to the Barber++ staging project
    and only application/compose read, update, and deploy operations.
-6. The dedicated repository runner has no Docker-group or sudo privilege and is
+7. The dedicated repository runner has no Docker-group or sudo privilege and is
    never eligible for pull-request jobs.
-7. `STAGING_VPS_AUTOMATION_READY` is set to `true` only after all evidence is
+8. `STAGING_VPS_AUTOMATION_READY` is set to `true` only after all evidence is
    recorded. Environment approval is still required for each release.
