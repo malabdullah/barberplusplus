@@ -1,0 +1,4 @@
+# Unified-diff context prefixes precede the original Go indentation tabs.
+# Preserve the patch bytes; all other whitespace checks remain enabled.
+ops/staging-vps/auth-security/go-dependencies.patch whitespace=-space-before-tab
+ops/staging-vps/auth-security/pgproto3-negative-length.patch whitespace=-space-before-tab

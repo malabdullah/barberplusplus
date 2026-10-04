@@ -1,0 +1,6 @@
+**
+!Dockerfile
+!debian.sources
+!harden.sh
+!snapshot.sha256
+!staging-entrypoint.sh

@@ -88,6 +88,93 @@ or Functions integration through Envoy, AMD64/VPS acceptance, live backups, or
 clear outstanding image vulnerabilities/provenance. No image pins, production
 resources, live VPS resources, DNS or account permissions changed in this work.
 
+## Local downstream security candidates
+
+Two further opt-in flags run only the exact local artifacts recorded in
+`staging-component-security-2026-10-04.md`: `--storage-security-candidate`
+retains official Auth and uses patched Storage; `--security-core-candidates`
+uses patched Auth and Storage plus official PostgREST 14.18 (which fixes the
+sporadic JWT-issued-in-the-future error). They never pull local candidates, verify
+the fixed OCI index and selected AMD64 identity/configuration, and do not alter
+deployment pins. A rebuild must be separately scanned/reviewed before updating
+the test identities. Both variants passed the isolated core and encrypted
+fresh-volume recovery rehearsal on October 4. Auth retains an unsuppressed
+version-match finding requiring documented patch review.
+
+For a new Storage build context, provide the exact official source checkout:
+
+```sh
+node scripts/prepare-staging-storage-candidate.mjs /absolute/storage-source /absolute/new-build-directory
+```
+
+Preparation verifies upstream/patched manifests and the build recipe, rejects
+existing output and reads committed blobs rather than working-copy files. The
+output contains no credentials. These artifacts are local candidates, not release
+approval or published images.
+
+`npm run test:staging-edge-runtime -- linux/amd64` explicitly tests the VPS
+architecture; omitting the platform retains local host architecture. Docker
+operations now bind to one local Unix socket and reject endpoint overrides.
+The probe records both local index and selected platform identities. It remains
+a standalone Functions test, not Envoy/Cloudflare/full-stack acceptance.
+
+To rehearse the separately built, exact distroless Functions candidate:
+
+```sh
+npm run test:staging-edge-runtime -- linux/amd64 --security-runtime-candidate
+```
+
+This explicitly selects the official v1.77.4 builder and locally verified
+minimal runtime; it does not change the default deployment pin. All eight real
+workers, JWT/cron/Meta/exact paths/CORS, encrypted Flow and tamper checks passed.
+The compiled AMD64 manifest
+`sha256:4304bfb208a54190aab7347dfe83c362efb7feb88f40ddd99d85c227b31e2c16`
+scanned at 0 HIGH / 0 CRITICAL across 14 OS packages. Repeating the build retained
+that platform manifest, while its local OCI index/attestation differed. Keep those
+identities distinct. Rust/Deno/V8/ONNX source advisory coverage is separate.
+
+The full eight-service rehearsal is a separate opt-in:
+
+```sh
+npm run test:staging-supabase-core -- /absolute/verified/upstream linux/amd64 sha256:<validated-local-postgres-candidate-id> --security-core-candidates --full-stack
+```
+
+It uses fresh synthetic volumes/internal networks, exact candidate identities
+and no host ports. Distroless inspection runs outside the Functions container;
+no shell is added to that image. Realtime's guarded profile remains mandatory.
+On an ARM Docker host only, its AMD64 Erlang JIT uses the documented local
+emulation flag; native AMD64/VPS verification is still required. Generate the
+Realtime cookie as 32 random bytes encoded as base64url (43 characters), because
+upstream also uses it as a PostgreSQL LISTEN channel with a 63-byte limit.
+The three additional services stop before the existing five-service restore
+rehearsal; this does not claim a full eight-service disaster-recovery test.
+
+On October 4 the exact candidate set passed real gateway Auth login, REST own-
+branch/cross-tenant checks, private Storage and exact anonymous denial, CORS,
+management-route denial, Functions database access and authentication boundaries,
+encrypted Flow, disabled outbound calls and Realtime private broadcasts. A real
+booking UPDATE was delivered to its authenticated barber and withheld from the
+other authenticated tenant during a bounded five-second observation window;
+both subscriptions were acknowledged and the denied connection answered a
+heartbeat. This is functional evidence, not a browser or native-VPS load test.
+
+The first post-Realtime restore found a genuine missing-role defect. The local
+recovery format now preserves only the reviewed, non-login
+`supabase_realtime_admin` role's exact attributes, memberships and parameter ACL,
+bound by a checksum inside the encrypted fixture. It does not export passwords,
+`pg_authid`, or general cluster globals. Restoration requires a fresh labelled
+target with the role absent, uses constant allowlisted SQL, and verifies exact
+metadata before and after import. Unexpected privileges/configuration fail.
+The repeated five-service restore passed Auth, RLS, Vault decryption and private
+Storage content/metadata checks, with all disposable resources cleaned up.
+
+Final local receipt: `/private/tmp/barber-full-stack-evidence.RJwLX3/receipt.json`;
+sanitized stdout SHA-256
+`f31a3a5a7933c25b6787a21d4fddb93fa5623bba0a2e14054d8d6f1653d51c41`.
+Native VPS verification, full eight-service recovery, live Cloudflare/TLS/browser
+tests, resource/load acceptance, scoped deployment identities, published image
+provenance and owner-specific release/security approval remain open.
+
 ## Auth telemetry quarantine
 
 Initial Auth tracing and metrics exporters are explicitly disabled, and nonempty

@@ -1,0 +1,17 @@
+# Reference only: not merged into any deployment. Supply an exact candidate image
+# separately. No host mounts/ports/devices, privileged mode or host namespaces.
+services:
+  realtime:
+    user: '65534:65534'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.0
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777
+      # Upstream pgdelta decompresses its pinned executable here on first use.
+      - /app/.pgdelta-cache:rw,nosuid,nodev,exec,size=256m,uid=65534,gid=65534,mode=0700
+    environment:
+      ENABLE_ERL_CRASH_DUMP: 'false'

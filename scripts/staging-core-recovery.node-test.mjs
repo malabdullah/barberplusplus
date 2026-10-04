@@ -21,19 +21,21 @@ test('synthetic archive round-trip preserves DB, Storage and config', () => {
   const databaseConfig = Buffer.from('synthetic-root-key-volume');
   const config = { name: 'synthetic-only', services: {} };
   const restored = unpackRecoveryFixture(packRecoveryFixture(database, storage, databaseConfig, config));
-  assert.deepEqual(restored, { database, storage, databaseConfig, config });
+  assert.deepEqual(restored, { database, storage, databaseConfig, config, recoveryRole: null });
 });
 
 test('archive parser rejects wrong kind, version and mismatched payload checksums', () => {
   const packed = packRecoveryFixture(Buffer.from('db'), Buffer.from('storage'), Buffer.from('key-volume'), {});
   for (const change of [
-    (data) => { data.version = 2; },
+    (data) => { data.version = 1; },
     (data) => { data.kind = 'staging-backup'; },
     (data) => { data.database = Buffer.from('changed').toString('base64'); },
     (data) => { data.storage = ''; },
     (data) => { data.storageSha256 = '0'.repeat(64); },
     (data) => { delete data.databaseConfig; },
     (data) => { data.databaseConfigSha256 = '0'.repeat(64); },
+    (data) => { delete data.recoveryRole; },
+    (data) => { data.recoveryRoleSha256 = '0'.repeat(64); },
   ]) {
     const data = JSON.parse(packed.toString());
     change(data);

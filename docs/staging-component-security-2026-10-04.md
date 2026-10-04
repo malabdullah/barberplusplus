@@ -1,5 +1,166 @@
 # Staging component security inventory — 2026-10-04
 
+## Local remediation update — not deployment acceptance
+
+The following work does not change Compose pins, grant a vulnerability exception,
+publish images or authorize deployment. All candidate runtime tests use new local
+synthetic volumes and internal-only networks. Production is unchanged.
+
+Non-secret final scan reports and a SHA-256 index are preserved privately at
+`/Users/malabdullah/BarberBackups/staging/validation-2026-10-04-7giejf/` (12
+scan reports plus the sanitized full-stack test output/receipt; directory
+0700/files 0600). These are local candidate evidence, not
+remote attestations or deployment approval. Earlier temporary paths below remain
+historical provenance; the preserved copy avoids relying only on `/private/tmp`.
+
+Final separate code-review pass checked the downstream recipes, immutable local
+candidate selection, isolated gateway/client test, strict Storage denial predicate
+and narrowly allowlisted recovery role restoration. It is an AI code review,
+not independent human approval. Final `npm run check`, 107 staging/unit safety
+checks, migration-name check and diff whitespace check passed. Two stored Go
+patches have exact-file whitespace attributes allowing their required diff
+context-space/tab prefix; no application/security check is disabled. A scoped
+scan of all 46 changed/new files found no secrets. Browser acceptance is still withheld
+because the existing development REST timing defect described below remains;
+fresh GitHub CI and release-specific owner approval have not occurred for these
+local changes. No branch protection, workflow approval or runtime gate was waived.
+
+### Storage 1.79.31 downstream runtime candidate
+
+`ops/staging-vps/Dockerfile.storage-candidate` retains the compiled application,
+migrations and Watt configuration from official AMD64 manifest
+`supabase/storage-api@sha256:13cdccea43f23d848f050eba0d4f3ccdf02a7aca93d4f43268438de95549ef74`.
+The upstream package manifests were verified byte-for-byte against tag v1.79.31,
+source commit `eccef5e70a67fb4030e0646e5e22602c94f568bc`.
+This comparison is not a signed source-to-binary attestation.
+
+The reviewed dependency patch uses Fastify 5.12.2, Undici 7.29.1 and narrowly
+scoped same-major security fixes for affected transitive dependencies. Safe
+newer versions and the exact pg-boss Git commit are preserved. Production native
+dependencies rebuild against the same pinned Node 24.20.0/Alpine 3.24 base as the
+runtime. Final runtime excludes npm/Yarn and compiler/Python tooling, and installs
+OpenSSL libraries at exactly 3.5.9-r0. This is a maintained downstream image,
+not an official Supabase release or a change to application source.
+
+`scripts/prepare-staging-storage-candidate.mjs` reads only committed upstream
+manifest blobs, checks their hashes, applies the retained lockfile patch, verifies
+the resulting hashes and creates an exclusive new build directory. It does not
+resolve dependencies, read checkout secrets or overwrite existing output.
+The Docker context permits only the two manifests and Dockerfile.
+
+Final local daemon-addressable OCI index:
+`sha256:05ca80acbbe1fa533ca946fcd9aabbbea8065b86bfd1446e8350650ae1e6ea46`.
+Selected AMD64 manifest reported by platform-aware Docker inspection:
+`sha256:ffc760ae7a04b0790ba3988c31916a586790db88b66f53d7f307dfe297231613`.
+These different identities are explicitly bound by the local probe; labels alone
+are not trusted and mutable tags are not accepted.
+
+Trivy 0.74.0 at `2026-10-04T09:55:56Z` reports **0 HIGH / 0 CRITICAL** in
+18 Alpine and 883 Node packages, without suppression or ignore-unfixed flags.
+Raw report SHA-256:
+`6222bfe7df833cabd92787277a882eebc55dcef999ce71ef8a22827b732df00c`.
+Evidence remains under `/private/tmp/barber-storage-source.wB7gXZ/` and is not
+durable release evidence. Native addon/application-source coverage is separate.
+
+The exact candidate passed the five-service AMD64 core and encrypted recovery
+rehearsal: four migrations, 32 pgTAP assertions, randomized fixtures, duplicate
+seed refusal, login, sink-only invitation, private upload/download, transformation
+disabled, anonymous denial, archive tamper rejection and new-volume recovery of
+Auth/RLS/Vault/Storage. A separate static code review found no actionable blocker;
+that is not independent human review or release approval.
+
+### Auth and Realtime
+
+Auth's local downstream candidate updates gRPC/OpenSSL and adds a regression-tested
+negative-length guard to vendored pgproto3/v2. The retained package version still
+produces **1 HIGH / 0 CRITICAL** in the unsuppressed scan. It is not represented as
+a clean scan; patch applicability review and reproducible source evidence remain
+separate from compatibility. Both patched Auth and Storage together passed the
+same isolated core/recovery rehearsal.
+
+Realtime's exploratory supported OS update reduced the same-database scan from
+137 HIGH / 3 CRITICAL to 78 HIGH / 0 CRITICAL, with 25 distinct remaining advisories.
+No packages were removed in that result; application files remained unchanged.
+The owner subsequently approved preparing a hardened staging-only profile with
+unused AWS/admin tooling removed and evidence-backed applicability review. This
+does **not** accept unresolved vulnerabilities or authorize live deployment.
+The hardened candidate now reports **52 HIGH / 0 CRITICAL**, covering 119 Debian
+packages and 12 distinct advisories. `ops/staging-vps/realtime-security/assessment.json`
+retains each finding and its conditional disposition; it is explicitly
+non-authorizing and is not a scanner suppression file. Some findings concern
+absent components, others require the strict unprivileged/read-only profile,
+and some remain vulnerable packages with no reviewed application path. Mitigated
+is not patched. Erlang/Elixir and compiled Bun application coverage is not claimed.
+The zero-HIGH raw gate remains unmet. Realtime is required by bookings,
+notifications and agent conversations.
+
+The final local reference is
+`sha256:2ea7fb6d3211f8e627985e473329dc5bb1abbbdc810d02784847d0a82bbd092c`,
+with AMD64 manifest
+`sha256:78f25384ba6173d08f4dd7969989f5115d986cf4e8923f7906bf4fa00bfd1902`.
+Native-library/pgdelta/profile checks passed. Full-stack startup uncovered an
+AMD64-on-ARM emulation failure also reproduced in the unchanged upstream image;
+the documented local-only JIT accommodation enabled the functional rehearsal.
+The exact eight-service set then passed real gateway/Auth/REST/Storage/Functions
+and Realtime booking-event/cross-tenant checks. A separate five-service encrypted
+restore passed after preserving Realtime's narrowly allowlisted non-login role.
+These results are not native-VPS, full eight-service recovery or security
+acceptance. Realtime already uses supported Debian 13.7: another Debian 13
+rebase would not remove the residual unfixed matches. Owner acceptance of the
+specific restricted staging profile was requested and remains pending.
+
+### Frontend, Functions and REST follow-up
+
+The frontend runtime applies supported Alpine package fixes while retaining the
+pinned unprivileged Nginx base: libexpat 2.8.5-r0, libuuid 2.42.3-r1 and pcre2
+10.49-r0. Exact local AMD64 manifest
+`sha256:dab9e7d689ac99f089a5d74b4e119ddc81f72c7a3ccce22e0c41f16ae55512a2`
+reports **0 HIGH / 0 CRITICAL** across 70 Alpine packages. A network-none local
+container passed health, UID 101, staging runtime configuration/release, SPA
+fallback, no-store, noindex and CSP/security-header assertions. It does not prove
+live TLS, Cloudflare Access, browser journeys or accepted release provenance.
+
+Fresh scans with explicit empty configuration/ignore files and a sanitized
+scanner environment confirm Storage 0/0, Auth 1/0, database 0/0, Mailpit 0/0 and
+Envoy 0/0 (HIGH/CRITICAL). Reports are under
+`/private/tmp/barber-clean-runtime-scan.cUL4fY/`; OS-only scans do not certify all
+embedded application languages. The old compiled Functions runtime remains
+**66 HIGH / 6 CRITICAL**; upstream v1.77.4 still reports **56 HIGH / 4 CRITICAL**.
+A minimal downstream Functions runtime now preserves the exact upstream v1.77.4
+binary and ONNX libraries on pinned distroless Debian 13. The compiled AMD64
+manifest `sha256:4304bfb208a54190aab7347dfe83c362efb7feb88f40ddd99d85c227b31e2c16`
+reports **0 HIGH / 0 CRITICAL** across 14 OS packages. All eight workers, JWT/cron
+denials, exact paths, CORS, Meta signatures, encrypted Flow round-trip and tamper
+rejection pass in an offline synthetic rehearsal. Raw scan SHA-256:
+`4c32c2ffbb49c284875a5ca0ba38dba06f6d827a3aad1c60cd5adfd9a3a6c12b`, at
+`/private/tmp/barber-edge-scan.BO5Kyg/raw.json`. This does not certify compiled
+Rust/Deno/V8/ONNX dependencies or authorize a deployment.
+
+Repeated local browser tests exposed PostgREST's sporadic `PGRST303` JWT-issued-
+in-the-future bug in the existing development v16.1 service (14/15 repeated
+journeys passed, one manager journey failed). The official fix exists in 14.18
+and 16.3; the staging-only candidate selector now uses official 14.18 AMD64
+manifest `sha256:c847127074bd26e1b8d3f7c0e6e01e5346f4b85dd34f5d699fd230af960827c0`.
+No JWT checks were weakened and no retries were added to hide the failure.
+The scanner recognizes no OS/language package inventory for PostgREST: an empty
+result is **no coverage**, not security clearance. See the upstream
+[PostgREST changelog](https://github.com/PostgREST/postgrest/blob/main/CHANGELOG.md).
+
+For the separate development/CI fix, verified CLI 2.116.0 source reads
+`supabase/.temp/rest-version` with the exact text `v16.4`. A running database
+causes `supabase start` to return early, so a normal project-scoped stop/start
+would be needed, without reset or `--no-backup`. Such a restart has not been
+performed; preserve existing volumes and user work. The vendor ECR AMD64/ARM64
+16.4 manifests were verified as `bee9e1efe9d90d8f6be359f756e039dbb6e1972474bc271b7c49c5a495911a41`
+and `c3638ac25258ede665db66a4052b6fd30db4f22789327dce84599409136da35f`.
+The candidate staging REST 14.18 is separate from this deferred local runtime fix.
+
+All component identities, dependency patches, full-stack integration, VPS load,
+network boundaries and release-specific owner approval still need to be bound
+to the final release. A passing local core rehearsal alone cannot establish them.
+
+## Original inventory and subsequent upstream candidate review
+
 **Unresolved; no full-stack acceptance or vulnerability exception.**
 Trivy 0.74.0 scanned eight explicit Linux AMD64 manifests remotely, with a fresh
 database updated `2026-10-04T01:47:20.093525258Z`. No images were executed by this

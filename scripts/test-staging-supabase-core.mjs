@@ -11,11 +11,13 @@ import { prepareStagingFixtures } from './staging-fixtures.mjs';
 import { isPrivateStorageDenied, rehearseCoreRecovery } from './rehearse-staging-core-recovery.mjs';
 import { localDockerProbe } from './local-docker-probe.mjs';
 import { coreCandidateImages, validateCoreCandidateMetadata } from './staging-core-candidates.mjs';
+import { fullStackOption, rehearseFullStack } from './staging-full-stack-probe.mjs';
 
 const upstream = realpathSync(process.argv[2] || 'missing-upstream-directory');
 const platform = process.argv[3] || 'linux/amd64';
-assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 6);
+assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 7);
 const coreCandidates = coreCandidateImages(process.argv[5], platform);
+const fullStack = fullStackOption(process.argv[6], platform, process.argv[5]);
 const project = `barber-core-probe-${randomBytes(8).toString('hex')}`;
 const label = 'barber.staging.core-probe';
 let model;
@@ -73,6 +75,7 @@ try {
   validateCompose(rendered);
   stage = 'database candidate verification';
   const candidateId = process.argv[4] ? inspectCandidate(docker, process.argv[4], platform) : null;
+  if (fullStack) assert.ok(candidateId, 'Full-stack requires a validated local Postgres candidate');
   const services = ['db', 'auth', 'rest', 'storage', 'mailpit'];
   model = { name: project, services: {},
     networks: { default: { name: project, internal: true, labels: { [label]: project } } },
@@ -114,6 +117,14 @@ try {
       continue;
     }
     console.log(`Preparing ${name} (${platform})`);
+    if (coreCandidates[name]?.startsWith('sha256:')) {
+      stage = `local candidate image metadata (${name})`;
+      const metadata = inspectPlatformImage(docker, service.image, platform);
+      validateCoreCandidateMetadata(name, service.image, metadata, platform);
+      service.pull_policy = 'never';
+      console.log(`${name}: exact local security candidate ${service.image}`);
+      continue;
+    }
     stage = `image pull (${name})`;
     docker(['pull', '--platform', platform, service.image], { timeout: 300000 });
     stage = `image metadata (${name})`;
@@ -218,12 +229,20 @@ try {
     { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY,
       password: fixtures.accounts.find((account) => account.email === 'admin@barber.test').password }) }).trim());
   console.log('PASS: patched Postgres + Auth/REST/Storage core, four migration replay, random staging fixtures, duplicate-seed refusal, 32 pgTAP checks.');
+  if (fullStack) {
+    stage = 'local full-stack rehearsal';
+    await rehearseFullStack({ model, rendered, upstream, docker, compose, sql, variables,
+      accounts: fixtures.accounts, redactions });
+    assert.deepEqual(Object.keys(model.services), services, 'Extra services must be removed before five-service recovery');
+  }
   stage = 'local recovery rehearsal';
   await rehearseCoreRecovery({ model, upstream, docker, compose, accounts: fixtures.accounts,
     key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY });
-  console.log('Not full-stack, VPS, public routing or release acceptance.');
+  console.log(fullStack ? 'Five-service recovery completed separately; eight-service backup, VPS, public routing and release acceptance remain open.'
+    : 'Not full-stack, VPS, public routing or release acceptance.');
 } catch (error) {
   console.error(`Core compatibility probe FAILED at ${stage}; no deployment acceptance.`);
+  if (stage === 'local full-stack rehearsal' && /^Full-stack rehearsal failed at [a-zA-Z -]+$/.test(error.message)) console.error(error.message);
   if (stage === 'local recovery rehearsal' && /^Local synthetic recovery rehearsal failed at [a-zA-Z, /-]+$/.test(error.message)) console.error(error.message);
   if (stage.startsWith('isolation inspection')) {
     console.error(error instanceof assert.AssertionError ? error.message.split('\n')[0] : 'Inspection command failed');

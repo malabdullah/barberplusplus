@@ -23,7 +23,7 @@
     "test": "vitest run",
     "test:cicd": "sh scripts/test-cicd.sh",
     "test:release": "node --test scripts/release-manifest.node-test.mjs",
-    "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs scripts/staging-fixtures.node-test.mjs scripts/staging-core-recovery.node-test.mjs scripts/staging-core-candidates.node-test.mjs",
+    "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs scripts/staging-fixtures.node-test.mjs scripts/staging-core-recovery.node-test.mjs scripts/staging-recovery-roles.node-test.mjs scripts/staging-core-candidates.node-test.mjs scripts/staging-full-stack.node-test.mjs ops/staging-vps/auth-security/prepare.node-test.mjs",
     "test:staging-broker": "python3 -I -B ops/staging-vps/broker/test_broker.py && sh -n ops/staging-vps/broker/install.sh",
     "test:staging-envoy-candidate": "node scripts/test-staging-envoy-candidate.mjs",
     "test:staging-envoy-safety": "node --test scripts/local-docker-probe.node-test.mjs scripts/staging-envoy-cors.node-test.mjs",

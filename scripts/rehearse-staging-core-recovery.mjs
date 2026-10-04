@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { recoveryRoleQuery, restoreRecoveryRoleSql, validateRecoveryRole } from './staging-recovery-roles.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const LIMIT = 32 * 1024 * 1024;
@@ -19,10 +20,12 @@ export function isPrivateStorageDenied(status, body) {
     || ((status === 400 || status === 403) && body?.statusCode === '403' && body.error === 'Unauthorized');
 }
 
-export function packRecoveryFixture(database, storage, databaseConfig, config) {
+export function packRecoveryFixture(database, storage, databaseConfig, config, recoveryRole = null) {
   assert.ok([database, storage, databaseConfig].every(Buffer.isBuffer));
   assert.ok(database.length > 0 && storage.length > 0 && databaseConfig.length > 0);
-  const value = Buffer.from(JSON.stringify({ version: 1, kind: 'local-synthetic-core',
+  validateRecoveryRole(recoveryRole);
+  const value = Buffer.from(JSON.stringify({ version: 2, kind: 'local-synthetic-core', recoveryRole,
+    recoveryRoleSha256: digest(JSON.stringify(recoveryRole)),
     database: database.toString('base64'), storage: storage.toString('base64'),
     databaseConfig: databaseConfig.toString('base64'), databaseConfigSha256: digest(databaseConfig),
     databaseSha256: digest(database), storageSha256: digest(storage), config }));
@@ -33,7 +36,7 @@ export function packRecoveryFixture(database, storage, databaseConfig, config) {
 export function unpackRecoveryFixture(value) {
   assert.ok(Buffer.isBuffer(value) && value.length <= LIMIT);
   const data = JSON.parse(value.toString('utf8'));
-  assert.equal(data.version, 1);
+  assert.equal(data.version, 2);
   assert.equal(data.kind, 'local-synthetic-core');
   const database = Buffer.from(data.database, 'base64');
   const storage = Buffer.from(data.storage, 'base64');
@@ -42,7 +45,9 @@ export function unpackRecoveryFixture(value) {
   assert.equal(digest(database), data.databaseSha256);
   assert.equal(digest(storage), data.storageSha256);
   assert.equal(digest(databaseConfig), data.databaseConfigSha256);
-  return { database, storage, databaseConfig, config: data.config };
+  validateRecoveryRole(data.recoveryRole);
+  assert.equal(digest(JSON.stringify(data.recoveryRole)), data.recoveryRoleSha256);
+  return { database, storage, databaseConfig, config: data.config, recoveryRole: data.recoveryRole };
 }
 
 export async function rehearseCoreRecovery({ model, upstream, docker, compose, accounts, key, anon }) {
@@ -114,6 +119,10 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     assert.equal(query(source, 'SHOW cron.launch_active_jobs;'), 'off');
     query(source, `SELECT vault.create_secret('${secret}', 'synthetic_recovery_probe');`);
     compose(['stop', 'auth', 'rest', 'storage', 'mailpit'], { timeout: 60000 });
+    stage = 'allowlisted recovery role capture';
+    const recoveryRole = validateRecoveryRole(JSON.parse(query(source, recoveryRoleQuery)));
+    console.log(`Recovery role metadata: ${recoveryRole ? 'supabase_realtime_admin (reviewed non-login role)' : 'no additional role'}`);
+    stage = 'capture';
     const database = docker(['exec', '-u', 'postgres', `${source}-db`,
       'pg_dump', '-U', 'supabase_admin', '-d', 'postgres', '--format=custom'],
     { encoding: null, maxBuffer: LIMIT });
@@ -131,13 +140,14 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     const identity = join(scratch, 'disposable-identity.txt');
     run('age-keygen', ['-o', identity]);
     const recipient = run('age-keygen', ['-y', identity], { encoding: 'utf8' }).trim();
-    const packed = packRecoveryFixture(database, storage, databaseConfig, model);
+    const packed = packRecoveryFixture(database, storage, databaseConfig, model, recoveryRole);
     const ciphertext = run('age', ['-r', recipient], { input: packed });
     const unpacked = unpackRecoveryFixture(run('age', ['--decrypt', '-i', identity], { input: ciphertext }));
     assert.deepEqual(unpacked.config, model);
     assert.equal(digest(unpacked.database), digest(database));
     assert.equal(digest(unpacked.storage), digest(storage));
     assert.equal(digest(unpacked.databaseConfig), digest(databaseConfig));
+    assert.deepEqual(unpacked.recoveryRole, recoveryRole);
     const damaged = Buffer.from(ciphertext);
     damaged[damaged.length - 1] ^= 1;
     assert.throws(() => run('age', ['--decrypt', '-i', identity], { input: damaged }));
@@ -156,6 +166,12 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     assert.equal(target.Config.Labels[label], project);
     assert.ok(target.Mounts.filter((mount) => mount.Type === 'volume').every((mount) => mount.Name.startsWith(`${project}-`)));
     assert.equal(query(project, 'SHOW cron.launch_active_jobs;'), 'off');
+    stage = 'allowlisted recovery role import';
+    assert.equal(JSON.parse(query(project, recoveryRoleQuery)), null, 'Unexpected existing Realtime role in fresh target');
+    const roleSql = restoreRecoveryRoleSql(unpacked.recoveryRole);
+    if (roleSql) docker(['exec', '-i', '-u', 'postgres', `${project}-db`, 'psql',
+      '-U', 'supabase_admin', '-d', 'postgres', '-X', '-q', '-v', 'ON_ERROR_STOP=1'], { input: roleSql });
+    assert.deepEqual(JSON.parse(query(project, recoveryRoleQuery)), unpacked.recoveryRole);
     stage = 'logical database import';
     // Background extension workers can keep the empty default database open.
     // Drop ONLY this newly initialized recovery target, never the source DB.
@@ -168,6 +184,7 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     stage = 'recovered database verification';
     assert.equal(query(project, 'SELECT count(*) FROM auth.users;'), '6');
     assert.equal(query(project, 'SELECT count(*) FROM public.branches;'), '2');
+    assert.deepEqual(JSON.parse(query(project, recoveryRoleQuery)), unpacked.recoveryRole);
     stage = 'recovered Vault decryption';
     assert.equal(query(project, "SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'synthetic_recovery_probe';"), secret);
     stage = 'Storage file restore';
