@@ -20,12 +20,36 @@ evidence. It must not expose arbitrary commands, arguments, filesystem paths,
 Docker API access, or runner-editable privileged scripts. A broad Dokploy owner
 token is not an acceptable substitute.
 
-Every adapter accepts `DEPLOY_SHA`, `FRONTEND_IMAGE`, `FUNCTIONS_IMAGE`, and an
-absolute `EVIDENCE_OUTPUT` path under a runner-owned evidence directory. It
-refuses mutable images, production identifiers, missing baseline readiness, an
-unexpected migration tree, symlinks, or a pre-existing output file. Evidence is
-written atomically with mode `0600` and schema identifier
+Every adapter accepts `DEPLOY_SHA`, `FRONTEND_IMAGE`, `FUNCTIONS_IMAGE`, and a
+broker-issued evidence identifier. The runner never supplies an arbitrary
+output path. The broker writes evidence beneath the fixed root-owned
+`/var/lib/barber-staging/evidence/<commit>/` tree and returns only its identifier
+and checksum. It refuses mutable images, production identifiers, missing
+baseline readiness, an unexpected migration tree, symlinks, or a pre-existing
+output. Evidence uses schema identifier
 `barber-staging-deployment-evidence/v1`.
+
+## Proposed constrained broker
+
+The minimum broker design is a root-owned systemd service listening on
+`/run/barber-staging-broker.sock`. The socket is `0660 root:barber-staging-release`;
+only the dedicated runner account belongs to that group. The executable lives
+under `/usr/local/libexec/`, configuration under `/etc/barber-staging-broker/`,
+and both are non-writable by the runner. The service authenticates the Unix peer
+credentials and accepts a versioned JSON request with only these operations:
+
+- `status.inspect` — sanitized isolated-stack and bootstrap readiness;
+- `backup.capture` — fixed quiesce/capture/resume sequence and evidence output;
+- `migration.apply` — verified history, dry-run, then `--skip-vault` apply tied
+  to matching backup evidence; and
+- `images.rollback` — restore only previously recorded immutable application
+  digests and run fixed health checks.
+
+The service chooses every command, container/resource name, credential file,
+and filesystem path. Requests cannot contain commands, executable paths, Docker
+arguments, database URLs, secret values, or paths outside the fixed evidence
+tree. Bootstrap is deliberately not exposed as an automation operation; the
+owner executes the reviewed first-provisioning procedure separately.
 
 ## Proposed adapter paths
 
