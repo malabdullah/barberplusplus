@@ -74,7 +74,8 @@ test('builds a fail-closed offline gh verifier command with every supported iden
 
 test('accepts verified certificate claims but explicitly does not authorize release', () => {
   const result = parse();
-  assert.equal(result.status, 'cryptography-and-certificate-policy-valid');
+  assert.equal(result.status, 'certificate-policy-output-valid');
+  assert.equal(result.cryptographyVerified, false);
   assert.equal(result.authorizing, false);
   assert.ok(result.remainingAuthorizationChecks.includes('github-workflow-run-approval-history'));
   assert.ok(result.remainingAuthorizationChecks.includes('server-replay-ledger'));
@@ -142,8 +143,20 @@ test('delegates cryptography only to allowlisted gh without a shell', async () =
       return { stdout: JSON.stringify(verifiedOutput()) };
     },
   });
+  assert.equal(result.status, 'cryptography-and-certificate-policy-valid');
+  assert.equal(result.cryptographyVerified, true);
   assert.equal(result.authorizing, false);
   assert.equal(invocation[0], '/opt/homebrew/bin/gh');
   assert.equal(invocation[2].shell, undefined);
   assert.equal(invocation[2].timeout, 30_000);
+});
+
+test('never upgrades caller-supplied JSON to cryptographically verified', () => {
+  const result = parseGhAttestationVerification(JSON.stringify(verifiedOutput()), {
+    artifactDigest, commit, releaseRunId, releaseRunAttempt,
+  });
+  assert.deepEqual(
+    { status: result.status, cryptographyVerified: result.cryptographyVerified, authorizing: result.authorizing },
+    { status: 'certificate-policy-output-valid', cryptographyVerified: false, authorizing: false },
+  );
 });

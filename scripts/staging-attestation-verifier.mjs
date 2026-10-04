@@ -130,7 +130,8 @@ export function parseGhAttestationVerification(raw, {
   exactString(subjectDigest.sha256, artifactDigest, 'statement.subject.digest.sha256');
 
   return Object.freeze({
-    status: 'cryptography-and-certificate-policy-valid',
+    status: 'certificate-policy-output-valid',
+    cryptographyVerified: false,
     authorizing: false,
     releaseRunId,
     releaseRunAttempt,
@@ -157,5 +158,16 @@ export async function verifyStagingEnvelopeAttestation({
     timeout: 30_000,
     windowsHide: true,
   });
-  return parseGhAttestationVerification(stdout, { artifactDigest, commit, releaseRunId, releaseRunAttempt });
+  const policyResult = parseGhAttestationVerification(stdout, {
+    artifactDigest,
+    commit,
+    releaseRunId,
+    releaseRunAttempt,
+  });
+  return Object.freeze({
+    ...policyResult,
+    status: 'cryptography-and-certificate-policy-valid',
+    cryptographyVerified: true,
+    authorizing: false,
+  });
 }

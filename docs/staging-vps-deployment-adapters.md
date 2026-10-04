@@ -217,14 +217,23 @@ source commit/ref, and GitHub-hosted runner constraints. It then fail-closes on
 the verified certificate summary unless repository/owner numeric IDs, workflow
 and source URIs/digests, event, visibility, and exact run/attempt URI match.
 
+The exported pure JSON parser does not perform cryptography and returns only
+`status: certificate-policy-output-valid` with `cryptographyVerified: false`.
+Only the wrapper that directly invokes the allowlisted `gh` executable without
+a shell, observes a successful exit, and then validates its output returns
+`status: cryptography-and-certificate-policy-valid` with
+`cryptographyVerified: true`. Both paths always return `authorizing: false`.
+
 Synthetic and negative adapter tests run with:
 
 ```sh
 node --test scripts/staging-attestation-verifier.node-test.mjs
 ```
 
-The tests mock only the already-verified CLI JSON boundary; they do not claim a
-real signature was verified. The adapter always returns `authorizing: false`.
+The tests mock only the CLI execution boundary; they do not claim a real
+signature was verified. Regression assertions prevent caller-supplied JSON from
+being labeled cryptographically verified. The adapter always returns
+`authorizing: false`.
 It cannot verify environment approval or a job identity because those claims
 are absent from current Fulcio certificate extensions. Workflow-run metadata,
 the approval-history response, current environment policy, allowlisted workflow
