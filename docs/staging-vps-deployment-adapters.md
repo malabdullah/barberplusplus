@@ -359,6 +359,125 @@ allowlists, and the constrained broker remain required before activation. The
 current repository state has no qualifying live release artifact to validate
 end to end, so no remote workflow or staging deployment was triggered.
 
+### Read-only activation probe — 2026-10-04
+
+The local GitHub CLI is configured for `malabdullah`, but `gh auth status`
+reports its credential as invalid. No token value was read or printed. Public
+repository GET requests still work, but this is not a usable authenticated
+identity and its scopes cannot be relied on.
+
+Real, non-authorizing collection against draft PR 3 and workflow run
+`37192236004` established the following:
+
+- PR 3 is open and draft. Its head is
+  `aecdbc69e6c2f2a37e53d3b54badb1b95f3144fd` on
+  `codex/staging-completion`, and its base is `codex/staging-vps`.
+- Run `37192236004` is successful first-attempt `pull_request` CI from
+  `.github/workflows/ci.yml`; it is not a `main` push or a staging release run.
+- The approval-history response is the empty array. Absence of a rejection does
+  not constitute approval.
+- The current `staging` environment still has ID `21158713380`, protected-
+  branches-only policy, and exactly one required reviewer: owner user ID
+  `19295903`.
+- The staging workflow at that PR commit is readable and has Git blob SHA
+  `77a67514646af4f4b90d4fcfd6849ec09221d68c`. Observing a blob does not place it
+  on the approved source allowlist.
+- The run has one artifact, ID `11298454359`, named
+  `gitleaks-results.sarif`. It is not a staging release-request artifact. The
+  real collector downloaded it read-only and rejected its ZIP as outside the
+  bounded release-envelope contract.
+- Anonymous GHCR token requests for both `malabdullah/barberplusplus` and
+  `malabdullah/barberplusplus-functions` returned `403`. No public immutable
+  manifest could be collected and no private-package credential was attempted.
+
+This probe proves fail-closed transport behavior only. It supplies no staging
+approval, release envelope, image digest, image attestation, migration evidence,
+trusted time, replay state, or deployment authorization.
+
+### Exact installation and permissions plan (not activated)
+
+The following stages are ordered gates. No later privilege is installed until
+the prior stage has independent evidence and explicit owner approval.
+
+1. **Observation identity and GitHub reads.** Create a dedicated GitHub App
+   installation limited to the single `malabdullah/barberplusplus` repository.
+   Grant repository permissions `Metadata: read`, `Actions: read`,
+   `Contents: read`, and `Attestations: read` only. Grant no Administration,
+   Checks, Deployments, Environments write, Issues, Pull requests, Secrets,
+   Workflows write, or Packages write permission. Use short-lived installation
+   tokens delivered to the observation service through a root-readable systemd
+   credential; never place a token in the repository, unit `Environment=`,
+   process arguments, logs, or the deployment account's home directory. The
+   service may make only the allowlisted GET requests implemented by the
+   collector. GitHub documents `Actions: read` for workflow-run, approval,
+   environment, artifact-record, and artifact-download GETs and `Contents:
+   read` for the exact workflow blob.
+2. **Separate GHCR pull identity.** Because the two packages are not publicly
+   readable, create a separate personal access token (classic) with only
+   `read:packages`, owned by a dedicated read-only machine identity with access
+   to exactly the two packages. GitHub currently requires a classic token for
+   private GHCR pulls. Do not add `repo`, `write:packages`, or
+   `delete:packages`. Store it as a Dokploy/server credential readable only by
+   the pull client that needs it; do not expose it to GitHub Actions or the
+   observation verifier. Package visibility/access must be reviewed before the
+   token is installed.
+3. **Trusted-clock gate.** Install and enable `chronyd` from the VPS operating-
+   system repository with at least three owner-approved NTP sources. Only root
+   may change its configuration or system time. Before evaluating `issued_at`
+   and `expires_at`, the verifier must fail unless `chronyc tracking` reports a
+   real reference, `Leap status: Normal`, a recent reference time, and a
+   configured maximum error bound computed from system offset, root dispersion,
+   and half root delay. Recheck immediately before the first side effect. Record
+   only sanitized clock status and the bound in evidence. The verifier service
+   receives no `CAP_SYS_TIME`; its systemd unit uses `ProtectClock=yes`.
+4. **Root-owned source policy.** Install a reviewed canonical policy file at
+   `/etc/barber-staging-broker/release-policy.json`, owned `root:root`, mode
+   `0644`, with its parent directory `0755` and non-writable by the release
+   account. It pins repository ID/name, environment/reviewer IDs, workflow path,
+   the independently reviewed Git blob SHA and source SHA-256, branch/ref,
+   origins, both GHCR repository names, envelope limits, migration-tree digest,
+   latest migration ID, and accepted broker protocol version. A workflow source
+   change requires an out-of-band reviewed root update and service restart; the
+   service never learns an allowlist value from an envelope or API response.
+5. **Independent replay ledgers.** Give the unprivileged observation service a
+   private state directory `/var/lib/barber-staging-release/` owned by its
+   dedicated account and mode `0700`. Separately create
+   `/var/lib/barber-staging/ledger/` as `root:root` mode `0700` for the broker.
+   Each process is the sole writer of its ledger. Records are canonical JSON
+   lines with sequence number, prior-record hash, event, request ID, run and
+   attempt, nonce, artifact ID, binding hash, commit/image/migration tuple,
+   trusted timestamp, and result. Append under an exclusive lock with
+   `O_APPEND|O_NOFOLLOW`, flush file and directory state, reject symlinks or
+   unexpected ownership/mode/link count, and verify the full hash chain before
+   every authorization. Rotation is a separately signed/root-recorded checkpoint,
+   never truncation. Back up the root ledger off-VPS. A crash before a terminal
+   record leaves the request non-retryable until owner review; it never repeats
+   a side effect automatically.
+6. **Constrained broker.** Install the independently reviewed fixed broker
+   executable as `root:root` mode `0755` beneath `/usr/local/libexec/` and its
+   policy/configuration as root-owned, non-writable files under
+   `/etc/barber-staging-broker/`. Run it as a hardened root systemd service with
+   an allowlisted executable/filesystem view and Unix socket
+   `/run/barber-staging-broker.sock`, mode `0660`, owner
+   `root:barber-staging-release`. Authenticate peer credentials. Permit only the
+   versioned operations `status.inspect`, `backup.capture`, `migration.apply`,
+   and `images.rollback`; never accept commands, executable paths, arbitrary
+   filesystem paths, Docker arguments, database URLs, secret values, production
+   identifiers, mutable tags, or bootstrap. The current broker remains
+   `status.inspect`-only. Do not add the deployment account to the socket group
+   until exact-image bootstrap, baseline, backup/restore, migration, runtime
+   security, and owner-approval gates all pass.
+
+The GitHub API requirements above follow the official
+[workflow-run API](https://docs.github.com/en/rest/actions/workflow-runs),
+[artifact API](https://docs.github.com/en/rest/actions/artifacts),
+[repository-contents API](https://docs.github.com/en/rest/repos/contents), and
+[deployment-environment API](https://docs.github.com/en/rest/deployments/environments).
+The separate registry credential follows GitHub's
+[Container registry authentication guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+Clock acceptance uses the fields and error-bound definition documented by
+[`chronyc tracking`](https://chrony-project.org/doc/4.4/chronyc.html).
+
 The approved initial staging inventory for future adapter allowlists is exactly
 Dokploy, PostgreSQL, gateway, Auth, REST, Realtime, Storage, compiled Functions,
 and mail sink. Studio, postgres-meta, Supavisor, and imgproxy/image resizing are
