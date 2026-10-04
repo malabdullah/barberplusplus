@@ -30,6 +30,7 @@ jobs:
       - run: npm run test:cicd
       - run: npm run test:release
       - run: npm run test:staging-vps
+      - run: npm run test:staging-broker
       - run: npm run test:staging-gateway
       - run: npm run test:staging-functions-package
       - name: Test real staging Edge Runtime with synthetic inputs
