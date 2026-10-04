@@ -10,7 +10,7 @@ require_var() {
 
 [ -f supabase/.baseline-ready ] || fail 'database baseline is not approved'
 [ -f supabase/schema.expected.sql ] || fail 'expected schema is absent'
-for command_name in curl docker jq node npm npx; do
+for command_name in curl jq node npm npx; do
   command -v "$command_name" >/dev/null 2>&1 || fail "missing required command: $command_name"
 done
 for variable in APP_URL STAGING_SUPABASE_URL DEPLOY_SHA FRONTEND_IMAGE FUNCTIONS_IMAGE DOKPLOY_URL DOKPLOY_PROJECT_ID DOKPLOY_ENVIRONMENT_ID DOKPLOY_FRONTEND_APPLICATION_ID DOKPLOY_SUPABASE_COMPOSE_ID STAGING_VPS_AUTOMATION_READY; do

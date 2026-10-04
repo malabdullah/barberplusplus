@@ -72,7 +72,8 @@ to GitHub. The job-scoped `GITHUB_TOKEN` publishes images; it is not stored as a
 secret. PR CI has no `environment:` stanza and therefore cannot receive any of
 the staging secrets above.
 
-Before enabling automation, implement and review three versioned adapters:
+Before enabling automation, implement and review the three versioned adapters
+proposed in [VPS deployment adapter contract](staging-vps-deployment-adapters.md):
 
 1. Backup capture: quiesce the isolated stack and capture Database, Auth, Vault,
    Storage, and encrypted configuration; bind evidence to commit, image digests,
@@ -141,9 +142,12 @@ does not rebuild it.
 
 The dedicated runner must be repository-scoped, installed on the staging VPS,
 and labeled exactly `barber-staging-vps`. It must not run PR jobs. Do not install
-it or create a persistent token until the VPS firewall/session and owner access
-are healthy. The current workflow intentionally fails after preflight so that
-merging it cannot perform the first cutover by accident.
+it as `barber-admin`, add it to the Docker group, or grant it `sudo`. The build
+runs on GitHub-hosted infrastructure; the VPS runner needs outbound GitHub HTTPS
+and loopback Dokploy API access only. Do not install it or create a persistent
+token until the management listener and owner access are healthy. The current
+workflow intentionally fails after preflight so that merging it cannot perform
+the first cutover by accident.
 
 ## Evidence
 
