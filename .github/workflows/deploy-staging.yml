@@ -25,33 +25,48 @@ jobs:
       contents: read
       packages: write
     outputs:
-      digest: ${{ steps.image.outputs.digest }}
+      frontend_digest: ${{ steps.frontend.outputs.digest }}
+      functions_digest: ${{ steps.functions.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
       - name: Require completed database baseline
         run: test -f supabase/.baseline-ready
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - run: npm ci
+      - name: Package committed Edge Function sources
+        run: node scripts/package-staging-functions.mjs '${{ github.event.workflow_run.head_sha }}' '${{ runner.temp }}/staging-functions'
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: image
+      - id: frontend
+        name: Build and publish frontend image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha }}
           build-args: APP_RELEASE=${{ github.event.workflow_run.head_sha }}
+      - id: functions
+        name: Build and publish Edge Functions image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/staging-functions
+          file: ${{ github.workspace }}/ops/staging-vps/Dockerfile.functions
+          push: true
+          tags: ghcr.io/${{ github.repository }}-functions:${{ github.event.workflow_run.head_sha }}
 
   deploy:
     needs: build
-    runs-on: [self-hosted, macOS, ARM64, barber-staging]
-    defaults:
-      run:
-        working-directory: release-source
+    runs-on: [self-hosted, Linux, X64, barber-staging-vps]
     permissions:
       contents: read
       packages: read
@@ -62,92 +77,23 @@ jobs:
       APP_URL: ${{ vars.APP_URL }}
       STAGING_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-      DEPLOY_IMAGE: ghcr.io/${{ github.repository }}@${{ needs.build.outputs.digest }}
-      STAGING_FUNCTION_ENV_FILE: /Users/malabdullah/actions-runner-barber-staging/.secrets/functions.env
-      STAGING_FUNCTION_STATE_DIR: /Users/malabdullah/actions-runner-barber-staging/_state/functions
-      STAGING_BACKUP_DIR: /Users/malabdullah/actions-runner-barber-staging/_backups
+      FRONTEND_IMAGE: ghcr.io/${{ github.repository }}@${{ needs.build.outputs.frontend_digest }}
+      FUNCTIONS_IMAGE: ghcr.io/${{ github.repository }}-functions@${{ needs.build.outputs.functions_digest }}
+      DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+      DOKPLOY_PROJECT_ID: ${{ vars.DOKPLOY_PROJECT_ID }}
+      DOKPLOY_ENVIRONMENT_ID: ${{ vars.DOKPLOY_ENVIRONMENT_ID }}
+      DOKPLOY_FRONTEND_APPLICATION_ID: ${{ vars.DOKPLOY_FRONTEND_APPLICATION_ID }}
+      DOKPLOY_SUPABASE_COMPOSE_ID: ${{ vars.DOKPLOY_SUPABASE_COMPOSE_ID }}
+      STAGING_VPS_AUTOMATION_READY: ${{ vars.STAGING_VPS_AUTOMATION_READY }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          path: release-source
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.20.0
-          cache: npm
-          cache-dependency-path: release-source/package-lock.json
-      - run: npm ci
-      - name: Validate isolated local staging configuration
-        env:
-          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
-        run: npm run check:staging-preflight
-      - name: Log in to GHCR
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USERNAME: ${{ github.actor }}
-        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
-      - name: Back up isolated staging database and Storage
-        env:
-          BACKUP_EVIDENCE_OUTPUT: ${{ runner.temp }}/staging-backup-evidence.json
-        run: sh scripts/backup-local-staging.sh
-      - name: Apply isolated staging migrations
+          persist-credentials: false
+      - name: Validate VPS deployment contract
+        run: sh scripts/staging-vps-deploy-preflight.sh
+      - name: Stop before an unreviewed first cutover
         run: |
-          npx supabase db push --local --include-all --skip-vault --dry-run
-          npx supabase db push --local --include-all --skip-vault --yes
-      - name: Deploy staging Edge Functions locally
-        run: sh scripts/deploy-local-staging-functions.sh
-      - name: Deploy exact image to local Docker
-        run: sh scripts/deploy-local-staging-frontend.sh
-      - name: Smoke staging
-        env:
-          SMOKE_APP_URL: ${{ vars.APP_URL }}
-          EXPECTED_ENV: staging
-          EXPECTED_RELEASE: ${{ github.event.workflow_run.head_sha }}
-          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
-        run: sh scripts/smoke-environment.sh
-      - name: Validate staging security boundary
-        env:
-          STAGING_APP_URL: ${{ vars.APP_URL }}
-          EXPECTED_RELEASE: ${{ github.event.workflow_run.head_sha }}
-          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
-        run: npm run check:staging-boundary
-      - name: Run staging browser journeys
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.APP_URL }}
-          ACCESS_CLIENT_ID: ${{ secrets.ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.ACCESS_CLIENT_SECRET }}
-        run: |
-          npx playwright install chromium
-          npm run test:e2e
-      - name: Record accepted release
-        run: |
-          node scripts/release-manifest.mjs create \
-            '${{ github.event.workflow_run.head_sha }}' \
-            '${{ needs.build.outputs.digest }}' \
-            '${{ github.run_id }}' \
-            > accepted-release.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: accepted-release-${{ github.event.workflow_run.head_sha }}
-          path: release-source/accepted-release.json
-          retention-days: 30
-      - uses: actions/upload-artifact@v4
-        with:
-          name: staging-backup-${{ github.event.workflow_run.head_sha }}
-          path: ${{ runner.temp }}/staging-backup-evidence.json
-          retention-days: 30
-      - name: Mark staging acceptance complete
-        id: acceptance
-        run: echo 'accepted=true' >> "$GITHUB_OUTPUT"
-      - name: Finalize accepted staging release
-        run: |
-          sh scripts/finalize-local-staging-frontend.sh
-          sh scripts/finalize-local-staging-functions.sh
-      - name: Restore previous release after rejection
-        if: failure() && steps.acceptance.outcome != 'success'
-        run: |
-          sh scripts/rollback-local-staging-frontend.sh
-          sh scripts/rollback-local-staging-functions.sh
+          echo 'The VPS artifact path is prepared, but deployment remains fail-closed.' >&2
+          echo 'Env3 backup, migration, recovery, and first-cutover contracts must be reviewed before this step is replaced.' >&2
+          exit 1

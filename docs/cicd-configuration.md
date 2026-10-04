@@ -1,8 +1,9 @@
 # CI/CD Configuration
 
-> The Mac-targeted workflow below is retained until its reviewed VPS replacement
-> is ready. See [VPS transition](staging-vps-transition.md); do not merge/deploy
-> this legacy workflow as if it targets the new VPS.
+> The repository now contains the fail-closed VPS workflow scaffold. It builds
+> immutable frontend and Edge Functions images, but intentionally stops before
+> deployment until the live backup/migration/recovery adapters and first-cutover
+> evidence are reviewed. Do not set `STAGING_VPS_AUTOMATION_READY=true` yet.
 
 This document records credential names and trust boundaries, never values.
 Staging and production configuration must remain separate.
@@ -15,8 +16,9 @@ Staging and production configuration must remain separate.
   for `main`. Its build job runs on GitHub-hosted Linux and is the only staging
   job allowed to write the GHCR package.
 - The staging deployment job requires all four runner labels: `self-hosted`,
-  `macOS`, `ARM64`, and `barber-staging`. It receives only the `staging`
-  environment values and operates on the isolated Docker Desktop stack.
+  `Linux`, `X64`, and `barber-staging-vps`. It is never used by PR workflows,
+  receives values only after `staging` approval, and can reach Dokploy only on
+  the VPS loopback interface.
 - `Promote production` runs only for a protected semantic `vX.Y.Z` tag. It must
   reuse the accepted staging digest without rebuilding and must receive an
   independent production approval.
@@ -48,6 +50,12 @@ Variables:
 | --- | --- |
 | `APP_URL` | `https://staging-barber.malabdullah.cloud` |
 | `SUPABASE_URL` | `https://supabase-staging.malabdullah.cloud` |
+| `DOKPLOY_URL` | `http://127.0.0.1:3000`; never a public management URL |
+| `DOKPLOY_PROJECT_ID` | Existing isolated staging project ID |
+| `DOKPLOY_ENVIRONMENT_ID` | Existing staging environment ID |
+| `DOKPLOY_FRONTEND_APPLICATION_ID` | Created frontend application resource ID |
+| `DOKPLOY_SUPABASE_COMPOSE_ID` | Created Supabase Compose resource ID |
+| `STAGING_VPS_AUTOMATION_READY` | Keep unset/`false` until every readiness gate below passes |
 
 Secrets:
 
@@ -55,11 +63,29 @@ Secrets:
 | --- | --- |
 | `ACCESS_CLIENT_ID` | Cloudflare Access service-token ID for staging checks |
 | `ACCESS_CLIENT_SECRET` | Matching service-token secret |
+| `DOKPLOY_API_KEY` | Dedicated staging-only token; application/compose read, update, and deploy only |
+| `GHCR_PULL_USERNAME` | Dedicated package reader identity used by Dokploy |
+| `GHCR_PULL_TOKEN` | Classic PAT with `read:packages` only; no repository scope when avoidable |
 
-The runner's owner-only `.secrets/functions.env` stores staging Edge Function
-values locally. Database and Storage access stays local to Docker. No Dokploy,
-database URL, GHCR PAT, or function-hook credential is required for staging;
-the job-scoped `GITHUB_TOKEN` authenticates its GHCR push and pull.
+Supabase runtime secrets remain in Dokploy/VPS configuration and are not copied
+to GitHub. The job-scoped `GITHUB_TOKEN` publishes images; it is not stored as a
+secret. PR CI has no `environment:` stanza and therefore cannot receive any of
+the staging secrets above.
+
+Before enabling automation, implement and review three versioned adapters:
+
+1. Backup capture: quiesce the isolated stack and capture Database, Auth, Vault,
+   Storage, and encrypted configuration; bind evidence to commit, image digests,
+   and migration tree; verify off-VPS receipt and a restore rehearsal.
+2. Migration apply: validate history, run the exact candidate dry-run, then
+   apply with `--skip-vault`; never seed/reset a nonempty staging database.
+3. Rollback/recovery: retain prior immutable frontend and Functions digests;
+   roll application images back, but use database forward-fix or reviewed
+   recovery only—never an automatic destructive migration downgrade.
+
+Adapters must accept and return only evidence-file paths, hashes, digests, and
+release identifiers. They must not print secrets. Owner approval of a staging
+job is separate from adapter readiness and evidence verification.
 
 ### `production`
 
@@ -100,28 +126,24 @@ explicitly approved removing only the independent PR approval count and
 latest-push approval from this shared branch. All other fields were verified
 unchanged. Do not further weaken controls to complete a release.
 
-## GHCR and local staging runner
+## GHCR and VPS staging runner
 
-The build job publishes
-`ghcr.io/malabdullah/barberplusplus:<commit-sha>`, records its registry digest,
-and passes `ghcr.io/malabdullah/barberplusplus@sha256:...` to the deployment job.
-The local helper rejects a mutable tag or a different repository.
+The build job publishes two commit-SHA tags and passes only their registry
+digests to deployment:
 
-The runner is named `barber-staging-mac`, is scoped to this repository, and is
-installed below `/Users/malabdullah/actions-runner-barber-staging`. Its protected
-subdirectories hold only staging secrets, launch-service state, and local
-database/Storage backups. The runner must remain online, Docker Desktop must be
-healthy, and the Cloudflare tunnel must be connected before merging.
+- `ghcr.io/malabdullah/barberplusplus@sha256:...`
+- `ghcr.io/malabdullah/barberplusplus-functions@sha256:...`
 
-The deployment keeps the previous frontend container stopped but recoverable
-until all checks and evidence uploads succeed. Failure restores it. Database
-migrations use the isolated local connection, and the staging Edge Functions
-service is managed by a dedicated macOS launch agent. Actions checks out the
-candidate into a separate release-source directory so it cannot mutate the live
-legacy bundle during the first cutover. Each Function release is then copied out
-of that checkout into a commit-addressed directory; the pinned Supabase CLI
-binary is copied to a version-addressed tool path. Failed health or acceptance
-checks restore the retained launch-agent configuration.
+The preflight rejects mutable tags, other repositories, unexpected Dokploy
+project/environment IDs, and any Dokploy URL other than loopback. Production
+continues to resolve the accepted frontend digest from staging evidence and
+does not rebuild it.
+
+The dedicated runner must be repository-scoped, installed on the staging VPS,
+and labeled exactly `barber-staging-vps`. It must not run PR jobs. Do not install
+it or create a persistent token until the VPS firewall/session and owner access
+are healthy. The current workflow intentionally fails after preflight so that
+merging it cannot perform the first cutover by accident.
 
 ## Evidence
 

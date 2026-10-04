@@ -5,6 +5,27 @@ immutable_digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 release_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 accepted_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
+run_vps_preflight() {
+  APP_URL=https://staging-barber.malabdullah.cloud \
+  STAGING_SUPABASE_URL=https://supabase-staging.malabdullah.cloud \
+  DEPLOY_SHA="$release_sha" \
+  FRONTEND_IMAGE="ghcr.io/malabdullah/barberplusplus@$immutable_digest" \
+  FUNCTIONS_IMAGE="ghcr.io/malabdullah/barberplusplus-functions@$accepted_digest" \
+  DOKPLOY_URL=http://127.0.0.1:3000 \
+  DOKPLOY_PROJECT_ID=LjKnNCq96dgPJacpmYaQ4 \
+  DOKPLOY_ENVIRONMENT_ID=rc8vJw9uMIQqoGFjeJYpc \
+  DOKPLOY_FRONTEND_APPLICATION_ID=frontend123 \
+  DOKPLOY_SUPABASE_COMPOSE_ID=compose123 \
+  STAGING_VPS_AUTOMATION_READY="${1:-true}" \
+  sh scripts/staging-vps-deploy-preflight.sh
+}
+
+run_vps_preflight >/dev/null
+if run_vps_preflight false >/dev/null 2>&1; then
+  echo 'VPS deployment preflight accepted an unopened automation gate.' >&2
+  exit 1
+fi
+
 DOKPLOY_URL=https://dokploy.invalid \
 DOKPLOY_API_KEY=placeholder \
 DOKPLOY_APPLICATION_ID=placeholder \
