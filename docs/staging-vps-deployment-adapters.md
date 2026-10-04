@@ -168,6 +168,31 @@ envelopes, write sanitized decisions to its own state directory, and prove
 expiry/replay/restart behavior. Broker socket access and real approved-release
 consumption are later stages requiring their own review and explicit approval.
 
+### Local syntax validator status
+
+`scripts/staging-release-envelope.mjs` implements only the pure, strict envelope
+parsing layer. Its adversarial Node tests are in
+`scripts/staging-release-envelope.node-test.mjs` and run directly with:
+
+```sh
+node --test scripts/staging-release-envelope.node-test.mjs
+```
+
+The parser enforces the byte limit, canonical compact JSON, exact recursively
+ordered fields and types, fixed repository/workflow/environment/origin/image
+constants, full commit/blob hashes, immutable digests, migration identifiers,
+run IDs/attempts, the 15-minute window, future skew, 128-bit nonce, and derived
+request-ID binding. A successful result explicitly returns `authorizing: false`
+and lists every external authorization check still required.
+
+The implementation does **not** verify GitHub or Sigstore attestations, OIDC
+claims, environment approval, workflow/CI API metadata, workflow blob allowlist,
+GHCR manifests, migration evidence, trusted server time, persistent replay
+state, or broker authorization. It performs no I/O and has no credential,
+network, filesystem, subprocess, polling, service, or deployment capability.
+It is not wired into a workflow or package script. Those gaps remain hard gates;
+syntactic validity must never be treated as release authorization.
+
 ## Proposed adapter paths
 
 ### First provisioning (separate gate)
