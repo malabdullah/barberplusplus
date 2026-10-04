@@ -1,10 +1,46 @@
 # Realtime staging security candidate
 
-Local candidate only. Nothing here changes deployment pins, deploys a service,
-accepts vulnerabilities or approves production. Owner approval covers this
+Test candidate only. Nothing here changes deployment pins, deploys a service
+or approves production. Owner approval covers this
 restricted staging profile, not a blanket scanner waiver.
 
+## Conditional owner acceptance — October 4
+
+After the risks and alternatives were explained, the owner selected option 1:
+"go with option 1 then". `owner-acceptance.json` records acceptance of only the
+12 documented advisories/52 matches for the exact image and restricted,
+synthetic-only staging profile. The assessment and raw findings remain unchanged.
+This is conditional risk acceptance, not a claim that vulnerable packages are
+fixed or permission to merge, bootstrap or deploy a release.
+
+The initial review deadline is October 18, 2026, 00:00 UTC (a conservative maximum
+two-week window selected for the temporary staging arrangement). Renewed owner
+acceptance is required after that deadline or after image/profile/finding changes.
+No automatic renewal or shutdown is configured. Native VPS profile/isolation
+verification and the existing release gates remain mandatory before live
+acceptance. This record is not yet wired into a deployment executor; keep that
+executor disabled until all authorization and runtime checks are implemented.
+
 ## Preserved source and reproducible inputs
+
+### Native staging profile rehearsal — October 4
+
+`probe-native.sh` passed on the actual `srv1207055` x86_64 host with the exact
+accepted candidate, no network/ports/host mounts, fresh disposable test keys and
+no ARM emulation workaround. Unsafe configuration rejection, native pgdelta,
+preserved app checksums, absent optional tools and release evaluation all passed.
+The probe explicitly fails if forbidden tools/modules unexpectedly exist; shell
+negation alone must not be relied upon with `set -e`. The same correction passed
+the local probe again at `/private/tmp/barber-realtime-profile-probe.dJYqxG`.
+
+The native receipt/checksums are in `native-profile-evidence-2026-10-04.json`.
+All test containers were removed; the reviewed image remains cached on staging.
+Existing services were unchanged. This was not database-connected application
+startup, full-stack acceptance or deployment; `/opt/barber-staging/supabase`
+remains absent. Native full-stack integration, runtime drift checks, backup,
+routing, load and release approval remain required.
+
+### Build provenance
 
 The base is official `supabase/realtime:v2.140.7`, selected by AMD64 manifest
 `sha256:482868126f20243547d2d2cb03f78d78eeb318435c48198a1a43f8c491433864`.
@@ -121,5 +157,6 @@ Do not convert these conditional dispositions into global ignores.
 This scanner did not assess Erlang/Elixir application libraries or the compiled
 Bun/pgdelta dependency graph. Full-stack websocket delivery, denial tests,
 synthetic migrations, resource/load behavior and final live runtime verification
-are still required. A zero-High scanner gate has **not** passed. Any acceptance
-policy must separately review the precise dispositions; `authorizing` is false.
+are still required. A zero-High scanner gate has **not** passed. The separate
+owner record conditionally accepts only these precise dispositions for staging;
+the scan/applicability assessment itself remains non-authorizing.

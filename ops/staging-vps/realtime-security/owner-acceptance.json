@@ -1,0 +1,32 @@
+{
+  "kind": "conditional-staging-risk-acceptance",
+  "approvedBy": "malabdullah",
+  "approvedOn": "2026-10-04",
+  "ownerStatement": "go with option 1 then",
+  "reviewBy": "2026-10-18T00:00:00Z",
+  "riskAcceptanceApproved": true,
+  "deploymentAuthorized": false,
+  "productionAllowed": false,
+  "scope": "Exact reviewed Realtime candidate; synthetic-only staging on srv1207055",
+  "assessmentSha256": "ab3f4fac1e2da1e99bb203090ae16d7e415c50b463682ff2cb952d1630849289",
+  "runtimeProfileSha256": "a991dccc40ca64c42d03cbf7b0ecf9d17b1174eb585a73934367f6f407cb3c9a",
+  "amd64PlatformId": "sha256:78f25384ba6173d08f4dd7969989f5115d986cf4e8923f7906bf4fa00bfd1902",
+  "scanRawSha256": "f27af897b0a0326272dc0be0ddf6842899027c77d4d8484cdebf3ecd0a3d5f4b",
+  "highMatches": 52,
+  "criticalMatches": 0,
+  "advisoryIds": [
+    "CVE-2026-76642", "CVE-2026-78408", "CVE-2026-78409", "CVE-2026-78410",
+    "CVE-2026-54369", "CVE-2026-16742", "CVE-2026-9538", "CVE-2025-69720",
+    "CVE-2026-12064", "CVE-2026-8286", "CVE-2026-8458", "CVE-2026-8927"
+  ],
+  "conditions": [
+    "Verify the exact image and enforced restricted profile on the native staging VPS before accepting live service",
+    "Synthetic-only data and dedicated staging credentials; no production access or real customer data",
+    "No direct public Realtime port, administrator execution, host mounts, Docker socket or added privileges",
+    "Keep every globalCondition and per-advisory condition in the reviewed assessment",
+    "Preserve raw findings; no scanner ignore file, severity change or blanket exception",
+    "New findings, image/profile changes or expired review require renewed assessment and owner acceptance",
+    "This record grants no merge, bootstrap, environment approval, deployment mutation or production authority"
+  ],
+  "reviewWindowNote": "Implementation-selected maximum initial review window under the owner's temporary-staging choice. No automatic renewal or scheduled shutdown is configured. Live use after the review deadline requires renewed acceptance."
+}

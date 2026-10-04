@@ -20,10 +20,11 @@ not independent human approval. Final `npm run check`, 107 staging/unit safety
 checks, migration-name check and diff whitespace check passed. Two stored Go
 patches have exact-file whitespace attributes allowing their required diff
 context-space/tab prefix; no application/security check is disabled. A scoped
-scan of all 46 changed/new files found no secrets. Browser acceptance is still withheld
-because the existing development REST timing defect described below remains;
-fresh GitHub CI and release-specific owner approval have not occurred for these
-local changes. No branch protection, workflow approval or runtime gate was waived.
+scan of all 46 changed/new files found no secrets. At that checkpoint browser
+acceptance was withheld because the development REST timing defect was present;
+the later update below records its verified fix. Fresh GitHub CI and
+release-specific owner approval remain separate gates. No branch protection,
+workflow approval or runtime gate was waived.
 
 ### Storage 1.79.31 downstream runtime candidate
 
@@ -107,7 +108,18 @@ restore passed after preserving Realtime's narrowly allowlisted non-login role.
 These results are not native-VPS, full eight-service recovery or security
 acceptance. Realtime already uses supported Debian 13.7: another Debian 13
 rebase would not remove the residual unfixed matches. Owner acceptance of the
-specific restricted staging profile was requested and remains pending.
+specific restricted staging profile was explicitly granted on October 4 after
+the risks and alternatives were explained. The exact scope, image/profile/report
+hashes and initial October 18 review deadline are recorded in
+`ops/staging-vps/realtime-security/owner-acceptance.json`. A separate disposable
+native profile rehearsal now passes on `srv1207055`, without network access,
+published ports or the ARM workaround. It verifies explicit unsafe-setting and
+privilege rejection, absent optional tools, unchanged app bytes, pgdelta and
+release evaluation. The receipt is
+`ops/staging-vps/realtime-security/native-profile-evidence-2026-10-04.json`.
+All probe containers were removed; only the image cache remains. Native full-stack
+integration and release-specific approval remain outstanding; raw findings are
+unchanged, and the actual staging stack has not been created.
 
 ### Frontend, Functions and REST follow-up
 
@@ -149,11 +161,26 @@ result is **no coverage**, not security clearance. See the upstream
 For the separate development/CI fix, verified CLI 2.116.0 source reads
 `supabase/.temp/rest-version` with the exact text `v16.4`. A running database
 causes `supabase start` to return early, so a normal project-scoped stop/start
-would be needed, without reset or `--no-backup`. Such a restart has not been
-performed; preserve existing volumes and user work. The vendor ECR AMD64/ARM64
+is needed, without reset or `--no-backup`. On October 4 the owner explicitly
+approved that local no-reset restart. It completed with identical before/after
+DB and Storage volume identities, public/Auth-user/Storage-row fingerprints,
+public/Auth/Storage schema fingerprint and file-storage content fingerprint.
+The primary checkout and its ignored CLI-generated startup files were preserved.
+Private comparison evidence: `/private/tmp/barber-local-rest-maintenance.f6jvx3`.
+The vendor ECR AMD64/ARM64
 16.4 manifests were verified as `bee9e1efe9d90d8f6be359f756e039dbb6e1972474bc271b7c49c5a495911a41`
 and `c3638ac25258ede665db66a4052b6fd30db4f22789327dce84599409136da35f`.
-The candidate staging REST 14.18 is separate from this deferred local runtime fix.
+The candidate staging REST 14.18 is separate from this local runtime fix.
+The development startup/bootstrap scripts and browser CI now call
+`scripts/prepare-local-service-pins.mjs`. Four tests cover exact/idempotent pinning,
+preservation of conflicting overrides, CLI/PG compatibility and symlink refusal.
+`npm run check` passes with this helper. The local development service now runs
+the exact ARM64 16.4 image above. All five Playwright journeys passed three
+consecutive repetitions (15/15, one worker, no added retries). No database reset,
+JWT weakening, primary-checkout change or VPS/production restart occurred.
+The 32 local pgTAP assertions, migration naming and schema-drift checks also pass.
+This clears the local regression, not live staging acceptance. Upstream fix:
+[PostgREST 16.3 release](https://github.com/PostgREST/postgrest/releases/tag/v16.3).
 
 All component identities, dependency patches, full-stack integration, VPS load,
 network boundaries and release-specific owner approval still need to be bound

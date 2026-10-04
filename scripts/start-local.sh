@@ -6,6 +6,7 @@ if [ ! -f .env.local ]; then
   exit 1
 fi
 
+node scripts/prepare-local-service-pins.mjs
 npx supabase start >/dev/null
 npx supabase functions serve --env-file supabase/functions/.env.local &
 functions_pid=$!
@@ -16,4 +17,3 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 npm run dev -- --host 127.0.0.1
-

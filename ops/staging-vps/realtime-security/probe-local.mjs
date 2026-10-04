@@ -53,14 +53,14 @@ test "$(id -u)" = 65534
 test ! -w /app/run.sh
 sha256sum -c /usr/local/share/barber-realtime-evidence/app.sha256 >/dev/null
 test -z "$(find /usr /bin /sbin -xdev -type f -perm /6000 -print)"
-for tool in aws sudo python3; do ! command -v "$tool"; done
+for tool in aws sudo python3; do if command -v "$tool" >/dev/null; then exit 1; fi; done
 test ! -e /usr/lib/systemd/systemd-homed
 perl -e 'exit 0'
-! perl -MArchive::Tar -e 1 2>/dev/null
+if perl -MArchive::Tar -e 1 2>/dev/null; then exit 1; fi
 test -z "$(grep -Ev '^(#|[[:space:]]*$)' /etc/fstab)"
 test "$(stat -c '%u' /app/run.sh)" = 0
 ldd /app/erts-16.4.0.4/bin/beam.smp /app/lib/crypto-5.8.3.2/priv/lib/crypto.so > /tmp/linked.txt
-! grep -q 'not found' /tmp/linked.txt
+if grep -q 'not found' /tmp/linked.txt; then exit 1; fi
 cat /tmp/linked.txt
 /app/erts-16.4.0.4/bin/erl -version 2>&1
 pgdelta --help >/dev/null
