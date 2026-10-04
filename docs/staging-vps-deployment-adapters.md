@@ -77,8 +77,19 @@ confirmation, root-key-volume restoration order, and successful Vault-inclusive
 restore-rehearsal evidence reference. It returns success only after every
 component, off-VPS receipt, and restore verification passes.
 
+Storage backup and extraction must use a reviewed pinned GNU tar implementation
+with `--xattrs`, `--xattrs-include=user.*`, `--acls`, and `--numeric-owner` while
+the relevant services are stopped. A plain file copy is invalid because it can
+lose the file-backend content-type, cache-control, ETag, ownership, and related
+extended attributes. Recovery evidence must verify private object bytes and
+metadata through the Storage API, including expected content type, cache-control,
+ETag behavior, authenticated access, and anonymous denial. Capture and restore
+must use isolated internal networks, no published restore ports, and newly
+created labeled target volumes.
+
 An encrypted transfer by itself is not a verified backup. Existing probe/pull
-helpers and local restore tests do not satisfy this contract.
+helpers and a successful synthetic local restore do not satisfy live VPS backup
+acceptance; live evidence remains a separate gate.
 
 ### `scripts/staging-vps-migration-adapter.sh`
 

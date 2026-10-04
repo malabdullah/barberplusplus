@@ -79,7 +79,9 @@ proposed in [VPS deployment adapter contract](staging-vps-deployment-adapters.md
    Storage, encrypted configuration, and the complete PostgreSQL `db-config`
    volume containing `pgsodium_root.key`; restore that volume before PostgreSQL
    starts; bind evidence to commit, image digests, and migration tree; verify
-   off-VPS receipt and a Vault-inclusive restore rehearsal.
+   off-VPS receipt and a Vault-inclusive restore rehearsal. Preserve Storage
+   `user.*` xattrs, ACLs, numeric ownership, and HTTP metadata with pinned GNU
+   tar, then verify recovered content and metadata through the Storage API.
 2. Migration apply: validate history, run the exact candidate dry-run, then
    apply with `--skip-vault`; never seed/reset a nonempty staging database.
 3. Rollback/recovery: retain prior immutable frontend and Functions digests;
