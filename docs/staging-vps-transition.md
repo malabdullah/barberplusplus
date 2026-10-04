@@ -431,3 +431,55 @@ Local synthetic recovery cannot satisfy a live backup receipt or release gate.
 Security remediation, full-stack tests, live secrets/integrations, routing,
 outbound controls, load gate and owner-specific release approval remain open.
 **Env 3 and Env 4 are both NOT COMPLETE; deployment remains NO-GO.**
+
+### October 4 continuation — read-only VPS broker installed
+
+- The owner approved GitHub-hosted CI plus a constrained server-side deployment
+  service, **not a GitHub self-hosted runner on this VPS**. The public personal
+  repository cannot use runner labels as a pull-request isolation boundary.
+  This supersedes the unprivileged-runner proposal immediately above; the
+  existing Mac runner was not changed in this slice.
+- The dedicated Dokploy invitation was accepted. The new account was visibly
+  verified as an active **Member**, not an owner/admin. All global toggles and
+  project/environment/service assignments remain off. No API key was created.
+  The empty `Barber Staging` project still has zero services. Password creation
+  was performed by the owner, not the agent. Fine-grained custom roles require
+  Dokploy Enterprise; do not claim free Member permissions are action-specific.
+- Installed the [read-only broker foundation](../ops/staging-vps/broker/README.md)
+  on `srv1207055`: root-owned executable under
+  `/usr/local/libexec/barber-staging-broker/`, socket/service unit files under
+  `/etc/systemd/system/`, and `/run/barber-staging-broker.sock` with mode
+  `0660 root:barber-staging-release`. The socket is enabled and active; the
+  non-root service starts on demand and exits after inactivity.
+- Created locked, non-login system users `barber-staging-broker` and
+  `barber-staging-deploy`. Neither belongs to Docker, sudo, or the socket group.
+  The deployment user's home is private. No credential, polling timer, HTTP
+  listener, repository checkout or shell-command executor is installed.
+- All six public installer/code/unit files were frozen into root-owned protected
+  directories and SHA-256 compared with the reviewed local files before
+  execution. Existing installation paths, identities, systemd units/drop-ins
+  and unsafe source/destination ancestors are refused. Effective sandbox
+  properties and exact installed unit bytes are checked before activation.
+- The first activation guard stopped safely because plain `systemctl show`
+  omitted empty properties. Inspection confirmed the socket remained disabled
+  and both units inactive. The checker now uses `show --all`, covered by a
+  regression test. A new frozen/checksummed copy passed all checks before
+  the separate socket activation; no guard was bypassed.
+- Thirteen broker/installer tests passed locally and on the VPS. The live
+  administrator probe passed socket/file ownership, locked identities, denied
+  nonmember connections, real Linux peer rejection, duplicate/extra-field and
+  oversized request rejection, non-root process UID, zero capability sets,
+  no-new-privileges and a separate network namespace. Every mutating operation
+  returned `OPERATION_DISABLED`; status reports `automationReady=false` and
+  `liveStackVerified=false`. These are capability statements, not stack health.
+- Dokploy health still returned `ok: true`; the existing Dokploy, n8n, database,
+  Redis, Ollama and Traefik containers remained running. The planned
+  `/opt/barber-staging/supabase` path is still absent. No application deployment,
+  production action, DNS/firewall change, permission grant or secret access
+  occurred in this slice.
+
+The signed-release verifier, constrained write adapters, safe component pins,
+first live bootstrap, real VPS backup/recovery, isolated integrations, routing,
+load/E2E acceptance and owner release approval remain outstanding. The read-only
+foundation does not advance any of those gates or enable the deployment workflow.
+**Env 3/4 remain NOT COMPLETE and application deployment remains NO-GO.**
