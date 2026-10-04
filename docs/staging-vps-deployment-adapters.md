@@ -79,8 +79,10 @@ GitHub sources for this design:
 
 - [OIDC security hardening](https://docs.github.com/en/actions/concepts/security/openid-connect)
 - [Artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
+- [`gh attestation verify` reference](https://cli.github.com/manual/gh_attestation_verify)
 - [Actions artifacts REST API](https://docs.github.com/en/rest/actions/artifacts)
 - [Workflow runs REST API](https://docs.github.com/en/rest/actions/workflow-runs)
+- [Workflow-run approval history API](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run)
 
 ### Release-request envelope
 
@@ -105,9 +107,19 @@ fields, and contains only:
 The post-approval job attests the envelope digest and both image subjects using
 GitHub OIDC/artifact attestations. The server verifies the attestation issuer,
 repository owner and numeric repository ID, protected workflow identity, main
-branch/ref, commit, `staging` environment-bound subject/claims, subject names,
-and subject digests. A valid signature alone is insufficient; all GitHub
-metadata and local allowlists below must also pass.
+branch/ref, commit, GitHub-hosted runner, run/attempt URI, public visibility,
+subject names, and subject digests. A valid signature alone is insufficient;
+all GitHub metadata and local allowlists below must also pass.
+
+Important correction: current GitHub/Fulcio certificate extensions do **not**
+contain the Actions environment name, job/check ID, or deployment reviewer.
+`gh attestation verify` can enforce repository/workflow/source identity and
+digests, but cannot prove `staging` approval. Predicate metadata is controlled
+by the signing workflow and must not be promoted into a trust claim. Environment
+approval is established separately from the GitHub workflow-run approval
+history endpoint, requiring an `approved` record for the exact release run,
+environment ID/name, and owner reviewer ID. The pinned workflow blob must also
+show that the envelope-attesting step belongs to the `environment: staging` job.
 
 ### Server verification
 
@@ -119,10 +131,11 @@ GitHub API that:
    commit, and completed successfully.
 2. The named source CI run is the successful same-repository `push` run for that
    commit and workflow attempt.
-3. The attestation was issued by the only OIDC-enabled post-approval job in the
-   workflow revision, and its claims bind it to environment `staging`. The
-   reviewed definition references `environment: staging`; any workflow blob
-   change requires an out-of-band allowlist update and review.
+3. The release run's approval history contains an `approved` decision for the
+   exact staging environment and configured owner reviewer. The attestation run
+   URI matches that run and attempt. The reviewed workflow blob places envelope
+   generation/attestation only in its `environment: staging` job. Any workflow
+   blob change requires an out-of-band allowlist update and review.
 4. Both GHCR manifests exist at the exact digests, their attestations match the
    envelope and commit, and no mutable tag is used for deployment.
 5. The baseline marker, migration-tree evidence, repository/environment IDs,
@@ -192,6 +205,32 @@ state, or broker authorization. It performs no I/O and has no credential,
 network, filesystem, subprocess, polling, service, or deployment capability.
 It is not wired into a workflow or package script. Those gaps remain hard gates;
 syntactic validity must never be treated as release authorization.
+
+### Local attestation adapter status
+
+`scripts/staging-attestation-verifier.mjs` delegates signature, certificate,
+timestamp, subject-digest, and trusted-root verification to the installed
+official GitHub CLI; it implements no signature cryptography. It constructs an
+offline `gh attestation verify` invocation using a local bundle and trusted root
+with exact repository, predicate, OIDC issuer, certificate SAN, signer commit,
+source commit/ref, and GitHub-hosted runner constraints. It then fail-closes on
+the verified certificate summary unless repository/owner numeric IDs, workflow
+and source URIs/digests, event, visibility, and exact run/attempt URI match.
+
+Synthetic and negative adapter tests run with:
+
+```sh
+node --test scripts/staging-attestation-verifier.node-test.mjs
+```
+
+The tests mock only the already-verified CLI JSON boundary; they do not claim a
+real signature was verified. The adapter always returns `authorizing: false`.
+It cannot verify environment approval or a job identity because those claims
+are absent from current Fulcio certificate extensions. Workflow-run metadata,
+the approval-history response, current environment policy, allowlisted workflow
+blob, envelope syntax, image attestations, migration evidence, trusted clock,
+replay ledger, and broker authorization remain mandatory independent gates.
+No attestation bundle or trusted-root material is currently installed.
 
 ## Proposed adapter paths
 
