@@ -277,6 +277,53 @@ attestation, envelope, images, migration evidence, clock, replay ledger, and
 broker authorization remain independent gates. No GitHub API polling or token
 handling is implemented.
 
+### Local release-artifact binding status
+
+`scripts/staging-release-evidence.mjs` composes the preceding policy results
+without replacing any of them. It requires exactly one canonical envelope,
+cryptography-and-certificate policy result, first-attempt approval result,
+GitHub artifact record, downloaded archive record, and migration record, plus
+exactly one frontend and one Functions image record.
+
+The binding requires all of the following to agree:
+
+- repository numeric ID/name, commit, workflow blob, CI run/attempt, and release
+  run/attempt;
+- the non-expired GitHub artifact's ID, deterministic name, archive digest,
+  archive size, repository/head-repository IDs, branch, commit, and creation
+  time inside the envelope window;
+- an archive containing exactly one regular `staging-release-request.json`
+  entry whose bytes match the attested envelope SHA-256;
+- frontend and Functions repositories, immutable digests, commit, and source CI
+  run/attempt; and
+- migration commit, migration-tree digest, and latest migration identifier.
+
+It produces a canonical binding hash and compares supplied replay-ledger records
+against the binding hash, request ID, artifact ID, envelope digest, and exact
+commit/image/migration tuple. Matching records return
+`blocked-replayed-release-evidence`; expired requests return
+`blocked-stale-release-evidence`; missing, duplicate, or role-ambiguous inputs
+return `blocked-ambiguous-release-evidence`. Mismatched identities are rejected.
+
+Tests run with:
+
+```sh
+node --test scripts/staging-release-evidence.node-test.mjs
+```
+
+The module always returns `authorizing: false`. Fixture records do not prove API
+origin, registry state, migration capture, trusted time, or durable replay
+state. The next prerequisite is an independently reviewed read-only transport
+layer that authenticates GitHub artifact/run/approval responses, verifies the
+downloaded archive digest and safe single-file inventory, obtains authenticated
+GHCR image evidence and migration evidence, and supplies a trusted clock plus a
+root-owned append-only replay snapshot. Broker authorization remains separate.
+
+The approved initial staging inventory for future adapter allowlists is exactly
+Dokploy, PostgreSQL, gateway, Auth, REST, Realtime, Storage, compiled Functions,
+and mail sink. Studio, postgres-meta, Supavisor, and imgproxy/image resizing are
+intentionally excluded.
+
 ## Proposed adapter paths
 
 ### First provisioning (separate gate)

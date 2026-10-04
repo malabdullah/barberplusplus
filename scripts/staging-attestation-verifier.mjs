@@ -133,6 +133,8 @@ export function parseGhAttestationVerification(raw, {
     status: 'certificate-policy-output-valid',
     cryptographyVerified: false,
     authorizing: false,
+    artifactDigest,
+    commit,
     releaseRunId,
     releaseRunAttempt,
     remainingAuthorizationChecks,
