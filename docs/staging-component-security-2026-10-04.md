@@ -151,3 +151,50 @@ The final local routing/isolation probe, targeted ESLint and full `npm run check
 passed. GitHub application CI now runs the opt-in candidate probe after fetching
 the verified upstream configuration; this is not an automatic image upgrade.
 The remaining seven component inventories and full-stack gates stay open.
+
+## Staging-only CORS candidate — local preparation
+
+All five checks passed for `ad2a304b553361b546efff8d56d83a6f6b199910` in
+[CI run 37188608155](https://github.com/malabdullah/barberplusplus/actions/runs/37188608155).
+This result covers the preceding Envoy candidate, not subsequent CORS changes.
+
+The opt-in `--staging-cors` probe now prepares a restricted listener in a unique
+temporary directory, without modifying upstream files, deployment pins or the
+VPS overlay. `staging-envoy-cors.mjs` accepts only the exact reviewed upstream
+listener SHA-256; modified, rendered and already-transformed inputs are refused.
+The only allowed browser Origin is `https://staging-barber.malabdullah.cloud`.
+Other Origins, including null, empty, duplicate, suffix-spoofed, insecure and
+nonstandard-port values, receive 403 before upstream dispatch. Requests with no
+Origin retain the ordinary API-key/JWT/signature gates; Origin is not proof of
+identity and can be omitted by non-browser clients.
+
+The native [Envoy CORS filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/cors/v3/cors.proto)
+keeps an explicit method/header/exposure allowlist, omits TRACE/CONNECT and
+cookie-credential permission, and bounds preflight caching to 600 seconds.
+Unsupported preflight methods/headers are not advertised as permitted; the
+browser must enforce that list. A first-request/last-response
+[Lua guard](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter)
+also strips backend `access-control-*` fields before emitting the restricted
+policy. This prevents an Auth/Storage/Function backend wildcard or credential
+header from silently broadening the gateway rule. Existing `Vary` fields are
+retained with `Origin` added. API bearer tokens, not browser cookies, remain the
+intended Supabase authentication mechanism.
+
+The isolated Linux AMD64 probe passed against synthetic backends intentionally
+returning permissive CORS headers: allowed preflight and responses, actual
+duplicate-Origin rejection, unsupported method/header exclusion, wildcard and
+credential stripping, preserved cache variation, non-browser requests, and
+unchanged 401 authentication denial. All preceding gateway routing/signature
+forwarding probes passed again. Six lightweight safety/negative tests and full
+`npm run check` also passed. Review identified a temporary-file cleanup ordering
+gap; cleanup now attempts all known container/network removals and always
+attempts temporary-file removal, reporting failure rather than claiming cleanup.
+The final CORS container rerun and all five Playwright journeys passed after
+that cleanup fix. The browser journeys use the retained local synthetic database,
+not the candidate gateway or VPS, and therefore do not certify CORS browser E2E.
+
+This is candidate evidence, not browser/Cloudflare acceptance. Real websocket
+handshakes, Storage uploads/resumable headers, Access cookie/preflight behavior,
+actual Auth/Function responses and the live origin boundary still need end-to-end
+verification before this transform can enter a deployment. No application,
+database, public DNS, production resource or live credential was changed.

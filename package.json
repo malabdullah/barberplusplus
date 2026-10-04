@@ -26,7 +26,7 @@
     "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs scripts/staging-fixtures.node-test.mjs scripts/staging-core-recovery.node-test.mjs",
     "test:staging-broker": "python3 -I -B ops/staging-vps/broker/test_broker.py && sh -n ops/staging-vps/broker/install.sh",
     "test:staging-envoy-candidate": "node scripts/test-staging-envoy-candidate.mjs",
-    "test:staging-envoy-safety": "node --test scripts/local-docker-probe.node-test.mjs",
+    "test:staging-envoy-safety": "node --test scripts/local-docker-probe.node-test.mjs scripts/staging-envoy-cors.node-test.mjs",
     "test:staging-postgres": "node scripts/test-staging-postgres.mjs",
     "test:staging-supabase-core": "node scripts/test-staging-supabase-core.mjs",
     "test:staging-functions-package": "node --test scripts/staging-functions-package.node-test.mjs",

@@ -2,13 +2,17 @@
 // This does not validate real Auth/Storage/Functions or change the deployment pin.
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { readFileSync, realpathSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
+import { stagingEnvoyCors, STAGING_BROWSER_ORIGIN } from './staging-envoy-cors.mjs';
 
 const image = 'envoyproxy/envoy@sha256:43b69cf424922cd5d1086cc019dc89197e58d58deac89d36b3c8b67f1a9e8523';
 const probeImage = 'node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e';
-assert.equal(process.argv.length, 3, 'Pass the verified self-hosted/v0.8.0 upstream directory');
+assert.ok(process.argv.length === 3 || (process.argv.length === 4 && process.argv[3] === '--staging-cors'),
+  'Pass the verified upstream directory and optionally --staging-cors');
+const restrictedCors = process.argv[3] === '--staging-cors';
 const configRoot = join(realpathSync(resolve(process.argv[2])), 'volumes/api/envoy');
 assert.ok(!/[\r\n,]/.test(configRoot), 'Unsafe Docker mount path');
 const expectedFiles = {
@@ -26,6 +30,7 @@ const docker = (...args) => localDocker(args);
 const name = `barber-envoy-candidate-${randomUUID()}`;
 const gateway = `${name}-gateway`; const backend = `${name}-backend`; const client = `${name}-client`;
 let networkCreated = false; const containers = [];
+let generatedConfig;
 const env = {
   ANON_KEY: randomUUID(), SERVICE_ROLE_KEY: randomUUID(),
   SUPABASE_PUBLISHABLE_KEY: `sb_publishable_${randomUUID()}`, SUPABASE_SECRET_KEY: `sb_secret_${randomUUID()}`,
@@ -43,7 +48,7 @@ async function probe(settings) {
       let text = '';
       res.on('data', (chunk) => { text += chunk; if (text.length > 16384) res.destroy(new Error('Response too large')); });
       res.on('error', reject);
-      res.on('end', () => resolve({ status: res.statusCode, text }));
+      res.on('end', () => resolve({ status: res.statusCode, text, headers: res.headers }));
     });
     req.on('error', reject); req.on('timeout', () => req.destroy(new Error('Request timed out')));
     req.end(body);
@@ -98,10 +103,67 @@ async function probe(settings) {
   }
   assert.equal((await call('/rest/v1/example', { ...anon, bad_header: 'reject' })).status, 400);
   assert.equal((await call('/')).status, 401, 'Dashboard must require basic auth');
-  console.log('PASS: exact upstream config, protected API routes, admin denials, legacy/modern key translation, JWT preservation, websocket routing, untouched function payloads/signatures, normalization and header rejection.');
+  if (settings.restrictedCors) {
+    const origin = settings.browserOrigin;
+    const preflight = await call('/rest/v1/example', { origin,
+      'access-control-request-method': 'POST', 'access-control-request-headers': 'apikey,authorization,content-type' }, 'OPTIONS');
+    assert.equal(preflight.status, 200);
+    assert.equal(preflight.headers['access-control-allow-origin'], origin);
+    assert.equal(preflight.text, '', 'Preflight must not reach the backend');
+    assert.equal(preflight.headers['access-control-allow-credentials'], undefined);
+    assert.equal(preflight.headers['access-control-allow-private-network'], undefined);
+    assert.ok(!preflight.headers['access-control-allow-methods'].match(/TRACE|CONNECT/));
+    assert.ok(!preflight.headers['access-control-allow-headers'].includes('*'));
+    for (const header of ['apikey', 'authorization', 'content-type']) {
+      assert.ok(preflight.headers['access-control-allow-headers'].split(',').includes(header));
+    }
+    const excessive = await call('/rest/v1/example', { origin, 'access-control-request-method': 'TRACE',
+      'access-control-request-headers': 'x-unapproved-header' }, 'OPTIONS');
+    assert.equal(excessive.text, '', 'Unsupported preflight must not be forwarded');
+    assert.ok(!excessive.headers['access-control-allow-methods'].split(',').includes('TRACE'));
+    assert.ok(!excessive.headers['access-control-allow-headers'].split(',').includes('x-unapproved-header'));
+    const duplicate = await call('/rest/v1/example', { ...anon, origin: [origin, 'https://untrusted.invalid'] });
+    assert.equal(duplicate.status, 403, 'Duplicate Origin fields must not select the first allowed value');
+    assert.equal(duplicate.headers['access-control-allow-origin'], undefined);
+    for (const path of ['/rest/v1/example', '/auth/v1/user', '/storage/v1/object/test', '/functions/v1/whatsapp-webhook']) {
+      const allowed = await call(path, { ...anon, origin });
+      assert.equal(allowed.status, 200);
+      assert.equal(allowed.headers['access-control-allow-origin'], origin);
+      assert.equal(allowed.headers['access-control-allow-credentials'], undefined);
+      assert.equal(allowed.headers['access-control-allow-private-network'], undefined);
+      assert.ok(!allowed.headers['access-control-expose-headers'].includes('*'));
+      assert.match(allowed.headers.vary, /Accept-Encoding/);
+      assert.match(allowed.headers.vary, /Origin/);
+      const server = await call(path, anon);
+      assert.equal(server.status, 200, 'Origin-less server requests still need their normal authorization');
+      assert.ok(Object.keys(server.headers).every((key) => !key.startsWith('access-control-')));
+      for (const denied of ['https://untrusted.invalid', `${origin}.untrusted.invalid`, `${origin}/`,
+        'null', 'http://staging-barber.malabdullah.cloud', `${origin}:444`, `${origin}, https://untrusted.invalid`, '']) {
+        for (const method of ['GET', 'POST', 'OPTIONS']) {
+          const rejected = await call(path, { ...anon, origin: denied,
+            'access-control-request-method': 'POST' }, method);
+          assert.equal(rejected.status, 403, 'Nonmatching Origin must not reach any backend');
+          assert.equal(rejected.text, 'Origin not allowed');
+          assert.equal(rejected.headers['access-control-allow-origin'], undefined);
+        }
+      }
+    }
+    const unauthenticated = await call('/rest/v1/example', { origin });
+    assert.equal(unauthenticated.status, 401, 'Allowed Origin is not authentication');
+    assert.equal(unauthenticated.headers['access-control-allow-origin'], origin);
+    console.log('PASS: exact staging Origin, restricted preflight, hostile/null/duplicate Origins denied, backend wildcard/credential headers stripped, Vary preserved, server requests and authentication retained.');
+  }
+  console.log('PASS: reviewed gateway config, protected API routes, admin denials, legacy/modern key translation, JWT preservation, websocket routing, untouched function payloads/signatures, normalization and header rejection.');
 }
 
 try {
+  if (restrictedCors) {
+    const template = stagingEnvoyCors(readFileSync(join(configRoot, 'lds.template.yaml'), 'utf8'));
+    generatedConfig = mkdtempSync(join(tmpdir(), 'barber-envoy-cors-'));
+    writeFileSync(join(generatedConfig, 'lds.template.yaml'), template, { mode: 0o644, flag: 'wx' });
+    // Reapplying or accepting modified input must fail rather than relax checks.
+    assert.throws(() => stagingEnvoyCors(template), /unreviewed/);
+  }
   docker('pull', '--platform', 'linux/amd64', image); docker('pull', probeImage);
   const info = JSON.parse(docker('image', 'inspect', image))[0];
   assert.equal(info.Architecture, 'amd64'); assert.equal(info.Os, 'linux');
@@ -110,7 +172,7 @@ try {
     '--security-opt', 'no-new-privileges:true', '--memory', '512m', '--cpus', '1', '--pids-limit', '128',
     '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001,mode=0700'];
   const aliases = ['auth', 'rest', 'realtime-dev.supabase-realtime', 'storage', 'functions', 'meta', 'studio'];
-  const server = `const http=require('node:http');for(const port of [9999,3000,4000,5000,9000,8080])http.createServer((req,res)=>{let body='';req.on('data',c=>body+=c);req.on('end',()=>{res.setHeader('content-type','application/json');res.end(JSON.stringify({port,path:req.url,headers:req.headers,body}));});}).listen(port,'0.0.0.0');`;
+  const server = `const http=require('node:http');for(const port of [9999,3000,4000,5000,9000,8080])http.createServer((req,res)=>{let body='';req.on('data',c=>body+=c);req.on('end',()=>{res.setHeader('content-type','application/json');res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-private-network','true');res.setHeader('access-control-expose-headers','*');res.setHeader('vary','Accept-Encoding');res.end(JSON.stringify({port,path:req.url,headers:req.headers,body}));});}).listen(port,'0.0.0.0');`;
   docker('create', '--name', backend, '--label', 'barber.purpose=envoy-candidate', '--network', name,
     ...aliases.flatMap((alias) => ['--network-alias', alias]), ...hardening, probeImage, 'node', '-e', server);
   containers.push(backend); docker('start', backend);
@@ -119,7 +181,8 @@ try {
     '--tmpfs', '/etc/envoy:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700'];
   for (const file of Object.keys(expectedFiles)) {
     const target = file === 'docker-entrypoint.sh' ? '/docker-entrypoint.sh' : `/etc/envoy/${file}`;
-    args.push('--mount', `type=bind,src=${join(configRoot, file)},dst=${target},readonly`);
+    const source = file === 'lds.template.yaml' && generatedConfig ? generatedConfig : configRoot;
+    args.push('--mount', `type=bind,src=${join(source, file)},dst=${target},readonly`);
   }
   for (const [key, value] of Object.entries(env)) args.push('-e', `${key}=${value}`);
   docker(...args, '--entrypoint', '/bin/sh', image, '/docker-entrypoint.sh', '--concurrency', '1');
@@ -146,7 +209,7 @@ try {
   }), 'Unexpected IPv6 default route');
   const output = localDocker(['run', '--rm', '-i', '--name', client,
     '--label', 'barber.purpose=envoy-candidate', '--network', name, ...hardening,
-    probeImage, 'node', '--input-type=module'], { input: `await (${probe.toString()})(${JSON.stringify(env)});`,
+    probeImage, 'node', '--input-type=module'], { input: `await (${probe.toString()})(${JSON.stringify({ ...env, restrictedCors, browserOrigin: STAGING_BROWSER_ORIGIN })});`,
     timeout: 90000 });
   console.log(output.trim());
   console.log('Candidate only: real-service integration, signed artifacts, load and VPS acceptance remain open.');
@@ -155,7 +218,23 @@ try {
   console.error('Envoy candidate probe failed; no deployment pin changed.');
   process.exitCode = 1;
 } finally {
-  try { docker('rm', '-f', client); } catch { /* auto-removed or not created */ }
-  for (const container of containers.reverse()) docker('rm', '-f', container);
-  if (networkCreated) docker('network', 'rm', name);
+  let cleanupFailed = false;
+  try {
+    try { docker('rm', '-f', client); } catch { /* auto-removed or not created */ }
+    for (const container of containers.reverse()) {
+      try { docker('rm', '-f', container); } catch { cleanupFailed = true; }
+    }
+    if (networkCreated) {
+      try { docker('network', 'rm', name); } catch { cleanupFailed = true; }
+    }
+  } finally {
+    if (generatedConfig) {
+      try { unlinkSync(join(generatedConfig, 'lds.template.yaml')); } catch { cleanupFailed = true; }
+      try { rmdirSync(generatedConfig); } catch { cleanupFailed = true; }
+    }
+  }
+  if (cleanupFailed) {
+    console.error('Candidate probe cleanup incomplete; inspect the uniquely labeled probe resources.');
+    process.exitCode = 1;
+  }
 }
