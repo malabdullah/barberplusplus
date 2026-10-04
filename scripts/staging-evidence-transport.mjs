@@ -62,6 +62,11 @@ export async function readGitHubReleaseEvidence({
   const approvals = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/runs/${runId}/approvals`, 256 * 1024), 'approval history', 256 * 1024);
   const environment = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}environments/staging`, 256 * 1024), 'staging environment', 256 * 1024);
   const artifactRecord = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/artifacts/${artifact}`, 256 * 1024), 'artifact record', 256 * 1024);
+  const runAttempt = positiveId(run.run_attempt, 'workflow run attempt');
+  const expectedArtifactName = `staging-release-request-${commit}-${runId}-${runAttempt}`;
+  if (artifactRecord.id !== Number(artifact) || artifactRecord.name !== expectedArtifactName) {
+    fail(`artifact is not the expected ${expectedArtifactName}`);
+  }
   const workflowFile = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}contents/.github/workflows/deploy-staging.yml?ref=${commit}`, 256 * 1024), 'workflow file', 256 * 1024);
   if (workflowFile.encoding !== 'base64' || typeof workflowFile.content !== 'string') fail('workflow file is not base64 content');
   const encodedWorkflow = workflowFile.content.replace(/\n/g, '');

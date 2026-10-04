@@ -108,10 +108,13 @@ test('collects only allowlisted read-only GitHub evidence and bounded archive da
   const archive = zip(envelope);
   const workflowSource = 'name: Deploy staging\n';
   const responses = new Map([
-    [`repos/malabdullah/barberplusplus/actions/runs/${runId}`, { id: Number(runId) }],
+    [`repos/malabdullah/barberplusplus/actions/runs/${runId}`, { id: Number(runId), run_attempt: 1 }],
     [`repos/malabdullah/barberplusplus/actions/runs/${runId}/approvals`, []],
     ['repos/malabdullah/barberplusplus/environments/staging', { id: 21158713380, name: 'staging' }],
-    [`repos/malabdullah/barberplusplus/actions/artifacts/${artifactId}`, { id: Number(artifactId) }],
+    [`repos/malabdullah/barberplusplus/actions/artifacts/${artifactId}`, {
+      id: Number(artifactId),
+      name: `staging-release-request-${commit}-${runId}-1`,
+    }],
     [`repos/malabdullah/barberplusplus/contents/.github/workflows/deploy-staging.yml?ref=${commit}`, {
       path: '.github/workflows/deploy-staging.yml',
       sha: 'b'.repeat(40),
@@ -141,16 +144,41 @@ test('rejects unsafe GitHub identifiers, workflow payloads and verifier paths', 
   await assert.rejects(() => readGitHubReleaseEvidence({ releaseRunId: '../1', artifactId: 2, commit: 'a'.repeat(40), execute: async () => ({ stdout: Buffer.from('{}') }) }));
   await assert.rejects(() => readGitHubReleaseEvidence({ releaseRunId: 1, artifactId: 2, commit: 'bad', execute: async () => ({ stdout: Buffer.from('{}') }) }));
   await assert.rejects(() => readGitHubReleaseEvidence({ releaseRunId: 1, artifactId: 2, commit: 'a'.repeat(40), ghPath: '/tmp/gh', execute: async () => ({ stdout: Buffer.from('{}') }) }));
+  const commit = 'a'.repeat(40);
   const responses = [
-    '{}', '[]', '{}', '{}',
+    JSON.stringify({ id: 1, run_attempt: 1 }),
+    '[]',
+    '{}',
+    JSON.stringify({ id: 2, name: `staging-release-request-${commit}-1-1` }),
     JSON.stringify({ path: '.github/workflows/deploy-staging.yml', encoding: 'base64', content: 'not base64!!!' }),
   ];
   await assert.rejects(() => readGitHubReleaseEvidence({
     releaseRunId: 1,
     artifactId: 2,
-    commit: 'a'.repeat(40),
+    commit,
     execute: async () => ({ stdout: Buffer.from(responses.shift()) }),
   }), /base64/);
+});
+
+test('rejects a non-release artifact before downloading its archive', async () => {
+  const commit = 'a'.repeat(40);
+  const endpoints = [
+    JSON.stringify({ id: 1, run_attempt: 1 }),
+    '[]',
+    JSON.stringify({ id: 21158713380, name: 'staging' }),
+    JSON.stringify({ id: 2, name: 'gitleaks-results.sarif' }),
+  ];
+  let calls = 0;
+  await assert.rejects(() => readGitHubReleaseEvidence({
+    releaseRunId: 1,
+    artifactId: 2,
+    commit,
+    execute: async () => {
+      calls += 1;
+      return { stdout: Buffer.from(endpoints.shift()) };
+    },
+  }), /artifact is not the expected staging-release-request/);
+  assert.equal(calls, 4);
 });
 
 function manifestResponse(body, { status = 200, headers = {} } = {}) {

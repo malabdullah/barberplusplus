@@ -361,10 +361,15 @@ end to end, so no remote workflow or staging deployment was triggered.
 
 ### Read-only activation probe — 2026-10-04
 
-The local GitHub CLI is configured for `malabdullah`, but `gh auth status`
-reports its credential as invalid. No token value was read or printed. Public
-repository GET requests still work, but this is not a usable authenticated
-identity and its scopes cannot be relied on.
+With unrestricted network access, the local GitHub CLI authenticates
+successfully as owner `malabdullah` (user ID `19295903`). The keyring-backed
+interactive token reports scopes `gist`, `read:org`, `repo`, and `workflow`;
+no token value was read or printed. Those scopes are sufficient for the real
+GitHub run, approval, environment, contents, and artifact GETs exercised below,
+but they are broader than the observation service requires and must not be
+copied to the VPS or treated as the planned machine identity. An earlier local
+status check made under restricted network incorrectly appeared as invalid and
+is superseded by this network-enabled verification.
 
 Real, non-authorizing collection against draft PR 3 and workflow run
 `37192236004` established the following:
@@ -384,11 +389,13 @@ Real, non-authorizing collection against draft PR 3 and workflow run
   on the approved source allowlist.
 - The run has one artifact, ID `11298454359`, named
   `gitleaks-results.sarif`. It is not a staging release-request artifact. The
-  real collector downloaded it read-only and rejected its ZIP as outside the
-  bounded release-envelope contract.
+  hardened real collector rejects its name before download because it is not
+  `staging-release-request-aecdbc69e6c2f2a37e53d3b54badb1b95f3144fd-37192236004-1`.
 - Anonymous GHCR token requests for both `malabdullah/barberplusplus` and
-  `malabdullah/barberplusplus-functions` returned `403`. No public immutable
-  manifest could be collected and no private-package credential was attempted.
+  `malabdullah/barberplusplus-functions` returned `403`. The authenticated
+  identity also receives `403` from the Packages API with the explicit message
+  that `read:packages` is required. No public immutable manifest could be
+  collected and no credential scope was changed.
 
 This probe proves fail-closed transport behavior only. It supplies no staging
 approval, release envelope, image digest, image attestation, migration evidence,
@@ -411,7 +418,9 @@ the prior stage has independent evidence and explicit owner approval.
    service may make only the allowlisted GET requests implemented by the
    collector. GitHub documents `Actions: read` for workflow-run, approval,
    environment, artifact-record, and artifact-download GETs and `Contents:
-   read` for the exact workflow blob.
+   read` for the exact workflow blob. The current interactive owner token is
+   adequate for manual read-only inspection but is explicitly not this service
+   identity because it carries `repo` and `workflow` scope.
 2. **Separate GHCR pull identity.** Because the two packages are not publicly
    readable, create a separate personal access token (classic) with only
    `read:packages`, owned by a dedicated read-only machine identity with access
