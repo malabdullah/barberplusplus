@@ -113,7 +113,7 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     const secret = randomBytes(24).toString('hex');
     assert.equal(query(source, 'SHOW cron.launch_active_jobs;'), 'off');
     query(source, `SELECT vault.create_secret('${secret}', 'synthetic_recovery_probe');`);
-    compose(['stop', 'auth', 'rest', 'storage', 'imgproxy', 'mailpit'], { timeout: 60000 });
+    compose(['stop', 'auth', 'rest', 'storage', 'mailpit'], { timeout: 60000 });
     const database = docker(['exec', '-u', 'postgres', `${source}-db`,
       'pg_dump', '-U', 'supabase_admin', '-d', 'postgres', '--format=custom'],
     { encoding: null, maxBuffer: LIMIT });

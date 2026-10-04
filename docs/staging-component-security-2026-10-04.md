@@ -258,7 +258,40 @@ b35b50cd8db783d570c39ebbcde34284152982b4bf68a4a005420f91a0a42997
 bcf6c24e8f78da73568e178b15b8ac50cbe40912ba52803acb6a096212b65995
 ```
 
-The owner has been asked whether initial staging may omit optional Studio/meta,
-Supavisor and image transformation services. No answer or removal is assumed.
-That choice cannot clear the remaining Auth, Storage, Realtime and full-stack
-readiness gates, and does not change production or authorize deployment.
+The owner subsequently approved omitting optional Studio/meta, Supavisor and
+image transformation services from initial staging. The reduced configuration
+is documented in `staging-vps-runtime.md`; no existing VPS service/data deletion
+or deployment is authorized by that scope approval. This cannot clear the
+remaining Auth, Storage, Realtime and full-stack readiness gates.
+
+## Latest Auth and Storage follow-up
+
+Two further official release candidates were scanned remotely with the same
+methodology/database, without executing or promoting them:
+
+| Candidate | HIGH | CRITICAL | Exact AMD64 digest |
+| --- | ---: | ---: | --- |
+| Auth 2.197.0 | 5 | 0 | `sha256:839f529492d116b4e8b7777c953a27c381d34c15a744b1bcefde5eefaa1f9f9f` |
+| Storage 1.79.31 | 54 | 1 | `sha256:13cdccea43f23d848f050eba0d4f3ccdf02a7aca93d4f43268438de95549ef74` |
+
+Repositories are `supabase/gotrue` and `supabase/storage-api`. Auth coverage was
+17 Alpine packages and 156 Go packages; remaining matches concern OpenSSL,
+pgproto3/v2 and gRPC. Storage coverage was 47 Alpine packages and 1,028 Node
+packages, retaining a critical tar match. These are version matches, not a
+claim of demonstrated application exploitability. Applicability/remediation
+review is still needed. Auth's EOL-list warning does not establish Alpine's
+support status.
+
+The [Auth changes](https://github.com/supabase/auth/compare/v2.196.0...v2.197.0)
+include five migrations and session/MFA/OTP behavior changes. The
+[Storage changes](https://github.com/supabase/storage/compare/v1.74.0...v1.79.31)
+include migration, listing, uniqueness-index and grants changes. Both need a
+disposable compatibility/recovery rehearsal before replacing a pin.
+
+Raw evidence: `/private/tmp/barber-auth-storage-scan.WKWMlO/`.
+Combined summary SHA-256:
+`cd6e61fe7a4504532919d2f6024dfba7cb70c52c8c105567a568864530c427ed`.
+Auth report SHA-256:
+`244b7e0f722fe81df718233072b99a01c700ff062fa59cbf43f7f5b7177f4d91`.
+Storage report SHA-256:
+`f738a937bcde56606c726495217193fbdfb071e880830e46d8ce3a798e3ce99c`.

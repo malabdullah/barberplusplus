@@ -13,14 +13,19 @@ test('annotated releases resolve to source commits, not tag objects', () => {
 
 function fixture() {
   const services = {};
-  for (const name of ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor']) {
+  for (const name of ['api-gw', 'auth', 'rest', 'realtime', 'storage', 'functions', 'db']) {
     services[name] = {
       container_name: name === 'realtime' ? 'realtime-dev.barber-staging-realtime'
-        : `barber-staging-${name === 'supavisor' ? 'pooler' : name}`,
+        : `barber-staging-${name}`,
       image: 'fixture/service:1.0.0', networks: { default: null }, environment: {},
     };
   }
   services['api-gw'].ports = [{ host_ip: '127.0.0.1', published: '18000', target: 8000, protocol: 'tcp' }];
+  services['api-gw'].volumes = [['staging-cds.yaml', 'cds.yaml'], ['staging-lds.template.yaml', 'lds.template.yaml']].map(([file, target]) => ({
+    type: 'bind', source: `/opt/barber-staging/supabase/volumes/api/envoy/${file}`, target: `/etc/envoy/${target}`, read_only: true,
+  }));
+  services.storage.environment = { ENABLE_IMAGE_TRANSFORMATION: 'false', IMGPROXY_URL: '' };
+  services.storage.depends_on = { db: { condition: 'service_healthy' }, rest: { condition: 'service_started' } };
   services.db.ports = [{ host_ip: '127.0.0.1', published: '15432', target: 5432, protocol: 'tcp' }];
   services.db.image = POSTGRES_IMAGE;
   services.db.command = [...POSTGRES_COMMAND];
@@ -63,7 +68,17 @@ const unsafeChanges = {
   'different database engine': (c) => { c.services.db.image = POSTGRES_IMAGE.replace('17.11.0.002@', '17.11.0.002-orioledb@'); },
   'wildcard API binding': (c) => { c.services['api-gw'].ports[0].host_ip = '0.0.0.0'; },
   'IPv6 public binding': (c) => { c.services.db.ports[0].host_ip = '::'; },
-  'extra pooler binding': (c) => { c.services.supavisor.ports = [{ published: '6543' }]; },
+  'pooler reintroduced': (c) => { c.services.supavisor = { image: 'fixture/pooler:1', ports: [{ published: '6543' }] }; },
+  'dashboard reintroduced': (c) => { c.services.studio = c.services.rest; },
+  'management API reintroduced': (c) => { c.services.meta = c.services.rest; },
+  'image proxy reintroduced': (c) => { c.services.imgproxy = c.services.rest; },
+  'image transformations enabled': (c) => { c.services.storage.environment.ENABLE_IMAGE_TRANSFORMATION = 'true'; },
+  'image proxy configured': (c) => { c.services.storage.environment.IMGPROXY_URL = 'http://imgproxy:5001'; },
+  'optional gateway dependency': (c) => { c.services['api-gw'].depends_on = { studio: {} }; },
+  'optional storage dependency': (c) => { c.services.storage.depends_on.imgproxy = {}; },
+  'foreign service dependency': (c) => { c.services.auth.depends_on = { production: {} }; },
+  'upstream gateway template': (c) => { c.services['api-gw'].volumes[1].source = '/opt/barber-staging/supabase/volumes/api/envoy/lds.template.yaml'; },
+  'writable gateway template': (c) => { c.services['api-gw'].volumes[1].read_only = false; },
   'wrong container': (c) => { c.services.db.container_name = 'supabase-db'; },
   'production data mount': (c) => { c.services.db.volumes = [{ type: 'bind', source: '/etc/dokploy/production/data' }]; },
   'Docker socket mount': (c) => { c.services.functions.volumes = [{ type: 'bind', source: '/var/run/docker.sock' }]; },

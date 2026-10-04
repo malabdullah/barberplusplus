@@ -4,6 +4,90 @@ These files prepare only the isolated staging runtime on `srv1207055`. The
 Mac-targeted deployment workflow has **not** been converted yet. Do not merge
 or treat these components as a working VPS deployment.
 
+## Minimal initial stack
+
+On October 4 the owner approved keeping Hostinger/Dokploy and omitting four
+optional Supabase services from initial staging: Studio, postgres-meta,
+Supavisor and Imgproxy. This is an approved design reduction, not permission to
+delete existing VPS containers/data or deploy a release. The eight configured
+services are DB, API gateway, Auth, REST, Realtime, Storage, Functions and Mailpit.
+Normal image/file uploads and downloads remain; server-side resizing is disabled.
+There is no Supabase dashboard/management API or database pooler endpoint.
+Administration remains through reviewed migrations and private SSH/database tools.
+Dokploy management and its restricted account are unchanged.
+
+`compose.override.yml` removes the four service definitions with `!reset`, not
+profiles, removes the gateway's Studio dependency and Storage's Imgproxy
+dependency, and explicitly sets `ENABLE_IMAGE_TRANSFORMATION=false` with no
+Imgproxy URL. The validator requires the exact eight-service inventory and
+rejects reintroduced services, missing core services, foreign dependencies,
+enabled transformations or the old gateway template paths. Resource/load testing
+is still required; fewer components do not by themselves establish capacity.
+
+Bootstrap now needs Node and creates public, checksum-bound
+`staging-cds.yaml` and `staging-lds.template.yaml` beside the unchanged upstream
+Envoy files. The helper refuses existing outputs or changed upstream content.
+For an existing verified **scratch** checkout with neither generated file:
+
+```sh
+node scripts/prepare-staging-envoy.mjs /absolute/verified/upstream
+npm run test:staging-envoy-candidate -- /absolute/verified/upstream --minimal
+```
+
+Do not regenerate files over a live installation. The overlay mounts these two
+files read-only. Management and fallback dashboard routes become explicit 403
+responses after the existing authentication filters; anonymous dashboard requests
+may still receive 401. Their backend DNS clusters are removed. Realtime uses the
+Compose service DNS name, retaining the upstream tenant host rewrite. The exact
+staging CORS policy and response-header guard are included. Browser, Cloudflare,
+real Realtime/Functions and full-stack checks remain separate acceptance gates.
+
+The opt-in gateway test runs the previously scanned Envoy 1.39.2 candidate. It
+does **not** update the Compose image pin or clear its provenance/security gate.
+The real core rehearsal now starts five services (DB/Auth/REST/Storage/Mailpit),
+and its backup quiescence list no longer includes Imgproxy. Synthetic local
+compatibility and recovery tests are not live backup or deployment evidence.
+
+This reduces optional exposure but does not resolve the remaining Auth, Storage,
+Realtime, image-provenance, migration, live-secret, backup, routing or load gates.
+[Supabase supports omitting unused services and dependencies](https://supabase.com/docs/guides/self-hosting/docker).
+
+### October 4 local validation of the reduced stack
+
+The separate code-review pass caught and fixed a stale Imgproxy reference in
+backup quiescence. This was a code review, not independent human approval.
+Local validation passed:
+
+- 87 staging topology/candidate/fixture/recovery tests, full `npm run check`,
+  five Playwright journeys and `git diff --check`.
+- Actual pinned upstream plus overlay Compose rendering, including the exact
+  eight-service inventory and read-only generated gateway mounts; the compiled
+  Functions overlay also passed with a syntactic, non-published image fixture.
+- Minimal Envoy candidate authentication, denied management routes, restricted
+  CORS, path/body/signature forwarding and isolated non-root execution tests.
+- Five-service core rehearsal: Auth login and invitation captured by Mailpit,
+  Storage upload/download and anonymous denial, disabled image transformation
+  returning 404, four application migrations, 32 pgTAP assertions, randomized
+  synthetic fixtures and duplicate-seed refusal.
+- Encrypted DB/Storage/config tamper rejection and restoration into fresh local
+  volumes, including Auth, RLS, Vault and private Storage verification.
+- Generated gateway files match the tested transform; a repeated preparation
+  attempt fails without overwriting either existing public file.
+- Fresh local frontend Docker build and isolated runtime check: health, staging
+  configuration, CSP, no-store, noindex, nosniff and UID 101 passed. Test image ID:
+  `sha256:34a2f8290e6e3c8bec1a2891faa28fcd8b46feacc7a1021496b48137e583dc64`.
+  It was not published or accepted as a release. Its disposable runtime had no
+  network access or published ports and was removed after the check.
+
+The core rehearsal used local PostgreSQL candidate
+`sha256:b8aebc0a7bdcfd3eadc557f0d19999ee5f5d4a29590e03ba34d90acf783cbd92`
+with the currently selected Auth/Storage versions, not the newly scanned upgrade
+candidates. Playwright used the retained local synthetic development database;
+the Envoy probe used stub backends. These results do not establish real Realtime
+or Functions integration through Envoy, AMD64/VPS acceptance, live backups, or
+clear outstanding image vulnerabilities/provenance. No image pins, production
+resources, live VPS resources, DNS or account permissions changed in this work.
+
 ## Test email
 
 `ops/staging-vps/compose.override.yml` connects Auth to `mailpit:1025` on the
@@ -157,7 +241,7 @@ These use synthetic keys and stub workers, not the deployed app or Meta service.
    plus Linux/Dokploy deployment, backup and rollback implementation.
 3. Provision unique staging secrets, initialize the baseline and synthetic seed,
    and test Auth against the private mail sink.
-4. Configure dedicated Meta/Flow and restricted Anthropic test credentials;
+4. Configure dedicated Meta/Flow and restricted OpenAI test credentials;
    keep outbound calls disabled until allowlist/limit checks pass.
 5. Implement consistent live DB/Storage capture and rehearse restoration;
    encrypted transfer and recovery-key custody are already verified.

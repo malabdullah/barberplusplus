@@ -1,5 +1,12 @@
 # Environment Architecture
 
+> Current target: the isolated Hostinger VPS, not the historical Mac deployment
+> below. On October 4 the owner approved an eight-service initial stack without
+> Studio, postgres-meta, Supavisor or Imgproxy. See
+> [current VPS transition](staging-vps-transition.md) and
+> [minimal runtime configuration](staging-vps-runtime.md#minimal-initial-stack).
+> The configuration is preparation only; no VPS application release is accepted.
+
 ## Isolation contract
 
 Local staging and production must not share a database, Storage volume, JWT

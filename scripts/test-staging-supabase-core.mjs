@@ -62,7 +62,7 @@ try {
   { env: { ...env, ...variables } }));
   validateCompose(rendered);
   const candidateId = process.argv[4] ? inspectCandidate(docker, process.argv[4], platform) : null;
-  const services = ['db', 'auth', 'rest', 'storage', 'imgproxy', 'mailpit'];
+  const services = ['db', 'auth', 'rest', 'storage', 'mailpit'];
   model = { name: project, services: {},
     networks: { default: { name: project, internal: true, labels: { [label]: project } } },
     volumes: {} };
@@ -190,11 +190,13 @@ try {
   assert(object.status === 200);
   const download = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {headers});
   assert(download.status === 200 && await download.text() === 'synthetic-only');
+  const transform = await fetch('http://storage:5000/render/image/authenticated/synthetic-probe/check.txt?width=20', {headers});
+  assert(transform.status === 404);
   const denied = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {
     headers:{Authorization:'Bearer '+input.anon}});
   const denial = await denied.json();
   assert((${isPrivateStorageDenied.toString()})(denied.status, denial));
-  console.log('PASS: synthetic Auth login/invite to mail sink, private Storage upload/download and anonymous denial');`;
+  console.log('PASS: synthetic Auth login/invite to mail sink, private Storage upload/download, disabled image transformation and anonymous denial');`;
   console.log(docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module', '-e', probe],
     { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY,
       password: fixtures.accounts.find((account) => account.email === 'admin@barber.test').password }) }).trim());

@@ -7,12 +7,14 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
 import { stagingEnvoyCors, STAGING_BROWSER_ORIGIN } from './staging-envoy-cors.mjs';
+import { minimalStagingEnvoy } from './staging-envoy-minimal.mjs';
 
 const image = 'envoyproxy/envoy@sha256:43b69cf424922cd5d1086cc019dc89197e58d58deac89d36b3c8b67f1a9e8523';
 const probeImage = 'node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e';
-assert.ok(process.argv.length === 3 || (process.argv.length === 4 && process.argv[3] === '--staging-cors'),
-  'Pass the verified upstream directory and optionally --staging-cors');
-const restrictedCors = process.argv[3] === '--staging-cors';
+assert.ok(process.argv.length === 3 || (process.argv.length === 4 && ['--staging-cors', '--minimal'].includes(process.argv[3])),
+  'Pass the verified upstream directory and optionally --staging-cors or --minimal');
+const minimal = process.argv[3] === '--minimal';
+const restrictedCors = minimal || process.argv[3] === '--staging-cors';
 const configRoot = join(realpathSync(resolve(process.argv[2])), 'volumes/api/envoy');
 assert.ok(!/[\r\n,]/.test(configRoot), 'Unsafe Docker mount path');
 const expectedFiles = {
@@ -30,7 +32,7 @@ const docker = (...args) => localDocker(args);
 const name = `barber-envoy-candidate-${randomUUID()}`;
 const gateway = `${name}-gateway`; const backend = `${name}-backend`; const client = `${name}-client`;
 let networkCreated = false; const containers = [];
-let generatedConfig;
+let generatedConfig; const generatedFiles = [];
 const env = {
   ANON_KEY: randomUUID(), SERVICE_ROLE_KEY: randomUUID(),
   SUPABASE_PUBLISHABLE_KEY: `sb_publishable_${randomUUID()}`, SUPABASE_SECRET_KEY: `sb_secret_${randomUUID()}`,
@@ -66,7 +68,7 @@ async function probe(settings) {
     assert.equal((await call(path, { apikey: 'invalid' })).status, 401, 'Invalid API key must fail');
   }
   assert.equal((await call('/pg/tables', anon)).status, 403);
-  assert.equal((await call('/pg/tables', admin)).status, 200);
+  assert.equal((await call('/pg/tables', admin)).status, settings.minimal ? 403 : 200);
   assert.equal((await call('/rest/v1/', anon)).status, 403);
   assert.equal((await call('/rest/v1/', admin)).status, 200);
   for (const path of ['/mcp', '/api/mcp', '/realtime/v1/api/tenants', '/realtime/v1/api/openapi']) {
@@ -103,6 +105,14 @@ async function probe(settings) {
   }
   assert.equal((await call('/rest/v1/example', { ...anon, bad_header: 'reject' })).status, 400);
   assert.equal((await call('/')).status, 401, 'Dashboard must require basic auth');
+  if (settings.minimal) {
+    const authorization = 'Basic ' + Buffer.from(`${settings.DASHBOARD_USERNAME}:${settings.DASHBOARD_PASSWORD}`).toString('base64');
+    for (const path of ['/', '/project/default', '/api/platform/profile', '/pg/tables', '/mcp', '/api/mcp', '/pg/../pg/tables']) {
+      assert.equal((await call(path, { ...admin, authorization })).status, 403,
+        'Removed management services must be denied even with synthetic admin credentials');
+    }
+    console.log('PASS: optional management routes denied with admin credentials; only five backend DNS clusters remain.');
+  }
   if (settings.restrictedCors) {
     const origin = settings.browserOrigin;
     const preflight = await call('/rest/v1/example', { origin,
@@ -158,9 +168,19 @@ async function probe(settings) {
 
 try {
   if (restrictedCors) {
-    const template = stagingEnvoyCors(readFileSync(join(configRoot, 'lds.template.yaml'), 'utf8'));
+    const listener = readFileSync(join(configRoot, 'lds.template.yaml'), 'utf8');
+    const reduced = minimal ? minimalStagingEnvoy(listener, readFileSync(join(configRoot, 'cds.yaml'), 'utf8')) : null;
+    const template = reduced?.listener || stagingEnvoyCors(listener);
     generatedConfig = mkdtempSync(join(tmpdir(), 'barber-envoy-cors-'));
     writeFileSync(join(generatedConfig, 'lds.template.yaml'), template, { mode: 0o644, flag: 'wx' });
+    generatedFiles.push('lds.template.yaml');
+    if (minimal) {
+      assert.throws(() => minimalStagingEnvoy(listener, 'unreviewed'), /unreviewed/);
+      assert.equal((reduced.clusters.match(/    name: /g) || []).length, 5);
+      assert.ok(!/cluster: (studio|meta)|cluster_name: (studio|meta)|address: (studio|meta)/.test(template + reduced.clusters));
+      writeFileSync(join(generatedConfig, 'cds.yaml'), reduced.clusters, { mode: 0o644, flag: 'wx' });
+      generatedFiles.push('cds.yaml');
+    }
     // Reapplying or accepting modified input must fail rather than relax checks.
     assert.throws(() => stagingEnvoyCors(template), /unreviewed/);
   }
@@ -171,7 +191,8 @@ try {
   const hardening = ['--user', '10001:10001', '--read-only', '--cap-drop', 'ALL',
     '--security-opt', 'no-new-privileges:true', '--memory', '512m', '--cpus', '1', '--pids-limit', '128',
     '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001,mode=0700'];
-  const aliases = ['auth', 'rest', 'realtime-dev.supabase-realtime', 'storage', 'functions', 'meta', 'studio'];
+  const aliases = minimal ? ['auth', 'rest', 'realtime', 'storage', 'functions']
+    : ['auth', 'rest', 'realtime-dev.supabase-realtime', 'storage', 'functions', 'meta', 'studio'];
   const server = `const http=require('node:http');for(const port of [9999,3000,4000,5000,9000,8080])http.createServer((req,res)=>{let body='';req.on('data',c=>body+=c);req.on('end',()=>{res.setHeader('content-type','application/json');res.setHeader('access-control-allow-origin','*');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-private-network','true');res.setHeader('access-control-expose-headers','*');res.setHeader('vary','Accept-Encoding');res.end(JSON.stringify({port,path:req.url,headers:req.headers,body}));});}).listen(port,'0.0.0.0');`;
   docker('create', '--name', backend, '--label', 'barber.purpose=envoy-candidate', '--network', name,
     ...aliases.flatMap((alias) => ['--network-alias', alias]), ...hardening, probeImage, 'node', '-e', server);
@@ -181,7 +202,7 @@ try {
     '--tmpfs', '/etc/envoy:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700'];
   for (const file of Object.keys(expectedFiles)) {
     const target = file === 'docker-entrypoint.sh' ? '/docker-entrypoint.sh' : `/etc/envoy/${file}`;
-    const source = file === 'lds.template.yaml' && generatedConfig ? generatedConfig : configRoot;
+    const source = generatedFiles.includes(file) ? generatedConfig : configRoot;
     args.push('--mount', `type=bind,src=${join(source, file)},dst=${target},readonly`);
   }
   for (const [key, value] of Object.entries(env)) args.push('-e', `${key}=${value}`);
@@ -209,7 +230,7 @@ try {
   }), 'Unexpected IPv6 default route');
   const output = localDocker(['run', '--rm', '-i', '--name', client,
     '--label', 'barber.purpose=envoy-candidate', '--network', name, ...hardening,
-    probeImage, 'node', '--input-type=module'], { input: `await (${probe.toString()})(${JSON.stringify({ ...env, restrictedCors, browserOrigin: STAGING_BROWSER_ORIGIN })});`,
+    probeImage, 'node', '--input-type=module'], { input: `await (${probe.toString()})(${JSON.stringify({ ...env, restrictedCors, minimal, browserOrigin: STAGING_BROWSER_ORIGIN })});`,
     timeout: 90000 });
   console.log(output.trim());
   console.log('Candidate only: real-service integration, signed artifacts, load and VPS acceptance remain open.');
@@ -229,7 +250,9 @@ try {
     }
   } finally {
     if (generatedConfig) {
-      try { unlinkSync(join(generatedConfig, 'lds.template.yaml')); } catch { cleanupFailed = true; }
+      for (const file of generatedFiles) {
+        try { unlinkSync(join(generatedConfig, file)); } catch { cleanupFailed = true; }
+      }
       try { rmdirSync(generatedConfig); } catch { cleanupFailed = true; }
     }
   }
