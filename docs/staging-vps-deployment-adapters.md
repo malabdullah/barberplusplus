@@ -487,6 +487,72 @@ The separate registry credential follows GitHub's
 Clock acceptance uses the fields and error-bound definition documented by
 [`chronyc tracking`](https://chrony-project.org/doc/4.4/chronyc.html).
 
+### Smallest exact owner provisioning action (documentation only)
+
+Do not reuse, export, or copy the owner's current interactive `gh` OAuth token.
+It has broader `repo` and `workflow` scope and is not a server credential. When
+the owner separately authorizes credential creation, provision exactly these two
+independent identities; neither one grants deployment or broker access.
+
+#### A. GitHub evidence reader
+
+1. In GitHub **Settings → Developer settings → GitHub Apps**, create a private
+   app named for the staging evidence reader. Disable webhooks and request no
+   organization or account permissions.
+2. Set repository permissions to only **Actions: Read**, **Contents: Read**, and
+   **Attestations: Read**. GitHub grants **Metadata: Read** implicitly. Leave
+   Administration, Checks, Deployments, Environments write, Issues, Packages,
+   Pull requests, Secrets, and Workflows without access.
+3. Install the app only on account `malabdullah`, selecting **Only select
+   repositories**, and select only `barberplusplus`. Record the numeric app ID
+   and installation ID; these are identifiers, not secrets.
+4. Generate one app private key. Transfer it directly to the VPS through the
+   owner's encrypted administrative channel; never paste it into Codex, chat,
+   GitHub Actions, Dokploy environment text, shell history, or the repository.
+5. Encrypt it into the root-owned systemd credential store as
+   `/etc/credstore.encrypted/barber-staging-github-app-key.cred`, owner
+   `root:root`, mode `0600`. The future observation unit references it as
+   `LoadCredentialEncrypted=github-app-private-key.pem:/etc/credstore.encrypted/barber-staging-github-app-key.cred`.
+   Put only the non-secret IDs in root-owned configuration using the exact names
+   `BARBER_GITHUB_APP_ID` and `BARBER_GITHUB_INSTALLATION_ID`.
+6. The observation service mints a short-lived installation token in memory and
+   exposes it only to its `gh api` subprocess as `GH_TOKEN`. It never persists,
+   prints, forwards, or shares that token with Dokploy. Before enabling polling,
+   prove the six allowlisted GETs work and record the app installation and
+   permission screen. Do not test permissions by attempting a write.
+
+No GitHub repository or environment secret is needed for this reader. The key
+and IDs are VPS-local; PR and release workflows never receive them.
+
+#### B. GHCR package reader
+
+1. Use a separate owner-controlled GitHub machine account dedicated to package
+   pulling; it must not own source, administer the repository, or hold the app
+   private key. Enable the account's required security controls before access.
+2. In each package's settings, grant that machine account **Read** access to
+   exactly `malabdullah/barberplusplus` and
+   `malabdullah/barberplusplus-functions`. Grant no Write or Admin package role.
+3. While signed in as that machine account, create one personal access token
+   (classic) with only `read:packages`. Do not select `repo`, `workflow`,
+   `write:packages`, or `delete:packages`. Use the shortest practical expiry and
+   record the owner and rotation date outside the repository.
+4. Enter the machine account login under the exact secret name
+   `GHCR_PULL_USERNAME` and the token under `GHCR_PULL_TOKEN` in the staging
+   Dokploy registry/server credential store. Enter values only in that secret
+   UI or a root-only systemd credential if the reviewed pull verifier later
+   needs authenticated manifest reads. Never add these values to repository,
+   environment, Actions, PR, or production secrets.
+5. After a reviewed image has actually been published, verify read-only access
+   by resolving each allowlisted repository at its full immutable
+   `sha256:<64-lowercase-hex>` digest. Do not test by pushing a tag. A missing
+   digest, `401`, or `403` remains a blocked result.
+
+The identities stay separated: the GitHub App cannot read GHCR packages, and
+the package account/token cannot read Actions evidence. Provisioning either
+identity does not set `STAGING_VPS_AUTOMATION_READY`, add the release account to
+`barber-staging-release`, enable broker mutations, approve a GitHub environment,
+publish an image, or authorize first bootstrap.
+
 The approved initial staging inventory for future adapter allowlists is exactly
 Dokploy, PostgreSQL, gateway, Auth, REST, Realtime, Storage, compiled Functions,
 and mail sink. Studio, postgres-meta, Supavisor, and imgproxy/image resizing are
