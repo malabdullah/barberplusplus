@@ -6,22 +6,24 @@ approved or implemented. The staging workflow must remain fail-closed.
 ## Common rules
 
 Each adapter runs locally on the staging VPS through a dedicated, unprivileged
-release runner. Inputs and outputs exposed to GitHub are non-secret release
-identifiers, immutable image digests, evidence paths, and SHA-256 checksums only.
+server-side deployment identity, not a GitHub self-hosted runner registered to
+the current public repository. Inputs and outputs exposed to GitHub are
+non-secret release identifiers, immutable image digests, evidence paths, and
+SHA-256 checksums only.
 Adapters resolve runtime credentials from owner-controlled local configuration,
 never from command-line arguments, and must not print secrets or backup data.
 
-The runner cannot directly use `sudo`, the Docker socket, or database operator
+The deployment identity cannot directly use `sudo`, the Docker socket, or database operator
 credentials. Privileged operations require a separately reviewed, root-owned
 broker with a fixed protocol. The broker must expose only named staging
 operations, validate every identifier/digest/path against an allowlist, use
 fixed root-owned executable code and configuration, and return sanitized
 evidence. It must not expose arbitrary commands, arguments, filesystem paths,
-Docker API access, or runner-editable privileged scripts. A broad Dokploy owner
+Docker API access, or deployment-identity-editable privileged scripts. A broad Dokploy owner
 token is not an acceptable substitute.
 
 Every adapter accepts `DEPLOY_SHA`, `FRONTEND_IMAGE`, `FUNCTIONS_IMAGE`, and a
-broker-issued evidence identifier. The runner never supplies an arbitrary
+broker-issued evidence identifier. The deployment identity never supplies an arbitrary
 output path. The broker writes evidence beneath the fixed root-owned
 `/var/lib/barber-staging/evidence/<commit>/` tree and returns only its identifier
 and checksum. It refuses mutable images, production identifiers, missing
@@ -33,9 +35,9 @@ output. Evidence uses schema identifier
 
 The minimum broker design is a root-owned systemd service listening on
 `/run/barber-staging-broker.sock`. The socket is `0660 root:barber-staging-release`;
-only the dedicated runner account belongs to that group. The executable lives
+only the dedicated deployment account belongs to that group. The executable lives
 under `/usr/local/libexec/`, configuration under `/etc/barber-staging-broker/`,
-and both are non-writable by the runner. The service authenticates the Unix peer
+and both are non-writable by the deployment identity. The service authenticates the Unix peer
 credentials and accepts a versioned JSON request with only these operations:
 
 - `status.inspect` — sanitized isolated-stack and bootstrap readiness;
@@ -125,7 +127,9 @@ Before these proposed names become workflow dependencies:
 5. The owner reviews the implementation and a separate first-bootstrap plan.
 6. A dedicated Dokploy identity/token is limited to the Barber++ staging project
    and only application/compose read, update, and deploy operations.
-7. The dedicated repository runner has no Docker-group or sudo privilege and is
-   never eligible for pull-request jobs.
+7. The server-side deployment identity has no Docker-group or sudo privilege.
+   No self-hosted runner is registered to the current public repository. A
+   future organization workflow-restricted group or private deployment
+   repository requires separate approval.
 8. `STAGING_VPS_AUTOMATION_READY` is set to `true` only after all evidence is
    recorded. Environment approval is still required for each release.

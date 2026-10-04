@@ -15,10 +15,12 @@ Staging and production configuration must remain separate.
 - `Deploy staging` starts only after a successful same-repository `CI` push run
   for `main`. Its build job runs on GitHub-hosted Linux and is the only staging
   job allowed to write the GHCR package.
-- The staging deployment job requires all four runner labels: `self-hosted`,
-  `Linux`, `X64`, and `barber-staging-vps`. It is never used by PR workflows,
-  receives values only after `staging` approval, and can reach Dokploy only on
-  the VPS loopback interface.
+- The checked-in staging deployment scaffold currently names a Linux
+  self-hosted runner, but that runner must not be registered while this remains
+  a public personal-account repository. GitHub warns that pull requests against
+  public repositories can compromise self-hosted runners. A PR can add a new job
+  targeting the runner labels without referencing the protected `staging`
+  environment; labels are routing metadata, not an authorization boundary.
 - `Promote production` runs only for a protected semantic `vX.Y.Z` tag. It must
   reuse the accepted staging digest without rebuilding and must receive an
   independent production approval.
@@ -26,8 +28,11 @@ Staging and production configuration must remain separate.
   use `--skip-vault`.
 
 Never enable a self-hosted runner for workflows triggered by untrusted pull
-request code. The current runner is repository-scoped and appears only in the
-post-CI staging deployment job.
+request code. Current sources:
+
+- [GitHub secure-use reference](https://docs.github.com/en/actions/reference/security/secure-use)
+- [GitHub runner-group access controls](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access)
+- [GitHub adding self-hosted runners](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners)
 
 ## GitHub environments
 
@@ -92,7 +97,7 @@ Adapters must accept and return only evidence-file paths, hashes, digests, and
 release identifiers. They must not print secrets. Owner approval of a staging
 job is separate from adapter readiness and evidence verification. Privileged
 capture/migration operations must go through the constrained root-owned broker
-defined by the contract; the runner never receives Docker, sudo, or arbitrary
+defined by the contract; the deployment identity never receives Docker, sudo, or arbitrary
 root execution. Initial provisioning of the absent stack is a separate
 owner-approved bootstrap gate and cannot claim prior-backup evidence.
 
@@ -135,7 +140,7 @@ explicitly approved removing only the independent PR approval count and
 latest-push approval from this shared branch. All other fields were verified
 unchanged. Do not further weaken controls to complete a release.
 
-## GHCR and VPS staging runner
+## GHCR and deployment executor
 
 The build job publishes two commit-SHA tags and passes only their registry
 digests to deployment:
@@ -148,14 +153,32 @@ project/environment IDs, and any Dokploy URL other than loopback. Production
 continues to resolve the accepted frontend digest from staging evidence and
 does not rebuild it.
 
-The dedicated runner must be repository-scoped, installed on the staging VPS,
-and labeled exactly `barber-staging-vps`. It must not run PR jobs. Do not install
-it as `barber-admin`, add it to the Docker group, or grant it `sudo`. The build
-runs on GitHub-hosted infrastructure; the VPS runner needs outbound GitHub HTTPS
-and loopback Dokploy API access only. Do not install it or create a persistent
-token until the management listener and owner access are healthy. The current
-workflow intentionally fails after preflight so that merging it cannot perform
-the first cutover by accident.
+The approved default architecture is GitHub-hosted CI plus a restricted
+server-side pull/deployment mechanism that consumes only a verified commit and
+immutable digests after the protected staging approval. It must use the
+constrained broker contract, cannot accept arbitrary commands or repository
+code execution, and keeps Dokploy/database credentials on the server.
+
+Do not register the checked-in `barber-staging-vps` runner. Keeping
+`STAGING_VPS_AUTOMATION_READY` false and retaining the deliberate workflow stop
+does not make a repository-level runner safe: an attacker can define a separate
+PR job without either gate. The existing first-time-contributor workflow
+approval setting is also not a durable runner boundary for later pull requests.
+
+Two safe alternatives require separate owner authorization and are not approved
+by the current setup instruction:
+
+1. Move runner control to an organization runner group restricted to this
+   repository and specifically to
+   `malabdullah/barberplusplus/.github/workflows/deploy-staging.yml@refs/heads/main`.
+2. Place deployment automation and its runner in a separate private deployment
+   repository, accepting only signed/verified release evidence from this public
+   repository.
+
+Moving the repository, creating an organization or private repository, changing
+the GitHub plan, or changing Actions policy requires a new explicit decision.
+Until then, only the server-side pull architecture may proceed. The deployment
+workflow remains fail-closed and must be revised before merge.
 
 ## Evidence
 
