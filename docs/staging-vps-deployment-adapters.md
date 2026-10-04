@@ -11,6 +11,15 @@ identifiers, immutable image digests, evidence paths, and SHA-256 checksums only
 Adapters resolve runtime credentials from owner-controlled local configuration,
 never from command-line arguments, and must not print secrets or backup data.
 
+The runner cannot directly use `sudo`, the Docker socket, or database operator
+credentials. Privileged operations require a separately reviewed, root-owned
+broker with a fixed protocol. The broker must expose only named staging
+operations, validate every identifier/digest/path against an allowlist, use
+fixed root-owned executable code and configuration, and return sanitized
+evidence. It must not expose arbitrary commands, arguments, filesystem paths,
+Docker API access, or runner-editable privileged scripts. A broad Dokploy owner
+token is not an acceptable substitute.
+
 Every adapter accepts `DEPLOY_SHA`, `FRONTEND_IMAGE`, `FUNCTIONS_IMAGE`, and an
 absolute `EVIDENCE_OUTPUT` path under a runner-owned evidence directory. It
 refuses mutable images, production identifiers, missing baseline readiness, an
@@ -19,6 +28,16 @@ written atomically with mode `0600` and schema identifier
 `barber-staging-deployment-evidence/v1`.
 
 ## Proposed adapter paths
+
+### First provisioning (separate gate)
+
+The first creation of the currently absent staging stack is bootstrap, not a
+normal release. It requires an explicit owner-approved bootstrap plan, empty
+Database/Storage/Vault proof, isolated resource and hostname checks, baseline
+and migration verification, initial fixture approval, and a post-bootstrap
+backup plus restore rehearsal. It must not invent prior-backup evidence for a
+stack that did not exist. `STAGING_VPS_AUTOMATION_READY` remains false until
+bootstrap evidence and the first accepted release are independently recorded.
 
 ### `scripts/staging-vps-backup-adapter.sh`
 
@@ -56,12 +75,15 @@ recovery-evidence reference.
 Before these proposed names become workflow dependencies:
 
 1. Env3 implements and locally validates the adapters and JSON schemas.
-2. The isolated live stack passes backup, restore, migration, and recovery
+2. A reviewed root-owned constrained broker provides only the exact privileged
+   staging operations required by the adapters; its API, allowlists, ownership,
+   and audit output are tested independently.
+3. The isolated live stack passes backup, restore, migration, and recovery
    rehearsal without production data or credentials.
-3. The owner reviews the implementation and a specific first-cutover plan.
-4. A dedicated Dokploy identity/token is limited to the Barber++ staging project
+4. The owner reviews the implementation and a separate first-bootstrap plan.
+5. A dedicated Dokploy identity/token is limited to the Barber++ staging project
    and only application/compose read, update, and deploy operations.
-5. The dedicated repository runner has no Docker-group or sudo privilege and is
+6. The dedicated repository runner has no Docker-group or sudo privilege and is
    never eligible for pull-request jobs.
-6. `STAGING_VPS_AUTOMATION_READY` is set to `true` only after all evidence is
+7. `STAGING_VPS_AUTOMATION_READY` is set to `true` only after all evidence is
    recorded. Environment approval is still required for each release.

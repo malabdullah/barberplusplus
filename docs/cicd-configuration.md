@@ -86,7 +86,11 @@ proposed in [VPS deployment adapter contract](staging-vps-deployment-adapters.md
 
 Adapters must accept and return only evidence-file paths, hashes, digests, and
 release identifiers. They must not print secrets. Owner approval of a staging
-job is separate from adapter readiness and evidence verification.
+job is separate from adapter readiness and evidence verification. Privileged
+capture/migration operations must go through the constrained root-owned broker
+defined by the contract; the runner never receives Docker, sudo, or arbitrary
+root execution. Initial provisioning of the absent stack is a separate
+owner-approved bootstrap gate and cannot claim prior-backup evidence.
 
 ### `production`
 
