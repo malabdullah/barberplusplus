@@ -73,6 +73,8 @@ jobs:
           candidate="$(docker image inspect --format '{{.Id}}' barber-postgres:ci-candidate)"
           npm run test:staging-postgres -- linux/amd64 "$candidate"
           npm run test:staging-supabase-core -- "$upstream" linux/amd64 "$candidate"
+          # Exact scan-reviewed Auth/Storage candidates; does not change deploy pins.
+          npm run test:staging-supabase-core -- "$upstream" linux/amd64 "$candidate" --core-candidates
       - run: npm run build
         env:
           VITE_APP_ENV: development

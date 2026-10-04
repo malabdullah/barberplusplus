@@ -44,6 +44,7 @@ function fixture() {
     API_EXTERNAL_URL: 'https://supabase-staging.malabdullah.cloud/auth/v1',
     GOTRUE_DISABLE_SIGNUP: 'true', GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: 'false',
     GOTRUE_EXTERNAL_PHONE_ENABLED: 'false',
+    GOTRUE_TRACING_ENABLED: 'false', GOTRUE_METRICS_ENABLED: 'false',
     GOTRUE_SMTP_HOST: 'mailpit', GOTRUE_SMTP_PORT: '1025', GOTRUE_SMTP_ADMIN_EMAIL: 'no-reply@barber.test',
     GOTRUE_SMTP_USER: '', GOTRUE_SMTP_PASS: '',
   };
@@ -90,6 +91,10 @@ const unsafeChanges = {
   'privileged container': (c) => { c.services.db.privileged = true; },
   'mutable latest image': (c) => { c.services.auth.image = 'supabase/gotrue:latest'; },
   'wrong Auth origin': (c) => { c.services.auth.environment.GOTRUE_SITE_URL = 'https://production.invalid'; },
+  'Auth tracing enabled': (c) => { c.services.auth.environment.GOTRUE_TRACING_ENABLED = 'true'; },
+  'Auth metrics enabled': (c) => { c.services.auth.environment.GOTRUE_METRICS_ENABLED = 'true'; },
+  'Auth tracing gate absent': (c) => { delete c.services.auth.environment.GOTRUE_TRACING_ENABLED; },
+  'Auth telemetry destination': (c) => { c.services.auth.environment.OTEL_EXPORTER_OTLP_ENDPOINT = 'https://collector.invalid'; },
   'anonymous signup': (c) => { c.services.auth.environment.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED = 'true'; },
   'external SMTP provider': (c) => { c.services.auth.environment.GOTRUE_SMTP_HOST = 'smtp.production.invalid'; },
   'SMTP provider credential': (c) => { c.services.auth.environment.GOTRUE_SMTP_PASS = 'synthetic-secret'; },

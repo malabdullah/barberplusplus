@@ -295,3 +295,36 @@ GoTrue scan report checksum (SHA-256):
 `244b7e0f722fe81df718233072b99a01c700ff062fa59cbf43f7f5b7177f4d91`.
 Storage report SHA-256:
 `f738a937bcde56606c726495217193fbdfb071e880830e46d8ce3a798e3ce99c`.
+
+### GoTrue candidate applicability review — preliminary, no exception
+
+The official v2.197.0 source resolves to
+`4eee58f296d9698a1c2c0ae14d7a0b379c7622d3`. Its Dockerfile uses `CGO_ENABLED=0`.
+Inspection of the exact scanned AMD64 binary, without running that binary,
+confirmed Go 1.27.0, CGO disabled, pgproto3/v2 2.3.3 and gRPC 1.82.1. The image
+has no source-revision label and the binary exposes no VCS revision; this does
+not establish signed source-to-image provenance.
+
+- The two OpenSSL package matches concern a QUIC server. The binary metadata
+  and loader inspection are consistent with a static Go executable, not a
+  dynamically linked OpenSSL server. This narrows applicability; it is not a
+  blanket package exception or proof about every executable in the image.
+- The [pgproto3 advisory](https://pkg.go.dev/vuln/GO-2026-4518) requires malicious
+  PostgreSQL responses and has no listed fixed v2 version. Connecting only to
+  the dedicated staging database reduces exposure but does not patch the
+  dependency or protect against a compromised peer.
+- The [gRPC memory fix](https://github.com/grpc/grpc-go/pull/9331) and
+  [missing-authority fix](https://github.com/grpc/grpc-go/pull/9365) need separate
+  reachability review. Tagged Auth source uses gRPC for optional outbound OTLP
+  exporters. No direct gRPC/xDS server constructor was found in its application
+  source, but that search is not a complete transitive call-graph analysis.
+
+Initial staging now explicitly disables `GOTRUE_TRACING_ENABLED` and
+`GOTRUE_METRICS_ENABLED`, with validator rejection of enabled/missing gates or
+nonempty `OTEL_*` settings. The tagged source gates exporter initialization on
+these booleans. This is an outbound/quarantine control, not a vulnerability
+suppression. Scanner findings remain recorded and deployment pins unchanged.
+
+Source references: [Dockerfile](https://github.com/supabase/auth/blob/4eee58f296d9698a1c2c0ae14d7a0b379c7622d3/Dockerfile),
+[tracing](https://github.com/supabase/auth/blob/4eee58f296d9698a1c2c0ae14d7a0b379c7622d3/internal/observability/tracing.go),
+[metrics](https://github.com/supabase/auth/blob/4eee58f296d9698a1c2c0ae14d7a0b379c7622d3/internal/observability/metrics.go).

@@ -85,10 +85,12 @@ export function validateCompose(config, { requireCompiledFunctions = false } = {
     || auth.GOTRUE_DISABLE_SIGNUP !== 'true'
     || auth.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED !== 'false'
     || auth.GOTRUE_EXTERNAL_PHONE_ENABLED !== 'false'
+    || auth.GOTRUE_TRACING_ENABLED !== 'false' || auth.GOTRUE_METRICS_ENABLED !== 'false'
     || auth.GOTRUE_SMTP_HOST !== 'mailpit'
     || auth.GOTRUE_SMTP_PORT !== '1025'
     || auth.GOTRUE_SMTP_ADMIN_EMAIL !== 'no-reply@barber.test'
     || auth.GOTRUE_SMTP_USER !== '' || auth.GOTRUE_SMTP_PASS !== '') fail('Unsafe staging Auth configuration');
+  if (Object.entries(auth).some(([key, value]) => key.startsWith('OTEL_') && value)) fail('Initial Auth telemetry must remain disabled');
   const functions = config.services.functions.environment;
   if (functions.APP_ENV !== 'staging' || functions.APP_URL !== 'https://staging-barber.malabdullah.cloud'
     || functions.VERIFY_JWT !== 'true'

@@ -1,29 +1,28 @@
 // Disposable local compatibility test, never a deployment or live-stack reset.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
-import { readFileSync, readdirSync, realpathSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync, unlinkSync, rmdirSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { parseEnv } from 'node:util';
 import { validateCompose } from './check-vps-compose.mjs';
 import { inspectCandidate, inspectPlatformImage } from './staging-postgres-candidate.mjs';
 import { prepareStagingFixtures } from './staging-fixtures.mjs';
 import { isPrivateStorageDenied, rehearseCoreRecovery } from './rehearse-staging-core-recovery.mjs';
+import { localDockerProbe } from './local-docker-probe.mjs';
+import { coreCandidateImages, validateCoreCandidateMetadata } from './staging-core-candidates.mjs';
 
 const upstream = realpathSync(process.argv[2] || 'missing-upstream-directory');
 const platform = process.argv[3] || 'linux/amd64';
-assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 5);
+assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 6);
+const coreCandidates = coreCandidateImages(process.argv[5], platform);
 const project = `barber-core-probe-${randomBytes(8).toString('hex')}`;
 const label = 'barber.staging.core-probe';
-const env = { PATH: process.env.PATH, HOME: process.env.HOME };
 let model;
 let started = false;
 let stage = 'preflight';
 const redactions = [];
-const docker = (args, options = {}) => execFileSync('docker', args, {
-  env, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
-  timeout: 30000, maxBuffer: 8 * 1024 * 1024, ...options,
-});
+const docker = localDockerProbe();
 const compose = (args, options = {}) => docker([
   'compose', '--project-directory', upstream, '-p', project, '-f', '-', ...args,
 ], { input: JSON.stringify(model), ...options });
@@ -31,9 +30,6 @@ const sql = (input) => docker(['exec', '-i', '-u', 'postgres', `${project}-db`,
   'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-d', 'postgres'], { input }).trim();
 
 try {
-  const context = docker(['context', 'show']).trim();
-  const [contextInfo] = JSON.parse(docker(['context', 'inspect', context]));
-  assert.ok(contextInfo.Endpoints.docker.Host.startsWith('unix://'), 'Local Docker only');
   const pin = readFileSync('ops/supabase/self-hosted.commit', 'utf8').trim();
   assert.equal(readFileSync(`${upstream}/.supabase-version`, 'utf8').trim(), `ref=${pin}`);
   assert.ok(readFileSync('supabase/.baseline-ready', 'utf8').includes('verified'));
@@ -56,11 +52,26 @@ try {
   variables.SERVICE_ROLE_KEY = jwt('service_role');
   redactions.push(...Object.entries(variables).filter(([key]) => /PASSWORD|SECRET|KEY|TOKEN/.test(key))
     .map(([, value]) => value).filter(Boolean));
-  const rendered = JSON.parse(docker(['compose', '--project-directory', '/opt/barber-staging/supabase',
-    '--env-file', `${upstream}/.env.example`, '-f', `${upstream}/docker-compose.yml`,
-    '-f', resolve('ops/staging-vps/compose.override.yml'), 'config', '--format', 'json'],
-  { env: { ...env, ...variables } }));
+  stage = 'synthetic compose rendering';
+  // Compose cannot read /dev/stdin on every macOS Docker installation. Keep
+  // synthetic values in a private, short-lived file, not process arguments or
+  // inherited Docker environment variables. Original example stays unchanged.
+  const scratch = mkdtempSync(join(tmpdir(), 'barber-core-env-'));
+  const envFile = join(scratch, 'synthetic.env');
+  let rendered;
+  try {
+    writeFileSync(envFile, Object.entries(variables).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n'),
+      { flag: 'wx', mode: 0o600 });
+    rendered = JSON.parse(docker(['compose', '--project-directory', '/opt/barber-staging/supabase',
+      '--env-file', envFile, '-f', `${upstream}/docker-compose.yml`,
+      '-f', resolve('ops/staging-vps/compose.override.yml'), 'config', '--format', 'json']));
+  } finally {
+    if (existsSync(envFile)) unlinkSync(envFile);
+    rmdirSync(scratch);
+  }
+  stage = 'synthetic topology validation';
   validateCompose(rendered);
+  stage = 'database candidate verification';
   const candidateId = process.argv[4] ? inspectCandidate(docker, process.argv[4], platform) : null;
   const services = ['db', 'auth', 'rest', 'storage', 'mailpit'];
   model = { name: project, services: {},
@@ -91,6 +102,7 @@ try {
     service.mem_limit ||= 1073741824;
     service.cpus ||= 1;
     service.pids_limit ||= 256;
+    if (coreCandidates[name]) service.image = coreCandidates[name];
     model.services[name] = service;
   }
   stage = 'candidate image pulls';
@@ -106,6 +118,11 @@ try {
     docker(['pull', '--platform', platform, service.image], { timeout: 300000 });
     stage = `image metadata (${name})`;
     const metadata = inspectPlatformImage(docker, service.image, platform);
+    if (coreCandidates[name]) {
+      validateCoreCandidateMetadata(name, service.image, metadata, platform);
+      console.log(`${name}: exact scanned candidate ${service.image}`);
+      continue;
+    }
     const repository = service.image.split('@')[0].replace(/:[^/]+$/, '');
     const immutable = metadata.RepoDigests.find((ref) => ref.startsWith(`${repository}@sha256:`));
     assert.ok(immutable, 'Missing immutable image identity');

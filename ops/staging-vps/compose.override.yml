@@ -30,6 +30,9 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_SMS_AUTOCONFIRM: "false"
+      # No external telemetry collector in initial synthetic staging.
+      GOTRUE_TRACING_ENABLED: "false"
+      GOTRUE_METRICS_ENABLED: "false"
       # Sink-only SMTP: no provider credentials, relay, or external recipients.
       GOTRUE_SMTP_HOST: mailpit
       GOTRUE_SMTP_PORT: "1025"

@@ -39,6 +39,23 @@ test('rejects endpoint environment overrides before any Docker invocation', () =
   }
 });
 
+test('preserves binary recovery archives and never accepts execution overrides', () => {
+  const { options, calls } = fixture();
+  const execute = options.execute;
+  const archive = Buffer.from([0, 10, 32, 255, 13, 10]);
+  options.execute = (program, args, settings) => {
+    const value = execute(program, args, settings);
+    return args[0] === '--host' ? archive : value;
+  };
+  const docker = localDockerProbe(options);
+  assert.deepEqual(docker(['cp', 'synthetic:/archive', '-'], {
+    encoding: null, maxBuffer: 1024, env: { DOCKER_HOST: 'ssh://forbidden.invalid' },
+  }), archive);
+  assert.equal(calls.at(-1).settings.encoding, null);
+  assert.equal(calls.at(-1).settings.maxBuffer, 1024);
+  assert.deepEqual(calls.at(-1).settings.env, { PATH: '/usr/bin', HOME: '/synthetic' });
+});
+
 test('rejects remote endpoints and non-sockets before mutations', () => {
   for (const host of ['tcp://127.0.0.1:2375', 'ssh://remote.invalid', 'unix://relative', 'unix:///socket?remote=1', null]) {
     const { options, calls } = fixture(host);

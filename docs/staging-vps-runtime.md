@@ -88,6 +88,57 @@ or Functions integration through Envoy, AMD64/VPS acceptance, live backups, or
 clear outstanding image vulnerabilities/provenance. No image pins, production
 resources, live VPS resources, DNS or account permissions changed in this work.
 
+## Auth telemetry quarantine
+
+Initial Auth tracing and metrics exporters are explicitly disabled, and nonempty
+`OTEL_*` settings are rejected. This keeps an unreviewed telemetry collector out
+of the synthetic staging configuration; it is not a component security waiver.
+
+## Opt-in Auth/Storage upgrade rehearsal
+
+`scripts/staging-core-candidates.mjs` contains only the previously scanned
+AMD64 manifest identities for Auth 2.197.0 and Storage 1.79.31. They can be used
+by the disposable local core probe, not by a deployment adapter:
+
+```sh
+npm run test:staging-supabase-core -- /absolute/verified/upstream linux/amd64 sha256:<validated-local-postgres-candidate-id> --core-candidates
+```
+
+Without the last flag, the probe retains the selected versions. Unknown options,
+other platforms, image identities or mismatched image metadata fail closed.
+The Compose deployment pins and baseline files are not modified. CI now runs
+both selected-version and candidate-version core/recovery rehearsals.
+
+The probe binds all Docker operations to one resolved local Unix socket. It
+rejects endpoint overrides and does not follow subsequent context changes.
+Binary backup archives retain their exact bytes. Synthetic Compose values use
+a mode-0600 temporary file inside a private directory, removed immediately
+after rendering, rather than process arguments, inherited Docker settings or a
+live `.env` file. Each run uses new internal-only networks, unexposed services,
+random synthetic credentials and label-checked disposable volumes.
+
+October 4 local AMD64 verification passed for both selected versions and these
+exact candidates with telemetry disabled: four application migrations, 32 pgTAP
+assertions, random-fixture empty-target/duplicate guards, login, sink-only
+invitation, private upload/download, disabled transformation, anonymous denial,
+encrypted archive tamper rejection, and fresh-volume restoration of Auth, Vault,
+tenant RLS and private Storage. Full local checks and five Playwright journeys
+also passed; the staging unit suite now contains 93 tests and the local-Docker/
+CORS suite contains seven. A separate code-review pass checked identity/platform
+rejection, private temporary-file cleanup, binary preservation, endpoint binding
+and candidate-only scope; this is not independent human approval.
+The fresh frontend test artifact
+`sha256:0c2fa056eed06cace9e08fc42e82e8d1fffe5911a1ed20c6b15529a9325b006d`
+passed isolated health/runtime, CSP, no-store, noindex, nosniff and UID 101 checks.
+It was neither published nor accepted as a release.
+
+These are fresh-initialization and recovery rehearsals, not an in-place upgrade
+or downgrade test. Browser tests still use the existing local synthetic dev
+database, not the candidate stack. No full-stack/VPS acceptance, vulnerability
+exception, release approval, migration change or deployed version change follows
+from this evidence. Outstanding component findings and source-image provenance
+are tracked in `staging-component-security-2026-10-04.md`.
+
 ## Test email
 
 `ops/staging-vps/compose.override.yml` connects Auth to `mailpit:1025` on the
