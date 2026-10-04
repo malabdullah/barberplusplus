@@ -272,10 +272,9 @@ node --test scripts/staging-approval-evidence.node-test.mjs
 ```
 
 Fixtures do not authenticate a GitHub response or prove a real approval. The
-module always returns `authorizing: false`; API transport/response origin,
+module always returns `authorizing: false`; API response origin,
 attestation, envelope, images, migration evidence, clock, replay ledger, and
-broker authorization remain independent gates. No GitHub API polling or token
-handling is implemented.
+broker authorization remain independent gates.
 
 ### Local release-artifact binding status
 
@@ -313,11 +312,52 @@ node --test scripts/staging-release-evidence.node-test.mjs
 
 The module always returns `authorizing: false`. Fixture records do not prove API
 origin, registry state, migration capture, trusted time, or durable replay
-state. The next prerequisite is an independently reviewed read-only transport
-layer that authenticates GitHub artifact/run/approval responses, verifies the
-downloaded archive digest and safe single-file inventory, obtains authenticated
-GHCR image evidence and migration evidence, and supplies a trusted clock plus a
-root-owned append-only replay snapshot. Broker authorization remains separate.
+state. Read-only transport is described below. Trusted time, a root-owned
+append-only replay snapshot, reviewed workflow/source allowlists, migration
+capture, and broker authorization remain separate prerequisites.
+
+### Local read-only evidence transport status
+
+`scripts/staging-evidence-transport.mjs` adds bounded, non-authorizing transport
+for the evidence validators. Its GitHub adapter invokes an allowlisted absolute
+`gh` binary with `GET` only and queries exactly the selected workflow run, its
+approval history, the current `staging` environment, one artifact record, the
+staging workflow file at the exact lowercase commit SHA, and that artifact's ZIP
+download. It does not create, update, approve, rerun, dispatch, or deploy
+anything.
+
+The artifact ZIP is never extracted. A memory-only inspector limits the archive
+to 1 MiB and the canonical envelope to 16 KiB, requires exactly one regular
+`staging-release-request.json` entry, and rejects ZIP64, links, directories,
+encryption, unsafe flags or methods, traversal or alternate names, comments,
+trailing or hidden bytes, unsafe compression ratios, inconsistent descriptors,
+invalid UTF-8, and size or CRC mismatches. The adapter records both the archive
+SHA-256 and the single entry SHA-256 for the binding validator.
+
+The GHCR adapter accepts only the two reviewed Barber++ repositories and an
+immutable lowercase `sha256:` digest. It first attempts an anonymous public
+manifest read, follows only the exact GHCR public bearer-token challenge, and
+requires the response body digest and `Docker-Content-Digest` to equal the
+requested digest. Redirects and unexpected media types fail closed. If a
+package is private or anonymous pull is unavailable, this result is blocked;
+the exact missing capability is a dedicated read-only identity with
+`read:packages`. No such credential is created or accepted by this adapter.
+
+Tests run with:
+
+```sh
+node --test scripts/staging-evidence-transport.node-test.mjs
+```
+
+The tests use bounded synthetic archives and mocked HTTP/CLI boundaries. They
+do not prove a live GitHub response, a real environment approval, a published
+artifact, or a live GHCR manifest. Inaccessible approval history is not success.
+The adapter always returns `authorizing: false`; authenticated host/token scope
+review, exact policy-validator composition, image attestations, migration
+evidence, trusted time, persistent replay protection, approved workflow/source
+allowlists, and the constrained broker remain required before activation. The
+current repository state has no qualifying live release artifact to validate
+end to end, so no remote workflow or staging deployment was triggered.
 
 The approved initial staging inventory for future adapter allowlists is exactly
 Dokploy, PostgreSQL, gateway, Auth, REST, Realtime, Storage, compiled Functions,
