@@ -85,3 +85,69 @@ and [changelog](https://github.com/supabase/supabase/blob/564eab8ad7840b13324f68
 Temporary candidate reports: `/private/tmp/barber-candidate-scan.emuuRK/`.
 Structured summary SHA-256:
 `583054585a6c90d152ae7c971af1f02033fde40d1682e98b40e9799b826b9499`.
+
+## Envoy 1.39.2 candidate — isolated verification, not pin promotion
+
+An additional upstream release was found during primary-source review:
+[Envoy 1.39.2](https://github.com/envoyproxy/envoy/releases/tag/v1.39.2), released
+October 1. The official AMD64 candidate is
+`envoyproxy/envoy@sha256:43b69cf424922cd5d1086cc019dc89197e58d58deac89d36b3c8b67f1a9e8523`.
+No derived image was necessary and no deployed/Compose pin was changed.
+
+- Trivy 0.74.0 with database updated `2026-10-04T01:47:20.093525258Z` completed
+  a fresh exact-manifest scan at `2026-10-04T08:05:12Z`: **0 HIGH, 0 CRITICAL**.
+  Coverage was 104 Ubuntu 22.04 packages and zero language-specific files.
+  This is not a complete native-code audit, exploitability claim or full-stack
+  acceptance. No suppression or ignore-unfixed option was used.
+- Both `libssl3:amd64` and `openssl` report `3.0.2-0ubuntu1.30`, the Jammy fix
+  for [CVE-2026-84782](https://ubuntu.com/security/CVE-2026-84782) in
+  [USN-8847-1](https://ubuntu.com/security/notices/USN-8847-1). The earlier two
+  HIGH occurrences were one advisory across two packages. BoringSSL is not
+  affected by that OpenSSL issue; it has a separate certificate-parsing DoS
+  fix, [CVE-2026-35189](https://github.com/google/boringssl/blob/main/docs/advisories/2026-09-29.md).
+- The actual candidate binary reports
+  `50d48c6c6c964b06f1365cb54ed05a7e03ac631f/1.39.2/Clean/RELEASE/BoringSSL`.
+  This differs from release-tag commit `018f6bf01f30dd46f4f1baffb40802598ed07b27`.
+  The actual commit is its direct child; the
+  [source comparison](https://github.com/envoyproxy/envoy/compare/018f6bf01f30dd46f4f1baffb40802598ed07b27...50d48c6c6c964b06f1365cb54ed05a7e03ac631f)
+  changes three Bazel/toolchain files. Its
+  [dependency declaration](https://github.com/envoyproxy/envoy/blob/50d48c6c6c964b06f1365cb54ed05a7e03ac631f/bazel/repository_locations.bzl)
+  still pins fixed BoringSSL `0.20260929.0`, archive SHA-256
+  `04da9ba0664e0a7f028e961c38d604f2cc6dac852a84ca0e51dc1fa051d4c8fe`.
+  Source ancestry is evidence, not cryptographic image-to-source attestation.
+- Upstream [container manifest publication succeeded](https://github.com/envoyproxy/envoy/actions/runs/37008109286/job/110849273143),
+  but [GitHub release publication failed](https://github.com/envoyproxy/envoy/actions/runs/37008109286/job/110853144004)
+  and [final verification was skipped](https://github.com/envoyproxy/envoy/actions/runs/37008109286/job/110854855576).
+  Record this honestly; do not call upstream verification all-green or claim a
+  tag-exact build. Digest-bound provenance remains unresolved.
+
+The repeatable `npm run test:staging-envoy-candidate -- /path/to/verified/upstream`
+probe runs the exact candidate with checksum-verified v0.8.0 gateway files and
+synthetic Node backends, an internal-only Docker network, no published ports,
+non-root users, read-only filesystems, dropped capabilities and resource limits.
+It tests config compatibility, required/invalid API keys, admin/MCP denials,
+legacy and modern API-key translation, preserved user JWT headers, websocket
+route rewriting, untouched function payload/signature headers, encoded separator
+rejection, path normalization and underscore-header rejection. It asserts the
+actual binary/package identity and no IPv4/IPv6 default route. Only uniquely
+named test resources are removed; existing services and volumes are preserved.
+The Docker wrapper rejects endpoint environment overrides and remote contexts,
+resolves an actual local Unix socket, and binds all operations (including the
+probe client and cleanup) to that socket with a sanitized environment. Four
+negative/regression test groups cover these controls, including a context change
+after selection. This was added after a separate review identified the inherited
+Docker-context risk; it does not imply other older probes have the same guard.
+
+These backends deliberately echo synthetic traffic: they do **not** implement
+Auth, RLS, Storage, Meta signature checking or the real Functions gateway. Thus
+passing this probe does not prove real-service authorization, Cloudflare exact
+path behavior, full-stack recovery, native VPS/load capacity or release readiness.
+The upstream listener still allows broad CORS; staging-origin restriction is a
+separate unresolved hardening item, not silently accepted by this test.
+
+Raw candidate scan: `/private/tmp/barber-envoy-review.ONA1bC5Z/envoy-1.39.2.json`.
+Report SHA-256: `13fbb4cab8f87b08d9d7b590ac65012ed28794bf23feae7ea07d406efe0612fe`.
+The final local routing/isolation probe, targeted ESLint and full `npm run check`
+passed. GitHub application CI now runs the opt-in candidate probe after fetching
+the verified upstream configuration; this is not an automatic image upgrade.
+The remaining seven component inventories and full-stack gates stay open.
