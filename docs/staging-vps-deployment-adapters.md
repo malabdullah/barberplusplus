@@ -157,7 +157,8 @@ Acceptance moves a request atomically through `observed`, `verified`,
 run attempt, nonce, artifact ID, or exact commit/digest tuple already present in
 either ledger cannot start another deployment. Process restart resumes evidence
 inspection but never repeats a side effect automatically. Retry requires a new
-owner-approved workflow attempt, nonce, expiry, and request ID. Rollback uses
+owner-approved workflow **run ID**—not a GitHub rerun attempt—plus a new nonce,
+expiry, and request ID. Rollback uses
 the separately recorded previous immutable digests and is never represented as
 a replay of the rejected request.
 
@@ -240,6 +241,41 @@ the approval-history response, current environment policy, allowlisted workflow
 blob, envelope syntax, image attestations, migration evidence, trusted clock,
 replay ledger, and broker authorization remain mandatory independent gates.
 No attestation bundle or trusted-root material is currently installed.
+
+### Local staging-approval evidence status
+
+The official approval-history endpoint is scoped by workflow `run_id` and
+returns decision state, environments, and reviewer identity. It does not return
+`run_attempt`, job/check ID, or approval timestamp. GitHub reruns reuse the run
+ID, so historical approval evidence cannot distinguish approval of attempt 1
+from approval of attempt 2 or later.
+
+`scripts/staging-approval-evidence.mjs` is a pure, non-authorizing policy
+validator for fixture/API-shaped evidence. It checks the current environment ID
+and name, protected-branch-only policy, sole owner reviewer numeric identity,
+repository/head-repository IDs and names, successful workflow-run event, main
+branch, exact commit and run attempt, workflow path, and reviewed workflow
+source against both its Git blob SHA and an independently allowlisted SHA-256.
+It also requires one unambiguous owner approval for only the staging environment.
+
+The only attempt it can bind safely is `run_attempt: 1`, because no earlier
+attempt exists for that run ID. For every later attempt it returns
+`blocked-approval-not-bound-to-run-attempt`, `attemptBound: false`, and the exact
+missing proof. Reruns must never deploy; a retry requires a wholly new workflow
+run and new owner approval. Ambiguous, absent, rejected, extra, wrong-reviewer,
+or wrong-environment histories return a separate blocked result.
+
+Tests run with:
+
+```sh
+node --test scripts/staging-approval-evidence.node-test.mjs
+```
+
+Fixtures do not authenticate a GitHub response or prove a real approval. The
+module always returns `authorizing: false`; API transport/response origin,
+attestation, envelope, images, migration evidence, clock, replay ledger, and
+broker authorization remain independent gates. No GitHub API polling or token
+handling is implemented.
 
 ## Proposed adapter paths
 
