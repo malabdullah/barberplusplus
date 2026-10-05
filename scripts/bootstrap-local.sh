@@ -7,6 +7,7 @@ command -v docker >/dev/null 2>&1 || {
 }
 
 npm ci
+node scripts/prepare-local-service-pins.mjs
 npx supabase start
 npx supabase db reset --local
 
@@ -38,4 +39,3 @@ if [ ! -f supabase/functions/.env.local ]; then
 fi
 
 echo "Local environment is ready. Run: npm run local:start"
-

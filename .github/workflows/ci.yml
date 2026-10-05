@@ -30,6 +30,8 @@ jobs:
       - run: npm run test:cicd
       - run: npm run test:release
       - run: npm run test:staging-vps
+      - run: npm run test:staging-broker
+      - run: npm run test:staging-envoy-safety
       - run: npm run test:staging-gateway
       - run: npm run test:staging-functions-package
       - name: Test real staging Edge Runtime with synthetic inputs
@@ -40,12 +42,15 @@ jobs:
           sudo apt-get install -y --no-install-recommends age
           npm run test:staging-backup
       - run: npm run check:supabase-pin
-      - name: Validate isolated VPS mail sink with synthetic mail
+      - name: Validate isolated VPS candidate services
         shell: bash
         run: |
           set -euo pipefail
           upstream="$RUNNER_TEMP/staging-upstream-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           sh scripts/bootstrap-staging-supabase.sh "$upstream"
+          npm run test:staging-envoy-candidate -- "$upstream"
+          npm run test:staging-envoy-candidate -- "$upstream" --staging-cors
+          npm run test:staging-envoy-candidate -- "$upstream" --minimal
           # Syntactic fixture only: no image publication or deployment occurs.
           export STAGING_FUNCTIONS_IMAGE="ghcr.io/malabdullah/barberplusplus-functions@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           docker compose --project-directory /opt/barber-staging/supabase \
@@ -68,6 +73,8 @@ jobs:
           candidate="$(docker image inspect --format '{{.Id}}' barber-postgres:ci-candidate)"
           npm run test:staging-postgres -- linux/amd64 "$candidate"
           npm run test:staging-supabase-core -- "$upstream" linux/amd64 "$candidate"
+          # Exact scan-reviewed Auth/Storage candidates; does not change deploy pins.
+          npm run test:staging-supabase-core -- "$upstream" linux/amd64 "$candidate" --core-candidates
       - run: npm run build
         env:
           VITE_APP_ENV: development
@@ -87,6 +94,7 @@ jobs:
       - run: npm ci
       - name: Start isolated Supabase with synthetic role fixtures
         run: |
+          node scripts/prepare-local-service-pins.mjs
           npx supabase start
           npx supabase db reset --local
           npx supabase status -o env > "$RUNNER_TEMP/supabase.env"

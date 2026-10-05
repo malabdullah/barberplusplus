@@ -1,0 +1,10 @@
+--- a/vendor/github.com/jackc/pgproto3/v2/data_row.go
++++ b/vendor/github.com/jackc/pgproto3/v2/data_row.go
+@@ -52,6 +52,6 @@
+ 		if msgSize == -1 {
+ 			dst.Values[i] = nil
+ 		} else {
+-			if len(src[rp:]) < msgSize {
++			if msgSize < 0 || len(src[rp:]) < msgSize {
+ 				return &invalidMessageFormatErr{messageType: "DataRow"}
+ 			}

@@ -80,6 +80,14 @@ The bootstrap intentionally stops until the authoritative production schema
 baseline has been reviewed and committed. See
 [`docs/database-baseline.md`](docs/database-baseline.md) for that one-time gate.
 
+Local startup and browser CI pin PostgREST to `v16.4` using the reviewed Supabase
+CLI `2.116.0` override. This includes the upstream fix for intermittent
+`PGRST303` errors immediately after login. Existing different overrides are
+preserved and cause startup to stop for review. A running stack is not replaced
+automatically: changing its service version requires a project-scoped stop/start
+that preserves volumes, followed by verification. Do not use bootstrap, database
+reset or `stop --no-backup` to update an existing development stack.
+
 ## Scripts
 
 ```bash

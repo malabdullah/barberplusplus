@@ -1,27 +1,30 @@
 // Disposable local compatibility test, never a deployment or live-stack reset.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
-import { readFileSync, readdirSync, realpathSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync, unlinkSync, rmdirSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { parseEnv } from 'node:util';
 import { validateCompose } from './check-vps-compose.mjs';
 import { inspectCandidate, inspectPlatformImage } from './staging-postgres-candidate.mjs';
+import { prepareStagingFixtures } from './staging-fixtures.mjs';
+import { isPrivateStorageDenied, rehearseCoreRecovery } from './rehearse-staging-core-recovery.mjs';
+import { localDockerProbe } from './local-docker-probe.mjs';
+import { coreCandidateImages, validateCoreCandidateMetadata } from './staging-core-candidates.mjs';
+import { fullStackOption, rehearseFullStack } from './staging-full-stack-probe.mjs';
 
 const upstream = realpathSync(process.argv[2] || 'missing-upstream-directory');
 const platform = process.argv[3] || 'linux/amd64';
-assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 5);
+assert.ok(['linux/amd64', 'linux/arm64'].includes(platform) && process.argv.length <= 7);
+const coreCandidates = coreCandidateImages(process.argv[5], platform);
+const fullStack = fullStackOption(process.argv[6], platform, process.argv[5]);
 const project = `barber-core-probe-${randomBytes(8).toString('hex')}`;
 const label = 'barber.staging.core-probe';
-const env = { PATH: process.env.PATH, HOME: process.env.HOME };
 let model;
 let started = false;
 let stage = 'preflight';
 const redactions = [];
-const docker = (args, options = {}) => execFileSync('docker', args, {
-  env, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
-  timeout: 30000, maxBuffer: 8 * 1024 * 1024, ...options,
-});
+const docker = localDockerProbe();
 const compose = (args, options = {}) => docker([
   'compose', '--project-directory', upstream, '-p', project, '-f', '-', ...args,
 ], { input: JSON.stringify(model), ...options });
@@ -29,9 +32,6 @@ const sql = (input) => docker(['exec', '-i', '-u', 'postgres', `${project}-db`,
   'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-d', 'postgres'], { input }).trim();
 
 try {
-  const context = docker(['context', 'show']).trim();
-  const [contextInfo] = JSON.parse(docker(['context', 'inspect', context]));
-  assert.ok(contextInfo.Endpoints.docker.Host.startsWith('unix://'), 'Local Docker only');
   const pin = readFileSync('ops/supabase/self-hosted.commit', 'utf8').trim();
   assert.equal(readFileSync(`${upstream}/.supabase-version`, 'utf8').trim(), `ref=${pin}`);
   assert.ok(readFileSync('supabase/.baseline-ready', 'utf8').includes('verified'));
@@ -54,13 +54,29 @@ try {
   variables.SERVICE_ROLE_KEY = jwt('service_role');
   redactions.push(...Object.entries(variables).filter(([key]) => /PASSWORD|SECRET|KEY|TOKEN/.test(key))
     .map(([, value]) => value).filter(Boolean));
-  const rendered = JSON.parse(docker(['compose', '--project-directory', '/opt/barber-staging/supabase',
-    '--env-file', `${upstream}/.env.example`, '-f', `${upstream}/docker-compose.yml`,
-    '-f', resolve('ops/staging-vps/compose.override.yml'), 'config', '--format', 'json'],
-  { env: { ...env, ...variables } }));
+  stage = 'synthetic compose rendering';
+  // Compose cannot read /dev/stdin on every macOS Docker installation. Keep
+  // synthetic values in a private, short-lived file, not process arguments or
+  // inherited Docker environment variables. Original example stays unchanged.
+  const scratch = mkdtempSync(join(tmpdir(), 'barber-core-env-'));
+  const envFile = join(scratch, 'synthetic.env');
+  let rendered;
+  try {
+    writeFileSync(envFile, Object.entries(variables).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n'),
+      { flag: 'wx', mode: 0o600 });
+    rendered = JSON.parse(docker(['compose', '--project-directory', '/opt/barber-staging/supabase',
+      '--env-file', envFile, '-f', `${upstream}/docker-compose.yml`,
+      '-f', resolve('ops/staging-vps/compose.override.yml'), 'config', '--format', 'json']));
+  } finally {
+    if (existsSync(envFile)) unlinkSync(envFile);
+    rmdirSync(scratch);
+  }
+  stage = 'synthetic topology validation';
   validateCompose(rendered);
+  stage = 'database candidate verification';
   const candidateId = process.argv[4] ? inspectCandidate(docker, process.argv[4], platform) : null;
-  const services = ['db', 'auth', 'rest', 'storage', 'imgproxy', 'mailpit'];
+  if (fullStack) assert.ok(candidateId, 'Full-stack requires a validated local Postgres candidate');
+  const services = ['db', 'auth', 'rest', 'storage', 'mailpit'];
   model = { name: project, services: {},
     networks: { default: { name: project, internal: true, labels: { [label]: project } } },
     volumes: {} };
@@ -89,6 +105,7 @@ try {
     service.mem_limit ||= 1073741824;
     service.cpus ||= 1;
     service.pids_limit ||= 256;
+    if (coreCandidates[name]) service.image = coreCandidates[name];
     model.services[name] = service;
   }
   stage = 'candidate image pulls';
@@ -100,10 +117,23 @@ try {
       continue;
     }
     console.log(`Preparing ${name} (${platform})`);
+    if (coreCandidates[name]?.startsWith('sha256:')) {
+      stage = `local candidate image metadata (${name})`;
+      const metadata = inspectPlatformImage(docker, service.image, platform);
+      validateCoreCandidateMetadata(name, service.image, metadata, platform);
+      service.pull_policy = 'never';
+      console.log(`${name}: exact local security candidate ${service.image}`);
+      continue;
+    }
     stage = `image pull (${name})`;
     docker(['pull', '--platform', platform, service.image], { timeout: 300000 });
     stage = `image metadata (${name})`;
     const metadata = inspectPlatformImage(docker, service.image, platform);
+    if (coreCandidates[name]) {
+      validateCoreCandidateMetadata(name, service.image, metadata, platform);
+      console.log(`${name}: exact scanned candidate ${service.image}`);
+      continue;
+    }
     const repository = service.image.split('@')[0].replace(/:[^/]+$/, '');
     const immutable = metadata.RepoDigests.find((ref) => ref.startsWith(`${repository}@sha256:`));
     assert.ok(immutable, 'Missing immutable image identity');
@@ -138,9 +168,28 @@ try {
     sql(readFileSync(`supabase/migrations/${migration}`, 'utf8'));
     console.log(`Replayed ${migration}`);
   }
-  stage = 'local synthetic seed';
-  // This seed contains documented local-only passwords. Never use it on the VPS.
-  sql(readFileSync('supabase/seed.sql', 'utf8'));
+  stage = 'random-password staging fixture rehearsal';
+  const fixtures = prepareStagingFixtures();
+  redactions.push(...fixtures.accounts.map((account) => account.password));
+  // A Vault-only blocker must reject before any seed insert. Without the guard,
+  // this would succeed (no duplicate fixture keys), so it tests the actual gate.
+  let rejectedVaultOnly = false;
+  try {
+    sql(`BEGIN; SELECT vault.create_secret('synthetic-guard-only', 'fixture_guard_probe');\n${fixtures.sql}`);
+  } catch (error) {
+    rejectedVaultOnly = String(error.stderr || '').includes('ERROR:  Fixture gate: database must be empty');
+  }
+  assert.ok(rejectedVaultOnly, 'Fixture must reject a Vault-only nonempty target');
+  assert.equal(sql('SELECT count(*) FROM auth.users;'), '0');
+  assert.equal(sql('SELECT count(*) FROM vault.secrets;'), '0');
+  sql(fixtures.sql);
+  // Refuse a second seed, preserving the first run and its credentials.
+  let rejectedDuplicate = false;
+  try { sql(fixtures.sql); } catch (error) {
+    rejectedDuplicate = String(error.stderr || '').includes('ERROR:  Fixture gate: database must be empty');
+  }
+  assert.ok(rejectedDuplicate, 'Fixture must refuse nonempty databases');
+  assert.equal(sql('SELECT count(*) FROM auth.users;'), '5');
   assert.equal(sql('SELECT count(*) FROM vault.secrets;'), '0');
   stage = 'database security tests';
   const tap = sql(readFileSync('supabase/tests/001_baseline_security.sql', 'utf8'));
@@ -153,7 +202,7 @@ try {
   const health = await fetch('http://auth:9999/health'); assert(health.status === 200);
   const login = await fetch('http://auth:9999/token?grant_type=password', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:'admin@barber.test',password:'LocalOnly123!'})
+    body:JSON.stringify({email:'admin@barber.test',password:input.password})
   }); assert(login.status === 200); const session = await login.json();
   assert(session.user.app_metadata.role === 'admin' && !!session.access_token);
   const headers = {Authorization:'Bearer '+input.key,'Content-Type':'application/json'};
@@ -169,15 +218,33 @@ try {
   assert(object.status === 200);
   const download = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {headers});
   assert(download.status === 200 && await download.text() === 'synthetic-only');
+  const transform = await fetch('http://storage:5000/render/image/authenticated/synthetic-probe/check.txt?width=20', {headers});
+  assert(transform.status === 404);
   const denied = await fetch('http://storage:5000/object/authenticated/synthetic-probe/check.txt', {
-    headers:{Authorization:'Bearer '+input.anon}}); assert(denied.status >= 400);
-  console.log('PASS: synthetic Auth login/invite to mail sink, private Storage upload/download and anonymous denial');`;
+    headers:{Authorization:'Bearer '+input.anon}});
+  const denial = await denied.json();
+  assert((${isPrivateStorageDenied.toString()})(denied.status, denial));
+  console.log('PASS: synthetic Auth login/invite to mail sink, private Storage upload/download, disabled image transformation and anonymous denial');`;
   console.log(docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module', '-e', probe],
-    { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY }) }).trim());
-  console.log('PASS: patched Postgres + Auth/REST/Storage core, four migration replay, local seed, 32 pgTAP checks.');
-  console.log('Not full-stack, VPS, restore, public routing or release acceptance.');
+    { input: JSON.stringify({ key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY,
+      password: fixtures.accounts.find((account) => account.email === 'admin@barber.test').password }) }).trim());
+  console.log('PASS: patched Postgres + Auth/REST/Storage core, four migration replay, random staging fixtures, duplicate-seed refusal, 32 pgTAP checks.');
+  if (fullStack) {
+    stage = 'local full-stack rehearsal';
+    await rehearseFullStack({ model, rendered, upstream, docker, compose, sql, variables,
+      accounts: fixtures.accounts, redactions,
+      exportedCandidates: process.argv[5] === '--exported-security-core-candidates' });
+    assert.deepEqual(Object.keys(model.services), services, 'Extra services must be removed before five-service recovery');
+  }
+  stage = 'local recovery rehearsal';
+  await rehearseCoreRecovery({ model, upstream, docker, compose, accounts: fixtures.accounts,
+    key: variables.SERVICE_ROLE_KEY, anon: variables.ANON_KEY });
+  console.log(fullStack ? 'Five-service recovery completed separately; eight-service backup, VPS, public routing and release acceptance remain open.'
+    : 'Not full-stack, VPS, public routing or release acceptance.');
 } catch (error) {
   console.error(`Core compatibility probe FAILED at ${stage}; no deployment acceptance.`);
+  if (stage === 'local full-stack rehearsal' && /^Full-stack rehearsal failed at [a-zA-Z -]+$/.test(error.message)) console.error(error.message);
+  if (stage === 'local recovery rehearsal' && /^Local synthetic recovery rehearsal failed at [a-zA-Z, /-]+$/.test(error.message)) console.error(error.message);
   if (stage.startsWith('isolation inspection')) {
     console.error(error instanceof assert.AssertionError ? error.message.split('\n')[0] : 'Inspection command failed');
   }

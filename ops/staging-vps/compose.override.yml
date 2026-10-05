@@ -3,10 +3,18 @@
 # upstream docker-compose.yml; never use this file as a standalone stack.
 name: barber-staging
 services:
-  studio:
-    container_name: barber-staging-studio
+  # Owner-approved minimal staging inventory. These services are absent, not
+  # merely hidden behind a profile that can accidentally be enabled.
+  studio: !reset null
+  meta: !reset null
+  supavisor: !reset null
+  imgproxy: !reset null
   api-gw:
     container_name: barber-staging-api-gw
+    depends_on: !reset {}
+    volumes:
+      - ./volumes/api/envoy/staging-cds.yaml:/etc/envoy/cds.yaml:ro
+      - ./volumes/api/envoy/staging-lds.template.yaml:/etc/envoy/lds.template.yaml:ro
     ports: !override
       - "127.0.0.1:18000:8000"
   auth:
@@ -22,6 +30,9 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_SMS_AUTOCONFIRM: "false"
+      # No external telemetry collector in initial synthetic staging.
+      GOTRUE_TRACING_ENABLED: "false"
+      GOTRUE_METRICS_ENABLED: "false"
       # Sink-only SMTP: no provider credentials, relay, or external recipients.
       GOTRUE_SMTP_HOST: mailpit
       GOTRUE_SMTP_PORT: "1025"
@@ -63,10 +74,14 @@ services:
     container_name: realtime-dev.barber-staging-realtime
   storage:
     container_name: barber-staging-storage
-  imgproxy:
-    container_name: barber-staging-imgproxy
-  meta:
-    container_name: barber-staging-meta
+    depends_on: !override
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+      IMGPROXY_URL: ""
   functions:
     container_name: barber-staging-functions
     volumes: !override
@@ -92,9 +107,6 @@ services:
     command: [postgres, -c, config_file=/etc/postgresql/postgresql.conf, -c, log_min_messages=fatal, -c, cron.launch_active_jobs=off]
     ports: !override
       - "127.0.0.1:15432:5432"
-  supavisor:
-    container_name: barber-staging-pooler
-    ports: !override []
 networks:
   default:
     name: barber-staging-internal

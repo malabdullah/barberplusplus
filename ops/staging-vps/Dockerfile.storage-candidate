@@ -1,0 +1,26 @@
+# Local compatibility/security candidate only; not a deployment approval.
+FROM --platform=linux/amd64 supabase/storage-api@sha256:13cdccea43f23d848f050eba0d4f3ccdf02a7aca93d4f43268438de95549ef74 AS upstream
+FROM --platform=linux/amd64 node@sha256:4caaaf42195bcd6f6f3559a413b20cb8f8ad089e231ee874cf7701643966689f AS dependencies
+WORKDIR /app
+RUN apk add --no-cache g++ make python3
+RUN npm install --global --ignore-scripts --no-audit --no-fund npm@11.12.1
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+RUN --network=none npm_package_config_node_gyp_nodedir=/usr/local npm rebuild
+
+FROM --platform=linux/amd64 node@sha256:4caaaf42195bcd6f6f3559a413b20cb8f8ad089e231ee874cf7701643966689f AS runtime
+RUN apk add --no-cache libcrypto3=3.5.9-r0 libssl3=3.5.9-r0
+# Node starts the server directly. Package managers are not runtime dependencies.
+RUN rm -rf /usr/local/lib/node_modules/npm /opt/yarn-v1.22.22 && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
+WORKDIR /app
+ENV VERSION=1.79.31-staging-security-candidate
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY --from=upstream /app/dist ./dist
+COPY --from=upstream /app/migrations ./migrations
+COPY --from=upstream /app/watt.json /app/watt.storage.json ./
+LABEL org.opencontainers.image.source="https://github.com/supabase/storage" \
+      org.opencontainers.image.revision="eccef5e70a67fb4030e0646e5e22602c94f568bc" \
+      cloud.malabdullah.barber.candidate="storage-security-local-only"
+EXPOSE 5000
+CMD ["node", "dist/start/server.js"]

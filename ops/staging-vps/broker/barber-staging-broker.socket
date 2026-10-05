@@ -1,0 +1,15 @@
+[Unit]
+Description=Barber staging read-only broker socket
+
+[Socket]
+ListenStream=/run/barber-staging-broker.sock
+SocketUser=root
+SocketGroup=barber-staging-release
+SocketMode=0660
+DirectoryMode=0755
+Accept=no
+Backlog=8
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

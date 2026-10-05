@@ -5,3 +5,13 @@ e450135611e6b168a742b33b5276d699bbc5953b:playwright.config.js:generic-api-key:23
 e450135611e6b168a742b33b5276d699bbc5953b:docs/staging-provisioning.md:generic-api-key:79
 e450135611e6b168a742b33b5276d699bbc5953b:supabase/functions/whatsapp-flow-endpoint/crypto.ts:private-key:127
 e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js:generic-api-key:4
+# Verified SHA-256 of public Trivy GoTrue report auth.json, not a credential.
+# Exact historical finding only; current documentation wording is corrected.
+976970319c0a4ff82c66258b9c142ae57b98656d:docs/staging-component-security-2026-10-04.md:generic-api-key:294
+# Public Go module checksum in unmodified patch context, not an API credential.
+# Verified exact line against https://sum.golang.org/lookup/golang.org/x/oauth2@v0.36.0
+# This exact historical secret-scan match only; no rule/path/CVE suppression.
+3a4ba829a522ff6e11c6686cf624e27be72f9c1b:ops/staging-vps/auth-security/go-dependencies.patch:generic-api-key:28
+# Historical permission-test fixture contained only the literal SYNTHETIC=fixture.
+# Not a credential; current fixture is comment-only. Exact commit/path/line only.
+7a1c8608ed413d579dac0f98346cb6877c2d7001:scripts/staging-vps.node-test.mjs:generic-api-key:19

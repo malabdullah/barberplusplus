@@ -1,7 +1,40 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { resolveRelease } from './check-supabase-pin.mjs';
 import { MAILPIT_ENV, MAILPIT_IMAGE, POSTGRES_COMMAND, POSTGRES_IMAGE, validateCompose } from './check-vps-compose.mjs';
+
+test('bootstrap SQL permissions survive private umask without relaxing secrets or accepting symlinks', () => {
+  const root = mkdtempSync(join(tmpdir(), 'barber-sql-permission-test-'));
+  try {
+    chmodSync(root, 0o700);
+    const db = join(root, 'volumes/db');
+    mkdirSync(db, { recursive: true, mode: 0o700 });
+    const names = ['realtime', '_supabase', 'logs', 'webhooks', 'pooler', 'jwt', 'roles'];
+    for (const name of names) writeFileSync(join(db, `${name}.sql`), '-- public source fixture\n', { mode: 0o600 });
+    const protectedConfig = join(root, '.env');
+    writeFileSync(protectedConfig, '# permission-test fixture, no credentials\n', { mode: 0o600 });
+    const source = readFileSync(new URL('./bootstrap-staging-supabase.sh', import.meta.url), 'utf8');
+    const loop = source.match(/for sql_name in realtime _supabase logs webhooks pooler jwt roles; do\n[\s\S]*?\ndone/);
+    assert.ok(loop, 'Expected bounded SQL permission preparation');
+    const execute = () => execFileSync('sh', ['-c', `set -eu; umask 077; target="$1"\n${loop[0]}`, 'permission-test', root], { stdio: 'pipe' });
+    execute();
+    for (const name of names) assert.equal(statSync(join(db, `${name}.sql`)).mode & 0o777, 0o644);
+    assert.equal(statSync(root).mode & 0o777, 0o700);
+    assert.equal(statSync(protectedConfig).mode & 0o777, 0o600);
+    unlinkSync(join(db, 'roles.sql'));
+    symlinkSync(protectedConfig, join(db, 'roles.sql'));
+    assert.throws(execute);
+    assert.equal(statSync(protectedConfig).mode & 0o777, 0o600);
+    unlinkSync(join(db, 'roles.sql'));
+    assert.throws(execute);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('annotated releases resolve to source commits, not tag objects', () => {
   const tag = 'a'.repeat(40);
@@ -13,14 +46,19 @@ test('annotated releases resolve to source commits, not tag objects', () => {
 
 function fixture() {
   const services = {};
-  for (const name of ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor']) {
+  for (const name of ['api-gw', 'auth', 'rest', 'realtime', 'storage', 'functions', 'db']) {
     services[name] = {
       container_name: name === 'realtime' ? 'realtime-dev.barber-staging-realtime'
-        : `barber-staging-${name === 'supavisor' ? 'pooler' : name}`,
+        : `barber-staging-${name}`,
       image: 'fixture/service:1.0.0', networks: { default: null }, environment: {},
     };
   }
   services['api-gw'].ports = [{ host_ip: '127.0.0.1', published: '18000', target: 8000, protocol: 'tcp' }];
+  services['api-gw'].volumes = [['staging-cds.yaml', 'cds.yaml'], ['staging-lds.template.yaml', 'lds.template.yaml']].map(([file, target]) => ({
+    type: 'bind', source: `/opt/barber-staging/supabase/volumes/api/envoy/${file}`, target: `/etc/envoy/${target}`, read_only: true,
+  }));
+  services.storage.environment = { ENABLE_IMAGE_TRANSFORMATION: 'false', IMGPROXY_URL: '' };
+  services.storage.depends_on = { db: { condition: 'service_healthy' }, rest: { condition: 'service_started' } };
   services.db.ports = [{ host_ip: '127.0.0.1', published: '15432', target: 5432, protocol: 'tcp' }];
   services.db.image = POSTGRES_IMAGE;
   services.db.command = [...POSTGRES_COMMAND];
@@ -39,6 +77,7 @@ function fixture() {
     API_EXTERNAL_URL: 'https://supabase-staging.malabdullah.cloud/auth/v1',
     GOTRUE_DISABLE_SIGNUP: 'true', GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: 'false',
     GOTRUE_EXTERNAL_PHONE_ENABLED: 'false',
+    GOTRUE_TRACING_ENABLED: 'false', GOTRUE_METRICS_ENABLED: 'false',
     GOTRUE_SMTP_HOST: 'mailpit', GOTRUE_SMTP_PORT: '1025', GOTRUE_SMTP_ADMIN_EMAIL: 'no-reply@barber.test',
     GOTRUE_SMTP_USER: '', GOTRUE_SMTP_PASS: '',
   };
@@ -63,7 +102,17 @@ const unsafeChanges = {
   'different database engine': (c) => { c.services.db.image = POSTGRES_IMAGE.replace('17.11.0.002@', '17.11.0.002-orioledb@'); },
   'wildcard API binding': (c) => { c.services['api-gw'].ports[0].host_ip = '0.0.0.0'; },
   'IPv6 public binding': (c) => { c.services.db.ports[0].host_ip = '::'; },
-  'extra pooler binding': (c) => { c.services.supavisor.ports = [{ published: '6543' }]; },
+  'pooler reintroduced': (c) => { c.services.supavisor = { image: 'fixture/pooler:1', ports: [{ published: '6543' }] }; },
+  'dashboard reintroduced': (c) => { c.services.studio = c.services.rest; },
+  'management API reintroduced': (c) => { c.services.meta = c.services.rest; },
+  'image proxy reintroduced': (c) => { c.services.imgproxy = c.services.rest; },
+  'image transformations enabled': (c) => { c.services.storage.environment.ENABLE_IMAGE_TRANSFORMATION = 'true'; },
+  'image proxy configured': (c) => { c.services.storage.environment.IMGPROXY_URL = 'http://imgproxy:5001'; },
+  'optional gateway dependency': (c) => { c.services['api-gw'].depends_on = { studio: {} }; },
+  'optional storage dependency': (c) => { c.services.storage.depends_on.imgproxy = {}; },
+  'foreign service dependency': (c) => { c.services.auth.depends_on = { production: {} }; },
+  'upstream gateway template': (c) => { c.services['api-gw'].volumes[1].source = '/opt/barber-staging/supabase/volumes/api/envoy/lds.template.yaml'; },
+  'writable gateway template': (c) => { c.services['api-gw'].volumes[1].read_only = false; },
   'wrong container': (c) => { c.services.db.container_name = 'supabase-db'; },
   'production data mount': (c) => { c.services.db.volumes = [{ type: 'bind', source: '/etc/dokploy/production/data' }]; },
   'Docker socket mount': (c) => { c.services.functions.volumes = [{ type: 'bind', source: '/var/run/docker.sock' }]; },
@@ -75,6 +124,10 @@ const unsafeChanges = {
   'privileged container': (c) => { c.services.db.privileged = true; },
   'mutable latest image': (c) => { c.services.auth.image = 'supabase/gotrue:latest'; },
   'wrong Auth origin': (c) => { c.services.auth.environment.GOTRUE_SITE_URL = 'https://production.invalid'; },
+  'Auth tracing enabled': (c) => { c.services.auth.environment.GOTRUE_TRACING_ENABLED = 'true'; },
+  'Auth metrics enabled': (c) => { c.services.auth.environment.GOTRUE_METRICS_ENABLED = 'true'; },
+  'Auth tracing gate absent': (c) => { delete c.services.auth.environment.GOTRUE_TRACING_ENABLED; },
+  'Auth telemetry destination': (c) => { c.services.auth.environment.OTEL_EXPORTER_OTLP_ENDPOINT = 'https://collector.invalid'; },
   'anonymous signup': (c) => { c.services.auth.environment.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED = 'true'; },
   'external SMTP provider': (c) => { c.services.auth.environment.GOTRUE_SMTP_HOST = 'smtp.production.invalid'; },
   'SMTP provider credential': (c) => { c.services.auth.environment.GOTRUE_SMTP_PASS = 'synthetic-secret'; },

@@ -4,6 +4,11 @@ Updated 2026-09-30. This document supersedes the Mac hosting target in the older
 staging runbooks; those describe the retained legacy implementation, not the
 completed VPS target. No production resources are part of this transition.
 
+October 5 update: the owner-approved permanent **private backend** is now running
+and its complete eight-service backup/restore passed. The September observations
+below are historical. Current resources and remaining release gates are recorded
+in [private bootstrap execution](staging-private-bootstrap-execution.md).
+
 ## Approved target and current state
 
 - Hostinger VPS `1207055`, hostname `srv1207055`, IPv4 `185.97.146.8`.
@@ -379,3 +384,107 @@ Security references: [Vitest advisory](https://github.com/vitest-dev/vitest/secu
 New version evidence:
 [17.11.0.002 release](https://github.com/supabase/postgres/releases/tag/17.11.0.002),
 [exact source version declaration](https://github.com/supabase/postgres/blob/b36165476f28c34448acbcc712a05d26213183ed/nix/config.nix).
+
+### October 4 continuation — local recovery passes, live acceptance still blocked
+
+- Owner-approved staging SSH `/32` replacement was saved and synchronized on
+  Hostinger firewall `367995`. SSH to `srv1207055` succeeded; Dokploy and its
+  dependencies were healthy. Production and all other provider rules were left
+  unchanged. `/opt/barber-staging/supabase` was still absent: no live stack exists
+  at the planned target yet. The original user worktrees were preserved.
+- New separate fixture preparation generates five unique random passwords in
+  memory. Synthetic entity IDs/data remain deterministic; the public development
+  seed is unchanged. The staging template refuses nonempty Auth, Vault, Storage
+  or application tables and requires cron disabled. A Vault-only negative test
+  and duplicate-seed test require the exact guard error, not any SQL failure.
+  This prepares SQL only; it is not a live installer or baseline authorization.
+- The disposable six-service AMD64 rehearsal passed all four migrations,
+  32 pgTAP assertions, random fixtures, Auth login/invite into Mailpit, Storage
+  upload/download, and explicit anonymous denial (not a server error).
+- Recovery now encrypts DB dump, Storage archive, the separate DB-config/root-key
+  archive and runtime configuration together. Fresh labeled volumes recover
+  accounts, Vault decryption, cross-tenant RLS and private file content/type.
+  GNU tar preserves Storage xattrs; the earlier plain-copy attempt reproduced
+  HTTP 500. Missing root-key data had independently prevented Vault decryption.
+  The final corrected rehearsal and ciphertext-tampering rejection passed.
+  Temporary identities and only the labeled probe resources were removed.
+- DOMPurify was patched from 3.4.13 to 3.4.16 after a new npm advisory. The
+  application uses string sanitization, not the advisory's IN_PLACE usage; this
+  is maintenance, not a claim of a proven application exploit. The template
+  sanitization regression test and locked-install audit (zero findings) passed.
+- Final `npm run check` passed: 14 function tests, 7 frontend unit tests, CI/CD
+  helper checks, 4 release tests, 77 staging topology/candidate/fixture/recovery
+  tests, 20 gateway tests, build and domain checks. Migration names and all five
+  local Playwright journeys passed. Known chunk-size/dynamic-import build warnings
+  remain. Browser journeys use the existing local development DB, not the VPS.
+- Local AMD64 frontend Docker build and network-disabled runtime probe passed
+  health, SPA fallback, synthetic runtime config, security headers, no-store and
+  noindex. No registry publication or release acceptance was performed.
+- Separate agent review identified and corrected permissive denial/duplicate
+  tests, archive-helper cleanup and empty-input test weaknesses. This is not
+  independent human review or owner release approval.
+- Eight pinned component scans and three newer-candidate scans retain unresolved
+  HIGH/CRITICAL findings. See [security inventory](staging-component-security-2026-10-04.md)
+  for identities, scope limits and compatibility cautions. No silent upgrades or
+  security exceptions were applied.
+
+Env 4 runs in its own worktree on `codex/env4-cicd`. Its Linux/VPS workflow is
+deliberately fail-closed. The proposed constrained deployment broker, dedicated
+project-scoped Dokploy identity, unprivileged runner, GHCR pull identity, first
+empty-stack bootstrap and real VPS backup/recovery remain unimplemented/gated.
+Local synthetic recovery cannot satisfy a live backup receipt or release gate.
+Security remediation, full-stack tests, live secrets/integrations, routing,
+outbound controls, load gate and owner-specific release approval remain open.
+**Env 3 and Env 4 are both NOT COMPLETE; deployment remains NO-GO.**
+
+### October 4 continuation — read-only VPS broker installed
+
+- The owner approved GitHub-hosted CI plus a constrained server-side deployment
+  service, **not a GitHub self-hosted runner on this VPS**. The public personal
+  repository cannot use runner labels as a pull-request isolation boundary.
+  This supersedes the unprivileged-runner proposal immediately above; the
+  existing Mac runner was not changed in this slice.
+- The dedicated Dokploy invitation was accepted. The new account was visibly
+  verified as an active **Member**, not an owner/admin. All global toggles and
+  project/environment/service assignments remain off. No API key was created.
+  The empty `Barber Staging` project still has zero services. Password creation
+  was performed by the owner, not the agent. Fine-grained custom roles require
+  Dokploy Enterprise; do not claim free Member permissions are action-specific.
+- Installed the [read-only broker foundation](../ops/staging-vps/broker/README.md)
+  on `srv1207055`: root-owned executable under
+  `/usr/local/libexec/barber-staging-broker/`, socket/service unit files under
+  `/etc/systemd/system/`, and `/run/barber-staging-broker.sock` with mode
+  `0660 root:barber-staging-release`. The socket is enabled and active; the
+  non-root service starts on demand and exits after inactivity.
+- Created locked, non-login system users `barber-staging-broker` and
+  `barber-staging-deploy`. Neither belongs to Docker, sudo, or the socket group.
+  The deployment user's home is private. No credential, polling timer, HTTP
+  listener, repository checkout or shell-command executor is installed.
+- All six public installer/code/unit files were frozen into root-owned protected
+  directories and SHA-256 compared with the reviewed local files before
+  execution. Existing installation paths, identities, systemd units/drop-ins
+  and unsafe source/destination ancestors are refused. Effective sandbox
+  properties and exact installed unit bytes are checked before activation.
+- The first activation guard stopped safely because plain `systemctl show`
+  omitted empty properties. Inspection confirmed the socket remained disabled
+  and both units inactive. The checker now uses `show --all`, covered by a
+  regression test. A new frozen/checksummed copy passed all checks before
+  the separate socket activation; no guard was bypassed.
+- Thirteen broker/installer tests passed locally and on the VPS. The live
+  administrator probe passed socket/file ownership, locked identities, denied
+  nonmember connections, real Linux peer rejection, duplicate/extra-field and
+  oversized request rejection, non-root process UID, zero capability sets,
+  no-new-privileges and a separate network namespace. Every mutating operation
+  returned `OPERATION_DISABLED`; status reports `automationReady=false` and
+  `liveStackVerified=false`. These are capability statements, not stack health.
+- Dokploy health still returned `ok: true`; the existing Dokploy, n8n, database,
+  Redis, Ollama and Traefik containers remained running. The planned
+  `/opt/barber-staging/supabase` path is still absent. No application deployment,
+  production action, DNS/firewall change, permission grant or secret access
+  occurred in this slice.
+
+The signed-release verifier, constrained write adapters, safe component pins,
+first live bootstrap, real VPS backup/recovery, isolated integrations, routing,
+load/E2E acceptance and owner release approval remain outstanding. The read-only
+foundation does not advance any of those gates or enable the deployment workflow.
+**Env 3/4 remain NOT COMPLETE and application deployment remains NO-GO.**

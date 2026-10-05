@@ -1,16 +1,29 @@
 // Opt-in, synthetic-only compatibility test. No DB, Auth or integration keys.
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { createHmac, generateKeyPairSync, randomUUID } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { packageFunctions, verifyFunctionBundle } from './package-staging-functions.mjs';
+import { localDockerProbe } from './local-docker-probe.mjs';
+import { inspectPlatformImage } from './staging-postgres-candidate.mjs';
 
-const image = readFileSync('ops/staging-vps/edge-runtime.image', 'utf8').trim();
-assert.match(image, /^supabase\/edge-runtime:v1\.74\.0@sha256:[a-f0-9]{64}$/);
+const pinnedImage = readFileSync('ops/staging-vps/edge-runtime.image', 'utf8').trim();
+assert.match(pinnedImage, /^supabase\/edge-runtime:v1\.74\.0@sha256:[a-f0-9]{64}$/);
 const probeImage = 'node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e';
-const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000 }).trim();
+const platform = process.argv[2] || (process.arch === 'arm64' ? 'linux/arm64' : 'linux/amd64');
+assert.ok(process.argv.length <= 4 && ['linux/amd64', 'linux/arm64'].includes(platform), 'Unsupported probe platform');
+const securityCandidate = process.argv[3] === '--security-runtime-candidate';
+assert.ok(process.argv[3] === undefined || securityCandidate, 'Unknown runtime candidate option');
+assert.ok(!securityCandidate || platform === 'linux/amd64', 'Security candidate is AMD64 only');
+const image = securityCandidate
+  ? 'supabase/edge-runtime@sha256:fded42ff725708990b1a0803633c2659453259d075c4bec6b4d01dfb82dc055e' : pinnedImage;
+const candidateRef = 'sha256:b00379f2cd56e0da0e721968a0593ff8b15b0cfb758223e5316aac8d30600431';
+const candidateChild = 'sha256:edfc3b271d665ed9df4e01cc1e6c0144fed184246cc30785974aa1c701c52156';
+const candidateTag = 'barber-edge-runtime-security-candidate:20261004-b00379f2';
+const localDocker = localDockerProbe();
+const docker = (...args) => localDocker(args);
 const root = mkdtempSync(join(tmpdir(), 'barber-edge-test-'));
 const bundle = join(root, 'functions');
 const name = `barber-edge-test-${randomUUID()}`;
@@ -24,6 +37,8 @@ const flowPublic = flowKeys.publicKey.export({ type: 'spki', format: 'pem' }).to
 const encode = (data) => Buffer.from(JSON.stringify(data)).toString('base64url');
 const unsigned = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ role: 'anon', exp: Math.floor(Date.now() / 1000) + 1200 })}`;
 const token = unsigned + '.' + createHmac('sha256', jwtSecret).update(unsigned).digest('base64url');
+const redact = (value) => [flowPrivate, JSON.stringify(flowPrivate).slice(1, -1), jwtSecret, cron, meta, verify, token]
+  .reduce((text, secret) => text.replaceAll(secret, '[synthetic-redacted]'), String(value));
 
 async function probe(settings) {
   const { default: assert } = await import('node:assert/strict');
@@ -99,12 +114,30 @@ try {
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const manifest = packageFunctions(resolve('.'), commit, bundle);
   verifyFunctionBundle(bundle);
-  docker('pull', image); docker('pull', probeImage);
+  docker('pull', '--platform', platform, image); docker('pull', '--platform', platform, probeImage);
+  if (securityCandidate) {
+    const candidate = inspectPlatformImage(localDocker, candidateRef, platform);
+    assert.equal(candidate.Id, candidateChild, 'Unreviewed minimal runtime image');
+    assert.equal(candidate.Config.User, '10001:10001');
+    assert.equal(candidate.Config.Labels['cloud.malabdullah.barber.candidate'], 'edge-runtime-security-local-only');
+    assert.equal(candidate.Config.Labels['cloud.malabdullah.barber.upstream-manifest'], image.split('@')[1]);
+    assert.deepEqual(candidate.Config.Entrypoint, ['edge-runtime']);
+    // Local-only alias enables BuildKit FROM resolution; verify its immutable
+    // child before and after the build. This is never a deployment reference.
+    const existing = docker('image', 'ls', '--quiet', '--no-trunc', '--filter', `reference=${candidateTag}`);
+    if (existing) assert.equal(inspectPlatformImage(localDocker, candidateTag, platform).Id, candidateChild,
+      'Refusing to overwrite an unrelated local tag');
+    docker('tag', candidateRef, candidateTag);
+  }
   const compiledImage = `barber-staging-functions-check:${commit}-${name.slice(-8)}`;
   console.log('Compiling immutable function artifacts; no credentials enter the build.');
-  docker('build', '--build-arg', `EDGE_RUNTIME_IMAGE=${image}`, '-f', 'ops/staging-vps/Dockerfile.functions', '-t', compiledImage, bundle);
+  localDocker(['build', '--platform', platform, '--build-arg', `EDGE_RUNTIME_IMAGE=${image}`,
+    '--build-arg', `EDGE_RUNTIME_FINAL_IMAGE=${securityCandidate ? candidateTag : image}`,
+    '-f', 'ops/staging-vps/Dockerfile.functions', '-t', compiledImage, bundle], { timeout: 900000 });
+  if (securityCandidate) assert.equal(inspectPlatformImage(localDocker, candidateTag, platform).Id, candidateChild);
+  const compiledMetadata = inspectPlatformImage(localDocker, compiledImage, platform);
   docker('network', 'create', '--internal', '--label', 'barber.purpose=edge-runtime-test', offline); createdNetworks.push(offline);
-  docker('create', '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', offline,
+  docker('create', '--platform', platform, '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', offline,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
     '--memory', '768m', '--cpus', '1', '--pids-limit', '256',
     '--tmpfs', '/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700',
@@ -117,9 +150,9 @@ try {
   createdContainer = true;
   docker('start', name);
   const input = `await (${probe.toString()})(${JSON.stringify({ token, cron, meta, verify, flowPublic })});`;
-  const runProbe = () => execFileSync('docker', ['run', '--rm', '-i', '--name', `${name}-probe`, '--network', `container:${name}`,
+  const runProbe = () => localDocker(['run', '--platform', platform, '--rm', '-i', '--name', `${name}-probe`, '--network', `container:${name}`,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', probeImage, 'node', '--input-type=module'],
-  { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 180000 });
+  { input, timeout: 180000 });
   const state = JSON.parse(docker('inspect', name))[0];
   assert.deepEqual(Object.keys(state.NetworkSettings.Networks), [offline]);
   assert.ok(Object.values(state.NetworkSettings.Ports).every((p) => !p?.length));
@@ -130,6 +163,8 @@ try {
   console.log('Cold-starting compiled functions without external network access.');
   console.log(runProbe().trim());
   console.log(JSON.stringify({ sourceCommit: commit, treeSha256: manifest.treeSha256, runtimeImage: image, compiledImage,
+    minimalRuntimeImage: securityCandidate ? candidateRef : null, minimalRuntimePlatformId: securityCandidate ? candidateChild : null,
+    platform, platformImageId: compiledMetadata.Id,
     imageId: docker('image', 'inspect', compiledImage, '--format', '{{.Id}}'), scope: 'local-runtime-compatibility-not-VPS-acceptance' }));
 } catch (error) {
   // Only this disposable container has synthetic credentials. Still suppress
@@ -137,10 +172,11 @@ try {
   if (createdContainer) {
     const state = JSON.parse(docker('inspect', name))[0];
     console.error(JSON.stringify({ running: state.State.Running, exitCode: state.State.ExitCode, oomKilled: state.State.OOMKilled }));
-    const logs = spawnSync('docker', ['logs', '--tail', '35', name], { encoding: 'utf8', timeout: 10000 });
-    console.error((logs.stdout + logs.stderr).replaceAll(flowPrivate, '[test-key]').replaceAll(jwtSecret, '[test-key]').replaceAll(cron, '[test-key]').replaceAll(meta, '[test-key]').replaceAll(verify, '[test-key]'));
+    let logs = '';
+    try { logs = localDocker(['logs', '--tail', '35', name], { timeout: 10000 }); } catch { /* No raw exception/arguments. */ }
+    console.error(redact(logs));
   }
-  console.error(error.stderr?.toString().replaceAll(token, '[test-token]').replaceAll(verify, '[test-key]') || 'Edge Runtime compatibility test failed');
+  console.error(error.stderr ? redact(error.stderr) : 'Edge Runtime compatibility test failed');
   process.exitCode = 1;
 } finally {
   try { docker('rm', '-f', `${name}-probe`); } catch { /* probe auto-removes */ }

@@ -18,7 +18,6 @@
     "npm:@vitejs/plugin-react@^4.2.0": "4.7.0_vite@7.3.6",
     "npm:date-fns@^2.30.0": "2.30.0",
     "npm:deno@2.9.5": "2.9.5",
-    "npm:dompurify@3.4.13": "3.4.13",
     "npm:globals@16.3.0": "16.3.0",
     "npm:i18next@^25.7.3": "25.10.10",
     "npm:jose@6.2.10": "6.2.10",
@@ -865,9 +864,6 @@
         "csstype"
       ]
     },
-    "@types/trusted-types@2.0.7": {
-      "integrity": "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw=="
-    },
     "@types/use-sync-external-store@0.0.6": {
       "integrity": "sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg=="
     },
@@ -1076,12 +1072,6 @@
     },
     "dom-accessibility-api@0.6.3": {
       "integrity": "sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w=="
-    },
-    "dompurify@3.4.13": {
-      "integrity": "sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==",
-      "optionalDependencies": [
-        "@types/trusted-types"
-      ]
     },
     "dunder-proto@1.0.1": {
       "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
@@ -1835,7 +1825,7 @@
         "npm:@vitejs/plugin-react@^4.2.0",
         "npm:date-fns@^2.30.0",
         "npm:deno@2.9.5",
-        "npm:dompurify@3.4.13",
+        "npm:dompurify@3.4.16",
         "npm:eslint@10.9.1",
         "npm:globals@16.3.0",
         "npm:i18next@^25.7.3",

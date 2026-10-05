@@ -18,13 +18,25 @@ export function validateCompose(config, { requireCompiledFunctions = false } = {
   const fail = (message) => { throw new Error(message); };
   if (config.name !== 'barber-staging') fail('Unexpected project name');
   const compiled = requireCompiledFunctions || config.services?.functions?.image?.startsWith('ghcr.io/malabdullah/barberplusplus-functions');
-  const names = ['studio', 'api-gw', 'auth', 'rest', 'realtime', 'storage', 'imgproxy', 'meta', 'functions', 'db', 'supavisor', 'mailpit'];
+  const names = ['api-gw', 'auth', 'rest', 'realtime', 'storage', 'functions', 'db', 'mailpit'];
   if (Object.keys(config.services || {}).sort().join() !== [...names].sort().join()) fail('Unexpected service inventory');
   if (config.services.db.image !== POSTGRES_IMAGE) fail('Database must use the reviewed standard PostgreSQL security patch digest');
   if (JSON.stringify(config.services.db.command) !== JSON.stringify(POSTGRES_COMMAND)) fail('Initial database cron execution must remain disabled');
+  if (Object.keys(config.services['api-gw'].depends_on || {}).length) fail('Gateway must not depend on optional services');
+  for (const [file, target] of [['staging-cds.yaml', 'cds.yaml'], ['staging-lds.template.yaml', 'lds.template.yaml']]) {
+    const mount = config.services['api-gw'].volumes?.find((item) => item.target === `/etc/envoy/${target}`);
+    if (mount?.type !== 'bind' || mount.read_only !== true
+      || mount.source !== `/opt/barber-staging/supabase/volumes/api/envoy/${file}`) fail('Gateway requires the minimal staging templates');
+  }
+  const storage = config.services.storage;
+  if (storage.environment?.ENABLE_IMAGE_TRANSFORMATION !== 'false' || storage.environment?.IMGPROXY_URL !== '') {
+    fail('Image transformations must remain disabled');
+  }
+  if (Object.keys(storage.depends_on || {}).sort().join() !== 'db,rest') fail('Unexpected Storage dependencies');
   for (const [name, service] of Object.entries(config.services)) {
+    if (Object.keys(service.depends_on || {}).some((dependency) => !names.includes(dependency))) fail('Dependency outside minimal staging inventory');
     const expectedName = name === 'realtime' ? 'realtime-dev.barber-staging-realtime'
-      : `barber-staging-${name === 'supavisor' ? 'pooler' : name}`;
+      : `barber-staging-${name}`;
     if (service.container_name !== expectedName) fail(`Unexpected container name: ${name}`);
     if (!service.image || !/(:[^/:]+|@sha256:[a-f0-9]{64})$/.test(service.image)
       || /:latest$/.test(service.image)) fail(`Unpinned image: ${name}`);
@@ -73,10 +85,12 @@ export function validateCompose(config, { requireCompiledFunctions = false } = {
     || auth.GOTRUE_DISABLE_SIGNUP !== 'true'
     || auth.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED !== 'false'
     || auth.GOTRUE_EXTERNAL_PHONE_ENABLED !== 'false'
+    || auth.GOTRUE_TRACING_ENABLED !== 'false' || auth.GOTRUE_METRICS_ENABLED !== 'false'
     || auth.GOTRUE_SMTP_HOST !== 'mailpit'
     || auth.GOTRUE_SMTP_PORT !== '1025'
     || auth.GOTRUE_SMTP_ADMIN_EMAIL !== 'no-reply@barber.test'
     || auth.GOTRUE_SMTP_USER !== '' || auth.GOTRUE_SMTP_PASS !== '') fail('Unsafe staging Auth configuration');
+  if (Object.entries(auth).some(([key, value]) => key.startsWith('OTEL_') && value)) fail('Initial Auth telemetry must remain disabled');
   const functions = config.services.functions.environment;
   if (functions.APP_ENV !== 'staging' || functions.APP_URL !== 'https://staging-barber.malabdullah.cloud'
     || functions.VERIFY_JWT !== 'true'

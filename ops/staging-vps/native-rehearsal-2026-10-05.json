@@ -1,0 +1,33 @@
+{
+  "kind": "synthetic-native-rehearsal-evidence",
+  "completedAt": "2026-10-05T04:46:06Z",
+  "host": "srv1207055",
+  "platform": "linux/amd64",
+  "baseCommit": "c0d07027a48696077a125af584a36fb7827f488a",
+  "sourceOverlaySha256": {
+    "scripts/staging-core-candidates.mjs": "5c35dbcd0165f95d71e4bd13c96a98c254da762464bba03ed8f497d1186ea239",
+    "scripts/staging-full-stack-probe.mjs": "0aa32ee155dd3fe6fbd4357b22f86b33b276a1b25b357f1d3e5992ff531b2781",
+    "scripts/test-staging-supabase-core.mjs": "3484501a8e5a8291030f1b7bb98e54af8e6430a0cecd03bda39943ee205db0e6",
+    "scripts/write-public-container-source.mjs": "32046af2be8a8e8685b270a53902196ec7afd6cfd65a2708ad0411799ccbdff3"
+  },
+  "upstreamCommit": "241bb11c0627f2981746d37033f57dbfa81d29b0",
+  "sanitizedLogPath": "/tmp/barber-native-core.bcwPRko1/native-gateway-fix.stdout.log",
+  "sanitizedLogSha256": "a2140d417e70b6689c987434207dfa95311c628c2a0448a7ab2a3940e65d25e8",
+  "exitCode": 0,
+  "eightServiceFunctionalRehearsal": "passed",
+  "fiveServiceFreshVolumeEncryptedRecovery": "passed",
+  "applicationMigrationsReplayed": 4,
+  "pgTapAssertions": 32,
+  "existingRunningServiceInventoryUnchanged": true,
+  "temporaryResourcesCleaned": true,
+  "publishedPorts": false,
+  "productionAccessed": false,
+  "liveStackCreated": false,
+  "releaseAccepted": false,
+  "limits": [
+    "Synthetic disposable data only; not a live backup receipt",
+    "Recovery covers DB/Auth/REST/Storage/Mailpit, not the complete eight-service runtime",
+    "No frontend browser, public TLS, Cloudflare Access, capacity or load acceptance",
+    "No registry publication, remote attestation, owner release approval or vulnerability waiver"
+  ]
+}

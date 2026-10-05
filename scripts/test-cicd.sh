@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+node --test scripts/local-service-pins.node-test.mjs
+
 immutable_digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 release_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 accepted_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

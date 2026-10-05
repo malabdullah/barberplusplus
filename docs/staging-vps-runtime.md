@@ -4,6 +4,255 @@ These files prepare only the isolated staging runtime on `srv1207055`. The
 Mac-targeted deployment workflow has **not** been converted yet. Do not merge
 or treat these components as a working VPS deployment.
 
+Update October 5: the separately owner-approved **private backend** is running
+with verified full backup/restore. See the [execution record](staging-private-bootstrap-execution.md).
+The generic overlay/workflow below is not its deployment entry point; public
+frontend release and automation remain unaccepted.
+
+## Minimal initial stack
+
+On October 4 the owner approved keeping Hostinger/Dokploy and omitting four
+optional Supabase services from initial staging: Studio, postgres-meta,
+Supavisor and Imgproxy. This is an approved design reduction, not permission to
+delete existing VPS containers/data or deploy a release. The eight configured
+services are DB, API gateway, Auth, REST, Realtime, Storage, Functions and Mailpit.
+Normal image/file uploads and downloads remain; server-side resizing is disabled.
+There is no Supabase dashboard/management API or database pooler endpoint.
+Administration remains through reviewed migrations and private SSH/database tools.
+Dokploy management and its restricted account are unchanged.
+
+`compose.override.yml` removes the four service definitions with `!reset`, not
+profiles, removes the gateway's Studio dependency and Storage's Imgproxy
+dependency, and explicitly sets `ENABLE_IMAGE_TRANSFORMATION=false` with no
+Imgproxy URL. The validator requires the exact eight-service inventory and
+rejects reintroduced services, missing core services, foreign dependencies,
+enabled transformations or the old gateway template paths. Resource/load testing
+is still required; fewer components do not by themselves establish capacity.
+
+Bootstrap now needs Node and creates public, checksum-bound
+`staging-cds.yaml` and `staging-lds.template.yaml` beside the unchanged upstream
+Envoy files. The helper refuses existing outputs or changed upstream content.
+For an existing verified **scratch** checkout with neither generated file:
+
+```sh
+node scripts/prepare-staging-envoy.mjs /absolute/verified/upstream
+npm run test:staging-envoy-candidate -- /absolute/verified/upstream --minimal
+```
+
+Do not regenerate files over a live installation. The overlay mounts these two
+files read-only. Management and fallback dashboard routes become explicit 403
+responses after the existing authentication filters; anonymous dashboard requests
+may still receive 401. Their backend DNS clusters are removed. Realtime uses the
+Compose service DNS name, retaining the upstream tenant host rewrite. The exact
+staging CORS policy and response-header guard are included. Browser, Cloudflare,
+real Realtime/Functions and full-stack checks remain separate acceptance gates.
+
+The opt-in gateway test runs the previously scanned Envoy 1.39.2 candidate. It
+does **not** update the Compose image pin or clear its provenance/security gate.
+The real core rehearsal now starts five services (DB/Auth/REST/Storage/Mailpit),
+and its backup quiescence list no longer includes Imgproxy. Synthetic local
+compatibility and recovery tests are not live backup or deployment evidence.
+
+This reduces optional exposure but does not resolve the remaining Auth, Storage,
+Realtime, image-provenance, migration, live-secret, backup, routing or load gates.
+[Supabase supports omitting unused services and dependencies](https://supabase.com/docs/guides/self-hosting/docker).
+
+### October 4 local validation of the reduced stack
+
+The separate code-review pass caught and fixed a stale Imgproxy reference in
+backup quiescence. This was a code review, not independent human approval.
+Local validation passed:
+
+- 87 staging topology/candidate/fixture/recovery tests, full `npm run check`,
+  five Playwright journeys and `git diff --check`.
+- Actual pinned upstream plus overlay Compose rendering, including the exact
+  eight-service inventory and read-only generated gateway mounts; the compiled
+  Functions overlay also passed with a syntactic, non-published image fixture.
+- Minimal Envoy candidate authentication, denied management routes, restricted
+  CORS, path/body/signature forwarding and isolated non-root execution tests.
+- Five-service core rehearsal: Auth login and invitation captured by Mailpit,
+  Storage upload/download and anonymous denial, disabled image transformation
+  returning 404, four application migrations, 32 pgTAP assertions, randomized
+  synthetic fixtures and duplicate-seed refusal.
+- Encrypted DB/Storage/config tamper rejection and restoration into fresh local
+  volumes, including Auth, RLS, Vault and private Storage verification.
+- Generated gateway files match the tested transform; a repeated preparation
+  attempt fails without overwriting either existing public file.
+- Fresh local frontend Docker build and isolated runtime check: health, staging
+  configuration, CSP, no-store, noindex, nosniff and UID 101 passed. Test image ID:
+  `sha256:34a2f8290e6e3c8bec1a2891faa28fcd8b46feacc7a1021496b48137e583dc64`.
+  It was not published or accepted as a release. Its disposable runtime had no
+  network access or published ports and was removed after the check.
+
+The core rehearsal used local PostgreSQL candidate
+`sha256:b8aebc0a7bdcfd3eadc557f0d19999ee5f5d4a29590e03ba34d90acf783cbd92`
+with the currently selected Auth/Storage versions, not the newly scanned upgrade
+candidates. Playwright used the retained local synthetic development database;
+the Envoy probe used stub backends. These results do not establish real Realtime
+or Functions integration through Envoy, AMD64/VPS acceptance, live backups, or
+clear outstanding image vulnerabilities/provenance. No image pins, production
+resources, live VPS resources, DNS or account permissions changed in this work.
+
+## Local downstream security candidates
+
+Two further opt-in flags run only the exact local artifacts recorded in
+`staging-component-security-2026-10-04.md`: `--storage-security-candidate`
+retains official Auth and uses patched Storage; `--security-core-candidates`
+uses patched Auth and Storage plus official PostgREST 14.18 (which fixes the
+sporadic JWT-issued-in-the-future error). They never pull local candidates, verify
+the fixed OCI index and selected AMD64 identity/configuration, and do not alter
+deployment pins. A rebuild must be separately scanned/reviewed before updating
+the test identities. Both variants passed the isolated core and encrypted
+fresh-volume recovery rehearsal on October 4. Auth retains an unsuppressed
+version-match finding requiring documented patch review.
+
+For a new Storage build context, provide the exact official source checkout:
+
+```sh
+node scripts/prepare-staging-storage-candidate.mjs /absolute/storage-source /absolute/new-build-directory
+```
+
+Preparation verifies upstream/patched manifests and the build recipe, rejects
+existing output and reads committed blobs rather than working-copy files. The
+output contains no credentials. These artifacts are local candidates, not release
+approval or published images.
+
+`npm run test:staging-edge-runtime -- linux/amd64` explicitly tests the VPS
+architecture; omitting the platform retains local host architecture. Docker
+operations now bind to one local Unix socket and reject endpoint overrides.
+The probe records both local index and selected platform identities. It remains
+a standalone Functions test, not Envoy/Cloudflare/full-stack acceptance.
+
+To rehearse the separately built, exact distroless Functions candidate:
+
+```sh
+npm run test:staging-edge-runtime -- linux/amd64 --security-runtime-candidate
+```
+
+This explicitly selects the official v1.77.4 builder and locally verified
+minimal runtime; it does not change the default deployment pin. All eight real
+workers, JWT/cron/Meta/exact paths/CORS, encrypted Flow and tamper checks passed.
+The compiled AMD64 manifest
+`sha256:4304bfb208a54190aab7347dfe83c362efb7feb88f40ddd99d85c227b31e2c16`
+scanned at 0 HIGH / 0 CRITICAL across 14 OS packages. Repeating the build retained
+that platform manifest, while its local OCI index/attestation differed. Keep those
+identities distinct. Rust/Deno/V8/ONNX source advisory coverage is separate.
+
+The full eight-service rehearsal is a separate opt-in:
+
+```sh
+npm run test:staging-supabase-core -- /absolute/verified/upstream linux/amd64 sha256:<validated-local-postgres-candidate-id> --security-core-candidates --full-stack
+```
+
+It uses fresh synthetic volumes/internal networks, exact candidate identities
+and no host ports. Distroless inspection runs outside the Functions container;
+no shell is added to that image. Realtime's guarded profile remains mandatory.
+On an ARM Docker host only, its AMD64 Erlang JIT uses the documented local
+emulation flag; native AMD64/VPS verification is still required. Generate the
+Realtime cookie as 32 random bytes encoded as base64url (43 characters), because
+upstream also uses it as a PostgreSQL LISTEN channel with a 63-byte limit.
+The three additional services stop before the existing five-service restore
+rehearsal; this does not claim a full eight-service disaster-recovery test.
+
+### Single-platform native rehearsal exports — October 5
+
+Docker's `image save --platform linux/amd64` retains the selected AMD64 manifest
+but drops the local wrapper index/attestation reference. An imported artifact
+must therefore use `--exported-security-core-candidates` in place of
+`--security-core-candidates` for the core/full-stack rehearsal. This explicit
+mode selects the already-reviewed platform IDs for Auth, Storage, Functions and
+Realtime; it does not rebuild, retag, fetch a substitute, or relax provenance,
+architecture, entrypoint, privilege or runtime-profile checks. Default local
+wrapper lookups remain unchanged. Both modes validate identical AMD64 contents.
+The database candidate and official REST/Envoy/Mailpit pins are unchanged.
+An exported artifact is still not a published or approved deployment image.
+
+The October 5 native `srv1207055` rehearsal passed all eight-service functional
+checks and the separate five-service encrypted restore. See the
+[receipt](../ops/staging-vps/native-rehearsal-2026-10-05.json) and
+[completion record](staging-env3-completion-2026-10-05.md). It exposed and fixed
+private-umask mount permissions: only public initialization SQL and unrendered
+gateway sources become readable by container users; secrets and installation
+directories stay private. This replaces the earlier native-functional-test gap,
+not public routing, live backups, eight-service recovery, load or release gates.
+
+On October 4 the exact candidate set passed real gateway Auth login, REST own-
+branch/cross-tenant checks, private Storage and exact anonymous denial, CORS,
+management-route denial, Functions database access and authentication boundaries,
+encrypted Flow, disabled outbound calls and Realtime private broadcasts. A real
+booking UPDATE was delivered to its authenticated barber and withheld from the
+other authenticated tenant during a bounded five-second observation window;
+both subscriptions were acknowledged and the denied connection answered a
+heartbeat. This is functional evidence, not a browser or native-VPS load test.
+
+The first post-Realtime restore found a genuine missing-role defect. The local
+recovery format now preserves only the reviewed, non-login
+`supabase_realtime_admin` role's exact attributes, memberships and parameter ACL,
+bound by a checksum inside the encrypted fixture. It does not export passwords,
+`pg_authid`, or general cluster globals. Restoration requires a fresh labelled
+target with the role absent, uses constant allowlisted SQL, and verifies exact
+metadata before and after import. Unexpected privileges/configuration fail.
+The repeated five-service restore passed Auth, RLS, Vault decryption and private
+Storage content/metadata checks, with all disposable resources cleaned up.
+
+Final local receipt: `/private/tmp/barber-full-stack-evidence.RJwLX3/receipt.json`;
+sanitized stdout SHA-256
+`f31a3a5a7933c25b6787a21d4fddb93fa5623bba0a2e14054d8d6f1653d51c41`.
+Native VPS verification, full eight-service recovery, live Cloudflare/TLS/browser
+tests, resource/load acceptance, scoped deployment identities, published image
+provenance and owner-specific release/security approval remain open.
+
+## Auth telemetry quarantine
+
+Initial Auth tracing and metrics exporters are explicitly disabled, and nonempty
+`OTEL_*` settings are rejected. This keeps an unreviewed telemetry collector out
+of the synthetic staging configuration; it is not a component security waiver.
+
+## Opt-in Auth/Storage upgrade rehearsal
+
+`scripts/staging-core-candidates.mjs` contains only the previously scanned
+AMD64 manifest identities for Auth 2.197.0 and Storage 1.79.31. They can be used
+by the disposable local core probe, not by a deployment adapter:
+
+```sh
+npm run test:staging-supabase-core -- /absolute/verified/upstream linux/amd64 sha256:<validated-local-postgres-candidate-id> --core-candidates
+```
+
+Without the last flag, the probe retains the selected versions. Unknown options,
+other platforms, image identities or mismatched image metadata fail closed.
+The Compose deployment pins and baseline files are not modified. CI now runs
+both selected-version and candidate-version core/recovery rehearsals.
+
+The probe binds all Docker operations to one resolved local Unix socket. It
+rejects endpoint overrides and does not follow subsequent context changes.
+Binary backup archives retain their exact bytes. Synthetic Compose values use
+a mode-0600 temporary file inside a private directory, removed immediately
+after rendering, rather than process arguments, inherited Docker settings or a
+live `.env` file. Each run uses new internal-only networks, unexposed services,
+random synthetic credentials and label-checked disposable volumes.
+
+October 4 local AMD64 verification passed for both selected versions and these
+exact candidates with telemetry disabled: four application migrations, 32 pgTAP
+assertions, random-fixture empty-target/duplicate guards, login, sink-only
+invitation, private upload/download, disabled transformation, anonymous denial,
+encrypted archive tamper rejection, and fresh-volume restoration of Auth, Vault,
+tenant RLS and private Storage. Full local checks and five Playwright journeys
+also passed; the staging unit suite now contains 93 tests and the local-Docker/
+CORS suite contains seven. A separate code-review pass checked identity/platform
+rejection, private temporary-file cleanup, binary preservation, endpoint binding
+and candidate-only scope; this is not independent human approval.
+The fresh frontend test artifact
+`sha256:0c2fa056eed06cace9e08fc42e82e8d1fffe5911a1ed20c6b15529a9325b006d`
+passed isolated health/runtime, CSP, no-store, noindex, nosniff and UID 101 checks.
+It was neither published nor accepted as a release.
+
+These are fresh-initialization and recovery rehearsals, not an in-place upgrade
+or downgrade test. Browser tests still use the existing local synthetic dev
+database, not the candidate stack. No full-stack/VPS acceptance, vulnerability
+exception, release approval, migration change or deployed version change follows
+from this evidence. Outstanding component findings and source-image provenance
+are tracked in `staging-component-security-2026-10-04.md`.
+
 ## Test email
 
 `ops/staging-vps/compose.override.yml` connects Auth to `mailpit:1025` on the
@@ -157,7 +406,7 @@ These use synthetic keys and stub workers, not the deployed app or Meta service.
    plus Linux/Dokploy deployment, backup and rollback implementation.
 3. Provision unique staging secrets, initialize the baseline and synthetic seed,
    and test Auth against the private mail sink.
-4. Configure dedicated Meta/Flow and restricted Anthropic test credentials;
+4. Configure dedicated Meta/Flow and restricted OpenAI test credentials;
    keep outbound calls disabled until allowlist/limit checks pass.
 5. Implement consistent live DB/Storage capture and rehearse restoration;
    encrypted transfer and recovery-key custody are already verified.

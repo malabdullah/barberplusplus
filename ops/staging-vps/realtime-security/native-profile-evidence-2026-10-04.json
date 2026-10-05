@@ -1,0 +1,32 @@
+{
+  "kind": "disposable-native-profile-test",
+  "date": "2026-10-04",
+  "host": "srv1207055",
+  "architecture": "x86_64",
+  "image": "sha256:78f25384ba6173d08f4dd7969989f5115d986cf4e8923f7906bf4fa00bfd1902",
+  "result": "PASS",
+  "emulationWorkaround": false,
+  "applicationDatabaseIntegrationTested": false,
+  "deploymentAuthorized": false,
+  "portsPublished": false,
+  "network": "none",
+  "liveCredentialsUsed": false,
+  "testContainersRemoved": true,
+  "imageCachedOnHost": true,
+  "checks": [
+    "Exact image identity and required unprivileged readonly profile",
+    "Forbidden AWS/ECS/certificate/crash-export settings rejected with exit 78",
+    "Root, writable-root, extra capability and absent no-new-privileges rejected",
+    "Root-owned non-writable app and unchanged application file checksums",
+    "No SUID/SGID bits, AWS CLI, sudo, Python, systemd-homed or Archive::Tar",
+    "No active fstab entries",
+    "Native pgdelta help, Erlang runtime and full release evaluation without ARM workaround"
+  ],
+  "privateEvidenceDirectory": "/tmp/barber-realtime-native.v2eMFVtt",
+  "evidenceSha256": {
+    "profile.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "denial.txt": "5727a9c4461e8873f2846d1f71926a73808aee0476812cf958299a268f57e9dc",
+    "native.txt": "c4439f8c1223b2adab0505c2b3bcf8eb624e09c383751b7425d7adb48135e8a1",
+    "release.txt": "1defe5827c0b6bc91bc787002098fa22577f07a3990dd06d3d98297a15887d5e"
+  }
+}
