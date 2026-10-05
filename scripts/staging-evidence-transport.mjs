@@ -270,6 +270,41 @@ function header(response, name) {
   return response.headers?.get?.(name) || response.headers?.get?.(name.toLowerCase()) || null;
 }
 
+const manifestMediaTypes = ['application/vnd.oci.image.manifest.v1+json', 'application/vnd.docker.distribution.manifest.v2+json'];
+const indexMediaTypes = ['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.list.v2+json'];
+
+// This staging host is linux/amd64. Accept its one runtime descriptor and an
+// optional BuildKit attestation descriptor, never nested indexes or extra
+// runnable platforms. The signed top-level digest remains the release identity.
+function inspectStagingImageIndex(index, mediaType) {
+  if (index?.schemaVersion !== 2 || index.mediaType !== mediaType
+      || !Array.isArray(index.manifests) || index.manifests.length < 1 || index.manifests.length > 2) {
+    fail('GHCR index structure is not allowed');
+  }
+  const seen = new Set();
+  for (const descriptor of index.manifests) {
+    if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)
+        || !manifestMediaTypes.includes(descriptor.mediaType) || typeof descriptor.digest !== 'string' || !digestPattern.test(descriptor.digest)
+        || !Number.isSafeInteger(descriptor.size) || descriptor.size < 1 || descriptor.size > maxJsonBytes
+        || Object.hasOwn(descriptor, 'urls') || Object.hasOwn(descriptor, 'data')
+        || seen.has(descriptor.digest)) fail('GHCR index descriptor is not allowed');
+    seen.add(descriptor.digest);
+  }
+  const runtime = index.manifests.filter((entry) => entry.platform?.os === 'linux'
+    && entry.platform?.architecture === 'amd64');
+  if (runtime.length !== 1 || Object.keys(runtime[0].platform).some((key) => !['os', 'architecture'].includes(key))
+      || Object.hasOwn(runtime[0], 'artifactType')
+      || runtime[0].annotations?.['vnd.docker.reference.type']) fail('GHCR index must have exactly one plain linux/amd64 runtime');
+  for (const descriptor of index.manifests.filter((entry) => entry !== runtime[0])) {
+    if (descriptor.platform?.os !== 'unknown' || descriptor.platform?.architecture !== 'unknown'
+        || descriptor.annotations?.['vnd.docker.reference.type'] !== 'attestation-manifest'
+        || descriptor.annotations?.['vnd.docker.reference.digest'] !== runtime[0].digest) {
+      fail('GHCR index auxiliary descriptor is not bound to the runtime');
+    }
+  }
+  return Object.freeze({ digest: runtime[0].digest, sizeInBytes: runtime[0].size, mediaType: runtime[0].mediaType });
+}
+
 export async function readGhcrManifest({ repository, digest, credentials, fetchImpl = fetch }) {
   if (!['malabdullah/barberplusplus', 'malabdullah/barberplusplus-functions'].includes(repository)) fail('GHCR repository is not allowlisted');
   if (!digestPattern.test(digest)) fail('GHCR digest is invalid');
@@ -281,7 +316,7 @@ export async function readGhcrManifest({ repository, digest, credentials, fetchI
     }
   }
   const manifestUrl = `https://ghcr.io/v2/${repository}/manifests/${digest}`;
-  const headers = { Accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' };
+  const headers = { Accept: [...manifestMediaTypes, ...indexMediaTypes].join(', ') };
   let response = await fetchImpl(manifestUrl, { method: 'GET', headers, redirect: 'error' });
   if (response.status === 401) {
     const challenge = header(response, 'www-authenticate');
@@ -307,8 +342,10 @@ export async function readGhcrManifest({ repository, digest, credentials, fetchI
   const calculated = `sha256:${createHash('sha256').update(body).digest('hex')}`;
   if (calculated !== digest || header(response, 'docker-content-digest') !== digest) fail('GHCR manifest digest does not match');
   const mediaType = header(response, 'content-type')?.split(';')[0];
-  if (!['application/vnd.oci.image.manifest.v1+json', 'application/vnd.docker.distribution.manifest.v2+json'].includes(mediaType)) fail('GHCR manifest content type is not allowed');
-  try { JSON.parse(body.toString('utf8')); } catch { fail('GHCR manifest is not JSON'); }
+  if (![...manifestMediaTypes, ...indexMediaTypes].includes(mediaType)) fail('GHCR manifest content type is not allowed');
+  let parsed;
+  try { parsed = JSON.parse(body.toString('utf8')); } catch { fail('GHCR manifest is not JSON'); }
+  const runtimeDescriptor = indexMediaTypes.includes(mediaType) ? inspectStagingImageIndex(parsed, mediaType) : null;
   return Object.freeze({
     status: 'read-only-ghcr-manifest-collected',
     authorizing: false,
@@ -316,6 +353,9 @@ export async function readGhcrManifest({ repository, digest, credentials, fetchI
     digest,
     mediaType,
     sizeInBytes: body.length,
+    // Descriptor only: child bytes, config, layers and runtime health are not
+    // verified by collecting the top-level signed manifest/index.
+    ...(runtimeDescriptor ? { runtimeDescriptor } : {}),
     remainingAuthorizationChecks: Object.freeze(['image-attestation', 'commit-and-run-binding', 'broker-authorization']),
   });
 }

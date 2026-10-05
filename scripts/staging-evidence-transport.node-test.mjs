@@ -347,3 +347,73 @@ test('rejects GHCR repository, digest, redirects, content type and digest mismat
     fetchImpl: async () => manifestResponse(body, { headers: { 'content-type': 'application/vnd.oci.image.manifest.v1+json', 'docker-content-digest': `sha256:${'0'.repeat(64)}` } }),
   }), /digest/);
 });
+
+function imageIndex(mediaType = 'application/vnd.oci.image.index.v1+json') {
+  return { schemaVersion: 2, mediaType, manifests: [
+    { mediaType: 'application/vnd.oci.image.manifest.v1+json', digest: `sha256:${'a'.repeat(64)}`, size: 1000, platform: { os: 'linux', architecture: 'amd64' } },
+    { mediaType: 'application/vnd.oci.image.manifest.v1+json', digest: `sha256:${'b'.repeat(64)}`, size: 800, platform: { os: 'unknown', architecture: 'unknown' }, annotations: { 'vnd.docker.reference.type': 'attestation-manifest', 'vnd.docker.reference.digest': `sha256:${'a'.repeat(64)}` } },
+  ] };
+}
+
+async function collectIndex(index) {
+  const body = JSON.stringify(index);
+  const digest = `sha256:${createHash('sha256').update(body).digest('hex')}`;
+  return readPublicGhcrManifest({ repository: 'malabdullah/barberplusplus', digest,
+    fetchImpl: async (_url, options) => {
+      assert.ok(options.headers.Accept.includes('application/vnd.oci.image.index.v1+json'));
+      assert.ok(options.headers.Accept.includes('application/vnd.docker.distribution.manifest.list.v2+json'));
+      assert.equal(options.redirect, 'error');
+      return manifestResponse(body, { headers: { 'content-type': index.mediaType, 'docker-content-digest': digest } });
+    },
+  });
+}
+
+test('accepts the signed BuildKit index without substituting its runtime child digest', async () => {
+  for (const type of ['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.list.v2+json']) {
+    const index = imageIndex(type);
+    const result = await collectIndex(index);
+    assert.equal(result.digest, `sha256:${createHash('sha256').update(JSON.stringify(index)).digest('hex')}`);
+    assert.equal(result.runtimeDescriptor.digest, index.manifests[0].digest);
+    assert.notEqual(result.digest, result.runtimeDescriptor.digest);
+    assert.equal(result.authorizing, false);
+    assert.equal(result.runtimeDescriptor.sizeInBytes, 1000);
+    assert.ok(Object.isFrozen(result.runtimeDescriptor));
+  }
+  const single = imageIndex();
+  single.manifests.pop();
+  assert.equal((await collectIndex(single)).runtimeDescriptor.digest, single.manifests[0].digest);
+});
+
+test('rejects ambiguous, nested, foreign-platform or unbound index descriptors', async () => {
+  for (const mutate of [
+    (index) => { index.schemaVersion = 1; },
+    (index) => { index.manifests = []; },
+    (index) => { index.manifests.push(structuredClone(index.manifests[0])); },
+    (index) => { index.manifests[0].platform.architecture = 'arm64'; },
+    (index) => { index.manifests[0].platform.variant = 'v3'; },
+    (index) => { index.manifests[0].mediaType = index.mediaType; },
+    (index) => { index.manifests[0].digest = 'latest'; },
+    (index) => { index.manifests[0].digest = [index.manifests[0].digest]; },
+    (index) => { index.manifests[0].size = 0; },
+    (index) => { index.manifests[0].size = 1024 * 1024 + 1; },
+    (index) => { index.manifests[0].urls = ['https://evil.invalid/image']; },
+    (index) => { index.manifests[0].data = 'embedded'; },
+    (index) => { index.manifests[0].artifactType = 'not-a-runtime'; },
+    (index) => { index.manifests[1].digest = index.manifests[0].digest; },
+    (index) => { index.manifests[1].platform = { os: 'linux', architecture: 'amd64' }; },
+    (index) => { index.manifests[1].annotations['vnd.docker.reference.digest'] = `sha256:${'c'.repeat(64)}`; },
+    (index) => { delete index.manifests[1].annotations; },
+  ]) {
+    const index = imageIndex();
+    mutate(index);
+    await assert.rejects(() => collectIndex(index), /GHCR index/);
+  }
+});
+
+test('still rejects an index when the registry serves bytes for a different digest', async () => {
+  const index = imageIndex();
+  await assert.rejects(() => readPublicGhcrManifest({
+    repository: 'malabdullah/barberplusplus', digest: `sha256:${'f'.repeat(64)}`,
+    fetchImpl: async () => manifestResponse(JSON.stringify(index), { headers: { 'content-type': index.mediaType, 'docker-content-digest': `sha256:${'f'.repeat(64)}` } }),
+  }), /digest does not match/);
+});

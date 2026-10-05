@@ -15,9 +15,10 @@ const probeImage = 'node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57
 const platform = process.argv[2] || (process.arch === 'arm64' ? 'linux/arm64' : 'linux/amd64');
 assert.ok(process.argv.length <= 4 && ['linux/amd64', 'linux/arm64'].includes(platform), 'Unsupported probe platform');
 const securityCandidate = process.argv[3] === '--security-runtime-candidate';
-assert.ok(process.argv[3] === undefined || securityCandidate, 'Unknown runtime candidate option');
-assert.ok(!securityCandidate || platform === 'linux/amd64', 'Security candidate is AMD64 only');
-const image = securityCandidate
+const releaseRuntime = process.argv[3] === '--release-runtime';
+assert.ok(process.argv[3] === undefined || securityCandidate || releaseRuntime, 'Unknown runtime candidate option');
+assert.ok(!(securityCandidate || releaseRuntime) || platform === 'linux/amd64', 'Security runtime is AMD64 only');
+const image = securityCandidate || releaseRuntime
   ? 'supabase/edge-runtime@sha256:fded42ff725708990b1a0803633c2659453259d075c4bec6b4d01dfb82dc055e' : pinnedImage;
 const candidateRef = 'sha256:b00379f2cd56e0da0e721968a0593ff8b15b0cfb758223e5316aac8d30600431';
 const candidateChild = 'sha256:edfc3b271d665ed9df4e01cc1e6c0144fed184246cc30785974aa1c701c52156';
@@ -131,11 +132,19 @@ try {
   }
   const compiledImage = `barber-staging-functions-check:${commit}-${name.slice(-8)}`;
   console.log('Compiling immutable function artifacts; no credentials enter the build.');
-  localDocker(['build', '--platform', platform, '--build-arg', `EDGE_RUNTIME_IMAGE=${image}`,
-    '--build-arg', `EDGE_RUNTIME_FINAL_IMAGE=${securityCandidate ? candidateTag : image}`,
-    '-f', 'ops/staging-vps/Dockerfile.functions', '-t', compiledImage, bundle], { timeout: 900000 });
+  const buildArgs = releaseRuntime ? [] : ['--build-arg', `EDGE_RUNTIME_IMAGE=${image}`,
+    '--build-arg', `EDGE_RUNTIME_FINAL_IMAGE=${securityCandidate ? candidateTag : image}`];
+  localDocker(['build', '--platform', platform, ...buildArgs,
+    '-f', releaseRuntime ? 'ops/staging-vps/Dockerfile.functions-release' : 'ops/staging-vps/Dockerfile.functions',
+    '-t', compiledImage, bundle], { timeout: 900000 });
   if (securityCandidate) assert.equal(inspectPlatformImage(localDocker, candidateTag, platform).Id, candidateChild);
   const compiledMetadata = inspectPlatformImage(localDocker, compiledImage, platform);
+  if (releaseRuntime) {
+    assert.equal(compiledMetadata.Config.User, '10001:10001');
+    assert.equal(compiledMetadata.Config.Labels['cloud.malabdullah.barber.runtime'], 'edge-runtime-security-release');
+    assert.equal(compiledMetadata.Config.Labels['cloud.malabdullah.barber.upstream-manifest'], image.split('@')[1]);
+    assert.deepEqual(compiledMetadata.Config.Entrypoint, ['edge-runtime']);
+  }
   docker('network', 'create', '--internal', '--label', 'barber.purpose=edge-runtime-test', offline); createdNetworks.push(offline);
   docker('create', '--platform', platform, '--name', name, '--label', 'barber.purpose=edge-runtime-test', '--network', offline,
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true',
@@ -164,7 +173,7 @@ try {
   console.log(runProbe().trim());
   console.log(JSON.stringify({ sourceCommit: commit, treeSha256: manifest.treeSha256, runtimeImage: image, compiledImage,
     minimalRuntimeImage: securityCandidate ? candidateRef : null, minimalRuntimePlatformId: securityCandidate ? candidateChild : null,
-    platform, platformImageId: compiledMetadata.Id,
+    releaseRuntime, platform, platformImageId: compiledMetadata.Id,
     imageId: docker('image', 'inspect', compiledImage, '--format', '{{.Id}}'), scope: 'local-runtime-compatibility-not-VPS-acceptance' }));
 } catch (error) {
   // Only this disposable container has synthetic credentials. Still suppress

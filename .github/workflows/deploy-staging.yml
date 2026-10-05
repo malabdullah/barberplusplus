@@ -81,7 +81,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ runner.temp }}/staging-functions
-          file: ${{ github.workspace }}/ops/staging-vps/Dockerfile.functions
+          file: ${{ github.workspace }}/ops/staging-vps/Dockerfile.functions-release
+          platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository }}-functions:${{ github.event.workflow_run.head_sha }}
 
