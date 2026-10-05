@@ -1,6 +1,10 @@
 # First permanent staging bootstrap — owner approval required
 
-Status: proposed October 5, 2026; **not executed and not approved**.
+Status: the owner approved this plan at commit
+`c24f8ecadbe49d353965a0e9b457ebcd3cfca287` on October 5, 2026 with
+“Approve this private staging bootstrap.” The private backend is initialized,
+functionally verified and recovered into separate disposable volumes.
+See the [execution and remaining gates](staging-private-bootstrap-execution.md).
 This is a one-time backend bootstrap, not a frontend release or Env3 acceptance.
 Approval must identify the exact Git commit containing this plan. Changed images,
 profiles, source, scope or expired risk acceptance require a new review.

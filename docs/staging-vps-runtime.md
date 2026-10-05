@@ -4,6 +4,11 @@ These files prepare only the isolated staging runtime on `srv1207055`. The
 Mac-targeted deployment workflow has **not** been converted yet. Do not merge
 or treat these components as a working VPS deployment.
 
+Update October 5: the separately owner-approved **private backend** is running
+with verified full backup/restore. See the [execution record](staging-private-bootstrap-execution.md).
+The generic overlay/workflow below is not its deployment entry point; public
+frontend release and automation remain unaccepted.
+
 ## Minimal initial stack
 
 On October 4 the owner approved keeping Hostinger/Dokploy and omitting four

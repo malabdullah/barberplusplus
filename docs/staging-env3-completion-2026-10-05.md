@@ -3,7 +3,17 @@
 Status: **NOT COMPLETE / no live VPS application release accepted**.
 This record is a dependency-ordered work list, not permission to deploy.
 
-## Verified today
+## Latest: private backend bootstrap passed
+
+The owner approved the exact private-bootstrap plan at `c24f8ec`. The permanent
+eight-service private backend is now running, four migrations and synthetic seed
+passed, and its real encrypted backup was copied to the Mac and restored into a
+separate eight-service stack. A bounded 300-request probe passed without errors.
+See [execution, receipts and remaining gates](staging-private-bootstrap-execution.md).
+No public frontend/VPS release or full Env3 acceptance follows. The rehearsal
+and pre-bootstrap observations below are historical, not the current inventory.
+
+## Verified before bootstrap
 
 - Staging SSH reaches `srv1207055` (`185.97.146.8`); production is not accessed.
 - Existing services remain running. Before rehearsal, the host reported 5.6 GB
@@ -27,7 +37,7 @@ This record is a dependency-ordered work list, not permission to deploy.
   app's cross-chat MCP tool and its legacy alternative were unavailable, so no
   message was delivered. No credential values were included in attempted messages.
 
-## Remaining work, in order
+## Gate sequence (updated after private bootstrap)
 
 1. **Native compatibility and core recovery rehearsal — passed.** Used only exact reviewed
    candidate images, fresh randomly named synthetic volumes, internal networks
@@ -41,19 +51,20 @@ This record is a dependency-ordered work list, not permission to deploy.
    exact source-bound images through approved CI, and verify private digest pulls
    using the new token. Never run the legacy Mac-targeted deployment as a VPS
    release. Keep `STAGING_VPS_AUTOMATION_READY` false.
-3. **First-bootstrap plan and owner approval.** Present an exact commit/image
-   manifest and the eight-service resource plan. Scope: new staging-only
+3. **First-bootstrap plan and owner approval — passed at `c24f8ec`.** The owner approved
+   the exact commit/image manifest and eight-service resource plan. Scope: new staging-only
    containers/volumes, independent generated credentials, validated baseline and
    randomized synthetic fixtures, sink-only email, outbound AI/WhatsApp disabled
    until dedicated integration checks pass. No deletion of legacy services,
    production changes, public DB/management ports, or implicit DNS cutover.
-   The owner must approve this specific plan; general persistence instructions
-   and credential approval are not release/bootstrap authorization.
-4. **Bootstrap and recoverability.** Prove the new target is empty, initialize
+   The owner specifically approved this plan; general persistence instructions
+   and credential approval did not substitute for that authorization.
+4. **Bootstrap and recoverability — passed.** Prove the new target is empty, initialize
    the approved baseline once, and seed only synthetic data. Capture Database,
    Auth, Vault including db-config root key, Storage bytes/metadata and encrypted
    runtime config. Pull encrypted archives to the approved Mac destination and
-   restore into different fresh volumes. A transport-only fixture is not a backup.
+   restore into different fresh volumes. All eight services passed that real
+   recovery check; a transport-only fixture was not used to satisfy this gate.
 5. **Staging ingress and integrations.** Route only the staging hostnames;
    verify TLS, Cloudflare Access default-deny and service access, and only the
    exact two Meta paths as exceptions with valid signatures/secrets/encryption.

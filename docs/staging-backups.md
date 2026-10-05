@@ -1,6 +1,14 @@
 # Staging backups to the owner's Mac
 
-## Current status — 2026-09-28
+## Current status — 2026-10-05
+
+The permanent private staging backend now has a real encrypted backup, verified
+Mac transfer and successful fresh-volume restoration of all eight services.
+See [execution and recovery evidence](staging-private-bootstrap-execution.md).
+Recurring capture/freshness monitoring and registry-backed lost-host recovery
+remain pending; this does not declare Env3 complete.
+
+## Historical transport setup — 2026-09-28
 
 **Transport implemented and tested; live application backup NOT ready.**
 The new VPS Supabase stack is not deployed. No database, Storage volume,
