@@ -2,7 +2,8 @@
 // This does not validate real Auth/Storage/Functions or change the deployment pin.
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdtempSync, readFileSync, realpathSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmdirSync, unlinkSync } from 'node:fs';
+import { writePublicContainerSource } from './write-public-container-source.mjs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
@@ -172,13 +173,13 @@ try {
     const reduced = minimal ? minimalStagingEnvoy(listener, readFileSync(join(configRoot, 'cds.yaml'), 'utf8')) : null;
     const template = reduced?.listener || stagingEnvoyCors(listener);
     generatedConfig = mkdtempSync(join(tmpdir(), 'barber-envoy-cors-'));
-    writeFileSync(join(generatedConfig, 'lds.template.yaml'), template, { mode: 0o644, flag: 'wx' });
+    writePublicContainerSource(join(generatedConfig, 'lds.template.yaml'), template);
     generatedFiles.push('lds.template.yaml');
     if (minimal) {
       assert.throws(() => minimalStagingEnvoy(listener, 'unreviewed'), /unreviewed/);
       assert.equal((reduced.clusters.match(/    name: /g) || []).length, 5);
       assert.ok(!/cluster: (studio|meta)|cluster_name: (studio|meta)|address: (studio|meta)/.test(template + reduced.clusters));
-      writeFileSync(join(generatedConfig, 'cds.yaml'), reduced.clusters, { mode: 0o644, flag: 'wx' });
+      writePublicContainerSource(join(generatedConfig, 'cds.yaml'), reduced.clusters);
       generatedFiles.push('cds.yaml');
     }
     // Reapplying or accepting modified input must fail rather than relax checks.

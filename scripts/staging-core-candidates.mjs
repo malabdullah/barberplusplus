@@ -7,8 +7,9 @@ const images = Object.freeze({
   storage: 'supabase/storage-api@sha256:13cdccea43f23d848f050eba0d4f3ccdf02a7aca93d4f43268438de95549ef74',
 });
 
-// Exact local build for disposable tests only. This ID is not a registry digest
-// and must never be promoted by the deployment adapter or pulled by tag.
+// Original local OCI wrapper references; an explicit exported-artifact mode
+// below selects the exact AMD64 manifests retained by single-platform exports.
+// Neither mode is a published registry identity or deployment approval.
 const patchedStorage = Object.freeze({
   auth: images.auth,
   storage: 'sha256:05ca80acbbe1fa533ca946fcd9aabbbea8065b86bfd1446e8350650ae1e6ea46',
@@ -35,24 +36,31 @@ const localMetadata = Object.freeze({
   },
 });
 
+const exportedCore = Object.freeze({
+  auth: localMetadata.auth.id,
+  storage: localMetadata.storage.id,
+  rest: patchedCore.rest,
+});
+
 export function coreCandidateImages(option, platform) {
   if (option === undefined) return Object.freeze({});
-  assert.ok(['--core-candidates', '--storage-security-candidate', '--security-core-candidates'].includes(option),
+  assert.ok(['--core-candidates', '--storage-security-candidate', '--security-core-candidates', '--exported-security-core-candidates'].includes(option),
     'Unknown core candidate selection');
   assert.equal(platform, 'linux/amd64', 'These scanned candidate manifests are AMD64 only');
   return option === '--core-candidates' ? images
-    : option === '--storage-security-candidate' ? patchedStorage : patchedCore;
+    : option === '--storage-security-candidate' ? patchedStorage
+      : option === '--exported-security-core-candidates' ? exportedCore : patchedCore;
 }
 
 export function validateCoreCandidateMetadata(service, ref, metadata, platform) {
   assert.ok(Object.hasOwn(images, service) || Object.hasOwn(patchedCore, service), 'Unknown candidate service');
-  assert.ok(ref === images[service] || ref === patchedCore[service],
+  assert.ok(ref === images[service] || ref === patchedCore[service] || ref === exportedCore[service],
     'Unreviewed candidate image');
   assert.equal(platform, 'linux/amd64');
   assert.equal(`${metadata.Os}/${metadata.Architecture}`, platform);
   if (ref.startsWith('sha256:')) {
-    // Docker's containerd store reports the selected platform manifest here,
-    // whereas the daemon-addressable local reference above is its OCI index.
+    // Wrapper lookups and exported-manifest lookups must both resolve to the
+    // same reviewed AMD64 content. No alternate platform or tag fallback.
     const expected = localMetadata[service];
     assert.equal(metadata.Id, expected.id,
       'Local candidate platform content identity mismatch');

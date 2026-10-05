@@ -149,6 +149,28 @@ upstream also uses it as a PostgreSQL LISTEN channel with a 63-byte limit.
 The three additional services stop before the existing five-service restore
 rehearsal; this does not claim a full eight-service disaster-recovery test.
 
+### Single-platform native rehearsal exports — October 5
+
+Docker's `image save --platform linux/amd64` retains the selected AMD64 manifest
+but drops the local wrapper index/attestation reference. An imported artifact
+must therefore use `--exported-security-core-candidates` in place of
+`--security-core-candidates` for the core/full-stack rehearsal. This explicit
+mode selects the already-reviewed platform IDs for Auth, Storage, Functions and
+Realtime; it does not rebuild, retag, fetch a substitute, or relax provenance,
+architecture, entrypoint, privilege or runtime-profile checks. Default local
+wrapper lookups remain unchanged. Both modes validate identical AMD64 contents.
+The database candidate and official REST/Envoy/Mailpit pins are unchanged.
+An exported artifact is still not a published or approved deployment image.
+
+The October 5 native `srv1207055` rehearsal passed all eight-service functional
+checks and the separate five-service encrypted restore. See the
+[receipt](../ops/staging-vps/native-rehearsal-2026-10-05.json) and
+[completion record](staging-env3-completion-2026-10-05.md). It exposed and fixed
+private-umask mount permissions: only public initialization SQL and unrendered
+gateway sources become readable by container users; secrets and installation
+directories stay private. This replaces the earlier native-functional-test gap,
+not public routing, live backups, eight-service recovery, load or release gates.
+
 On October 4 the exact candidate set passed real gateway Auth login, REST own-
 branch/cross-tenant checks, private Storage and exact anonymous denial, CORS,
 management-route denial, Functions database access and authentication boundaries,

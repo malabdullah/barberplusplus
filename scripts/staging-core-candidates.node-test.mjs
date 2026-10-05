@@ -40,10 +40,13 @@ test('local Storage candidate requires its exact content ID, source labels, comm
     },
   } };
   validateCoreCandidateMetadata('storage', images.storage, metadata, 'linux/amd64');
+  const exportedRef = coreCandidateImages('--exported-security-core-candidates', 'linux/amd64').storage;
+  validateCoreCandidateMetadata('storage', exportedRef, metadata, 'linux/amd64');
   for (const change of [{ Id: `sha256:${'0'.repeat(64)}` }, { Os: 'windows' },
     { Architecture: 'arm64' }, { Config: {} }, { Config: { ...metadata.Config, Cmd: ['sh'] } },
     { Config: { ...metadata.Config, Labels: {} } }]) {
     assert.throws(() => validateCoreCandidateMetadata('storage', images.storage, { ...metadata, ...change }, 'linux/amd64'));
+    assert.throws(() => validateCoreCandidateMetadata('storage', exportedRef, { ...metadata, ...change }, 'linux/amd64'));
   }
   assert.throws(() => validateCoreCandidateMetadata('auth', images.storage, metadata, 'linux/amd64'));
   assert.throws(() => validateCoreCandidateMetadata('storage', `sha256:${'0'.repeat(64)}`, metadata, 'linux/amd64'));
@@ -62,12 +65,23 @@ test('local Auth candidate stays distinct from official and Storage identities',
       'cloud.malabdullah.barber.candidate': 'LOCAL-ONLY: downstream vendored pgproto3 patch; grpc1.83.2; not upstream official release',
     } } };
   validateCoreCandidateMetadata('auth', images.auth, metadata, 'linux/amd64');
-  for (const change of [{ Id: images.auth }, { Id: images.storage }, { Architecture: 'arm64' },
+  const exportedRef = coreCandidateImages('--exported-security-core-candidates', 'linux/amd64').auth;
+  validateCoreCandidateMetadata('auth', exportedRef, metadata, 'linux/amd64');
+  for (const change of [{ Id: 'sha256:add5d67a982f17b36538b37ac316095bc5b6ddb9549207ca4e764aadb8307755' }, { Id: images.storage }, { Architecture: 'arm64' },
     { Config: { ...metadata.Config, User: 'root' } }, { Config: { ...metadata.Config, Cmd: ['sh'] } },
     { Config: { ...metadata.Config, Labels: {} } }]) {
     assert.throws(() => validateCoreCandidateMetadata('auth', images.auth, { ...metadata, ...change }, 'linux/amd64'));
+    assert.throws(() => validateCoreCandidateMetadata('auth', exportedRef, { ...metadata, ...change }, 'linux/amd64'));
   }
   assert.throws(() => validateCoreCandidateMetadata('storage', images.auth, metadata, 'linux/amd64'));
+});
+
+test('exported local core candidates are addressed by the reviewed AMD64 manifest, not an OCI wrapper', () => {
+  const images = coreCandidateImages('--exported-security-core-candidates', 'linux/amd64');
+  assert.ok(Object.isFrozen(images));
+  assert.throws(() => coreCandidateImages('--exported-security-core-candidates', 'linux/arm64'));
+  assert.equal(images.auth, 'sha256:aa5adadc5b0e338b64d2d4565c6f7820989f778cb9e89895b1c4a07ed079302d');
+  assert.equal(images.storage, 'sha256:ffc760ae7a04b0790ba3988c31916a586790db88b66f53d7f307dfe297231613');
 });
 
 test('patched core uses only the exact official REST bugfix manifest', () => {

@@ -62,6 +62,17 @@ cp -R "$work_dir/source/docker/." "$target/"
 printf 'ref=%s\n' "$expected_commit" > "$target/.supabase-version"
 printf '%s\n' "$release" > "$target/.supabase-release"
 chmod 600 "$target/.supabase-version"
+# These reviewed source files are bind-mounted and read by non-root Postgres.
+# An inherited umask 077 must not make them unreadable inside a Linux container.
+# Keep the installation directory private; never relax generated secret files.
+for sql_name in realtime _supabase logs webhooks pooler jwt roles; do
+  sql_path="$target/volumes/db/$sql_name.sql"
+  [ -f "$sql_path" ] && [ ! -L "$sql_path" ] || {
+    echo "Expected a regular upstream SQL initialization file." >&2
+    exit 1
+  }
+  chmod 644 "$sql_path"
+done
 node "$script_dir/prepare-staging-envoy.mjs" "$target"
 
 echo "Installed the pinned Supabase configuration $release at reviewed commit $expected_commit."

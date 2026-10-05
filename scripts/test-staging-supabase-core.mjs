@@ -232,7 +232,8 @@ try {
   if (fullStack) {
     stage = 'local full-stack rehearsal';
     await rehearseFullStack({ model, rendered, upstream, docker, compose, sql, variables,
-      accounts: fixtures.accounts, redactions });
+      accounts: fixtures.accounts, redactions,
+      exportedCandidates: process.argv[5] === '--exported-security-core-candidates' });
     assert.deepEqual(Object.keys(model.services), services, 'Extra services must be removed before five-service recovery');
   }
   stage = 'local recovery rehearsal';

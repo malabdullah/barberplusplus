@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { writePublicContainerSource } from './write-public-container-source.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { inspectPlatformImage } from './staging-postgres-candidate.mjs';
@@ -18,11 +19,16 @@ const child = Object.freeze({
   functions: 'sha256:4304bfb208a54190aab7347dfe83c362efb7feb88f40ddd99d85c227b31e2c16',
   realtime: 'sha256:78f25384ba6173d08f4dd7969989f5115d986cf4e8923f7906bf4fa00bfd1902',
 });
+const exportedImages = Object.freeze({ ...fullStackImages, ...child });
+export function fullStackCandidateImages(exported = false) {
+  assert.equal(typeof exported, 'boolean', 'Explicit exported-artifact selection required');
+  return exported ? exportedImages : fullStackImages;
+}
 export function fullStackOption(option, platform, coreOption) {
   if (option === undefined) return false;
   assert.equal(option, '--full-stack', 'Unknown full-stack option');
   assert.equal(platform, 'linux/amd64', 'Full-stack candidates are AMD64 only');
-  assert.equal(coreOption, '--security-core-candidates', 'Full-stack requires the exact patched core candidates');
+  assert.ok(['--security-core-candidates', '--exported-security-core-candidates'].includes(coreOption), 'Full-stack requires the exact patched core candidates');
   return true;
 }
 export function realtimeEmulationFlags(hostArchitecture, originalFlags) {
@@ -69,7 +75,8 @@ export function validateFullStackMetadata(name, metadata) {
   }
 }
 
-export async function rehearseFullStack({ model, rendered, upstream, docker, compose, sql, variables, accounts, redactions }) {
+export async function rehearseFullStack({ model, rendered, upstream, docker, compose, sql, variables, accounts, redactions, exportedCandidates = false }) {
+  const candidateImages = fullStackCandidateImages(exportedCandidates);
   const project = model.name;
   const label = 'barber.staging.core-probe';
   const names = ['realtime', 'functions', 'api-gw'];
@@ -84,10 +91,10 @@ export async function rehearseFullStack({ model, rendered, upstream, docker, com
   try {
     assert.deepEqual(Object.keys(model.services), ['db', 'auth', 'rest', 'storage', 'mailpit']);
     assert.equal(model.networks.default.internal, true);
-    for (const name of ['functions', 'realtime']) validateFullStackMetadata(name, inspectPlatformImage(docker, fullStackImages[name], 'linux/amd64'));
-    docker(['pull', '--platform', 'linux/amd64', fullStackImages['api-gw']], { timeout: 300000 });
-    const gatewayMetadata = inspectPlatformImage(docker, fullStackImages['api-gw'], 'linux/amd64');
-    assert.ok(gatewayMetadata.RepoDigests.includes(fullStackImages['api-gw']));
+    for (const name of ['functions', 'realtime']) validateFullStackMetadata(name, inspectPlatformImage(docker, candidateImages[name], 'linux/amd64'));
+    docker(['pull', '--platform', 'linux/amd64', candidateImages['api-gw']], { timeout: 300000 });
+    const gatewayMetadata = inspectPlatformImage(docker, candidateImages['api-gw'], 'linux/amd64');
+    assert.ok(gatewayMetadata.RepoDigests.includes(candidateImages['api-gw']));
     const root = join(upstream, 'volumes/api/envoy');
     const originalFiles = {
       'docker-entrypoint.sh': '7ae0abaa8d76332d001e60dc29d4f29985890f89e04ee78489abbf680495631d',
@@ -96,11 +103,11 @@ export async function rehearseFullStack({ model, rendered, upstream, docker, com
     for (const [file, hash] of Object.entries(originalFiles)) {
       const data = readFileSync(join(root, file));
       assert.equal(createHash('sha256').update(data).digest('hex'), hash);
-      writeFileSync(join(scratch, file), data, { mode: 0o644, flag: 'wx' });
+      writePublicContainerSource(join(scratch, file), data);
     }
     const gateway = minimalStagingEnvoy(readFileSync(join(root, 'lds.template.yaml'), 'utf8'), readFileSync(join(root, 'cds.yaml'), 'utf8'));
-    writeFileSync(join(scratch, 'lds.template.yaml'), gateway.listener, { mode: 0o644, flag: 'wx' });
-    writeFileSync(join(scratch, 'cds.yaml'), gateway.clusters, { mode: 0o644, flag: 'wx' });
+    writePublicContainerSource(join(scratch, 'lds.template.yaml'), gateway.listener);
+    writePublicContainerSource(join(scratch, 'cds.yaml'), gateway.clusters);
     const base = { restart: 'no', platform: 'linux/amd64', ports: [], networks: { default: {} },
       labels: { [label]: project }, read_only: true, cap_drop: ['ALL'], security_opt: ['no-new-privileges:true'],
       pids_limit: 256, mem_limit: 1073741824, cpus: 1, pull_policy: 'never' };
@@ -108,11 +115,11 @@ export async function rehearseFullStack({ model, rendered, upstream, docker, com
     const profilePath = 'ops/staging-vps/realtime-security/runtime-profile.yml';
     assert.equal(createHash('sha256').update(readFileSync(profilePath)).digest('hex'), 'a991dccc40ca64c42d03cbf7b0ecf9d17b1174eb585a73934367f6f407cb3c9a', 'Unreviewed Realtime runtime profile');
     const profile = JSON.parse(docker(['compose', '-p', project, '-f', '-', '-f', profilePath, 'config', '--format', 'json'],
-      { input: JSON.stringify({ services: { realtime: { image: fullStackImages.realtime } } }) })).services.realtime;
+      { input: JSON.stringify({ services: { realtime: { image: candidateImages.realtime } } }) })).services.realtime;
     const hostArchitecture = docker(['info', '--format', '{{.Architecture}}']);
     const erlFlags = realtimeEmulationFlags(hostArchitecture, realtime.environment.ERL_AFLAGS);
     if (erlFlags !== realtime.environment.ERL_AFLAGS) console.log('Local ARM-host AMD64 emulation: Erlang +JMsingle true (OTP issue 10355); native/VPS acceptance remains untested.');
-    model.services.realtime = { ...realtime, ...base, ...profile, image: fullStackImages.realtime,
+    model.services.realtime = { ...realtime, ...base, ...profile, image: candidateImages.realtime,
       container_name: `${project}-realtime`, volumes: [],
       healthcheck: { test: ['CMD', 'curl', '-q', '--noproxy', '*', '--proto', '=http', '--max-time', '5',
         '--fail', '--silent', '--output', '/dev/null', '--header', `Authorization: Bearer ${variables.ANON_KEY}`,
@@ -120,7 +127,7 @@ export async function rehearseFullStack({ model, rendered, upstream, docker, com
       // libcluster_postgres uses the cookie as a LISTEN channel (<=63 bytes).
       environment: { ...realtime.environment, ...profile.environment, ERL_AFLAGS: erlFlags, RELEASE_COOKIE: randomBytes(32).toString('base64url') } };
     redactions.push(model.services.realtime.environment.RELEASE_COOKIE);
-    model.services.functions = { ...base, image: fullStackImages.functions, container_name: `${project}-functions`,
+    model.services.functions = { ...base, image: candidateImages.functions, container_name: `${project}-functions`,
       user: '10001:10001', mem_limit: 805306368, volumes: [],
       tmpfs: ['/tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700'],
       command: ['start', '--main-service', '/home/deno/bundles/main.eszip'],
@@ -133,7 +140,7 @@ export async function rehearseFullStack({ model, rendered, upstream, docker, com
     const gatewayEnv = {};
     for (const name of ['ANON_KEY', 'SERVICE_ROLE_KEY', 'DASHBOARD_USERNAME', 'DASHBOARD_PASSWORD']) gatewayEnv[name] = variables[name];
     for (const name of ['ANON_KEY_ASYMMETRIC', 'SERVICE_ROLE_KEY_ASYMMETRIC', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY']) gatewayEnv[name] = '';
-    model.services['api-gw'] = { ...base, image: fullStackImages['api-gw'], container_name: `${project}-api-gw`,
+    model.services['api-gw'] = { ...base, image: candidateImages['api-gw'], container_name: `${project}-api-gw`,
       user: '10001:10001', mem_limit: 536870912, environment: gatewayEnv, entrypoint: ['/bin/sh'],
       command: ['/docker-entrypoint.sh', '--concurrency', '1'],
       tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001,mode=0700', '/etc/envoy:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700'],
