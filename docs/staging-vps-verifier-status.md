@@ -12,6 +12,69 @@ is `2913fc1` on `codex/staging-completion`.
 Nothing in this implementation deploys an application, changes public routing,
 merges a branch, creates a version tag, or enables a broker mutation.
 
+## Env3 integration review — October 5
+
+Env4 commit `7acdf2ed1b3b691032f2df311ea38027fb3c322c` was fast-forwarded into
+the staging completion feature branch; `main` and the Env4 checkout were not
+changed. A separate AI code-review pass (not independent human review) found
+and corrected these integration gaps:
+
+- The verifier suite was missing from the application CI job; it now runs there.
+- The bootstrap source must match the exact approved commit, not merely have
+  the shape of a Git SHA.
+- Adapter request IDs require this repository, first-attempt identity and a
+  128-bit hexadecimal nonce. Empty, foreign-repository and rerun IDs are denied.
+- Success replies must be canonical single-frame JSON with only the expected
+  fields and the evidence prefix for that operation. Duplicate fields and a
+  migration receipt presented as a backup receipt are denied. Broker-supplied
+  error text is not echoed into operator logs.
+
+Full local `npm run check` passed, including 64 verifier and 148 staging safety
+tests. All 15 local browser journeys passed without resetting the development
+database. A fresh synthetic frontend Docker build/runtime passed health, runtime
+configuration, CSP, noindex, no-store, nosniff and UID 101 checks, with no network
+or published ports. Local image:
+`sha256:403bfff0e8bb8b7f5bc7bc41975ccdef24d20f93c86acb1146aec4671fbb0a1a`.
+It is a review image, not a published or accepted release. Only its labelled
+disposable container was removed; the image remains cached.
+
+Read-only VPS checks confirmed `srv1207055`, active broker socket and
+`NTP=yes` / `NTPSynchronized=yes`. Neither `gh` nor `chronyc` is installed.
+The current Ubuntu `gh` candidate is 2.45.0, while the verifier requires the
+modern attestation interface; installing the old package is not sufficient.
+The official CLI release inspected was 2.102.0. A package-manager simulation
+for Chrony 4.5-1ubuntu4.2 would add `tzdata-legacy` and replace
+`systemd-timesyncd`; **no packages or clock services were changed**. This
+clock-service replacement requires specific owner approval and post-install
+synchronization/offset verification. A boolean NTP status does not satisfy the
+verifier's bounded clock-error test.
+
+Live GitHub protection still requires all five app-bound checks, strict updates,
+PRs and administrator enforcement, with no force pushes/deletions. Staging still
+requires owner approval and protected branches. No policy was changed.
+
+### Remaining implementation, not just activation
+
+The current modules are verification/request-building libraries, not an installed
+end-to-end daemon. Still required: root-owned credential/runtime wiring, a
+persistent crash-safe ledger writer/lock, a non-deploying real-evidence run,
+and mutation-capable broker workers with independent authorization checks.
+The one-time bootstrap capture operator cannot be reused for recurring backups
+because its empty-Vault gate intentionally blocks repetition. Backup operations
+need asynchronous job/status semantics or another reviewed bounded execution
+protocol: the current five-second adapter deadline is not a valid backup timeout.
+The three adapter requests also do not implement frontend/Functions deployment;
+that fixed operation, first-release recovery and later rollback need explicit
+design and tests before activation. Do not label these gaps as completed.
+
+The next artifact-evidence stage needs a separately approved protected-main
+merge to publish the first two images, followed by owner approval of the
+non-deploying attestation job. That approval must not enable the broker, change
+DNS/public routing or deploy a frontend. New GHCR packages default to private;
+verify visibility before using them and never silently change it.
+Sources: [official attest action](https://github.com/actions/attest),
+[GHCR publication and visibility](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
 ## Implemented repository components
 
 - `.github/workflows/deploy-staging.yml` builds the frontend and Functions

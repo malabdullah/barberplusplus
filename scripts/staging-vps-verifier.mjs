@@ -33,7 +33,7 @@ export function validateStagingReleasePolicy(policy) {
   exact(policy.host, 'srv1207055', 'policy.host');
   exact(policy.project, 'barber-staging-private', 'policy.project');
   exact(policy.installRoot, '/opt/barber-staging/supabase', 'policy.installRoot');
-  if (!sha1.test(policy.bootstrapSource)) fail('policy.bootstrapSource is invalid');
+  exact(policy.bootstrapSource, 'c24f8ecadbe49d353965a0e9b457ebcd3cfca287', 'policy.bootstrapSource');
   exactKeys(policy.repository, ['id', 'fullName'], 'policy.repository');
   exact(policy.repository.id, 1123713308, 'policy.repository.id');
   exact(policy.repository.fullName, 'malabdullah/barberplusplus', 'policy.repository.fullName');

@@ -215,4 +215,25 @@ test('adapter replies require exact operation-bound evidence', () => {
   assert.equal(result.authorizing, false);
   assert.throws(() => validateStagingAdapterReply(good.replace('backup.capture', 'migration.apply'), 'backup.capture'), /success evidence/);
   assert.throws(() => validateStagingAdapterReply(`${JSON.stringify({ version: 1, code: 'OPERATION_DISABLED' })}\n`, 'backup.capture'), /refused/);
+  assert.throws(() => validateStagingAdapterReply(good.replace('backup-', 'migration-'), 'backup.capture'), /success evidence/);
+  assert.throws(() => validateStagingAdapterReply(good.replace('"code":"OK"', '"code":"NO","code":"OK"'), 'backup.capture'), /reply is invalid/);
+  assert.throws(() => validateStagingAdapterReply(good.replace('"version":1', '"extra":true,"version":1'), 'backup.capture'), /fields/);
+  assert.throws(() => validateStagingAdapterReply(good, 'other.operation'), /operation is not allowed/);
+});
+
+test('private-bootstrap source cannot be substituted even with a well-formed commit', () => {
+  const changed = structuredClone(checkedInPolicy);
+  changed.bootstrapSource = 'a'.repeat(40);
+  assert.throws(() => validateStagingReleasePolicy(changed), /bootstrapSource/);
+});
+
+test('adapter request identities reject empty values, another repository and reruns', () => {
+  for (const requestId of ['', 'another-request', `1123713309:123:1:${'a'.repeat(32)}`, `1123713308:123:2:${'a'.repeat(32)}`]) {
+    assert.throws(() => buildStagingAdapterRequest('backup.capture', { binding: { ...adapterBinding(), requestId } }, enabledPolicy()), /identity/);
+  }
+});
+
+test('broker error content is not reflected into operator logs', () => {
+  const raw = `${JSON.stringify({ version: 1, code: 'private-response-fixture' })}\n`;
+  assert.throws(() => validateStagingAdapterReply(raw, 'backup.capture'), (error) => !error.message.includes('private-response-fixture'));
 });

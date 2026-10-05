@@ -5,6 +5,7 @@ const socketPath = '/run/barber-staging-broker.sock';
 const sha256 = /^[0-9a-f]{64}$/;
 const digest = /^sha256:[0-9a-f]{64}$/;
 const decimal = /^[1-9]\d*$/;
+const evidencePrefixes = Object.freeze({ 'backup.capture': 'backup', 'migration.apply': 'migration', 'images.rollback': 'rollback' });
 
 function fail(message) {
   throw new Error(`Invalid staging VPS adapter request: ${message}`);
@@ -21,6 +22,7 @@ function validateBinding(binding) {
     'migrationTreeSha256', 'latestMigration'], 'binding');
   if (!sha256.test(binding.bindingSha256) || !/^[0-9a-f]{40}$/.test(binding.commit) || !sha256.test(binding.workflowSha256)
       || !decimal.test(binding.artifactId) || typeof binding.requestId !== 'string' || binding.requestId.length > 256
+      || !/^1123713308:[1-9]\d*:1:[0-9a-f]{32}$/.test(binding.requestId)
       || !digest.test(binding.frontendDigest) || !digest.test(binding.functionsDigest)
       || !digest.test(binding.migrationTreeSha256) || !/^\d{14}_[a-z0-9_]+$/.test(binding.latestMigration)) fail('binding identity is invalid');
 }
@@ -54,12 +56,15 @@ export function buildStagingAdapterRequest(operation, input, policy) {
 }
 
 export function validateStagingAdapterReply(raw, operation) {
+  if (!Object.hasOwn(evidencePrefixes, operation)) fail('operation is not allowed');
   if (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > 4096 || !raw.endsWith('\n') || raw.slice(0, -1).includes('\n')) fail('broker reply frame is invalid');
   let reply;
   try { reply = JSON.parse(raw); } catch { fail('broker reply is not JSON'); }
-  if (!reply || typeof reply !== 'object' || Array.isArray(reply) || reply.version !== 1 || typeof reply.code !== 'string') fail('broker reply is invalid');
-  if (reply.code !== 'OK') fail(`broker refused ${operation} with ${reply.code}`);
-  if (reply.operation !== operation || typeof reply.evidenceId !== 'string' || !/^(backup|migration|rollback)-[0-9a-f]{64}$/.test(reply.evidenceId)
+  if (!reply || typeof reply !== 'object' || Array.isArray(reply) || reply.version !== 1 || typeof reply.code !== 'string'
+      || raw !== `${JSON.stringify(reply)}\n`) fail('broker reply is invalid');
+  if (reply.code !== 'OK') fail(`broker refused ${operation}`);
+  exactKeys(reply, ['version', 'code', 'operation', 'evidenceId', 'evidenceSha256'], 'broker success reply');
+  if (reply.operation !== operation || typeof reply.evidenceId !== 'string' || !new RegExp(`^${evidencePrefixes[operation]}-[0-9a-f]{64}$`).test(reply.evidenceId)
       || typeof reply.evidenceSha256 !== 'string' || !sha256.test(reply.evidenceSha256)) fail('broker success evidence is invalid');
   return Object.freeze({ status: `${operation}-evidence-recorded`, authorizing: false,
     evidenceId: reply.evidenceId, evidenceSha256: reply.evidenceSha256 });

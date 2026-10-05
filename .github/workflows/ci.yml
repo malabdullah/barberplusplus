@@ -31,6 +31,7 @@ jobs:
       - run: npm run test:release
       - run: npm run test:staging-vps
       - run: npm run test:staging-broker
+      - run: npm run test:staging-verifier
       - run: npm run test:staging-envoy-safety
       - run: npm run test:staging-gateway
       - run: npm run test:staging-functions-package
