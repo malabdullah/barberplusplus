@@ -2,6 +2,17 @@
 
 Status: implemented locally, automation disabled, not installed or activated.
 
+October 5 update: PR #3 merged, main CI passed, the first two images were
+published, and the separately approved evidence job completed. Live signature,
+approval and manifest checks are recorded in
+[first publication evidence](staging-first-image-publication.md). The owner
+approved keeping both code packages public while staging access stays private.
+The follow-up feature branch fixes OCI index handling and aligns the Functions
+release recipe/CI with the tested hardened runtime. The original published
+Functions image is not accepted for deployment. The sections below retain the
+earlier integration history; observer/broker installation and deployment remain
+unapproved and incomplete.
+
 This report binds the Env4 verifier work to the successful private bootstrap in
 [`staging-private-bootstrap-execution.md`](staging-private-bootstrap-execution.md).
 The bootstrap source is `c24f8ecadbe49d353965a0e9b457ebcd3cfca287` on host

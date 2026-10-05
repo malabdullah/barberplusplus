@@ -36,7 +36,7 @@ jobs:
       - run: npm run test:staging-gateway
       - run: npm run test:staging-functions-package
       - name: Test real staging Edge Runtime with synthetic inputs
-        run: npm run test:staging-edge-runtime
+        run: npm run test:staging-edge-runtime -- linux/amd64 --release-runtime
       - name: Test staging backup encryption and safety checks
         run: |
           sudo apt-get update -qq

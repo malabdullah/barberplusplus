@@ -6,6 +6,22 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { functionNames, packageFunctions, scopeRuntimeLock, verifyFunctionBundle } from './package-staging-functions.mjs';
 
+test('release workflow and CI use the same pinned hardened Functions recipe', () => {
+  const recipe = readFileSync(new URL('../ops/staging-vps/Dockerfile.functions-release', import.meta.url), 'utf8');
+  const candidate = readFileSync(new URL('../ops/staging-vps/functions-security/Dockerfile', import.meta.url), 'utf8');
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-staging.yml', import.meta.url), 'utf8');
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  for (const pin of candidate.match(/(?:supabase\/edge-runtime|gcr\.io\/distroless\/cc-debian13)@sha256:[a-f0-9]{64}/g)) assert.ok(recipe.includes(pin));
+  assert.ok(recipe.includes('7883510fe308b4b5c49ec0a8e2020ec81c5fa41133239f3969a372b1cbf107ba'));
+  assert.ok(recipe.includes('COPY --from=upstream --chown=0:0 /usr/lib/libonnxruntime.so* /usr/lib/'));
+  assert.ok(recipe.includes('USER 10001:10001'));
+  assert.ok(recipe.includes('FROM upstream AS build'));
+  assert.ok(!recipe.includes('ARG EDGE_RUNTIME'));
+  for (const name of ['main', ...functionNames]) assert.ok(recipe.includes(name));
+  assert.ok(workflow.includes('file: ${{ github.workspace }}/ops/staging-vps/Dockerfile.functions-release'));
+  assert.ok(ci.includes('npm run test:staging-edge-runtime -- linux/amd64 --release-runtime'));
+});
+
 function fixture(fn) {
   const root = mkdtempSync(join(tmpdir(), 'barber-function-package-test-'));
   const repo = join(root, 'repo'); mkdirSync(repo);

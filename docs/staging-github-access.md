@@ -2,6 +2,15 @@
 
 ## October 5, 2026 — partial provisioning, not deployment authorization
 
+Later October 5 update: after the approved merge/build, a read-only VPS probe
+using the existing package credential verified both package metadata responses
+(HTTP 200), repository ID `1123713308`, and exact manifest bytes. Both packages
+are public; the owner explicitly approved keeping the code packages public and
+staging access private. No visibility or credential scope changed. Anonymous
+manifest/signature verification also passed after the OCI-index reader fix.
+See [publication evidence](staging-first-image-publication.md). The earlier 404
+probe below is historical. No image was deployed and no polling service enabled.
+
 The owner approved the restricted evidence-reader and a separate package-reader
 credential. On October 5 the owner explicitly chose to use the existing
 `malabdullah` account for package downloads instead of creating a machine
