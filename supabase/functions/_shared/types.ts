@@ -125,6 +125,8 @@ export interface AgentTool {
 
 export interface AgentToolResult {
   success: boolean;
-  data?: Record<string, unknown>;
+  data?: unknown;
   error?: string;
+  message?: string;
+  suggestion?: Record<string, unknown>;
 }

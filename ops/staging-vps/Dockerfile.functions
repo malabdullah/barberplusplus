@@ -1,0 +1,16 @@
+ARG EDGE_RUNTIME_IMAGE=supabase/edge-runtime:v1.74.0@sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120
+ARG EDGE_RUNTIME_FINAL_IMAGE=${EDGE_RUNTIME_IMAGE}
+FROM ${EDGE_RUNTIME_IMAGE} AS build
+COPY . /home/deno/functions/
+RUN mkdir /opt/barber-bundles && \
+    for function in main auth-rate-limiter cleanup-notifications get-kuwait-governorates invite-barber send-booking-reminders send-whatsapp-message whatsapp-flow-endpoint whatsapp-webhook; do \
+      edge-runtime bundle --entrypoint "/home/deno/functions/$function/index.ts" \
+        --output "/opt/barber-bundles/$function.eszip" --checksum sha256 --timeout 60 || exit 1; \
+    done
+
+FROM ${EDGE_RUNTIME_FINAL_IMAGE}
+COPY --from=build /opt/barber-bundles/ /home/deno/bundles/
+COPY --from=build /home/deno/functions/bundle-manifest.json /home/deno/bundle-manifest.json
+ENV DENO_DIR=/tmp/deno XDG_CACHE_HOME=/tmp/cache
+USER 10001:10001
+CMD ["start", "--main-service", "/home/deno/bundles/main.eszip"]

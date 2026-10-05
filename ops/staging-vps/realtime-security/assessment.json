@@ -1,0 +1,99 @@
+{
+  "reviewDate": "2026-10-04",
+  "authorizing": false,
+  "scope": "Local hardened single-node staging candidate only; not a scanner ignore file or deployment exception",
+  "officialAmd64Manifest": "sha256:482868126f20243547d2d2cb03f78d78eeb318435c48198a1a43f8c491433864",
+  "sourceCommit": "e0d1f657161f7f01e9b4be156627d974fdc6918d",
+  "localReference": "sha256:2ea7fb6d3211f8e627985e473329dc5bb1abbbdc810d02784847d0a82bbd092c",
+  "amd64PlatformId": "sha256:78f25384ba6173d08f4dd7969989f5115d986cf4e8923f7906bf4fa00bfd1902",
+  "scan": {
+    "rawSha256": "f27af897b0a0326272dc0be0ddf6842899027c77d4d8484cdebf3ecd0a3d5f4b",
+    "databaseUpdatedAt": "2026-10-04T08:52:32.606987838Z",
+    "high": 52,
+    "critical": 0,
+    "osPackages": 119,
+    "elixirErlangAndCompiledBunCoverage": false
+  },
+  "globalConditions": [
+    "Use the exact candidate and its tested guarded entrypoint; do not override it",
+    "Apply runtime-profile.yml with no host namespaces, host mounts, devices, Docker socket or published Realtime ports",
+    "Never run administrative/root commands inside this service",
+    "Supply a fresh environment-specific RELEASE_COOKIE; never use the packaged or production cookie",
+    "No new integrations, shell commands, proxy settings or customer-controlled environment values",
+    "Full-stack websocket/auth/RLS integration and live profile verification remain separate prerequisites"
+  ],
+  "dispositions": [
+    {
+      "id": "CVE-2026-76642",
+      "state": "mitigated_by_required_profile_not_package_fixed",
+      "reason": "Privileged mount post-hooks need authority absent from UID 65534 with zero capability sets, stripped SUID/SGID bits and no-new-privileges. Candidate fstab has no active entries. No host mount access is permitted.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-76642"
+    },
+    {
+      "id": "CVE-2026-78408",
+      "state": "mitigated_by_required_profile_not_package_fixed",
+      "reason": "The root nsenter/cgroup handoff prerequisite is absent. Realtime starts unprivileged, has no host namespaces or root administrative execution, and cannot gain capabilities. Adding root troubleshooting/exec or host cgroup access invalidates this assessment.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-78408"
+    },
+    {
+      "id": "CVE-2026-78409",
+      "state": "mitigated_by_required_profile_not_package_fixed",
+      "reason": "No fstab-authorized X-mount.subdir entry exists, mount privilege bits are stripped, and runtime capability sets are zero. Do not add host mounts or user-mount configuration.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-78409"
+    },
+    {
+      "id": "CVE-2026-78410",
+      "state": "mitigated_by_required_profile_not_package_fixed",
+      "reason": "The privileged restricted-bind-mount path is unavailable: empty active fstab, no SUID mount binary, no capabilities, no-new-privileges and no host bind mounts.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-78410"
+    },
+    {
+      "id": "CVE-2026-54369",
+      "state": "mitigated_by_required_profile_not_package_fixed",
+      "reason": "The reported escalation requires a privileged pathname ACL caller. This profile has only unprivileged Realtime, no administrative caller, root-owned read-only application files and two bounded scratch tmpfs mounts. The library remains installed and vulnerable outside that profile.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-54369"
+    },
+    {
+      "id": "CVE-2026-16742",
+      "state": "not_affected_missing_vulnerable_component",
+      "reason": "The image has libsystemd0/libudev1 but not systemd-homed. The affected user-management service is absent and not running. This is a source-package match, not a finding in those two library operations.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-16742"
+    },
+    {
+      "id": "CVE-2026-9538",
+      "state": "not_affected_missing_vulnerable_component",
+      "reason": "perl-base is installed but loading Archive::Tar fails; the affected module is absent. Installing additional Perl modules invalidates this disposition.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-9538"
+    },
+    {
+      "id": "CVE-2025-69720",
+      "state": "conditional_no_reviewed_application_path_not_package_fixed",
+      "reason": "The affected infocmp CLI remains part of Debian Essential ncurses-bin. Realtime startup, reviewed source command invocations and native pgdelta help do not invoke infocmp or parse external terminfo. Do not mark the package fixed or remove Essential ncurses blindly. Arbitrary command execution or a new terminfo consumer requires renewed review.",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2025-69720"
+    },
+    {
+      "id": "CVE-2026-12064",
+      "state": "conditional_healthcheck_only_not_package_fixed",
+      "reason": "The reviewed profile disables upstream AWS metadata/crash-export curl paths. Retained curl is for an explicit loopback HTTP healthcheck only, with no schemeless URLs, --proto-default, SFTP or SCP. Final integration must verify that exact healthcheck and no other curl consumer.",
+      "source": "https://curl.se/docs/CVE-2026-12064.html"
+    },
+    {
+      "id": "CVE-2026-8286",
+      "state": "conditional_healthcheck_only_not_package_fixed",
+      "reason": "A separate one-request loopback HTTP healthcheck does not use STARTTLS or reuse a TLS connection pool. AWS paths are disabled. Changing curl use or adding STARTTLS requires renewed review.",
+      "source": "https://curl.se/docs/CVE-2026-8286.html"
+    },
+    {
+      "id": "CVE-2026-8458",
+      "state": "conditional_healthcheck_only_not_package_fixed",
+      "reason": "The permitted single loopback HTTP healthcheck does not use Negotiate authentication or shared connection reuse. The final command must explicitly bypass proxies and use no curl configuration file.",
+      "source": "https://curl.se/docs/CVE-2026-8458.html"
+    },
+    {
+      "id": "CVE-2026-8927",
+      "state": "conditional_healthcheck_only_not_package_fixed",
+      "reason": "An isolated one-request curl process using --noproxy '*' and -q has no sequential Digest-authenticated cross-proxy state. Final integration must use those options and a fixed loopback HTTP URL; arbitrary proxy/transfer configuration is excluded.",
+      "source": "https://curl.se/docs/CVE-2026-8927.html"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Authoritative schema baseline verified 2026-09-03.
+
+This marker certifies schema-only replay, deterministic synthetic fixtures,
+schema drift output, and database security tests. It does not certify a
+production-data or Storage restore drill.

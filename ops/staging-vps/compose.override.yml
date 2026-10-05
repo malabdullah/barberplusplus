@@ -1,0 +1,120 @@
+# Preparation only. Apply after review, secret provisioning, and readiness gates.
+# Compose >= 2.24.4 is required for !override. Always combine with the pinned
+# upstream docker-compose.yml; never use this file as a standalone stack.
+name: barber-staging
+services:
+  # Owner-approved minimal staging inventory. These services are absent, not
+  # merely hidden behind a profile that can accidentally be enabled.
+  studio: !reset null
+  meta: !reset null
+  supavisor: !reset null
+  imgproxy: !reset null
+  api-gw:
+    container_name: barber-staging-api-gw
+    depends_on: !reset {}
+    volumes:
+      - ./volumes/api/envoy/staging-cds.yaml:/etc/envoy/cds.yaml:ro
+      - ./volumes/api/envoy/staging-lds.template.yaml:/etc/envoy/lds.template.yaml:ro
+    ports: !override
+      - "127.0.0.1:18000:8000"
+  auth:
+    container_name: barber-staging-auth
+    networks:
+      default: {}
+      mail-sink: {}
+    environment:
+      GOTRUE_SITE_URL: https://staging-barber.malabdullah.cloud
+      API_EXTERNAL_URL: https://supabase-staging.malabdullah.cloud/auth/v1
+      GOTRUE_URI_ALLOW_LIST: https://staging-barber.malabdullah.cloud/reset-password,https://staging-barber.malabdullah.cloud/accept-invite
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "false"
+      # No external telemetry collector in initial synthetic staging.
+      GOTRUE_TRACING_ENABLED: "false"
+      GOTRUE_METRICS_ENABLED: "false"
+      # Sink-only SMTP: no provider credentials, relay, or external recipients.
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_ADMIN_EMAIL: no-reply@barber.test
+  mailpit:
+    container_name: barber-staging-mailpit
+    image: axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=0700
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 100
+    networks:
+      mail-sink: {}
+    # No published ports. On the VPS, use an SSH tunnel to this container's
+    # private bridge IP:8025 to read the inbox; never attach an egress network.
+    environment:
+      MP_DATABASE: /tmp/mailpit.db
+      MP_MAX_MESSAGES: "1000"
+      MP_MAX_AGE: 7d
+      MP_MAX_MESSAGE_SIZE: "5"
+      MP_SMTP_ALLOWED_RECIPIENTS: '^[A-Za-z0-9._+-]+@barber\.test\z'
+      MP_SMTP_DISABLE_RDNS: "true"
+      MP_DISABLE_VERSION_CHECK: "true"
+      MP_BLOCK_REMOTE_CSS_AND_FONTS: "true"
+      MP_ENABLE_SPAMASSASSIN: "false"
+      MP_LABEL: Barber++ staging — synthetic mail only
+  rest:
+    container_name: barber-staging-rest
+  realtime:
+    # Keep the upstream tenant prefix, but avoid every legacy container name.
+    container_name: realtime-dev.barber-staging-realtime
+  storage:
+    container_name: barber-staging-storage
+    depends_on: !override
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+      IMGPROXY_URL: ""
+  functions:
+    container_name: barber-staging-functions
+    volumes: !override
+      - ./volumes/functions:/home/deno/functions:ro
+      - deno-cache:/root/.cache/deno
+    environment:
+      APP_ENV: staging
+      APP_URL: https://staging-barber.malabdullah.cloud
+      # Custom main service supplies per-function rules. Keep fallback closed.
+      VERIFY_JWT: "true"
+      OUTBOUND_RECIPIENT_ALLOWLIST: ""
+      # Fail closed until dedicated test integrations are configured separately.
+      WHATSAPP_ACCESS_TOKEN: ""
+      OPENAI_API_KEY: ""
+      AI_OUTBOUND_ENABLED: "false"
+  db:
+    container_name: barber-staging-db
+    # Standard PostgreSQL 17.11, not OrioleDB. Independent security patch pin;
+    # full-stack replay and VPS acceptance remain required before deployment.
+    image: supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53
+    # Historical migrations temporarily register an old production URL. Never
+    # execute jobs during replay or before staging-only Vault setup is approved.
+    command: [postgres, -c, config_file=/etc/postgresql/postgresql.conf, -c, log_min_messages=fatal, -c, cron.launch_active_jobs=off]
+    ports: !override
+      - "127.0.0.1:15432:5432"
+networks:
+  default:
+    name: barber-staging-internal
+  mail-sink:
+    name: barber-staging-mail-sink
+    internal: true
+volumes:
+  db-config:
+    name: barber-staging-db-config
+  deno-cache:
+    name: barber-staging-deno-cache

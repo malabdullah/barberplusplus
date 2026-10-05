@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationsService } from '../services';
-import { sanitizeUUID, logErrorDev } from '../utils/security';
+import { logErrorDev } from '../utils/security';
 import { validatePassword } from '../utils/validation';
 import './Login.css';
 
@@ -29,33 +29,19 @@ export default function AcceptInvite() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // SECURITY: Verify this is actually an invited barber with valid UUID
-          const rawBarberId = session.user.user_metadata?.barberId;
-          const barberId = sanitizeUUID(rawBarberId);
-
-          if (!barberId) {
-            // Not an invited barber - redirect based on role
-            const role = session.user.user_metadata?.role;
-            if (role === 'barber' || role === 'manager') {
-              navigate(role === 'barber' ? '/barber' : '/');
-              return;
-            }
+          const role = session.user.app_metadata?.role;
+          if (role !== 'barber') {
             setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
             setIsCheckingSession(false);
             return;
           }
 
-          // If user already accepted invite, redirect to dashboard
-          if (session.user.user_metadata?.invite_accepted) {
-            navigate('/barber');
-            return;
-          }
-
-          // SECURITY: Verify barber record exists and invite is still valid
+          // SECURITY: Resolve ownership through the database assignment. User
+          // metadata is editable by the account holder and is not authoritative.
           const { data: barber, error: barberError } = await supabase
             .from('barbers')
             .select('id, invite_status, name')
-            .eq('id', barberId)
+            .eq('user_id', session.user.id)
             .single();
 
           if (barberError || !barber) {
@@ -92,11 +78,7 @@ export default function AcceptInvite() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         if (session?.user) {
-          // SECURITY: Validate barberId is a valid UUID
-          const rawBarberId = session.user.user_metadata?.barberId;
-          const barberId = sanitizeUUID(rawBarberId);
-
-          if (!barberId) {
+          if (session.user.app_metadata?.role !== 'barber') {
             setInviteError(t('auth.invalidInviteLink') || 'Invalid invite link');
             setIsCheckingSession(false);
             return;
@@ -106,7 +88,7 @@ export default function AcceptInvite() {
           const { data: barber } = await supabase
             .from('barbers')
             .select('id, invite_status, name')
-            .eq('id', barberId)
+            .eq('user_id', session.user.id)
             .single();
 
           if (barber && (barber.invite_status === 'sent' || barber.invite_status === 'pending')) {
@@ -146,21 +128,22 @@ export default function AcceptInvite() {
     try {
       // Update the user's password
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-        data: { invite_accepted: true }
+        password: password
       });
 
       if (updateError) throw updateError;
 
       // Update barber record to mark invite as accepted
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.barberId) {
+      if (user?.id && user.app_metadata?.role === 'barber') {
         // Get barber details for notification
         const { data: barberData } = await supabase
           .from('barbers')
-          .select('name, branch_id')
-          .eq('id', user.user_metadata.barberId)
+          .select('id, name, branch_id')
+          .eq('user_id', user.id)
           .single();
+
+        if (!barberData) throw new Error('No barber assignment was found for this account.');
 
         await supabase
           .from('barbers')
@@ -168,7 +151,8 @@ export default function AcceptInvite() {
             invite_status: 'accepted',
             invite_accepted_at: new Date().toISOString()
           })
-          .eq('id', user.user_metadata.barberId);
+          .eq('id', barberData.id)
+          .eq('user_id', user.id);
 
         // Create notification for manager
         if (barberData?.branch_id) {
@@ -179,7 +163,7 @@ export default function AcceptInvite() {
             title: 'New Team Member',
             message: `${barberData.name || userName || 'A barber'} has accepted your invitation and joined the team`,
             entityType: 'barber',
-            entityId: user.user_metadata.barberId,
+            entityId: barberData.id,
             metadata: {
               barberName: barberData.name || userName,
             },

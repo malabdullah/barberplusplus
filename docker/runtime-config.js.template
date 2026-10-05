@@ -1,0 +1,7 @@
+window.__BARBER_CONFIG__ = Object.freeze({
+  environment: '${APP_ENV}',
+  appUrl: '${APP_URL}',
+  supabaseUrl: '${SUPABASE_PUBLIC_URL}',
+  supabasePublishableKey: '${SUPABASE_PUBLISHABLE_KEY}',
+  release: '${APP_RELEASE}'
+});

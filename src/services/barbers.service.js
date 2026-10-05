@@ -223,7 +223,7 @@ export const barbersService = {
     } catch (error) {
       // Handle timeout specifically
       if (error.name === 'AbortError' || error.context?.name === 'AbortError') {
-        throw new Error('Request timed out. Please try again.');
+        throw new Error('Request timed out. Please try again.', { cause: error });
       }
 
       // Re-throw known errors (already sanitized above)
@@ -233,7 +233,7 @@ export const barbersService = {
 
       // SECURITY: Sanitize unexpected errors
       logErrorDev('Unexpected Edge Function error:', error);
-      throw new Error('Failed to send invite. Please try again.');
+      throw new Error('Failed to send invite. Please try again.', { cause: error });
     }
   },
 

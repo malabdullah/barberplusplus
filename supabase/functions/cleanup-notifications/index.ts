@@ -1,10 +1,18 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2.89.0";
+import { hasValidSharedSecret } from "../_shared/environment.ts";
 
 const RETENTION_DAYS = 30;
 const BATCH_SIZE = 1000;
 
 Deno.serve(async (req: Request) => {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+  if (!(await hasValidSharedSecret(req))) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

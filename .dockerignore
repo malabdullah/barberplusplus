@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.github
+.env
+.env.*
+!.env.example
+!.env.*.example
+npm-debug.log*
+playwright-report
+test-results
+coverage
+supabase/.temp
+supabase/.branches
+

@@ -1,0 +1,16 @@
+{
+  "nodeModulesDir": "none",
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-import-prefix",
+        "no-unversioned-import",
+        "no-explicit-any",
+        "no-unused-vars",
+        "require-await",
+        "prefer-const",
+        "no-case-declarations"
+      ]
+    }
+  }
+}

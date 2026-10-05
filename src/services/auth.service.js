@@ -36,7 +36,7 @@ export const authService = {
     authRateLimiter.reset(email.toLowerCase());
 
     // SECURITY: Validate role - don't default to 'manager'
-    const roleValidation = validateUserRole(data.user?.user_metadata?.role);
+    const roleValidation = validateUserRole(data.user?.app_metadata?.role);
     if (!roleValidation.valid) {
       // Sign out user with invalid role
       await supabase.auth.signOut();
@@ -62,7 +62,7 @@ export const authService = {
       email: userData.email,
       password: userData.password,
       options: {
-        data: { name: userData.name, phone: userData.phone, role: 'manager' }
+        data: { name: userData.name, phone: userData.phone }
       }
     });
 

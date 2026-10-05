@@ -5,6 +5,7 @@ import type {
   WhatsAppWebhookPayload,
   WhatsAppIncomingMessage,
 } from './types.ts';
+import { assertOutboundRecipientAllowed, getAppEnvironment } from './environment.ts';
 
 const WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0';
 
@@ -43,9 +44,12 @@ export async function verifyWebhookSignature(
   const { appSecret } = getConfig(false);
 
   if (!signature || !appSecret) {
-    console.warn('Missing signature or app secret for verification');
-    // For now, allow requests without signature during development
-    return true;
+    if (getAppEnvironment() === 'development') {
+      console.warn('Webhook signature verification is disabled only for local development');
+      return true;
+    }
+    console.error('Missing webhook signature or app secret');
+    return false;
   }
 
   try {
@@ -86,7 +90,7 @@ export function verifyWebhookChallenge(
 ): { valid: boolean; challenge?: string } {
   const { verifyToken } = getConfig(false);
 
-  console.log('Webhook verification attempt:', { mode, token, verifyToken: verifyToken?.substring(0, 10) + '...' });
+  console.log('Webhook verification attempt:', { mode, hasToken: Boolean(token) });
 
   if (mode === 'subscribe' && token === verifyToken) {
     console.log('Webhook verification successful');
@@ -209,6 +213,7 @@ export async function sendTextMessage(
   text: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { phoneNumberId, accessToken } = getConfig();
+  assertOutboundRecipientAllowed(to);
 
   const message: WhatsAppTextMessage = {
     messaging_product: 'whatsapp',
@@ -268,6 +273,7 @@ export async function sendButtonMessage(
   footer?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { phoneNumberId, accessToken } = getConfig();
+  assertOutboundRecipientAllowed(to);
 
   // WhatsApp allows max 3 buttons
   const limitedButtons = buttons.slice(0, 3);
@@ -350,6 +356,7 @@ export async function sendListMessage(
   footer?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { phoneNumberId, accessToken } = getConfig();
+  assertOutboundRecipientAllowed(to);
 
   const message: WhatsAppInteractiveMessage = {
     messaging_product: 'whatsapp',
@@ -430,6 +437,7 @@ export async function sendFlowMessage(
   mode: 'navigate' | 'data_exchange' = 'navigate'
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { phoneNumberId, accessToken } = getConfig();
+  assertOutboundRecipientAllowed(to);
 
   const interactive: Record<string, unknown> = {
     type: 'flow',

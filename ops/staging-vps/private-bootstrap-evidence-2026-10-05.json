@@ -1,0 +1,101 @@
+{
+  "ownerApproval": {
+    "approvedSource": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+    "response": "Approve this private staging bootstrap",
+    "scope": "private-backend-only-no-public-release"
+  },
+  "boundedLoad": {
+    "durationMs": 30022,
+    "concurrency": 5,
+    "targetRps": 10,
+    "requests": 300,
+    "errors": 0,
+    "p95Ms": 144,
+    "maxMs": 270,
+    "scope": "30-second-read-only-backend-probe-not-capacity-acceptance",
+    "source": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+    "at": "2026-10-05T05:22:49.327Z",
+    "noRestartsOrOom": true,
+    "fullCapacityAccepted": false
+  },
+  "backup": {
+    "id": "staging-20261005T051540Z-c0240e7a",
+    "ciphertextBytes": 1188328,
+    "ciphertextSha256": "774f8c9d702c9f66b25df34bd26071907a6b4c0987eac533a24ead2259058dec",
+    "offHostTransferAndDecryptionVerified": true
+  },
+  "initialized": {
+    "kind": "private-staging-initialized",
+    "source": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+    "at": "2026-10-05T05:08:31.685Z",
+    "migrations": {
+      "20260901000000_baseline.sql": "b901044d0b1d6d99e1a078938031163b58acd56040f7cc52353c392b9ca7cc14",
+      "20260901104047_self_hosted_cutover.sql": "5d6758daeb28d8349062100ae2d486e15bb55db8e310430ae8546d443a45406b",
+      "20260902095726_trusted_authorization_and_cron.sql": "49e3f92e35d88142e5a08909e868b1c24b4913b9bd309b357b77e2be881187aa",
+      "20260903111635_harden_authorization_and_service_policies.sql": "1dcbb12039adefebd47d134e699131c75373d6a16fd4d8fda4721406f7f3e6df"
+    },
+    "pgTapAssertions": 32,
+    "services": [
+      "db",
+      "auth",
+      "rest",
+      "storage",
+      "mailpit",
+      "realtime",
+      "functions",
+      "api-gw"
+    ],
+    "publicPorts": false,
+    "outboundIntegrations": false,
+    "fullAcceptance": false
+  },
+  "functional": {
+    "source": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+    "at": "2026-10-05T05:10:47.907Z",
+    "services": [
+      "db",
+      "auth",
+      "rest",
+      "storage",
+      "mailpit",
+      "realtime",
+      "functions",
+      "api-gw"
+    ],
+    "publicPorts": false,
+    "isolationVerified": true,
+    "fullReleaseAccepted": false
+  },
+  "restore": {
+    "backupId": "staging-20261005T051540Z-c0240e7a",
+    "approvedSource": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+    "verifiedAt": "2026-10-05T05:20:19.152Z",
+    "scope": "eight-service-new-volume-restore",
+    "project": "barber-staging-restore-509850a0ef2d0e7e",
+    "bundleSha256": "664ca109ed584ee154d6b42e55ac42a1bdf2c8ddaa6f363a5d392868f824187c",
+    "restoredServices": [
+      "db",
+      "auth",
+      "rest",
+      "storage",
+      "mailpit",
+      "realtime",
+      "functions",
+      "api-gw"
+    ],
+    "checks": [
+      "Auth",
+      "RLS",
+      "Vault decryption",
+      "Storage bytes and xattrs",
+      "SMTP sink",
+      "gateway boundaries",
+      "Functions signatures and Flow",
+      "Realtime events and tenant denial"
+    ],
+    "originalServicesUnchanged": true,
+    "liveVolumesOverwritten": false,
+    "releaseAccepted": false,
+    "temporaryResourcesCleaned": true
+  }
+}
