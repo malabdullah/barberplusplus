@@ -1,0 +1,28 @@
+{
+  "schema": "barber-staging-release-policy/v1",
+  "automationReady": false,
+  "host": "srv1207055",
+  "project": "barber-staging-private",
+  "installRoot": "/opt/barber-staging/supabase",
+  "bootstrapSource": "c24f8ecadbe49d353965a0e9b457ebcd3cfca287",
+  "repository": {
+    "id": 1123713308,
+    "fullName": "malabdullah/barberplusplus"
+  },
+  "environment": {
+    "id": 21158713380,
+    "name": "staging",
+    "reviewerId": 19295903
+  },
+  "workflow": {
+    "path": ".github/workflows/deploy-staging.yml",
+    "allowedSources": []
+  },
+  "services": ["db", "auth", "rest", "storage", "mailpit", "realtime", "functions", "api-gw"],
+  "imageRepositories": {
+    "frontend": "ghcr.io/malabdullah/barberplusplus",
+    "functions": "ghcr.io/malabdullah/barberplusplus-functions"
+  },
+  "migrationCount": 4,
+  "brokerProtocol": 1
+}

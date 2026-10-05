@@ -6,6 +6,7 @@ const execFileAsync = promisify(execFile);
 const shaPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^[0-9a-f]{64}$/;
 const decimalPattern = /^[1-9]\d*$/;
+const imageDigestPattern = /^sha256:[0-9a-f]{64}$/;
 
 export const barberAttestationPolicy = Object.freeze({
   repository: 'malabdullah/barberplusplus',
@@ -47,23 +48,12 @@ function requireAbsoluteFilePath(value, name) {
   }
 }
 
-export function buildGhAttestationVerifyArguments({
-  artifactPath,
-  bundlePath,
-  trustedRootPath,
-  commit,
-}) {
-  requireAbsoluteFilePath(artifactPath, 'artifactPath');
-  requireAbsoluteFilePath(bundlePath, 'bundlePath');
-  requireAbsoluteFilePath(trustedRootPath, 'trustedRootPath');
-  if (new Set([artifactPath, bundlePath, trustedRootPath]).size !== 3) fail('verification paths must be distinct');
+function commonVerifyArguments({ artifactPath, commit, allowOci = false }) {
+  if (!allowOci) requireAbsoluteFilePath(artifactPath, 'artifactPath');
   if (typeof commit !== 'string' || !shaPattern.test(commit)) fail('commit must be a lowercase full SHA');
-
   const workflowIdentity = `https://github.com/${barberAttestationPolicy.repository}/${barberAttestationPolicy.workflowPath}@${barberAttestationPolicy.sourceRef}`;
-  return Object.freeze([
+  return [
     'attestation', 'verify', artifactPath,
-    '--bundle', bundlePath,
-    '--custom-trusted-root', trustedRootPath,
     '--repo', barberAttestationPolicy.repository,
     '--predicate-type', barberAttestationPolicy.predicateType,
     '--cert-oidc-issuer', barberAttestationPolicy.oidcIssuer,
@@ -73,17 +63,50 @@ export function buildGhAttestationVerifyArguments({
     '--source-ref', barberAttestationPolicy.sourceRef,
     '--deny-self-hosted-runners',
     '--format', 'json',
+  ];
+}
+
+export function buildGhAttestationVerifyArguments({
+  artifactPath,
+  bundlePath,
+  trustedRootPath,
+  commit,
+}) {
+  requireAbsoluteFilePath(bundlePath, 'bundlePath');
+  requireAbsoluteFilePath(trustedRootPath, 'trustedRootPath');
+  if (new Set([artifactPath, bundlePath, trustedRootPath]).size !== 3) fail('verification paths must be distinct');
+  const common = commonVerifyArguments({ artifactPath, commit });
+  return Object.freeze([
+    ...common.slice(0, 3),
+    '--bundle', bundlePath,
+    '--custom-trusted-root', trustedRootPath,
+    ...common.slice(3),
   ]);
+}
+
+export function buildGhAttestationVerifyOnlineArguments({ artifactPath, commit }) {
+  return Object.freeze(commonVerifyArguments({ artifactPath, commit }));
+}
+
+export function buildGhImageAttestationVerifyOnlineArguments({ repository, digest, commit }) {
+  if (!['ghcr.io/malabdullah/barberplusplus', 'ghcr.io/malabdullah/barberplusplus-functions'].includes(repository)) {
+    fail('image repository is not allowlisted');
+  }
+  if (typeof digest !== 'string' || !imageDigestPattern.test(digest)) fail('image digest is invalid');
+  const target = `oci://${repository}@${digest}`;
+  return Object.freeze(commonVerifyArguments({ artifactPath: target, commit, allowOci: true }));
 }
 
 export function parseGhAttestationVerification(raw, {
   artifactDigest,
+  subjectName = 'staging-release-request.json',
   commit,
   releaseRunId,
   releaseRunAttempt,
 } = {}) {
   if (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > 1024 * 1024) fail('CLI output is absent or oversized');
   if (typeof artifactDigest !== 'string' || !digestPattern.test(artifactDigest)) fail('artifactDigest must be 64 lowercase hexadecimal characters');
+  if (typeof subjectName !== 'string' || subjectName.length === 0 || subjectName.length > 256 || /[\0\r\n]/.test(subjectName)) fail('subjectName is invalid');
   if (typeof commit !== 'string' || !shaPattern.test(commit)) fail('commit must be a lowercase full SHA');
   if (typeof releaseRunId !== 'string' || !decimalPattern.test(releaseRunId)) fail('releaseRunId must be a positive decimal string');
   if (!Number.isSafeInteger(releaseRunAttempt) || releaseRunAttempt < 1 || releaseRunAttempt > 1000) fail('releaseRunAttempt is invalid');
@@ -125,6 +148,7 @@ export function parseGhAttestationVerification(raw, {
 
   exactString(statement.predicateType, barberAttestationPolicy.predicateType, 'statement.predicateType');
   if (!Array.isArray(statement.subject) || statement.subject.length !== 1) fail('statement must contain exactly one subject');
+  exactString(statement.subject[0]?.name, subjectName, 'statement.subject.name');
   const subjectDigest = statement.subject[0]?.digest;
   if (!subjectDigest || Object.keys(subjectDigest).length !== 1) fail('statement subject digest is invalid');
   exactString(subjectDigest.sha256, artifactDigest, 'statement.subject.digest.sha256');
@@ -171,5 +195,87 @@ export async function verifyStagingEnvelopeAttestation({
     status: 'cryptography-and-certificate-policy-valid',
     cryptographyVerified: true,
     authorizing: false,
+  });
+}
+
+export async function verifyStagingEnvelopeAttestationOnline({
+  artifactPath,
+  artifactDigest,
+  commit,
+  releaseRunId,
+  releaseRunAttempt,
+  ghPath = '/usr/bin/gh',
+  execute = execFileAsync,
+}) {
+  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  const args = buildGhAttestationVerifyOnlineArguments({ artifactPath, commit });
+  const { stdout } = await execute(ghPath, args, {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    timeout: 30_000,
+    windowsHide: true,
+  });
+  const policyResult = parseGhAttestationVerification(stdout, {
+    artifactDigest,
+    commit,
+    releaseRunId,
+    releaseRunAttempt,
+  });
+  return Object.freeze({
+    ...policyResult,
+    status: 'cryptography-and-certificate-policy-valid',
+    cryptographyVerified: true,
+    verificationMode: 'authenticated-github-api',
+    authorizing: false,
+  });
+}
+
+export async function verifyStagingImageAttestationOnline({
+  role,
+  repository,
+  digest,
+  manifestEvidence,
+  commit,
+  releaseRunId,
+  releaseRunAttempt,
+  ghPath = '/usr/bin/gh',
+  execute = execFileAsync,
+}) {
+  if (!['frontend', 'functions'].includes(role)) fail('image role is not allowed');
+  const expectedRepository = role === 'frontend'
+    ? 'ghcr.io/malabdullah/barberplusplus'
+    : 'ghcr.io/malabdullah/barberplusplus-functions';
+  exactString(repository, expectedRepository, 'image repository');
+  if (!manifestEvidence || manifestEvidence.status !== 'read-only-ghcr-manifest-collected'
+      || manifestEvidence.authorizing !== false
+      || `ghcr.io/${manifestEvidence.repository}` !== repository
+      || manifestEvidence.digest !== digest) {
+    fail('authenticated immutable manifest evidence does not match the image');
+  }
+  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  const args = buildGhImageAttestationVerifyOnlineArguments({ repository, digest, commit });
+  const { stdout } = await execute(ghPath, args, {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    timeout: 30_000,
+    windowsHide: true,
+  });
+  parseGhAttestationVerification(stdout, {
+    artifactDigest: digest.slice('sha256:'.length),
+    subjectName: repository,
+    commit,
+    releaseRunId,
+    releaseRunAttempt,
+  });
+  return Object.freeze({
+    status: 'image-manifest-and-attestation-valid',
+    attestationVerified: true,
+    authorizing: false,
+    role,
+    repository,
+    digest,
+    commit,
+    releaseRunId,
+    releaseRunAttempt,
   });
 }

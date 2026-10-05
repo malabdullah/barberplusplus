@@ -42,6 +42,7 @@ export function bindStagingReleaseEvidence({
   envelopeResults,
   attestationResults,
   approvalResults,
+  ciRunRecords,
   artifactRecords,
   downloadedArtifacts,
   imageRecords,
@@ -52,10 +53,11 @@ export function bindStagingReleaseEvidence({
   const envelopeResult = one(envelopeResults, 'envelopeResults');
   const attestation = one(attestationResults, 'attestationResults');
   const approval = one(approvalResults, 'approvalResults');
+  const ciRun = one(ciRunRecords, 'ciRunRecords');
   const artifact = one(artifactRecords, 'artifactRecords');
   const downloaded = one(downloadedArtifacts, 'downloadedArtifacts');
   const migration = one(migrationRecords, 'migrationRecords');
-  if (!envelopeResult || !attestation || !approval || !artifact || !downloaded || !migration
+  if (!envelopeResult || !attestation || !approval || !ciRun || !artifact || !downloaded || !migration
       || !Array.isArray(imageRecords) || imageRecords.length !== 2) {
     return blocked('blocked-ambiguous-release-evidence', ['exactly one record per evidence class and two image records']);
   }
@@ -94,6 +96,19 @@ export function bindStagingReleaseEvidence({
   exact(approval.environmentId, 21158713380, 'approved environment ID');
   exact(approval.reviewerId, 19295903, 'approved reviewer ID');
 
+  exact(ciRun.id, Number(envelope.runs.ci.id), 'CI run ID');
+  exact(ciRun.run_attempt, envelope.runs.ci.attempt, 'CI run attempt');
+  exact(ciRun.status, 'completed', 'CI run status');
+  exact(ciRun.conclusion, 'success', 'CI run conclusion');
+  exact(ciRun.event, 'push', 'CI run event');
+  exact(ciRun.head_branch, envelope.branch, 'CI run branch');
+  exact(ciRun.head_sha, envelope.commit, 'CI run commit');
+  if (!['.github/workflows/ci.yml', '.github/workflows/ci.yml@main'].includes(ciRun.path)) fail('CI workflow path is invalid');
+  exact(ciRun.repository?.id, envelope.repository.id, 'CI repository ID');
+  exact(ciRun.repository?.full_name, envelope.repository.full_name, 'CI repository name');
+  exact(ciRun.head_repository?.id, envelope.repository.id, 'CI head repository ID');
+  exact(ciRun.head_repository?.full_name, envelope.repository.full_name, 'CI head repository name');
+
   positiveSafeInteger(artifact.id, 'artifact.id');
   const artifactName = `staging-release-request-${envelope.commit}-${envelope.runs.release.id}-${envelope.runs.release.attempt}`;
   exact(artifact.name, artifactName, 'artifact.name');
@@ -130,14 +145,19 @@ export function bindStagingReleaseEvidence({
     if (!image) return blocked('blocked-ambiguous-release-evidence', ['one frontend and one Functions image record']);
     exact(image.repository, envelope.images[role].repository, `${role} repository`);
     exact(image.digest, envelope.images[role].digest, `${role} digest`);
+    exact(image.status, 'image-manifest-and-attestation-valid', `${role} evidence status`);
+    exact(image.attestationVerified, true, `${role} attestation verification`);
+    exact(image.authorizing, false, `${role} authorizing flag`);
     exact(image.commit, envelope.commit, `${role} commit`);
-    exact(image.sourceRunId, envelope.runs.ci.id, `${role} source run ID`);
-    exact(image.sourceRunAttempt, envelope.runs.ci.attempt, `${role} source run attempt`);
+    exact(image.releaseRunId, envelope.runs.release.id, `${role} release run ID`);
+    exact(image.releaseRunAttempt, envelope.runs.release.attempt, `${role} release run attempt`);
   }
 
   if (!commitPattern.test(migration.commit)) fail('migration.commit is invalid');
   if (!sha256Pattern.test(migration.treeSha256)) fail('migration.treeSha256 is invalid');
   if (!migrationPattern.test(migration.latest)) fail('migration.latest is invalid');
+  if (!Array.isArray(migration.migrations) || migration.migrations.length !== 4) fail('migration inventory must contain the four bootstrapped migrations');
+  if (migration.migrations.at(-1)?.name !== `${migration.latest}.sql`) fail('migration inventory latest entry does not match');
   exact(migration.commit, envelope.commit, 'migration commit');
   exact(migration.treeSha256, envelope.migrations.tree_sha256, 'migration tree');
   exact(migration.latest, envelope.migrations.latest, 'latest migration');
@@ -147,6 +167,7 @@ export function bindStagingReleaseEvidence({
     repository: envelope.repository.full_name,
     commit: envelope.commit,
     workflowBlobSha: envelope.workflow.blob_sha,
+    workflowSha256: approval.reviewedWorkflowSha256,
     ciRunId: envelope.runs.ci.id,
     ciRunAttempt: envelope.runs.ci.attempt,
     releaseRunId: envelope.runs.release.id,

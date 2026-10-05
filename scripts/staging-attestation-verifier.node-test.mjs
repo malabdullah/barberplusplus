@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildGhAttestationVerifyArguments,
+  buildGhAttestationVerifyOnlineArguments,
+  buildGhImageAttestationVerifyOnlineArguments,
   parseGhAttestationVerification,
   verifyStagingEnvelopeAttestation,
+  verifyStagingEnvelopeAttestationOnline,
+  verifyStagingImageAttestationOnline,
 } from './staging-attestation-verifier.mjs';
 
 const commit = 'a'.repeat(40);
@@ -70,6 +74,24 @@ test('builds a fail-closed offline gh verifier command with every supported iden
     '--deny-self-hosted-runners',
     '--format', 'json',
   ]);
+});
+
+test('builds an online verifier command that fetches only repository-linked attestations', () => {
+  const args = buildGhAttestationVerifyOnlineArguments({ artifactPath: '/evidence/request.json', commit });
+  assert.deepEqual(args, [
+    'attestation', 'verify', '/evidence/request.json',
+    '--repo', 'malabdullah/barberplusplus',
+    '--predicate-type', 'https://slsa.dev/provenance/v1',
+    '--cert-oidc-issuer', 'https://token.actions.githubusercontent.com',
+    '--cert-identity', workflowUri,
+    '--signer-digest', commit,
+    '--source-digest', commit,
+    '--source-ref', 'refs/heads/main',
+    '--deny-self-hosted-runners',
+    '--format', 'json',
+  ]);
+  assert.equal(args.includes('--bundle'), false);
+  assert.equal(args.includes('--custom-trusted-root'), false);
 });
 
 test('accepts verified certificate claims but explicitly does not authorize release', () => {
@@ -149,6 +171,49 @@ test('delegates cryptography only to allowlisted gh without a shell', async () =
   assert.equal(invocation[0], '/opt/homebrew/bin/gh');
   assert.equal(invocation[2].shell, undefined);
   assert.equal(invocation[2].timeout, 30_000);
+});
+
+test('online verification upgrades only successful gh output and remains non-authorizing', async () => {
+  let invocation;
+  const result = await verifyStagingEnvelopeAttestationOnline({
+    artifactPath: '/evidence/request.json', artifactDigest, commit, releaseRunId, releaseRunAttempt,
+    execute: async (...args) => { invocation = args; return { stdout: JSON.stringify(verifiedOutput()) }; },
+  });
+  assert.equal(result.status, 'cryptography-and-certificate-policy-valid');
+  assert.equal(result.cryptographyVerified, true);
+  assert.equal(result.verificationMode, 'authenticated-github-api');
+  assert.equal(result.authorizing, false);
+  assert.equal(invocation[0], '/usr/bin/gh');
+  assert.equal(invocation[1].includes('--bundle'), false);
+  assert.equal(invocation[2].shell, undefined);
+});
+
+test('verifies each immutable GHCR subject against the release workflow identity', async () => {
+  const repository = 'ghcr.io/malabdullah/barberplusplus';
+  const digest = `sha256:${artifactDigest}`;
+  const manifestEvidence = {
+    status: 'read-only-ghcr-manifest-collected', authorizing: false,
+    repository: 'malabdullah/barberplusplus', digest,
+  };
+  const args = buildGhImageAttestationVerifyOnlineArguments({ repository, digest, commit });
+  assert.equal(args[2], `oci://${repository}@${digest}`);
+  const output = verifiedOutput();
+  output[0].verificationResult.statement.subject[0].name = repository;
+  const result = await verifyStagingImageAttestationOnline({
+    role: 'frontend', repository, digest, manifestEvidence, commit, releaseRunId, releaseRunAttempt,
+    execute: async () => ({ stdout: JSON.stringify(output) }),
+  });
+  assert.deepEqual({ status: result.status, role: result.role, digest: result.digest, authorizing: result.authorizing }, {
+    status: 'image-manifest-and-attestation-valid', role: 'frontend', digest, authorizing: false,
+  });
+  await assert.rejects(() => verifyStagingImageAttestationOnline({
+    role: 'frontend', repository, digest, commit, releaseRunId, releaseRunAttempt,
+    execute: async () => ({ stdout: JSON.stringify(output) }),
+  }), /manifest evidence/);
+  await assert.rejects(() => verifyStagingImageAttestationOnline({
+    role: 'functions', repository, digest, manifestEvidence, commit, releaseRunId, releaseRunAttempt,
+    execute: async () => ({ stdout: JSON.stringify(output) }),
+  }), /image repository/);
 });
 
 test('never upgrades caller-supplied JSON to cryptographically verified', () => {

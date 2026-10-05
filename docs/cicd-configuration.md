@@ -1,9 +1,10 @@
 # CI/CD Configuration
 
-> The repository now contains the fail-closed VPS workflow scaffold. It builds
-> immutable frontend and Edge Functions images, but intentionally stops before
-> deployment until the live backup/migration/recovery adapters and first-cutover
-> evidence are reviewed. Do not set `STAGING_VPS_AUTOMATION_READY=true` yet.
+> The repository now contains a fail-closed evidence workflow plus the local
+> verifier and constrained request adapters. It builds immutable frontend and
+> Edge Functions images, but intentionally stops before deployment until the
+> live mutation-capable broker and first-release evidence are separately
+> reviewed. The checked-in root policy keeps `automationReady: false`.
 
 This document records credential names and trust boundaries, never values.
 Staging and production configuration must remain separate.
@@ -15,12 +16,8 @@ Staging and production configuration must remain separate.
 - `Deploy staging` starts only after a successful same-repository `CI` push run
   for `main`. Its build job runs on GitHub-hosted Linux and is the only staging
   job allowed to write the GHCR package.
-- The checked-in staging deployment scaffold currently names a Linux
-  self-hosted runner, but that runner must not be registered while this remains
-  a public personal-account repository. GitHub warns that pull requests against
-  public repositories can compromise self-hosted runners. A PR can add a new job
-  targeting the runner labels without referencing the protected `staging`
-  environment; labels are routing metadata, not an authorization boundary.
+- The staging workflow has no self-hosted runner and no inbound deployment
+  hook. A future server-side pull verifier may read evidence outbound only.
 - `Promote production` runs only for a protected semantic `vX.Y.Z` tag. It must
   reuse the accepted staging digest without rebuilding and must receive an
   independent production approval.
@@ -49,7 +46,9 @@ shared-main policy. Main requires PRs and all five checks, but no second-person
 approval. A recorded code review and owner release-specific approval are still
 required by the deployment procedure.
 
-Variables:
+The current evidence-only job reads only `APP_URL` for the environment link.
+The remaining names are reserved for a later, separately approved deployment
+architecture and are not consumed by this workflow:
 
 | Name | Meaning |
 | --- | --- |
@@ -62,7 +61,9 @@ Variables:
 | `DOKPLOY_SUPABASE_COMPOSE_ID` | Created Supabase Compose resource ID |
 | `STAGING_VPS_AUTOMATION_READY` | Keep unset/`false` until every readiness gate below passes |
 
-Secrets:
+No staging environment secret is consumed by the current workflow. These names
+are reserved for a later deployment architecture and must not be entered merely
+to run the evidence workflow:
 
 | Name | Minimum capability |
 | --- | --- |
@@ -77,8 +78,8 @@ to GitHub. The job-scoped `GITHUB_TOKEN` publishes images; it is not stored as a
 secret. PR CI has no `environment:` stanza and therefore cannot receive any of
 the staging secrets above.
 
-Before enabling automation, implement and review the three versioned adapters
-proposed in [VPS deployment adapter contract](staging-vps-deployment-adapters.md):
+Before enabling automation, review and install the three versioned adapter
+operations in [VPS deployment adapter contract](staging-vps-deployment-adapters.md):
 
 1. Backup capture: quiesce the isolated stack and capture Database, Auth, Vault,
    Storage, encrypted configuration, and the complete PostgreSQL `db-config`
@@ -148,10 +149,10 @@ digests to deployment:
 - `ghcr.io/malabdullah/barberplusplus@sha256:...`
 - `ghcr.io/malabdullah/barberplusplus-functions@sha256:...`
 
-The preflight rejects mutable tags, other repositories, unexpected Dokploy
-project/environment IDs, and any Dokploy URL other than loopback. Production
-continues to resolve the accepted frontend digest from staging evidence and
-does not rebuild it.
+The release envelope and VPS request adapters reject mutable tags, other
+repositories, unexpected project/bootstrap identities, commands and arbitrary
+paths. Production continues to resolve the accepted frontend digest from
+staging evidence and does not rebuild it.
 
 The approved default architecture is GitHub-hosted CI plus a restricted
 server-side pull/deployment mechanism that consumes only a verified commit and
@@ -162,11 +163,9 @@ versioned envelope, authenticity, expiry, replay ledger, and observation-only
 first installation stage are specified in
 [VPS deployment adapter contract](staging-vps-deployment-adapters.md#approved-release-pull-protocol-proposed-v1).
 
-Do not register the checked-in `barber-staging-vps` runner. Keeping
-`STAGING_VPS_AUTOMATION_READY` false and retaining the deliberate workflow stop
-does not make a repository-level runner safe: an attacker can define a separate
-PR job without either gate. The existing first-time-contributor workflow
-approval setting is also not a durable runner boundary for later pull requests.
+Do not add or register a `barber-staging-vps` repository runner. The existing
+first-time-contributor workflow approval setting is not a durable runner
+boundary for later pull requests.
 
 Two safe alternatives require separate owner authorization and are not approved
 by the current setup instruction:

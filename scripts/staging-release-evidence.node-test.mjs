@@ -60,6 +60,13 @@ function evidence() {
       environmentId: 21158713380,
       reviewerId: 19295903,
     }],
+    ciRunRecords: [{
+      id: Number(envelope.runs.ci.id), run_attempt: envelope.runs.ci.attempt,
+      status: 'completed', conclusion: 'success', event: 'push', path: '.github/workflows/ci.yml',
+      head_branch: 'main', head_sha: commit,
+      repository: { id: envelope.repository.id, full_name: envelope.repository.full_name },
+      head_repository: { id: envelope.repository.id, full_name: envelope.repository.full_name },
+    }],
     artifactRecords: [{
       id: 99,
       name: `staging-release-request-${commit}-${envelope.runs.release.id}-1`,
@@ -88,20 +95,28 @@ function evidence() {
     }],
     imageRecords: [
       {
+        status: 'image-manifest-and-attestation-valid', attestationVerified: true, authorizing: false,
         role: 'frontend', repository: envelope.images.frontend.repository,
         digest: envelope.images.frontend.digest, commit,
-        sourceRunId: envelope.runs.ci.id, sourceRunAttempt: envelope.runs.ci.attempt,
+        releaseRunId: envelope.runs.release.id, releaseRunAttempt: envelope.runs.release.attempt,
       },
       {
+        status: 'image-manifest-and-attestation-valid', attestationVerified: true, authorizing: false,
         role: 'functions', repository: envelope.images.functions.repository,
         digest: envelope.images.functions.digest, commit,
-        sourceRunId: envelope.runs.ci.id, sourceRunAttempt: envelope.runs.ci.attempt,
+        releaseRunId: envelope.runs.release.id, releaseRunAttempt: envelope.runs.release.attempt,
       },
     ],
     migrationRecords: [{
       commit,
       treeSha256: envelope.migrations.tree_sha256,
       latest: envelope.migrations.latest,
+      migrations: [
+        { name: '20260901000000_baseline.sql', sha256: '1'.repeat(64) },
+        { name: '20260902095726_trusted_authorization_and_cron.sql', sha256: '2'.repeat(64) },
+        { name: '20260903111500_restore_remaining_baseline.sql', sha256: '3'.repeat(64) },
+        { name: '20260903111635_secure_staging_boundary.sql', sha256: '4'.repeat(64) },
+      ],
     }],
     replayRecords: [],
     now,
@@ -116,6 +131,7 @@ test('binds the exact release tuple but never authorizes deployment', () => {
     {
       repository: result.binding.repository,
       commit: result.binding.commit,
+      workflowSha256: result.binding.workflowSha256,
       frontend: result.binding.frontendDigest,
       functions: result.binding.functionsDigest,
       migration: result.binding.migrationTreeSha256,
@@ -123,6 +139,7 @@ test('binds the exact release tuple but never authorizes deployment', () => {
     {
       repository: 'malabdullah/barberplusplus',
       commit,
+      workflowSha256: '9'.repeat(64),
       frontend: digest('c'),
       functions: digest('d'),
       migration: digest('e'),
@@ -140,6 +157,7 @@ test('rejects commit, workflow run and attested envelope substitutions', () => {
     (value) => { value.approvalResults[0].releaseRunAttempt = 2; },
     (value) => { value.artifactRecords[0].workflow_run.head_sha = '4'.repeat(40); },
     (value) => { value.artifactRecords[0].workflow_run.repository_id = 1; },
+    (value) => { value.ciRunRecords[0].head_sha = '5'.repeat(40); },
   ]) {
     const value = evidence();
     mutate(value);
@@ -152,9 +170,11 @@ test('rejects frontend, Functions and migration identity substitutions', () => {
     (value) => { value.imageRecords[0].repository = 'ghcr.io/attacker/app'; },
     (value) => { value.imageRecords[0].digest = digest('1'); },
     (value) => { value.imageRecords[1].commit = '2'.repeat(40); },
-    (value) => { value.imageRecords[1].sourceRunId = '1'; },
+    (value) => { value.imageRecords[1].releaseRunId = '1'; },
+    (value) => { value.imageRecords[0].attestationVerified = false; },
     (value) => { value.migrationRecords[0].treeSha256 = digest('3'); },
     (value) => { value.migrationRecords[0].latest = '20260903111636_other'; },
+    (value) => { value.migrationRecords[0].migrations.pop(); },
   ]) {
     const value = evidence();
     mutate(value);
@@ -210,6 +230,7 @@ test('blocks replay by any unique identity or exact release tuple', () => {
 test('blocks missing, duplicate or role-ambiguous evidence', () => {
   for (const mutate of [
     (value) => { value.attestationResults = []; },
+    (value) => { value.ciRunRecords = []; },
     (value) => { value.artifactRecords.push({ ...value.artifactRecords[0] }); },
     (value) => { value.migrationRecords = []; },
     (value) => { value.imageRecords[1].role = 'frontend'; },

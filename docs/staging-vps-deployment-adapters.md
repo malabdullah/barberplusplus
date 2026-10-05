@@ -1,7 +1,9 @@
 # Staging VPS Deployment Adapter Contract (Proposed v1)
 
-Status: proposal for Env3 and owner review. These paths and schemas are not yet
-approved or implemented. The staging workflow must remain fail-closed.
+Status: repository-side verifier and request adapters implemented; live broker
+mutations and deployment remain unapproved and disabled. See
+[`staging-vps-verifier-status.md`](staging-vps-verifier-status.md) for the exact
+implemented boundary and remaining activation steps.
 
 ## Common rules
 
@@ -63,10 +65,10 @@ It receives no Dokploy, server, database, or broker credential.
 
 Workflow permissions remain read-only by default. The build job alone receives
 `packages: write`; it receives no OIDC token or attestation permission. The
-post-approval evidence job alone receives `id-token: write` and
-`attestations: write`, declares `environment: staging`, performs no checkout,
-and cannot publish or deploy an image. The allowlisted workflow blob must retain
-this separation.
+post-approval evidence job alone receives `id-token: write`,
+`attestations: write`, and `artifact-metadata: write`, declares
+`environment: staging`, performs no checkout, and cannot publish or deploy an
+image. The allowlisted workflow blob must retain this separation.
 
 The server-side pull service makes outbound requests to GitHub. It exposes no
 public webhook or command endpoint and never accepts a pushed request. Its
@@ -199,20 +201,19 @@ run IDs/attempts, the 15-minute window, future skew, 128-bit nonce, and derived
 request-ID binding. A successful result explicitly returns `authorizing: false`
 and lists every external authorization check still required.
 
-The implementation does **not** verify GitHub or Sigstore attestations, OIDC
-claims, environment approval, workflow/CI API metadata, workflow blob allowlist,
-GHCR manifests, migration evidence, trusted server time, persistent replay
-state, or broker authorization. It performs no I/O and has no credential,
-network, filesystem, subprocess, polling, service, or deployment capability.
-It is not wired into a workflow or package script. Those gaps remain hard gates;
-syntactic validity must never be treated as release authorization.
+This parser remains pure and non-authorizing. Separate repository modules now
+collect and validate GitHub/GHCR evidence, attestations, approval, migration
+content, trusted time, replay state and broker status. The root policy keeps the
+composed result blocked until a reviewed workflow allowlist and separately
+approved mutation-capable broker are present; see the current status report.
 
 ### Local attestation adapter status
 
 `scripts/staging-attestation-verifier.mjs` delegates signature, certificate,
 timestamp, subject-digest, and trusted-root verification to the installed
-official GitHub CLI; it implements no signature cryptography. It constructs an
-offline `gh attestation verify` invocation using a local bundle and trusted root
+official GitHub CLI; it implements no signature cryptography. It constructs
+authenticated online lookup and an offline `gh attestation verify` invocation
+using a local bundle and trusted root
 with exact repository, predicate, OIDC issuer, certificate SAN, signer commit,
 source commit/ref, and GitHub-hosted runner constraints. It then fail-closes on
 the verified certificate summary unless repository/owner numeric IDs, workflow
@@ -240,7 +241,8 @@ are absent from current Fulcio certificate extensions. Workflow-run metadata,
 the approval-history response, current environment policy, allowlisted workflow
 blob, envelope syntax, image attestations, migration evidence, trusted clock,
 replay ledger, and broker authorization remain mandatory independent gates.
-No attestation bundle or trusted-root material is currently installed.
+The online path also verifies the exact envelope subject and both immutable
+GHCR image subjects. No offline bundle or trusted-root material is installed.
 
 ### Local staging-approval evidence status
 
@@ -293,8 +295,8 @@ The binding requires all of the following to agree:
   time inside the envelope window;
 - an archive containing exactly one regular `staging-release-request.json`
   entry whose bytes match the attested envelope SHA-256;
-- frontend and Functions repositories, immutable digests, commit, and source CI
-  run/attempt; and
+- frontend and Functions repositories, immutable digests, commit, verified
+  attestation state, and release run/attempt; and
 - migration commit, migration-tree digest, and latest migration identifier.
 
 It produces a canonical binding hash and compares supplied replay-ledger records
@@ -341,7 +343,9 @@ requires the response body digest and `Docker-Content-Digest` to equal the
 requested digest. Redirects and unexpected media types fail closed. If a
 package is private or anonymous pull is unavailable, this result is blocked;
 the exact missing capability is a dedicated read-only identity with
-`read:packages`. No such credential is created or accepted by this adapter.
+`read:packages`. When supplied, that credential is used only as Basic
+authentication to the exact `https://ghcr.io/token` exchange; it is not sent to
+a manifest URL or exposed in returned evidence.
 
 Tests run with:
 

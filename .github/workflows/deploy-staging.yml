@@ -19,7 +19,8 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.sha == github.event.workflow_run.head_sha
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,6 +28,9 @@ jobs:
     outputs:
       frontend_digest: ${{ steps.frontend.outputs.digest }}
       functions_digest: ${{ steps.functions.outputs.digest }}
+      migration_tree: ${{ steps.release-inputs.outputs.migration_tree }}
+      latest_migration: ${{ steps.release-inputs.outputs.latest_migration }}
+      workflow_blob: ${{ steps.release-inputs.outputs.workflow_blob }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +43,23 @@ jobs:
           node-version: 24.20.0
           cache: npm
       - run: npm ci
+      - id: release-inputs
+        name: Record reviewed source inputs
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync } from 'node:fs';
+          import { getMigrationSet } from './scripts/release-manifest.mjs';
+
+          const workflow = '.github/workflows/deploy-staging.yml';
+          const migrations = await getMigrationSet();
+          const output = [
+            `migration_tree=sha256:${migrations.migration_tree_sha256}`,
+            `latest_migration=${migrations.latest_migration}`,
+            `workflow_blob=${execFileSync('git', ['hash-object', workflow], { encoding: 'utf8' }).trim()}`,
+          ].join('\n') + '\n';
+          appendFileSync(process.env.GITHUB_OUTPUT, output);
+          NODE
       - name: Package committed Edge Function sources
         run: node scripts/package-staging-functions.mjs '${{ github.event.workflow_run.head_sha }}' '${{ runner.temp }}/staging-functions'
       - uses: docker/setup-buildx-action@v3
@@ -64,36 +85,89 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-functions:${{ github.event.workflow_run.head_sha }}
 
-  deploy:
+  release-request:
     needs: build
-    runs-on: [self-hosted, Linux, X64, barber-staging-vps]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     environment:
       name: staging
       url: ${{ vars.APP_URL }}
-    env:
-      APP_URL: ${{ vars.APP_URL }}
-      STAGING_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-      FRONTEND_IMAGE: ghcr.io/${{ github.repository }}@${{ needs.build.outputs.frontend_digest }}
-      FUNCTIONS_IMAGE: ghcr.io/${{ github.repository }}-functions@${{ needs.build.outputs.functions_digest }}
-      DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
-      DOKPLOY_PROJECT_ID: ${{ vars.DOKPLOY_PROJECT_ID }}
-      DOKPLOY_ENVIRONMENT_ID: ${{ vars.DOKPLOY_ENVIRONMENT_ID }}
-      DOKPLOY_FRONTEND_APPLICATION_ID: ${{ vars.DOKPLOY_FRONTEND_APPLICATION_ID }}
-      DOKPLOY_SUPABASE_COMPOSE_ID: ${{ vars.DOKPLOY_SUPABASE_COMPOSE_ID }}
-      STAGING_VPS_AUTOMATION_READY: ${{ vars.STAGING_VPS_AUTOMATION_READY }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          persist-credentials: false
-      - name: Validate VPS deployment contract
-        run: sh scripts/staging-vps-deploy-preflight.sh
-      - name: Stop before an unreviewed first cutover
+      - name: Create canonical non-deploying release request
+        env:
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+          CI_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RELEASE_RUN_ID: ${{ github.run_id }}
+          RELEASE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+          REPOSITORY: ${{ github.repository }}
+          FRONTEND_DIGEST: ${{ needs.build.outputs.frontend_digest }}
+          FUNCTIONS_DIGEST: ${{ needs.build.outputs.functions_digest }}
+          MIGRATION_TREE: ${{ needs.build.outputs.migration_tree }}
+          LATEST_MIGRATION: ${{ needs.build.outputs.latest_migration }}
+          WORKFLOW_BLOB: ${{ needs.build.outputs.workflow_blob }}
         run: |
-          echo 'The VPS artifact path is prepared, but deployment remains fail-closed.' >&2
-          echo 'Env3 backup, migration, recovery, and first-cutover contracts must be reviewed before this step is replaced.' >&2
-          exit 1
+          node --input-type=module <<'NODE'
+          import { randomBytes } from 'node:crypto';
+          import { writeFileSync } from 'node:fs';
+
+          const required = ['COMMIT', 'CI_RUN_ID', 'CI_RUN_ATTEMPT', 'RELEASE_RUN_ID', 'RELEASE_RUN_ATTEMPT',
+            'REPOSITORY_ID', 'REPOSITORY', 'FRONTEND_DIGEST', 'FUNCTIONS_DIGEST', 'MIGRATION_TREE',
+            'LATEST_MIGRATION', 'WORKFLOW_BLOB'];
+          for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
+          if (process.env.REPOSITORY !== 'malabdullah/barberplusplus') throw new Error('Unexpected repository');
+          const issued = new Date();
+          const expires = new Date(issued.getTime() + (15 * 60 * 1000));
+          const nonce = randomBytes(16).toString('hex');
+          const attempt = Number(process.env.RELEASE_RUN_ATTEMPT);
+          const envelope = {
+            schema: 'barber-staging-release-request/v1',
+            action: 'deploy-staging',
+            repository: { id: Number(process.env.REPOSITORY_ID), full_name: process.env.REPOSITORY },
+            workflow: { path: '.github/workflows/deploy-staging.yml', blob_sha: process.env.WORKFLOW_BLOB },
+            runs: {
+              ci: { id: process.env.CI_RUN_ID, attempt: Number(process.env.CI_RUN_ATTEMPT) },
+              release: { id: process.env.RELEASE_RUN_ID, attempt },
+            },
+            commit: process.env.COMMIT,
+            branch: 'main',
+            images: {
+              frontend: { repository: 'ghcr.io/malabdullah/barberplusplus', digest: process.env.FRONTEND_DIGEST },
+              functions: { repository: 'ghcr.io/malabdullah/barberplusplus-functions', digest: process.env.FUNCTIONS_DIGEST },
+            },
+            migrations: { tree_sha256: process.env.MIGRATION_TREE, latest: process.env.LATEST_MIGRATION },
+            environment: 'staging',
+            origins: { app: 'https://staging-barber.malabdullah.cloud', supabase: 'https://supabase-staging.malabdullah.cloud' },
+            issued_at: issued.toISOString(),
+            expires_at: expires.toISOString(),
+            nonce,
+            request_id: `${process.env.REPOSITORY_ID}:${process.env.RELEASE_RUN_ID}:${attempt}:${nonce}`,
+          };
+          writeFileSync('staging-release-request.json', JSON.stringify(envelope), { flag: 'wx', mode: 0o600 });
+          NODE
+      - name: Attest the release request
+        uses: actions/attest@v4
+        with:
+          subject-path: staging-release-request.json
+      - name: Attest the frontend image digest
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ needs.build.outputs.frontend_digest }}
+      - name: Attest the Functions image digest
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}-functions
+          subject-digest: ${{ needs.build.outputs.functions_digest }}
+      - name: Upload the single-file release request
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-release-request-${{ github.event.workflow_run.head_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: staging-release-request.json
+          if-no-files-found: error
+          retention-days: 7

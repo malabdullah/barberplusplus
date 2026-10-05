@@ -3,7 +3,10 @@ import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { deflateRawSync } from 'node:zlib';
 import {
+  readGitHubCiRunEvidence,
   inspectReleaseArtifactZip,
+  readGhcrManifest,
+  readGitHubMigrationEvidence,
   readGitHubReleaseEvidence,
   readPublicGhcrManifest,
 } from './staging-evidence-transport.mjs';
@@ -181,6 +184,85 @@ test('rejects a non-release artifact before downloading its archive', async () =
   assert.equal(calls, 4);
 });
 
+test('collects only the successful same-repository protected-main CI source run', async () => {
+  const commit = 'a'.repeat(40);
+  const run = {
+    id: 41, run_attempt: 1, status: 'completed', conclusion: 'success', event: 'push',
+    head_branch: 'main', head_sha: commit, path: '.github/workflows/ci.yml',
+    repository: { id: 1123713308, full_name: 'malabdullah/barberplusplus' },
+    head_repository: { id: 1123713308, full_name: 'malabdullah/barberplusplus' },
+  };
+  const result = await readGitHubCiRunEvidence({
+    ciRunId: 41,
+    commit,
+    execute: async (binary, args) => {
+      assert.equal(binary, '/usr/bin/gh');
+      assert.equal(args[1], 'repos/malabdullah/barberplusplus/actions/runs/41');
+      return { stdout: Buffer.from(JSON.stringify(run)) };
+    },
+  });
+  assert.equal(result.workflowRun.id, 41);
+  assert.equal(result.authorizing, false);
+  for (const mutate of [
+    (value) => { value.event = 'pull_request'; },
+    (value) => { value.head_sha = 'b'.repeat(40); },
+    (value) => { value.head_repository.id = 1; },
+    (value) => { value.conclusion = 'failure'; },
+  ]) {
+    const altered = structuredClone(run);
+    mutate(altered);
+    await assert.rejects(() => readGitHubCiRunEvidence({
+      ciRunId: 41, commit, execute: async () => ({ stdout: Buffer.from(JSON.stringify(altered)) }),
+    }), /protected-main source/);
+  }
+});
+
+test('collects the exact bounded migration tree from one immutable commit', async () => {
+  const commit = 'a'.repeat(40);
+  const files = [
+    ['20260901000000_baseline.sql', 'select 1;\n'],
+    ['20260903111635_harden_authorization.sql', 'select 2;\n'],
+  ];
+  const listing = files.map(([name, body], index) => ({ name, path: `supabase/migrations/${name}`, type: 'file', size: Buffer.byteLength(body), sha: String(index + 1).repeat(40) }));
+  const responses = new Map([[`repos/malabdullah/barberplusplus/contents/supabase/migrations?ref=${commit}`, listing]]);
+  for (const [index, [name, body]] of files.entries()) responses.set(`repos/malabdullah/barberplusplus/contents/supabase/migrations/${name}?ref=${commit}`,
+    { ...listing[index], encoding: 'base64', content: Buffer.from(body).toString('base64') });
+  const calls = [];
+  const result = await readGitHubMigrationEvidence({ commit, execute: async (binary, args) => {
+    calls.push({ binary, args }); return { stdout: Buffer.from(JSON.stringify(responses.get(args[1]))) };
+  } });
+  const rows = files.map(([name, body]) => `${name}\0${createHash('sha256').update(body).digest('hex')}\n`).join('');
+  assert.equal(result.treeSha256, `sha256:${createHash('sha256').update(rows).digest('hex')}`);
+  assert.equal(result.latest, '20260903111635_harden_authorization');
+  assert.equal(result.authorizing, false);
+  assert.equal(calls.length, 3);
+});
+
+test('migration collection rejects alternate paths, duplicates, metadata changes and malformed content', async () => {
+  const commit = 'a'.repeat(40);
+  const base = { name: '20260901000000_baseline.sql', path: 'supabase/migrations/20260901000000_baseline.sql', type: 'file', size: 9, sha: '1'.repeat(40) };
+  for (const listing of [
+    [],
+    [base, { ...base }],
+    [{ ...base, name: '../baseline.sql' }],
+    [{ ...base, path: 'production.sql' }],
+  ]) await assert.rejects(() => readGitHubMigrationEvidence({ commit, execute: async () => ({ stdout: Buffer.from(JSON.stringify(listing)) }) }));
+  let call = 0;
+  await assert.rejects(() => readGitHubMigrationEvidence({
+    commit,
+    execute: async () => {
+      call += 1;
+      return {
+        stdout: Buffer.from(JSON.stringify(
+          call === 1
+            ? [base]
+            : { ...base, sha: '2'.repeat(40), encoding: 'base64', content: 'bad!' },
+        )),
+      };
+    },
+  }), /metadata/);
+});
+
 function manifestResponse(body, { status = 200, headers = {} } = {}) {
   return new Response(body, { status, headers });
 }
@@ -212,8 +294,8 @@ test('uses only an exact public GHCR bearer challenge and fails closed when pull
     fetchImpl: async (url, options) => {
       call += 1;
       if (call === 1) return manifestResponse('', { status: 401, headers: { 'www-authenticate': 'Bearer realm="https://ghcr.io/token",service="ghcr.io",scope="repository:malabdullah/barberplusplus-functions:pull"' } });
-      if (call === 2) return manifestResponse(JSON.stringify({ token: 'public-token' }), { headers: { 'content-type': 'application/json' } });
-      assert.equal(options.headers.Authorization, 'Bearer public-token');
+      if (call === 2) return manifestResponse(JSON.stringify({ token: 'bounded-public-registry-token' }), { headers: { 'content-type': 'application/json' } });
+      assert.equal(options.headers.Authorization, 'Bearer bounded-public-registry-token');
       return manifestResponse(body, { headers: { 'content-type': 'application/vnd.docker.distribution.manifest.v2+json', 'docker-content-digest': digest } });
     },
   });
@@ -223,6 +305,31 @@ test('uses only an exact public GHCR bearer challenge and fails closed when pull
     repository: 'malabdullah/barberplusplus-functions', digest,
     fetchImpl: async () => manifestResponse('', { status: 401, headers: { 'www-authenticate': 'Bearer realm="https://evil.invalid/token",service="ghcr.io",scope="repository:malabdullah/barberplusplus-functions:pull"' } }),
   }), /challenge/);
+});
+
+test('uses read:packages credentials only for the exact GHCR token exchange', async () => {
+  const body = JSON.stringify({ schemaVersion: 2 });
+  const digest = `sha256:${createHash('sha256').update(body).digest('hex')}`;
+  const token = 'github_pat_fixture_value_not_a_secret';
+  let call = 0;
+  const result = await readGhcrManifest({
+    repository: 'malabdullah/barberplusplus', digest,
+    credentials: { username: 'malabdullah', token },
+    fetchImpl: async (url, options) => {
+      call += 1;
+      if (call === 1) return manifestResponse('', { status: 401, headers: { 'www-authenticate': 'Bearer realm="https://ghcr.io/token",service="ghcr.io",scope="repository:malabdullah/barberplusplus:pull"' } });
+      if (call === 2) {
+        assert.equal(options.headers.Authorization, `Basic ${Buffer.from(`malabdullah:${token}`).toString('base64')}`);
+        return manifestResponse(JSON.stringify({ token: 'bounded-registry-token' }));
+      }
+      assert.equal(options.headers.Authorization, 'Bearer bounded-registry-token');
+      return manifestResponse(body, { headers: { 'content-type': 'application/vnd.oci.image.manifest.v1+json', 'docker-content-digest': digest } });
+    },
+  });
+  assert.equal(result.digest, digest);
+  assert.equal(JSON.stringify(result).includes(token), false);
+  await assert.rejects(() => readGhcrManifest({ repository: 'malabdullah/barberplusplus', digest,
+    credentials: { username: 'malabdullah', token: 'short' }, fetchImpl: fetch }), /credentials/);
 });
 
 test('rejects GHCR repository, digest, redirects, content type and digest mismatch', async () => {

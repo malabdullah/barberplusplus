@@ -3,6 +3,17 @@ set -eu
 
 node --test scripts/local-service-pins.node-test.mjs
 
+workflow=.github/workflows/deploy-staging.yml
+if grep -Eq 'runs-on:.*self-hosted|DOKPLOY_|STAGING_VPS_AUTOMATION_READY|staging-vps-deploy-preflight' "$workflow"; then
+  echo 'Staging workflow exposes a server runner or deployment configuration.' >&2
+  exit 1
+fi
+grep -F 'environment:' "$workflow" >/dev/null
+grep -F 'uses: actions/attest@v4' "$workflow" >/dev/null
+grep -F 'artifact-metadata: write' "$workflow" >/dev/null
+grep -F 'uses: actions/upload-artifact@v4' "$workflow" >/dev/null
+grep -F 'name: staging-release-request-${{ github.event.workflow_run.head_sha }}-${{ github.run_id }}-${{ github.run_attempt }}' "$workflow" >/dev/null
+
 immutable_digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 release_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 accepted_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

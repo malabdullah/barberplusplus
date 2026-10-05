@@ -30,6 +30,16 @@ function parseJsonBuffer(stdout, name, maximum = maxJsonBytes) {
   }
 }
 
+function decodeCanonicalBase64(content, name, maximum) {
+  if (typeof content !== 'string') fail(`${name} is not base64 content`);
+  const encoded = content.replace(/\n/g, '');
+  if (encoded.length === 0 || encoded.length % 4 !== 0 ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) fail(`${name} base64 is invalid`);
+  const bytes = Buffer.from(encoded, 'base64');
+  if (bytes.toString('base64') !== encoded || bytes.length === 0 || bytes.length > maximum) fail(`${name} base64 is noncanonical or oversized`);
+  return bytes;
+}
+
 async function ghApi(execute, ghPath, endpoint, maximum = maxJsonBytes) {
   if (!endpoint.startsWith(apiPrefix) || /[\0\s]/.test(endpoint) || endpoint.includes('..')) fail('GitHub API endpoint is not allowlisted');
   const { stdout } = await execute(ghPath, [
@@ -69,13 +79,7 @@ export async function readGitHubReleaseEvidence({
   }
   const workflowFile = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}contents/.github/workflows/deploy-staging.yml?ref=${commit}`, 256 * 1024), 'workflow file', 256 * 1024);
   if (workflowFile.encoding !== 'base64' || typeof workflowFile.content !== 'string') fail('workflow file is not base64 content');
-  const encodedWorkflow = workflowFile.content.replace(/\n/g, '');
-  if (encodedWorkflow.length === 0 || encodedWorkflow.length % 4 !== 0 ||
-      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedWorkflow)) {
-    fail('workflow file base64 is invalid');
-  }
-  const workflowBytes = Buffer.from(encodedWorkflow, 'base64');
-  if (workflowBytes.toString('base64') !== encodedWorkflow) fail('workflow file base64 is noncanonical');
+  const workflowBytes = decodeCanonicalBase64(workflowFile.content, 'workflow file', 128 * 1024);
   const workflowSource = workflowBytes.toString('utf8');
   if (Buffer.from(workflowSource, 'utf8').compare(workflowBytes) !== 0) fail('workflow source is not valid UTF-8');
   if (Buffer.byteLength(workflowSource) === 0 || Buffer.byteLength(workflowSource) > 128 * 1024) fail('workflow source is absent or oversized');
@@ -107,6 +111,64 @@ export async function readGitHubReleaseEvidence({
       'persistent-replay-ledger',
       'broker-authorization',
     ]),
+  });
+}
+
+export async function readGitHubCiRunEvidence({
+  ciRunId,
+  commit,
+  ghPath = '/usr/bin/gh',
+  execute = execFileAsync,
+}) {
+  const runId = positiveId(ciRunId, 'ciRunId');
+  if (!/^[0-9a-f]{40}$/.test(commit)) fail('commit must be a lowercase full SHA');
+  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  const run = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/runs/${runId}`), 'CI workflow run');
+  if (String(run.id) !== runId || !Number.isSafeInteger(run.run_attempt) || run.run_attempt < 1
+      || run.status !== 'completed' || run.conclusion !== 'success'
+      || run.event !== 'push' || run.head_branch !== 'main' || run.head_sha !== commit
+      || !['.github/workflows/ci.yml', '.github/workflows/ci.yml@main'].includes(run.path)
+      || run.repository?.id !== 1123713308 || run.repository?.full_name !== 'malabdullah/barberplusplus'
+      || run.head_repository?.id !== 1123713308 || run.head_repository?.full_name !== 'malabdullah/barberplusplus') {
+    fail('CI workflow run does not match the successful protected-main source');
+  }
+  return Object.freeze({ status: 'read-only-ci-run-evidence-collected', authorizing: false, workflowRun: run });
+}
+
+export async function readGitHubMigrationEvidence({ commit, ghPath = '/usr/bin/gh', execute = execFileAsync }) {
+  if (!/^[0-9a-f]{40}$/.test(commit)) fail('commit must be a lowercase full SHA');
+  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  const endpoint = `${apiPrefix}contents/supabase/migrations?ref=${commit}`;
+  const listing = parseJsonBuffer(await ghApi(execute, ghPath, endpoint, 256 * 1024), 'migration directory', 256 * 1024);
+  if (!Array.isArray(listing) || listing.length === 0 || listing.length > 64) fail('migration directory inventory is invalid');
+  const names = listing.map((entry) => entry?.name);
+  if (new Set(names).size !== names.length || names.some((name) => !/^\d{14}_[a-z0-9_]+\.sql$/.test(name))) fail('migration filename is invalid or duplicated');
+  names.sort();
+  const migrations = [];
+  let totalBytes = 0;
+  for (const name of names) {
+    const listed = listing.find((entry) => entry.name === name);
+    if (listed.type !== 'file' || listed.path !== `supabase/migrations/${name}` || !/^[0-9a-f]{40}$/.test(listed.sha)
+        || !Number.isSafeInteger(listed.size) || listed.size < 1 || listed.size > 256 * 1024) fail('migration directory entry is invalid');
+    const fileEndpoint = `${apiPrefix}contents/supabase/migrations/${name}?ref=${commit}`;
+    const file = parseJsonBuffer(await ghApi(execute, ghPath, fileEndpoint, 512 * 1024), `migration ${name}`, 512 * 1024);
+    if (file.type !== 'file' || file.name !== name || file.path !== listed.path || file.sha !== listed.sha || file.size !== listed.size || file.encoding !== 'base64') {
+      fail('migration file metadata does not match its directory entry');
+    }
+    const bytes = decodeCanonicalBase64(file.content, `migration ${name}`, 256 * 1024);
+    if (bytes.length !== file.size) fail('migration file size does not match');
+    totalBytes += bytes.length;
+    if (totalBytes > maxJsonBytes) fail('migration set is oversized');
+    migrations.push(Object.freeze({ name, sha256: createHash('sha256').update(bytes).digest('hex') }));
+  }
+  const tree = migrations.map((entry) => `${entry.name}\0${entry.sha256}\n`).join('');
+  return Object.freeze({
+    status: 'read-only-migration-evidence-collected',
+    authorizing: false,
+    commit,
+    treeSha256: `sha256:${createHash('sha256').update(tree).digest('hex')}`,
+    latest: names.at(-1).replace(/\.sql$/, ''),
+    migrations: Object.freeze(migrations),
   });
 }
 
@@ -208,9 +270,16 @@ function header(response, name) {
   return response.headers?.get?.(name) || response.headers?.get?.(name.toLowerCase()) || null;
 }
 
-export async function readPublicGhcrManifest({ repository, digest, fetchImpl = fetch }) {
+export async function readGhcrManifest({ repository, digest, credentials, fetchImpl = fetch }) {
   if (!['malabdullah/barberplusplus', 'malabdullah/barberplusplus-functions'].includes(repository)) fail('GHCR repository is not allowlisted');
   if (!digestPattern.test(digest)) fail('GHCR digest is invalid');
+  if (credentials !== undefined) {
+    if (!credentials || Object.keys(credentials).join(',') !== 'username,token'
+        || credentials.username !== 'malabdullah' || typeof credentials.token !== 'string'
+        || credentials.token.length < 20 || credentials.token.length > 512 || /[\0\r\n]/.test(credentials.token)) {
+      fail('GHCR read credentials are invalid');
+    }
+  }
   const manifestUrl = `https://ghcr.io/v2/${repository}/manifests/${digest}`;
   const headers = { Accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' };
   let response = await fetchImpl(manifestUrl, { method: 'GET', headers, redirect: 'error' });
@@ -218,10 +287,16 @@ export async function readPublicGhcrManifest({ repository, digest, fetchImpl = f
     const challenge = header(response, 'www-authenticate');
     const match = challenge?.match(/^Bearer realm="(https:\/\/ghcr\.io\/token)",service="ghcr\.io",scope="([^"]+)"$/);
     if (!match || match[2] !== `repository:${repository}:pull`) fail('GHCR authentication challenge is not allowed');
-    const tokenResponse = await fetchImpl(`${match[1]}?service=ghcr.io&scope=${encodeURIComponent(match[2])}`, { method: 'GET', redirect: 'error' });
+    const tokenHeaders = credentials ? { Authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.token}`).toString('base64')}` } : undefined;
+    const tokenResponse = await fetchImpl(`${match[1]}?service=ghcr.io&scope=${encodeURIComponent(match[2])}`, {
+      method: 'GET', headers: tokenHeaders, redirect: 'error',
+    });
     if (!tokenResponse.ok) fail('public GHCR pull token is unavailable; a read:packages identity is required');
-    const tokenBody = await tokenResponse.json();
-    if (typeof tokenBody.token !== 'string' || tokenBody.token.length > 4096) fail('GHCR pull token response is invalid');
+    const tokenBytes = Buffer.from(await tokenResponse.arrayBuffer());
+    if (tokenBytes.length === 0 || tokenBytes.length > 64 * 1024) fail('GHCR pull token response is absent or oversized');
+    let tokenBody;
+    try { tokenBody = JSON.parse(tokenBytes.toString('utf8')); } catch { fail('GHCR pull token response is not JSON'); }
+    if (typeof tokenBody.token !== 'string' || tokenBody.token.length < 20 || tokenBody.token.length > 4096) fail('GHCR pull token response is invalid');
     response = await fetchImpl(manifestUrl, { method: 'GET', headers: { ...headers, Authorization: `Bearer ${tokenBody.token}` }, redirect: 'error' });
   }
   if (!response.ok) fail(`GHCR manifest is unavailable with status ${response.status}`);
@@ -243,4 +318,8 @@ export async function readPublicGhcrManifest({ repository, digest, fetchImpl = f
     sizeInBytes: body.length,
     remainingAuthorizationChecks: Object.freeze(['image-attestation', 'commit-and-run-binding', 'broker-authorization']),
   });
+}
+
+export async function readPublicGhcrManifest(options) {
+  return readGhcrManifest({ ...options, credentials: undefined });
 }
