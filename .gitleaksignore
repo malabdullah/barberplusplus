@@ -12,3 +12,6 @@ e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js
 # Verified exact line against https://sum.golang.org/lookup/golang.org/x/oauth2@v0.36.0
 # This exact historical secret-scan match only; no rule/path/CVE suppression.
 3a4ba829a522ff6e11c6686cf624e27be72f9c1b:ops/staging-vps/auth-security/go-dependencies.patch:generic-api-key:28
+# Historical permission-test fixture contained only the literal SYNTHETIC=fixture.
+# Not a credential; current fixture is comment-only. Exact commit/path/line only.
+7a1c8608ed413d579dac0f98346cb6877c2d7001:scripts/staging-vps.node-test.mjs:generic-api-key:19

@@ -15,8 +15,8 @@ test('bootstrap SQL permissions survive private umask without relaxing secrets o
     mkdirSync(db, { recursive: true, mode: 0o700 });
     const names = ['realtime', '_supabase', 'logs', 'webhooks', 'pooler', 'jwt', 'roles'];
     for (const name of names) writeFileSync(join(db, `${name}.sql`), '-- public source fixture\n', { mode: 0o600 });
-    const secret = join(root, '.env');
-    writeFileSync(secret, 'SYNTHETIC=fixture\n', { mode: 0o600 });
+    const protectedConfig = join(root, '.env');
+    writeFileSync(protectedConfig, '# permission-test fixture, no credentials\n', { mode: 0o600 });
     const source = readFileSync(new URL('./bootstrap-staging-supabase.sh', import.meta.url), 'utf8');
     const loop = source.match(/for sql_name in realtime _supabase logs webhooks pooler jwt roles; do\n[\s\S]*?\ndone/);
     assert.ok(loop, 'Expected bounded SQL permission preparation');
@@ -24,11 +24,11 @@ test('bootstrap SQL permissions survive private umask without relaxing secrets o
     execute();
     for (const name of names) assert.equal(statSync(join(db, `${name}.sql`)).mode & 0o777, 0o644);
     assert.equal(statSync(root).mode & 0o777, 0o700);
-    assert.equal(statSync(secret).mode & 0o777, 0o600);
+    assert.equal(statSync(protectedConfig).mode & 0o777, 0o600);
     unlinkSync(join(db, 'roles.sql'));
-    symlinkSync(secret, join(db, 'roles.sql'));
+    symlinkSync(protectedConfig, join(db, 'roles.sql'));
     assert.throws(execute);
-    assert.equal(statSync(secret).mode & 0o777, 0o600);
+    assert.equal(statSync(protectedConfig).mode & 0o777, 0o600);
     unlinkSync(join(db, 'roles.sql'));
     assert.throws(execute);
   } finally {

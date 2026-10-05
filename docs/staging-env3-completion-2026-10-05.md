@@ -128,3 +128,9 @@ was identified; this is not independent human review. The proposed
 candidate images, isolation, synthetic data, preserved legacy resources and
 security limitations. Its specific owner approval remains required before any
 permanent stack is created. Frontend publication and public cutover are excluded.
+
+GitHub run `37265245228` identified the literal, non-secret permission-test fixture
+as a generic API key. The fixture is now comment-only. Only that exact historical
+commit/path/line fingerprint is recorded in `.gitleaksignore`, preserving history
+without disabling a rule or scanning exemption for current files. New CI must
+pass independently; the earlier run is not reported as successful.
