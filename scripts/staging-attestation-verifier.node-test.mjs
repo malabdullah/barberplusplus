@@ -188,6 +188,17 @@ test('online verification upgrades only successful gh output and remains non-aut
   assert.equal(invocation[2].shell, undefined);
 });
 
+test('root-installed official staging CLI path is explicitly supported without PATH lookup', async () => {
+  let binary;
+  const result = await verifyStagingEnvelopeAttestationOnline({
+    artifactPath: '/evidence/request.json', artifactDigest, commit, releaseRunId, releaseRunAttempt,
+    ghPath: '/usr/local/bin/gh',
+    execute: async (file) => { binary = file; return { stdout: JSON.stringify(verifiedOutput()) }; },
+  });
+  assert.equal(binary, '/usr/local/bin/gh');
+  assert.equal(result.authorizing, false);
+});
+
 test('verifies each immutable GHCR subject against the release workflow identity', async () => {
   const repository = 'ghcr.io/malabdullah/barberplusplus';
   const digest = `sha256:${artifactDigest}`;

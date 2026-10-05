@@ -176,7 +176,7 @@ export async function verifyStagingEnvelopeAttestation({
   ghPath = '/usr/bin/gh',
   execute = execFileAsync,
 }) {
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
   const args = buildGhAttestationVerifyArguments({ artifactPath, bundlePath, trustedRootPath, commit });
   const { stdout } = await execute(ghPath, args, {
     encoding: 'utf8',
@@ -207,7 +207,7 @@ export async function verifyStagingEnvelopeAttestationOnline({
   ghPath = '/usr/bin/gh',
   execute = execFileAsync,
 }) {
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
   const args = buildGhAttestationVerifyOnlineArguments({ artifactPath, commit });
   const { stdout } = await execute(ghPath, args, {
     encoding: 'utf8',
@@ -252,7 +252,7 @@ export async function verifyStagingImageAttestationOnline({
       || manifestEvidence.digest !== digest) {
     fail('authenticated immutable manifest evidence does not match the image');
   }
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
   const args = buildGhImageAttestationVerifyOnlineArguments({ repository, digest, commit });
   const { stdout } = await execute(ghPath, args, {
     encoding: 'utf8',

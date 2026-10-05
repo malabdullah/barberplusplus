@@ -66,7 +66,7 @@ export async function readGitHubReleaseEvidence({
   const runId = positiveId(releaseRunId, 'releaseRunId');
   const artifact = positiveId(artifactId, 'artifactId');
   if (!/^[0-9a-f]{40}$/.test(commit)) fail('commit must be a lowercase full SHA');
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
 
   const run = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/runs/${runId}`), 'workflow run');
   const approvals = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/runs/${runId}/approvals`, 256 * 1024), 'approval history', 256 * 1024);
@@ -122,7 +122,7 @@ export async function readGitHubCiRunEvidence({
 }) {
   const runId = positiveId(ciRunId, 'ciRunId');
   if (!/^[0-9a-f]{40}$/.test(commit)) fail('commit must be a lowercase full SHA');
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
   const run = parseJsonBuffer(await ghApi(execute, ghPath, `${apiPrefix}actions/runs/${runId}`), 'CI workflow run');
   if (String(run.id) !== runId || !Number.isSafeInteger(run.run_attempt) || run.run_attempt < 1
       || run.status !== 'completed' || run.conclusion !== 'success'
@@ -137,7 +137,7 @@ export async function readGitHubCiRunEvidence({
 
 export async function readGitHubMigrationEvidence({ commit, ghPath = '/usr/bin/gh', execute = execFileAsync }) {
   if (!/^[0-9a-f]{40}$/.test(commit)) fail('commit must be a lowercase full SHA');
-  if (!['/usr/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
+  if (!['/usr/bin/gh', '/usr/local/bin/gh', '/opt/homebrew/bin/gh'].includes(ghPath)) fail('ghPath is not allowlisted');
   const endpoint = `${apiPrefix}contents/supabase/migrations?ref=${commit}`;
   const listing = parseJsonBuffer(await ghApi(execute, ghPath, endpoint, 256 * 1024), 'migration directory', 256 * 1024);
   if (!Array.isArray(listing) || listing.length === 0 || listing.length > 64) fail('migration directory inventory is invalid');

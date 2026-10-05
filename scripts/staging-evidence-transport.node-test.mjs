@@ -133,13 +133,14 @@ test('collects only allowlisted read-only GitHub evidence and bounded archive da
     return { stdout: Buffer.from(JSON.stringify(responses.get(endpoint))) };
   };
   const result = await readGitHubReleaseEvidence({
-    releaseRunId: runId, artifactId, commit, ghPath: '/opt/homebrew/bin/gh', execute,
+    releaseRunId: runId, artifactId, commit, ghPath: '/usr/local/bin/gh', execute,
   });
   assert.equal(result.status, 'read-only-github-evidence-collected');
   assert.equal(result.authorizing, false);
   assert.equal(result.workflowFile.source, workflowSource);
   assert.equal(result.downloadedArtifact.envelopeJson, envelope);
   assert.equal(calls.length, 6);
+  assert.ok(calls.every((call) => call.binary === '/usr/local/bin/gh'));
   assert.ok(calls.every((call) => call.args[0] === 'api' && call.args.includes('GET') && call.options.encoding === null));
 });
 

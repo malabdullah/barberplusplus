@@ -44,10 +44,9 @@ The current Ubuntu `gh` candidate is 2.45.0, while the verifier requires the
 modern attestation interface; installing the old package is not sufficient.
 The official CLI release inspected was 2.102.0. A package-manager simulation
 for Chrony 4.5-1ubuntu4.2 would add `tzdata-legacy` and replace
-`systemd-timesyncd`; **no packages or clock services were changed**. This
-clock-service replacement requires specific owner approval and post-install
-synchronization/offset verification. A boolean NTP status does not satisfy the
-verifier's bounded clock-error test.
+`systemd-timesyncd`; no packages were changed during that preflight. The owner
+subsequently approved this prerequisite installation; results follow below.
+A boolean NTP status alone does not satisfy the verifier's bounded clock-error test.
 
 Live GitHub protection still requires all five app-bound checks, strict updates,
 PRs and administrator enforcement, with no force pushes/deletions. Staging still
@@ -74,6 +73,44 @@ DNS/public routing or deploy a frontend. New GHCR packages default to private;
 verify visibility before using them and never silently change it.
 Sources: [official attest action](https://github.com/actions/attest),
 [GHCR publication and visibility](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+### Approved prerequisite installation
+
+The owner explicitly replied “Approve staging verifier prerequisites.” At
+06:37:50 UTC on October 5, the one-time staging-only installer completed:
+
+- Official GitHub CLI 2.102.0 at `/usr/local/bin/gh`, root-owned 0755.
+  The downloader checked the fixed official AMD64 archive SHA-256
+  `bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386`.
+  Installed binary SHA-256:
+  `7469124f706944133d6a169691dd1c6c3511b12e85878d255e044e2948df4c9b`.
+  Required attestation command flags were verified. No GitHub login, credential
+  permission, global auth configuration or deployment was added by installation.
+- Chrony `4.5-1ubuntu4.2` and `tzdata-legacy=2026c-0ubuntu0.24.04.1` installed
+  from the existing Ubuntu package sources. Only `systemd-timesyncd` was removed,
+  as approved. Prior configuration/service-state evidence is preserved root-only
+  in `/var/lib/barber-staging-verifier-prerequisites`; replacement is recoverable
+  by a separately reviewed package/service rollback, not a blind installer retry.
+- Chrony is active and the host reports NTP synchronized. The actual verifier
+  accepted fresh tracking evidence at 06:39:08 UTC, measured error bound
+  `0.001971134` seconds (about 2 ms), below its one-second limit. This is evidence
+  of that observation, not permanent future clock validity.
+- Every previously running Docker container retained its ID, name and image.
+  DNS, firewall, production, existing application services and deployment
+  memberships were unchanged. Automation remains disabled.
+
+The frozen installer is `/root/barber-verifier-tools.sXvbdy/install.mjs`, SHA-256
+`9a9472d56b7c19ec0c6f4613936fd8b74c9965d0ad7a4163708ec6768aa7a6a3`.
+It refuses an existing destination or unexpected package-plan changes.
+`installed.json` is the historical install receipt; `clock-verified.json` is
+the subsequent separate clock proof in the root-private evidence directory.
+Do not overwrite either to imply later observations.
+
+The verifier transport and signature helpers now explicitly allow the installed
+`/usr/local/bin/gh` path without PATH lookup. Root ownership and fixed binaries
+still need enforcing in the future service installer. The pre-install combined
+commit `63b2bc3` passed all five CI jobs in run `37272823451`; this result does not
+certify subsequent prerequisite integration changes.
 
 ## Implemented repository components
 
