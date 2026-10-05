@@ -4,6 +4,11 @@ Updated 2026-09-30. This document supersedes the Mac hosting target in the older
 staging runbooks; those describe the retained legacy implementation, not the
 completed VPS target. No production resources are part of this transition.
 
+October 5 update: the owner-approved permanent **private backend** is now running
+and its complete eight-service backup/restore passed. The September observations
+below are historical. Current resources and remaining release gates are recorded
+in [private bootstrap execution](staging-private-bootstrap-execution.md).
+
 ## Approved target and current state
 
 - Hostinger VPS `1207055`, hostname `srv1207055`, IPv4 `185.97.146.8`.

@@ -104,10 +104,13 @@ backup adapter, freshness monitoring, retention and key rotation remain pending.
 1. Review and publish source-bound immutable frontend/Functions/component
    artifacts through CI; prove restricted registry pulls. Adapt the VPS release
    consumer with Env4; automation remains disabled and the broker inspect-only.
-2. Approve and apply a precise management-access hardening plan. UFW was inactive
-   and Dokploy port 3000 host-published. One external connection timeout is not a
-   complete firewall audit. Existing service/firewall changes are not authorized
-   by this private-bootstrap approval.
+2. Complete the management-access review before public activation. Hostinger's
+   staging firewall `367995` was visibly **Active** on October 5: TCP 22 from the
+   previously approved owner `/32`, TCP 80/443 from any source, then drop-all.
+   No rule was changed. UFW was inactive and Dokploy port 3000 host-published;
+   provider filtering is the verified perimeter control, not loopback binding.
+   Additional host-side defense needs a precise Docker-aware plan and approval;
+   blindly enabling UFW can disrupt Docker/SSH and is not a verified fix.
 3. Obtain specific frontend release and staging-only ingress approval; configure
    TLS/Cloudflare Access default-deny with only the exact signed Meta paths public.
    Existing public staging addresses still target the earlier Mac lab, not this
@@ -125,3 +128,27 @@ patch. Realtime retains 52 HIGH matches across 12 advisories, zero CRITICAL;
 the exact restricted synthetic-staging exception still requires review by
 October 18, 2026 at 00:00 UTC. Neither this bootstrap nor recovery renews that
 exception or establishes a clean scan. See the component security inventory.
+
+## Env4 handoff
+
+The cross-chat status tool was still unavailable after bootstrap; no message
+delivery or coordination success is claimed. The Env4 checkout was inspected
+read-only at `4c45c9a`; no files there were changed. The current staging changes
+are in draft PR3, branch `codex/staging-completion`, not merged to `main`.
+
+For the next CI/CD integration review:
+
+- Use this actual private model, fixed resource names and four-entry migration
+  history; do not rerun bootstrap, reuse the legacy Mac deployment scripts, or
+  apply the generic overlay over these live volumes.
+- The real backup format, capture/restore operators and receipts now exist, but
+  capture is a bounded one-time operator, not the constrained recurring broker
+  adapter. Keep broker mutations and `STAGING_VPS_AUTOMATION_READY` disabled.
+- Frontend publication, component/Functions provenance and actual GHCR pulls
+  remain open. Cached native image IDs are not registry digests or attestations.
+- Implement/test the reviewed release-evidence verifier and narrow adapters
+  before proposing activation. Runtime credentials must stay off GitHub; the
+  deploy identity must not gain Docker, sudo or arbitrary-command access.
+- Preserve separate owner approval for the exact frontend release, protected
+  GitHub environment approval and staged public ingress. Private-bootstrap
+  authorization cannot be reused to approve those actions.
