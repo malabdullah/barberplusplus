@@ -25,7 +25,7 @@
     "test:release": "node --test scripts/release-manifest.node-test.mjs",
     "test:staging-vps": "node --test scripts/staging-vps.node-test.mjs scripts/staging-postgres-candidate.node-test.mjs scripts/staging-fixtures.node-test.mjs scripts/staging-core-recovery.node-test.mjs scripts/staging-recovery-roles.node-test.mjs scripts/staging-core-candidates.node-test.mjs scripts/staging-full-stack.node-test.mjs scripts/staging-private-model.node-test.mjs scripts/staging-private-backup-format.node-test.mjs ops/staging-vps/auth-security/prepare.node-test.mjs",
     "test:staging-broker": "python3 -I -B ops/staging-vps/broker/test_broker.py && sh -n ops/staging-vps/broker/install.sh",
-    "test:staging-verifier": "node --test scripts/staging-release-envelope.node-test.mjs scripts/staging-attestation-verifier.node-test.mjs scripts/staging-approval-evidence.node-test.mjs scripts/staging-release-evidence.node-test.mjs scripts/staging-evidence-transport.node-test.mjs scripts/staging-vps-verifier.node-test.mjs",
+    "test:staging-verifier": "node --test scripts/staging-release-envelope.node-test.mjs scripts/staging-attestation-verifier.node-test.mjs scripts/staging-approval-evidence.node-test.mjs scripts/staging-release-evidence.node-test.mjs scripts/staging-evidence-transport.node-test.mjs scripts/staging-vps-verifier.node-test.mjs scripts/staging-observer.node-test.mjs",
     "test:staging-envoy-candidate": "node scripts/test-staging-envoy-candidate.mjs",
     "test:staging-envoy-safety": "node --test scripts/local-docker-probe.node-test.mjs scripts/staging-envoy-cors.node-test.mjs",
     "test:staging-postgres": "node scripts/test-staging-postgres.mjs",
