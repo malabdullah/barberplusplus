@@ -1,5 +1,13 @@
 # Restricted staging GitHub access
 
+October 8 update: the existing encrypted App key is now wired only to the
+owner-approved **manual, read-only** observer through systemd credentials.
+Live runs verified the exact App/repository/read scopes and token revocation,
+and, after the approved clock adjustment, rejected the expired release envelope.
+No timer, polling, package-reader
+credential delivery or deployment capability was added. See
+[installed observer receipt](staging-manual-observer.md).
+
 ## October 5, 2026 — partial provisioning, not deployment authorization
 
 Later October 5 update: after the approved merge/build, a read-only VPS probe
