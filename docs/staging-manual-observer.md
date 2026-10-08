@@ -4,6 +4,12 @@ Scope approved October 8, 2026: prepare, test and install a **manual, read-only*
 release checker using the existing restricted GitHub App. No deployment, timer,
 scheduled polling, broker membership, DNS, firewall or production change.
 
+Latest October 8 result: the separately approved [clock sampling adjustment](staging-clock-sampling.md)
+resolved the stale-reference blocker. The installed service now passes the
+clock check, correctly rejects the expired October 5 envelope, and revokes its
+temporary token. A fresh full service success proof still needs a new approved
+first-attempt release. Historical failure details below remain for audit.
+
 ## Trust boundary
 
 The root-owned program runs as existing `barber-staging-deploy` UID 997/GID 985
@@ -134,9 +140,9 @@ their temporary tokens. At 07:38 UTC Chrony was synchronized but its selected
 reference sample was 23 minutes old, exceeding the verifier's existing
 five-minute reference-age limit. Its default sampling interval can exceed that
 limit. Clock configuration was not changed and the limit was not weakened.
-Owner approval for a staging-only sampling adjustment has been requested.
-The installed service has **not yet reached the live expired-envelope check**
-or passed a fresh full release check. Its failed unit state is intentional
+At that point, approval for a staging-only sampling adjustment was requested;
+the later approved change and successful expiry rejection are linked above.
+The service has not passed a fresh full release check. Its failed unit state is intentional
 evidence of the closed gate, not a running/crashed backend service.
 
 Private 0600 per-run audit files survive service exits; normal locks were

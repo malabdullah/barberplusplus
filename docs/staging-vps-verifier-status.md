@@ -4,9 +4,11 @@ Status: manual read-only observer installed; automation and deployment disabled.
 
 October 8 update: the owner approved the manual observer installation. Its
 credential lifecycle, effective unprivileged identity, private audit records and
-interrupted-invocation lock were tested on the VPS. Live observation currently
-rejects the stale Chrony reference sample and revokes its token. A sampling
-adjustment needs owner approval; fresh full service verification and every
+interrupted-invocation lock were tested on the VPS. Live observation initially
+rejected the stale Chrony reference sample and revoked its token. The owner then
+approved the [sampling adjustment](staging-clock-sampling.md): the real clock
+gate now passes and the expired October 5 envelope is correctly rejected.
+Fresh full service verification and every
 deployment gate remain incomplete. See [manual observer receipt](staging-manual-observer.md)
 and [replacement image publication](staging-replacement-image-publication.md).
 Later dated receipts supersede historical installation/publication statements
