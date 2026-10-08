@@ -1,6 +1,6 @@
 # Env3 manual-first launch — preparation, October 8, 2026
 
-**Privately deployed; public cutover and acceptance pending.** The owner approved manual-first staging launch,
+**Live private sandbox; same-host login fix verified.** The owner approved manual-first staging launch,
 with automation remaining disabled. This changes the executor prerequisite,
 not the exact-release approval, recovery, isolation or acceptance gates.
 Production is out of scope. No code merge is authorized by this record.
@@ -252,3 +252,20 @@ tests and `git diff --check` passed. Existing bundle-size/dynamic-import warning
 remain non-blocking; this is not live browser evidence. Direct public TCP/HTTP
 probes to staging ports 18080 and 54331 timed out instead of reaching either
 application (consistent with zero published ports and provider firewall policy).
+
+## DNS cutover completed; acceptance blocker found
+
+The owner explicitly approved deleting and recreating only the two staging DNS
+records. Both were replaced successfully through the new tunnel route form;
+both are proxied/Auto and point to
+`890d4536-b73b-47de-be24-f45a064a79f3.cfargotunnel.com`.
+The new tunnel has exactly the two application routes to the private origins
+above and a `http_status:404` catch-all. All other DNS records, Access policies,
+old Mac tunnel/routes and production are unchanged. The old DNS values above
+remain the rollback targets; the removed record identities cannot be restored,
+but equivalent DNS records can be recreated or edited using those retained values.
+
+See [live acceptance and resolved login defect](staging-live-acceptance.md).
+This is the manual, synthetic-only sandbox scope, not production or fully
+automated operational acceptance. Do not generate a production-promotable
+accepted manifest from this restricted result.
