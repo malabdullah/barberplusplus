@@ -1,6 +1,6 @@
 # Env3 manual-first launch — preparation, October 8, 2026
 
-**Not deployed or accepted.** The owner approved manual-first staging launch,
+**Privately deployed; public cutover and acceptance pending.** The owner approved manual-first staging launch,
 with automation remaining disabled. This changes the executor prerequisite,
 not the exact-release approval, recovery, isolation or acceptance gates.
 Production is out of scope. No code merge is authorized by this record.
@@ -179,3 +179,76 @@ credentials or egress. The approved two-core VPS is for initial tests, not an
 unlimited capacity claim. Env3 is not complete until remaining gates pass.
 
 Reference: [Cloudflare's official remote-tunnel setup](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/).
+
+## Approved execution and private-origin recovery — October 8
+
+The owner explicitly approved deploying release `6217cb3` from this exact plan
+and moving only the two staging hostnames to the VPS. Access remains private;
+automation and external AI/WhatsApp calls remain disabled; no database reset.
+
+The first one-shot attempt updated only Functions/gateway and added the isolated
+frontend. Docker on this host retained requested loopback port bindings in
+HostConfig but did not publish them from internal-only networks. Loopback health
+failed before routing changes. The operator restored the original Functions and
+gateway and stopped the new frontend, preserving all configuration and receipts.
+The frontend subsequently passed a diagnostic health check on its private IP.
+
+The reviewed recovery operator keeps both networks internal and removes the
+ineffective port mappings. It changes only the Functions image and frontend
+configuration. It verifies existing non-target container identities against the
+first attempt, exact configuration/template/image identities, migration hashes,
+fresh backup and both successful restore receipts before mutation. It preserves
+the first attempt's files rather than deleting markers or replaying bootstrap.
+All preflight checks passed after correcting a source-file checksum mistakenly
+used as a deployed-configuration checksum; the actual configuration hash matches
+both `prepared.json` and the first attempt's `started.json`:
+`15016fbbc08ce25c311783227f4b039288e4b6ed1cd584d6188605a32ef5da5d`.
+
+Recovery operator: `scripts/resume-manual-staging-first-release.mjs`, frozen as
+`/root/barber-manual-release.TeZmqs/scripts/resume-manual-staging-first-release-v3.mjs`,
+SHA-256 `e002af4b4dfe5de199acb1880527869f1fde2e80d5c3030d4e4dff6f8e0252ae`.
+Original one-shot operator SHA-256:
+`73ea4447d90c2d490466099a80f785b4d551dcfaa1194d75039bfb2166b73395`.
+
+The recovery completed successfully. Exact approved frontend and Functions
+images are running, with zero published ports and no non-target container
+changes. Receipt: `/opt/barber-staging/manual-first-release/origin-verified.json`.
+Candidate files: `backend.private-origin.json`, `frontend.private-origin.json`;
+attempt record: `private-origin-started.json`. These are root-private and must
+not be printed or committed. Do not rerun either one-shot operator against the
+completed markers.
+
+Verified host-to-private-bridge origins:
+
+- Frontend: `http://172.22.0.2:8080`.
+- API gateway: `http://172.21.0.5:8000`.
+
+Frontend health/runtime identity/noindex and Auth health passed. A synthetic
+barber login passed; own-branch access returned one row and the other tenant
+returned none. Unsigned POSTs to both exact Meta endpoints returned 401.
+These are private-origin checks, not public ingress or browser acceptance.
+Docker bridge addresses are not pinned: after any container/network recreation,
+inspect ownership, network isolation and new addresses, validate health and
+update only these tunnel origins before declaring service restored. Never open
+host ports or attach these containers to an external network to work around it.
+
+Cloudflare's create-route form rejected the existing frontend DNS record. A
+temporary edit of that CNAME to the new tunnel did not resolve the conflict, so
+it was restored and the UI verified the original Mac tunnel target. Both staging
+DNS records remain proxied/Auto pointing to
+`26a265bd-d46f-4fe0-9f81-182b5670da8a.cfargotunnel.com`; all other records and
+Access rules are unchanged. Frontend DNS record ID:
+`d5da0b4152457c663d41b22e745fa111`. No successful new tunnel route is claimed.
+The owner has been asked for the additional delete-and-recreate action on only
+these two DNS records. Retain the old Mac routes/tunnel for routing rollback.
+
+The existing Mac Access service-token file was verified present with private
+permissions and both required fields, without displaying credentials. Public
+boundary and browser tests can use it in memory after cutover. No credential
+needs to be pasted into chat.
+
+Post-operator local verification: full `npm run check`, four manual configuration
+tests and `git diff --check` passed. Existing bundle-size/dynamic-import warnings
+remain non-blocking; this is not live browser evidence. Direct public TCP/HTTP
+probes to staging ports 18080 and 54331 timed out instead of reaching either
+application (consistent with zero published ports and provider firewall policy).
