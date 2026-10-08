@@ -123,9 +123,37 @@ Bypass application `9e8eafcd-8a13-4992-9efe-df0769f09a72` contains only
 The gateway/function checks still require signatures/secrets and exact paths.
 Live HTTP tests must verify neighboring and encoded paths after any cutover.
 
-A new, separate `barber-staging-vps` tunnel is proposed, with its own private
-credential and no CIDR/private-network routes. Tunnel creation/connector setup
-approval has been requested; nothing was created or rerouted in this inspection.
+A new, separate `barber-staging-vps` tunnel was created after the owner's
+explicit approval of tunnel creation, official connector installation and
+private credential storage. ID: `890d4536-b73b-47de-be24-f45a064a79f3`.
+Connector `78c28201-aabe-433a-bcd4-cf1837ff65ef` is healthy on `srv1207055`,
+Linux AMD64. No application, CIDR or private hostname routes were added.
+No DNS, Access, firewall, Mac tunnel or production setting was changed.
+
+Official Cloudflare 2026.10.0 binary, downloaded from its GitHub release, is
+installed at `/opt/barber-staging-cloudflared/cloudflared`; its SHA-256 matches
+the release asset digest:
+`d33ff2d14475178d2012c2c56beba87389ac5ded27649519f198a7d3134a99db`.
+The enabled `barber-staging-cloudflared.service` uses a dynamic non-root user,
+empty capability sets, no-new-privileges, strict filesystem protections and
+256 MiB/50% CPU/64-task limits. It is a persistent network connector, **not
+deployment automation**. Automatic binary updates are disabled; future updates
+must be verified and installed deliberately.
+
+Credential: `/etc/barber-staging-cloudflared/tunnel-token`, root-owned 0600 in
+a root-owned 0700 directory. Systemd passes a private credential-file path;
+the token is not a process argument, shell-history entry, repository file or
+log value. Its temporary Mac transfer copy and clipboard contents were cleared;
+the protected VPS credential remains. Never print/copy it into the runbook.
+
+Readiness returned HTTP 200 with four connections, no process restarts, and
+metrics bound only to `127.0.0.1:20242`. Existing Docker container identity
+fingerprint stayed `97496dffd167cc0e68ddd2ab9b1bd157682f1b98fa2b695f0a31c354fd9e7c08`.
+The reviewed unit is `ops/staging-vps/barber-staging-cloudflared.service`, SHA-256
+`c5d3e64e554a28b37b0f73c2fe1799019bc5e4a96501eac239ee0fdf43ff2397`.
+`systemd-analyze verify` passed; its sandbox exposure assessment was 2.8 (OK),
+which is an advisory hardening score, not a security certification.
+
 Do not join the VPS to the old Mac tunnel: two different origins under the same
 tunnel can produce mixed environments. Keep Access unchanged and cut over only
 the two staging DNS records after exact release approval and origin tests.
@@ -135,7 +163,7 @@ the two staging DNS records after exact release approval and origin tests.
 - Reviewed, source-bound manual operator/configuration and rollback procedure;
   fresh exact-release/authorization and staging-only routing approval.
 - Permanent loopback origin health and actual deployment/rollback verification.
-- Official Cloudflare connector, separate tunnel, DNS/TLS and authenticated plus
+- Staging-only tunnel routes, DNS/TLS and authenticated plus
   unauthenticated boundary tests; no direct-origin bypass or exposed management.
 - Live frontend browser/role journeys, security headers, cross-tenant/Storage/
   Realtime checks, bounded load/resource checks and owner acceptance.
