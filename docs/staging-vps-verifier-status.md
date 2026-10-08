@@ -8,8 +8,14 @@ interrupted-invocation lock were tested on the VPS. Live observation initially
 rejected the stale Chrony reference sample and revoked its token. The owner then
 approved the [sampling adjustment](staging-clock-sampling.md): the real clock
 gate now passes and the expired October 5 envelope is correctly rejected.
-Fresh full service verification and every
-deployment gate remain incomplete. See [manual observer receipt](staging-manual-observer.md)
+The separately approved fresh run `37748167638` then passed the installed
+manual observer at 08:36 UTC, with its temporary token revoked. This verifies
+individual proofs, not replay state or deployment permission. The
+[publication/observation receipt](staging-observer-image-publication.md) records
+exact identifiers. Durable replay persistence is now implemented and tested
+locally and in an unprivileged native rehearsal, but remains
+[uninstalled and non-authorizing](staging-durable-replay-ledger.md).
+Every deployment gate remains incomplete. See [manual observer receipt](staging-manual-observer.md)
 and [replacement image publication](staging-replacement-image-publication.md).
 Later dated receipts supersede historical installation/publication statements
 below; no automated release consumption or broker mutation is enabled.
