@@ -13,7 +13,7 @@ FROM nginxinc/nginx-unprivileged:1.30.4-alpine3.24@sha256:45ce1e2e699234253d1def
 # Keep the upstream runtime pinned while applying supported security patches.
 # Return to the original unprivileged UID before any application startup.
 USER root
-RUN apk add --no-cache libexpat=2.8.5-r0 libuuid=2.42.3-r1 pcre2=10.49-r0
+RUN apk add --no-cache libexpat=2.8.5-r0 libuuid=2.42.3-r1 pcre2=10.49-r0 tiff=4.7.2-r0
 USER 101
 
 ARG APP_RELEASE=unknown

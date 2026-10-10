@@ -1,6 +1,19 @@
 # Deployment Runbook
 
-## One-time GitHub and hosting setup
+## Current manual VPS staging procedure
+
+Use [Env3 operations](env3-operations-runbook.md) and the exact-release evidence
+in [live staging acceptance](staging-live-acceptance.md). Confirm a healthy
+isolated backend, current security disposition and a fresh verified backup.
+Changes require a reviewed PR, all five required checks and owner approval of
+the concrete release. Keep deployments manual, preserve prior immutable images
+and configuration, and validate the same-host browser API route after changes.
+Do not reset/seed live data or automatically reverse database migrations.
+
+The old cross-origin browser configuration restores a known login defect and
+is not a healthy fallback. Production promotion remains separately authorized.
+
+## Historical Mac staging setup — superseded
 
 Protect `main` with pull requests and all CI jobs under the approved solo-owner
 policy in `staging-owner-approval.md`. Record a separate code-review pass and
@@ -29,7 +42,7 @@ that:
 The hook secret is environment-specific. It must never accept arbitrary shell
 commands or repository URLs.
 
-## Staging release
+## Historical Mac staging release — superseded
 
 Before the deployment job starts, the owner must approve the specific run in
 the GitHub `staging` environment. This gate was enabled on 2026-09-28; it allows
