@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { packPrivateBackup, unpackPrivateBackup, BACKUP_LIMIT, checksum } from './staging-private-backup-format.mjs';
 import { validatePrivateModel } from './staging-private-model.mjs';
 import { manualFirstRelease as release } from './staging-manual-first-release.mjs';
+const CLOUDFLARE_ACCOUNT_ID = '09c18affdb74c9a3721f79f6566df48a';
 
 export const LIVE_FILES = Object.freeze(['live/backend.json', 'live/frontend.json',
   'live/runtime-config.js', 'live/nginx.conf', 'live/routes.json', 'live/tunnel-token', 'live/cloudflared.service']);
@@ -93,8 +94,8 @@ export function unpackStagingBackup(bytes) {
   assert.equal(checksum(live['live/nginx.conf']), LIVE_HASHES.nginx);
   validateRoutes(JSON.parse(live['live/routes.json']));
   assert.equal(checksum(live['live/cloudflared.service']), checksum(readFileSync(new URL('../ops/staging-vps/barber-staging-cloudflared.service', import.meta.url))));
-  const token = JSON.parse(Buffer.from(live['live/tunnel-token'].toString().trim(), 'base64').toString());
-  assert.equal(token.t, LIVE_ROUTES.tunnelId); assert.equal(token.a, '09c18affdb74c9a3721f79f6566df48a');
-  assert.ok(typeof token.s === 'string' && token.s.length >= 20);
+  const connector = JSON.parse(Buffer.from(live['live/tunnel-token'].toString().trim(), 'base64').toString());
+  assert.equal(connector.t, LIVE_ROUTES.tunnelId); assert.equal(connector.a, CLOUDFLARE_ACCOUNT_ID);
+  assert.ok(typeof connector.s === 'string' && connector.s.length >= 20);
   return { metadata: bundle.metadata, entries: { ...legacy.entries, ...live }, model: backend, frontend, version: 2 };
 }

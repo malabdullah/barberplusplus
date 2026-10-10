@@ -107,3 +107,10 @@ The implementation intentionally rejects changed application/component models
 until their concrete approved descriptors are registered in the frozen policy.
 Do not weaken validators to install a different release. Native resource/profile
 and actual v2 restoration tests remain required because SSH access is unavailable.
+
+PR #6 CI at `c92ae0e`: application, database, dependency review and browser
+(including Linux Firefox) passed. Secret scanning found only two public resource
+identifiers: tunnel UUID and account ID. Current wording/code was clarified and
+only the exact historical commit/path/line matches were classified in the
+existing `.gitleaksignore`. No rule, path, CVE or credential-value suppression
+was introduced. The new head must pass all five checks again before advancement.

@@ -123,9 +123,10 @@ Bypass application `9e8eafcd-8a13-4992-9efe-df0769f09a72` contains only
 The gateway/function checks still require signatures/secrets and exact paths.
 Live HTTP tests must verify neighboring and encoded paths after any cutover.
 
-A new, separate `barber-staging-vps` tunnel was created after the owner's
-explicit approval of tunnel creation, official connector installation and
-private credential storage. ID: `890d4536-b73b-47de-be24-f45a064a79f3`.
+A new, separate `barber-staging-vps` tunnel was created.
+Tunnel identifier: `890d4536-b73b-47de-be24-f45a064a79f3`.
+The owner explicitly approved tunnel creation, official connector installation
+and private credential storage.
 Connector `78c28201-aabe-433a-bcd4-cf1837ff65ef` is healthy on `srv1207055`,
 Linux AMD64. No application, CIDR or private hostname routes were added.
 No DNS, Access, firewall, Mac tunnel or production setting was changed.
