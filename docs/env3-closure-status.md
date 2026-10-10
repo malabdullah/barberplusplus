@@ -93,3 +93,17 @@ before live changes or any bounded owner disposition. See the
 
 No installation-ready receipt has been fabricated. Production, live database,
 DNS, application images and deployment automation remain unchanged.
+
+## Separate implementation review pass
+
+Reviewed commit `b380a48` for staged-only host/path bindings, image/configuration
+drift rejection, private secret handling, capture timeout/restart ordering,
+no-overwrite publication, scoped disposable cleanup, retention protection and
+browser credential isolation. This is a separate solo-maintainer code-review
+pass, not independent human review. Capture/restore/install receipts and live
+release approval remain mandatory; preparation tests do not satisfy them.
+
+The implementation intentionally rejects changed application/component models
+until their concrete approved descriptors are registered in the frozen policy.
+Do not weaken validators to install a different release. Native resource/profile
+and actual v2 restoration tests remain required because SSH access is unavailable.

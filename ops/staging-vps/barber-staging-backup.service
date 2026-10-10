@@ -20,4 +20,3 @@ CPUQuota=100%
 TasksMax=128
 PrivateTmp=true
 NoNewPrivileges=true
-
