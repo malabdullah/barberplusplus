@@ -212,6 +212,8 @@ test('blocks replay by any unique identity or exact release tuple', () => {
     { requestId: baseline.binding.requestId },
     { artifactId: baseline.binding.artifactId },
     { envelopeSha256: baseline.binding.envelopeSha256 },
+    { requestId: `1123713308:${baseline.binding.releaseRunId}:1:${'a'.repeat(32)}` },
+    { requestId: `1123713308:999:1:${baseline.binding.nonce}` },
     {
       commit: baseline.binding.commit,
       frontendDigest: baseline.binding.frontendDigest,
@@ -249,4 +251,16 @@ test('fixture aggregation is never authenticated transport or deployment authori
   assert.ok(result.remainingAuthorizationChecks.includes('authenticated-github-api-evidence'));
   assert.ok(result.remainingAuthorizationChecks.includes('authenticated-ghcr-image-evidence'));
   assert.ok(result.remainingAuthorizationChecks.includes('broker-authorization'));
+});
+
+test('GitHub whole-second artifact timestamps work without weakening signed-envelope timestamps', () => {
+  const value = evidence();
+  value.artifactRecords[0].created_at = '2026-10-04T11:59:30Z';
+  assert.equal(bindStagingReleaseEvidence(value).status, 'release-artifact-binding-valid');
+  for (const invalid of ['2026-10-04T11:59:30+00:00', '2026-02-30T11:59:30Z', '2026-10-04T11:59:30.00Z', '2026-10-04T12:15:00Z']) {
+    value.artifactRecords[0].created_at = invalid;
+    assert.throws(() => bindStagingReleaseEvidence(value), /Invalid staging release binding/);
+  }
+  const envelope = JSON.parse(value.envelopeJson); envelope.issued_at = '2026-10-04T11:59:00Z';
+  assert.throws(() => parseStagingReleaseEnvelope(JSON.stringify(envelope), { now }));
 });

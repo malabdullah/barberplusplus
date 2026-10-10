@@ -245,6 +245,10 @@
   }
 
   .sidebar {
+    max-width: min(var(--sidebar-width), calc(100vw - 48px));
+    padding-top: max(var(--space-lg), env(safe-area-inset-top, 0px));
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom, 0px));
+    overscroll-behavior: contain;
     transform: translateX(-100%);
     transition: transform var(--transition-base);
     z-index: 200;

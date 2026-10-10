@@ -8,19 +8,26 @@ import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
 import { APPROVED_SOURCE, INSTALL_ROOT, SERVICES } from './staging-private-model.mjs';
-import { BACKUP_LIMIT, checksum, unpackPrivateBackup } from './staging-private-backup-format.mjs';
+import { BACKUP_LIMIT, checksum } from './staging-private-backup-format.mjs';
+import { unpackStagingBackup } from './staging-live-backup-format.mjs';
 import { restoreRecoveryRoleSql, recoveryRoleQuery } from './staging-recovery-roles.mjs';
 import { fullStackClient } from './staging-full-stack-client.mjs';
 import { isPrivateStorageDenied } from './rehearse-staging-core-recovery.mjs';
 import { writePublicContainerSource } from './write-public-container-source.mjs';
+import { manualFirstRelease } from './staging-manual-first-release.mjs';
+import { importRecoveryImages } from './import-staging-recovery-images.mjs';
+import { STAGING_TAR_IMAGE } from './staging-backup-tool.mjs';
 
-const TAR_IMAGE = 'node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e';
+const TAR_IMAGE = STAGING_TAR_IMAGE;
 const project = `barber-staging-restore-${randomBytes(8).toString('hex')}`;
 const label = 'cloud.malabdullah.barber.disposable-restore';
+const candidateMode = process.argv[3] === '--rehearse-manual-functions';
+const localMode = process.argv[3] === '--local-off-vps';
 let stage = 'archive validation'; let scratch; let docker; let model; let compose; let created = false; let completed;
 try {
-  assert.equal(hostname(), 'srv1207055'); assert.equal(process.getuid(), 0);
-  assert.equal(process.argv.length, 3);
+  if (localMode) assert.equal(process.platform, 'darwin');
+  else { assert.equal(hostname(), 'srv1207055'); assert.equal(process.getuid(), 0); }
+  assert.ok(process.argv.length === 3 || (process.argv.length === 4 && (candidateMode || localMode)));
   assert.match(process.argv[2], /^staging-\d{8}T\d{6}Z-[a-f0-9]{8}$/);
   const chunks = []; let bytes = 0;
   for await (const chunk of process.stdin) { bytes += chunk.length; assert.ok(bytes <= BACKUP_LIMIT); chunks.push(chunk); }
@@ -29,9 +36,12 @@ try {
   assert.equal(execFileSync('/usr/bin/tar', ['-tf', '-'], tarOptions).toString().trim(), 'bundle.json');
   assert.ok(execFileSync('/usr/bin/tar', ['-tvf', '-'], tarOptions).toString().startsWith('-'), 'Expected one regular archive member');
   const payload = execFileSync('/usr/bin/tar', ['-xOf', '-', 'bundle.json'], tarOptions);
-  const { metadata, entries, model: original } = unpackPrivateBackup(payload);
+  const { metadata, entries, model: original, frontend, version } = unpackStagingBackup(payload);
+  if (localMode) assert.equal(version, 2, 'Lost-host rehearsal requires the current live release backup');
   assert.equal(metadata.id, process.argv[2]);
   docker = localDockerProbe();
+  const imported = localMode ? await importRecoveryImages(docker) : null;
+  const archiveTool = localMode ? imported[TAR_IMAGE] : TAR_IMAGE;
   const before = docker(['ps', '--format', '{{.ID}} {{.Names}} {{.Image}}']).split('\n').filter(Boolean).sort();
   assert.equal(docker(['network', 'ls', '-q', '--filter', `name=^${project}$`]), '');
   scratch = mkdtempSync(join(tmpdir(), `${project}-`));
@@ -40,6 +50,30 @@ try {
     if (path.startsWith('sql/') || path.startsWith('gateway/')) writePublicContainerSource(join(scratch, path), data);
   }
   model = structuredClone(original);
+  if (version === 2) {
+    for (const [name, data] of [['runtime-config.same-origin.js', entries['live/runtime-config.js']], ['nginx.same-origin.conf', entries['live/nginx.conf']]]) {
+      writePublicContainerSource(join(scratch, name), data);
+    }
+    model.services.frontend = structuredClone(frontend.services.frontend);
+    for (const mount of model.services.frontend.volumes) mount.source = join(scratch, mount.source.split('/').at(-1));
+  }
+  if (localMode) {
+    for (const service of Object.values(model.services)) {
+      assert.ok(imported[service.image], 'Exact off-VPS image export missing');
+      service.image = imported[service.image];
+    }
+  }
+  // Opt-in compatibility rehearsal on a fresh restore only. Never substitute
+  // the candidate in the live model or call this an exact-image backup restore.
+  if (candidateMode) {
+    const [image] = JSON.parse(docker(['image', 'inspect', manualFirstRelease.functions]));
+    assert.equal(image.Os, 'linux'); assert.equal(image.Architecture, 'amd64');
+    assert.ok(image.RepoDigests.includes(manualFirstRelease.functions));
+    assert.equal(image.Config.User, '10001:10001');
+    assert.deepEqual(image.Config.Entrypoint, ['edge-runtime']);
+    assert.deepEqual(image.Config.Cmd, ['start', '--main-service', '/home/deno/bundles/main.eszip']);
+    model.services.functions.image = manualFirstRelease.functions;
+  }
   model.name = project;
   model.networks.default = { name: project, internal: true, labels: { [label]: project } };
   for (const [key, volume] of Object.entries(model.volumes)) {
@@ -85,13 +119,32 @@ try {
     '--label', `${label}=${project}`, '--platform', 'linux/amd64', '--cap-drop', 'ALL', '--cap-add', 'CHOWN',
     '--cap-add', 'FOWNER', '--cap-add', 'DAC_OVERRIDE', '--security-opt', 'no-new-privileges',
     '--memory', '256m', '--cpus', '0.5', '--pids-limit', '64', '--mount', `type=volume,src=${model.volumes.storage.name},dst=/data`,
-    '--entrypoint', 'tar', TAR_IMAGE, '--xattrs', '--xattrs-include=user.*', '--acls', '--numeric-owner', '-C', '/data', '-xpf', '-'],
+    '--entrypoint', 'tar', archiveTool, '--xattrs', '--xattrs-include=user.*', '--acls', '--numeric-owner', '-C', '/data', '-xpf', '-'],
   { input: entries['storage.tar'], maxBuffer: BACKUP_LIMIT, timeout: 60000 });
   stage = 'all eight restored services';
   compose(['up', '-d', '--wait', '--wait-timeout', '240']);
-  for (const name of SERVICES) {
+  if (version === 2) {
+    const probe = async () => {
+      const response = await fetch('http://frontend:8080/healthz');
+      if (response.status !== 200 || (await response.text()).trim() !== 'ok') throw new Error('Restored frontend unhealthy');
+      const runtime = await fetch('http://frontend:8080/runtime-config.js');
+      if (runtime.status !== 200 || runtime.headers.get('x-robots-tag') !== 'noindex, nofollow') throw new Error('Restored runtime invalid');
+      return await runtime.text();
+    };
+    const recoveredRuntime = docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module'], { input: `process.stdout.write(await (${probe.toString()})());` });
+    assert.equal(recoveredRuntime, entries['live/runtime-config.js'].toString().trim());
+  }
+  if (candidateMode) {
+    const archive = docker(['cp', `${project}-functions:/home/deno/bundle-manifest.json`, '-'], { encoding: null });
+    const manifest = JSON.parse(execFileSync('/usr/bin/tar', ['-xOf', '-', 'bundle-manifest.json'],
+      { input: archive, maxBuffer: 1048576, stdio: ['pipe', 'pipe', 'pipe'] }));
+    assert.equal(manifest.sourceCommit, manualFirstRelease.commit);
+    assert.equal(manifest.environment, 'staging');
+  }
+  for (const name of Object.keys(model.services)) {
     const [state] = JSON.parse(docker(['inspect', `${project}-${name}`]));
     assert.equal(state.Config.Labels[label], project); assert.equal(state.State.Running, true);
+    assert.equal(state.Config.Image, model.services[name].image);
     assert.deepEqual(Object.keys(state.HostConfig.PortBindings || {}), []);
     assert.deepEqual(Object.keys(state.NetworkSettings.Networks), [project]);
   }
@@ -132,7 +185,9 @@ try {
     .filter((line) => line && !line.split(' ')[1].startsWith(`${project}-`)).sort();
   assert.deepEqual(after, before, 'Existing services changed during restore');
   completed = { backupId: metadata.id, approvedSource: APPROVED_SOURCE, verifiedAt: new Date().toISOString(),
-    scope: 'eight-service-new-volume-restore', project, bundleSha256: checksum(payload), restoredServices: SERVICES,
+    scope: localMode ? 'mac-off-vps-live-release-restore' : candidateMode ? 'published-functions-fresh-restore-rehearsal' : version === 2 ? 'nine-service-new-volume-restore' : 'eight-service-new-volume-restore',
+    ...(candidateMode ? { candidateCommit: manualFirstRelease.commit, candidateFunctionsImage: manualFirstRelease.functions } : {}),
+    project, bundleSha256: checksum(payload), restoredServices: Object.keys(model.services),
     checks: ['Auth', 'RLS', 'Vault decryption', 'Storage bytes and xattrs', 'SMTP sink', 'gateway boundaries', 'Functions signatures and Flow', 'Realtime events and tenant denial'],
     originalServicesUnchanged: true, liveVolumesOverwritten: false, releaseAccepted: false };
 } catch {
@@ -158,7 +213,11 @@ try {
   }
   if (scratch && cleaned) rmSync(scratch, { recursive: true });
   if (completed && cleaned) {
-    writeFileSync(`${INSTALL_ROOT}/restore-${completed.backupId}.json`, JSON.stringify({ ...completed, temporaryResourcesCleaned: true }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-    console.log(JSON.stringify({ backupId: completed.backupId, status: 'eight-service-restore-verified', temporaryResourcesCleaned: true, releaseAccepted: false }));
+    const prefix = candidateMode ? 'candidate-rehearsal' : 'restore';
+    const receiptPath = localMode ? `/Users/malabdullah/BarberBackups/staging/${completed.backupId}/restore-local-${project}.json` : `${INSTALL_ROOT}/${prefix}-${completed.backupId}.json`;
+    writeFileSync(receiptPath, JSON.stringify({ ...completed, temporaryResourcesCleaned: true }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+    console.log(JSON.stringify({ backupId: completed.backupId,
+      status: candidateMode ? 'published-functions-rehearsal-verified' : 'eight-service-restore-verified',
+      temporaryResourcesCleaned: true, releaseAccepted: false }));
   }
 }

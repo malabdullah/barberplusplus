@@ -15,3 +15,9 @@ e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js
 # Historical permission-test fixture contained only the literal SYNTHETIC=fixture.
 # Not a credential; current fixture is comment-only. Exact commit/path/line only.
 7a1c8608ed413d579dac0f98346cb6877c2d7001:scripts/staging-vps.node-test.mjs:generic-api-key:19
+# Public staging tunnel resource UUID, verified in Cloudflare's published-route
+# UI on October 10. Not its connector credential. Current wording is separated.
+32c4ef846de90351f670a4183e0f7767546db856:docs/staging-manual-first-launch.md:generic-api-key:128
+# Public Cloudflare account identifier, verified against the account dashboard
+# URL. No credential value; exact historical match only. Current code names it.
+b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:generic-api-key:97
