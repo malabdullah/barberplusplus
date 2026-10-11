@@ -1,5 +1,7 @@
 {
+  "environment": { "testBanner": "TEST — synthetic data" },
   "common": {
+    "navigation": "Navigation",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",

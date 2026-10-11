@@ -13,6 +13,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
+import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
 
 const navItems = [
   { path: '/agent', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
@@ -24,12 +25,13 @@ const navItems = [
 
 export default function AgentSidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
+  const sidebarRef = useSidebarAccessibility(isOpen, onClose, t('common.navigation'));
   const { user } = useApp();
   const location = useLocation();
 
   // Close sidebar when navigating on mobile
   const handleNavClick = () => {
-    if (window.innerWidth <= 1024) {
+    if (window.matchMedia('(max-width: 1024px)').matches) {
       onClose?.();
     }
   };
@@ -41,9 +43,9 @@ export default function AgentSidebar({ isOpen, onClose }) {
         <div className="sidebar-overlay" onClick={onClose} />
       )}
 
-      <aside className={`sidebar agent-sidebar ${isOpen ? 'open' : ''}`}>
+      <aside ref={sidebarRef} className={`sidebar agent-sidebar ${isOpen ? 'open' : ''}`}>
         {/* Mobile close button */}
-        <button className="sidebar-close-btn" onClick={onClose}>
+        <button className="sidebar-close-btn" onClick={onClose} aria-label={t('common.close')}>
           <X size={20} strokeWidth={2} />
         </button>
 

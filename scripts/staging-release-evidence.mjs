@@ -120,7 +120,12 @@ export function bindStagingReleaseEvidence({
   exact(artifact.workflow_run?.head_repository_id, envelope.repository.id, 'artifact head repository ID');
   exact(artifact.workflow_run?.head_branch, envelope.branch, 'artifact branch');
   exact(artifact.workflow_run?.head_sha, envelope.commit, 'artifact commit');
-  const artifactCreated = canonicalTime(artifact.created_at, 'artifact.created_at');
+  // GitHub REST uses whole-second UTC timestamps. Do not normalize or change
+  // the signed envelope's stricter millisecond representation.
+  if (typeof artifact.created_at !== 'string'
+      || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(artifact.created_at)) fail('artifact.created_at is invalid');
+  const artifactCreated = canonicalTime(artifact.created_at.length === 20
+    ? artifact.created_at.replace(/Z$/, '.000Z') : artifact.created_at, 'artifact.created_at');
   if (artifactCreated < issuedAt || artifactCreated >= expiresAt) fail('artifact creation is outside the envelope window');
 
   exact(downloaded.artifactId, artifact.id, 'downloaded artifact ID');
@@ -188,6 +193,8 @@ export function bindStagingReleaseEvidence({
     || record.requestId === binding.requestId
     || record.artifactId === binding.artifactId
     || record.envelopeSha256 === binding.envelopeSha256
+    || (typeof record.requestId === 'string' && /^1123713308:[1-9]\d*:1:[0-9a-f]{32}$/.test(record.requestId)
+      && (record.requestId.split(':')[1] === binding.releaseRunId || record.requestId.split(':')[3] === binding.nonce))
     || (record.commit === binding.commit
       && record.frontendDigest === binding.frontendDigest
       && record.functionsDigest === binding.functionsDigest

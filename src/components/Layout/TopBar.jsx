@@ -144,7 +144,7 @@ const TopBar = memo(function TopBar({
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <button className="topbar-menu-btn" onClick={onMenuClick}>
+        <button className="topbar-menu-btn" onClick={onMenuClick} aria-label={t('common.navigation')}>
           <Menu size={20} strokeWidth={1.5} />
         </button>
 

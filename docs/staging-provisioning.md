@@ -1,10 +1,24 @@
 # Staging Provisioning Record
 
-> Migration in progress: the approved target is now the Hostinger staging VPS.
-> See [VPS transition](staging-vps-transition.md) for current state and gates.
-> The Mac record below is historical and does not certify VPS readiness.
+## Current VPS record
 
-Last reviewed: 2026-09-03. This document contains identifiers and secret names
+The manual private release went live on October 8, 2026. See
+[live release and configuration](staging-live-acceptance.md) and
+[closure execution](env3-closure-status.md). The VPS has eight isolated backend
+services and one frontend; public application access uses Cloudflare Tunnel and
+Access. The October 10 browser reauthentication reached the synthetic barber
+workspace. Full fresh VPS inspection remains blocked by SSH access.
+
+Recurring backup/monitoring implementation is prepared, not enabled. It must
+pass fresh inspection, supervised capture, transfer and restoration before the
+48-hour/two-cycle observation gate can begin. No final Env3 acceptance is claimed.
+
+## Historical Mac provisioning record
+
+The following is retained evidence, not current VPS instructions. Do not
+register or deploy through the historical Mac runner.
+
+Historical record reviewed: 2026-09-03. This document contains identifiers and secret names
 only. Never add credential values, private keys, tokens, recipient addresses, or
 phone numbers.
 

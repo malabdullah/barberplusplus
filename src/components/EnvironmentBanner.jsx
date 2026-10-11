@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isStaging } from '../lib/runtimeConfig';
 
 export default function EnvironmentBanner() {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!isStaging) return undefined;
 
@@ -23,8 +25,7 @@ export default function EnvironmentBanner() {
 
   return (
     <div className="environment-banner" role="status">
-      Staging environment — synthetic test data only
+      {t('environment.testBanner')}
     </div>
   );
 }
-

@@ -1,5 +1,10 @@
 # CI/CD Configuration
 
+The hosted non-production environment is now called Test; `staging` remains
+the GitHub/runtime compatibility identifier. The approved manual flow and
+candidate freeze are in [Test operations](test-environment-runbook.md).
+Production controls and all five required checks remain unchanged.
+
 > The repository now contains a fail-closed evidence workflow plus the local
 > verifier and constrained request adapters. It builds immutable frontend and
 > Edge Functions images, but intentionally stops before deployment until the

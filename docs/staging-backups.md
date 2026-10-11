@@ -1,5 +1,20 @@
 # Staging backups to the owner's Mac
 
+## October 10 closure implementation
+
+The current-release v2 capture/reader and nine-service recovery support are
+implemented alongside the retained v1 reader. The 04:00 Asia/Kuwait timer,
+bounded recovery handler, Mac transfer/monitor and receipt-gated retention are
+prepared. They have not been installed or accepted on the VPS. See
+[operations runbook](env3-operations-runbook.md) for the required execution gates.
+
+Nine recorded-release images now have encrypted authenticated off-VPS exports
+under the owner's private `BarberBackups/staging-images` directory. The exact
+Realtime artifact is unavailable locally and must be preserved from the VPS;
+this incomplete image inventory cannot pass lost-host recovery acceptance.
+Image exports are separate from the 64 MiB application bundle. No current VPS
+capture, completed security review or final closure is inferred from those copies.
+
 ## Current status — 2026-10-05
 
 The permanent private staging backend now has a real encrypted backup, verified

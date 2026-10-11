@@ -1,0 +1,12 @@
+[Unit]
+Description=Barber staging backup at 04:00 Kuwait time
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 Asia/Kuwait
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=barber-staging-backup.service
+
+[Install]
+WantedBy=timers.target

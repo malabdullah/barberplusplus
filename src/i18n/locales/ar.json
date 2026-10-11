@@ -1,5 +1,7 @@
 {
+  "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية" },
   "common": {
+    "navigation": "التنقل",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",

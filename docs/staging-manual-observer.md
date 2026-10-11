@@ -5,10 +5,12 @@ release checker using the existing restricted GitHub App. No deployment, timer,
 scheduled polling, broker membership, DNS, firewall or production change.
 
 Latest October 8 result: the separately approved [clock sampling adjustment](staging-clock-sampling.md)
-resolved the stale-reference blocker. The installed service now passes the
-clock check, correctly rejects the expired October 5 envelope, and revokes its
-temporary token. A fresh full service success proof still needs a new approved
-first-attempt release. Historical failure details below remain for audit.
+resolved the stale-reference blocker. The installed service correctly rejects
+the expired October 5 envelope. A separately approved fresh first-attempt run
+`37748167638` then passed all individual evidence checks at 08:36 UTC, with its
+temporary token revoked. See the [live receipt](staging-observer-image-publication.md).
+This is not deployment authorization or replay-ledger verification. Historical
+failure details below remain for audit.
 
 ## Trust boundary
 
@@ -142,8 +144,10 @@ five-minute reference-age limit. Its default sampling interval can exceed that
 limit. Clock configuration was not changed and the limit was not weakened.
 At that point, approval for a staging-only sampling adjustment was requested;
 the later approved change and successful expiry rejection are linked above.
-The service has not passed a fresh full release check. Its failed unit state is intentional
-evidence of the closed gate, not a running/crashed backend service.
+At that point the service had not passed a fresh full release check. Its failed
+unit state was intentional evidence of the closed gate, not a running/crashed
+backend service. The later fresh observation linked above exited successfully
+and left the unit inactive/static, with no scheduler or deployment capability.
 
 Private 0600 per-run audit files survive service exits; normal locks were
 removed after completed failures. A separately created empty test lock blocked
@@ -167,7 +171,7 @@ policy, DNS/firewall and production were not changed. No frontend was deployed.
   No local or remote database reset is needed for this infrastructure-only work.
   Frontend image tests are unchanged; this feature is validated as a host
   service, not an application-container release.
-- Remaining Env3 work: fresh full service success proof, authoritative crash-safe
+- Remaining Env3 work: authoritative crash-safe
   replay/authorization ledger, constrained backup/migration/deploy/recovery
   workers, fresh backup/restore evidence, release approval, frontend deployment,
   private ingress cutover and complete staging acceptance.

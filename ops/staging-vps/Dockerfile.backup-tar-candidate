@@ -1,0 +1,11 @@
+# Candidate only: scanner plus ACL/xattr round-trip must pass before live use.
+FROM --platform=linux/amd64 alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+RUN apk add --no-cache tar=1.35-r5 acl=2.3.2-r1 attr=2.5.2-r2 && \
+    mkdir -p /usr/share/barber-backup-evidence && \
+    apk info -v > /usr/share/barber-backup-evidence/packages.txt && \
+    sha256sum /bin/tar > /usr/share/barber-backup-evidence/tar.sha256
+USER 0:0
+LABEL cloud.malabdullah.barber.candidate="backup-tar-local-only" \
+      cloud.malabdullah.barber.tar-source="alpine-3.24:1.35-r5"
+ENTRYPOINT ["/bin/tar"]
+CMD ["--version"]
