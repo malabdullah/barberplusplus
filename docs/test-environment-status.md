@@ -29,7 +29,22 @@ Translated Test indicator, versioned policy, candidate-bound freeze/controller,
 manual operation reservations, monitor without transfer/freshness dependencies,
 synthetic rebuild and fixed-purpose installers are being validated.
 
-Pending: current full local/CI checks and separate review; native synthetic
-rebuild; live monitoring installation/supervised/scheduled/resume evidence;
+Full repository validation and 9 local E2E journeys passed. The native AMD64
+nine-service synthetic rebuild passed at 09:39 Kuwait (receipt
+`barber-test-rebuild-a00a44cd5445fc5b`): four migration hashes, 32 pgTAP checks,
+five account logins, new Vault encryption, Storage, mail sink, frontend,
+Functions/Flow and Realtime delivery/tenant denial. Fresh secrets/volumes were
+used and only labelled disposable resources removed. Original services remained
+unchanged. This is a rebuild, not lost-server restoration.
+
+Investigated failures are preserved privately: initialization order, unexpected
+Mac archive metadata and a fresh-stack WebSocket handshake. Source packaging now
+verifies exact membership/hashes; the rehearsal includes a bounded WebSocket
+readiness check that immediately rejects authentication/routing denials.
+Local Firefox failed before opening the app (macOS plugin-container permission
+and framebuffer errors); the Linux CI three-engine matrix remains required.
+
+Pending: latest CI and final review evidence; live monitoring
+installation/supervised/scheduled/resume evidence;
 security dispositions; exact release approval/deployment and final browser/iPhone
 acceptance. No production resources or current application images changed.

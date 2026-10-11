@@ -13,6 +13,7 @@ import { writePublicContainerSource } from './write-public-container-source.mjs'
 import { fullStackClient } from './staging-full-stack-client.mjs';
 import { isPrivateStorageDenied } from './rehearse-staging-core-recovery.mjs';
 import { assertUnfrozen, OPERATION_LOCK } from './test-environment-state.mjs';
+import { waitForTestWebsocket } from './test-realtime-readiness.mjs';
 
 const project = `barber-test-rebuild-${randomBytes(8).toString('hex')}`;
 const label = 'cloud.malabdullah.barber.synthetic-rebuild';
@@ -101,6 +102,7 @@ try {
     flowPublic: synthetic.settings.flowPublic, password: fixtures.accounts[0].password, barberPassword: fixtures.accounts.find(a => a.email === 'barber@barber.test').password,
     otherManagerPassword: fixtures.accounts.find(a => a.email === 'manager-two@barber.test').password };
   stage = 'Functions and Realtime isolation';
+  docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module'], { input: `await (${waitForTestWebsocket.toString()})(${JSON.stringify(settings.anon)});`, timeout: 150000 });
   console.log(docker(['exec', '-i', `${project}-storage`, 'node', '--input-type=module'], { input: `await (${fullStackClient.toString()})(${JSON.stringify(settings)}, (${isPrivateStorageDenied.toString()}));`, timeout: 180000 }));
   const after = docker(['ps', '--format', '{{.ID}} {{.Names}} {{.Image}}']).split('\n').filter(line => line && !line.split(' ')[1].startsWith(`${project}-`)).sort();
   assert.deepEqual(after, before); liveContext();
@@ -123,9 +125,10 @@ try {
     if (stage === 'Functions and Realtime isolation') try {
       const diagnostic = async input => {
         const { request } = await import('node:http');
+        const { randomBytes } = await import('node:crypto');
         for (const [host, path] of [['api-gw:8000', '/realtime/v1/websocket'], ['realtime:4000', '/socket/websocket']]) {
           const status = await new Promise(resolve => {
-            const req = request(`http://${host}${path}?apikey=${input.anon}&vsn=1.0.0`, { headers: { Host: 'realtime-dev.supabase-realtime', Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==' } });
+            const req = request(`http://${host}${path}?apikey=${input.anon}&vsn=1.0.0`, { headers: { Host: 'realtime-dev.supabase-realtime', Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': randomBytes(16).toString('base64') } });
             req.on('upgrade', (response, socket) => { socket.destroy(); resolve(response.statusCode); });
             req.on('response', response => { response.resume(); resolve(response.statusCode); });
             req.on('error', () => resolve('transport-error')); req.setTimeout(10000, () => { req.destroy(); resolve('timeout'); }); req.end();
