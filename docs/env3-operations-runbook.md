@@ -1,5 +1,10 @@
 # Env3 operating and closure runbook
 
+> Historical closure contract, superseded October 11, 2026 by the approved
+> [shared Test runbook](test-environment-runbook.md). Do not install the daily
+> backup/transfer schedule or enforce its freshness/48-hour gates for Test.
+> The instructions below are retained to explain historical evidence and tools.
+
 Scope: private synthetic staging on srv1207055. Production and real outbound
 integrations are excluded. This implementation does not activate deployment
 workers. [Execution status](env3-closure-status.md) is the completion record.

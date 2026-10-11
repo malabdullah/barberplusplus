@@ -13,17 +13,22 @@ import { recoveryRoleQuery, validateRecoveryRole } from './staging-recovery-role
 import { selectBackupVaultProbe } from './staging-backup-vault-probe.mjs';
 import { maintenanceWindow } from './staging-operations-policy.mjs';
 import { STAGING_TAR_IMAGE } from './staging-backup-tool.mjs';
+import { assertUnfrozen } from './test-environment-state.mjs';
+import { testCheckpointContext } from './test-environment-runtime.mjs';
+import { packTestCheckpoint } from './test-checkpoint-format.mjs';
 
 const exportRoot = '/var/backups/barber-staging/export';
 const lock = '/var/backups/barber-staging/capture-in-progress';
 const tarImage = STAGING_TAR_IMAGE;
 let context; let stopped = false; let scratch; let complete = false; let stage = 'preflight'; let directory;
+const testMode = process.argv[2] === '--test-checkpoint';
 try {
-  assert.ok(process.argv.length === 3 && ['--supervised', '--scheduled'].includes(process.argv[2]));
+  assert.ok(process.argv.length === 3 && ['--supervised', '--scheduled', '--test-checkpoint'].includes(process.argv[2]));
   if (process.argv[2] === '--scheduled' && !maintenanceWindow(new Date())) {
     console.error('Scheduled staging capture missed its window; no services stopped.'); process.exit(1);
   }
-  context = liveContext(); const { docker, sql, states, prepared } = context;
+  context = testMode ? testCheckpointContext() : liveContext(); const { docker, sql, states, prepared } = context;
+  assertUnfrozen('checkpoint');
   privateRoot('/var/backups/barber-staging'); privateRoot(exportRoot);
   const recipient = readProtected('/etc/barber-staging-backup/recipient.txt');
   assert.match(recipient.toString().trim(), /^age1[a-z0-9]+$/);
@@ -35,13 +40,14 @@ try {
   assert.equal(sql("SELECT count(*) FROM auth.users WHERE email IS NULL OR email !~ '@barber\\.test$';"), '0');
   const vaultProbe = selectBackupVaultProbe('refresh-private-bootstrap', sql);
   const history = JSON.parse(sql('SELECT coalesce(json_agg(version ORDER BY version),\'[]\') FROM supabase_migrations.schema_migrations;'));
-  assert.deepEqual(history, Object.keys(prepared.migrations).map(name => name.slice(0, 14)).sort());
+  const migrations = testMode ? Object.fromEntries(context.candidate.migrations.map(m => [m.file, m.sha256])) : prepared.migrations;
+  assert.deepEqual(history, Object.keys(migrations).map(name => name.slice(0, 14)).sort());
   const paths = ['compose.private.json', 'synthetic-accounts.json', 'synthetic-integration.json', 'seed.private.sql',
     'prepared.json', 'initialized.json', 'functional-verified.json', 'security-tests.sql',
-    ...Object.keys(prepared.publicFiles), ...Object.keys(prepared.migrations).map(name => `migrations/${name}`)];
+    ...Object.keys(prepared.publicFiles), ...Object.keys(migrations).map(name => `migrations/${name}`)];
   const parts = {};
   for (const path of paths) { validateBackupFile(path); parts[path] = readProtected(`${INSTALL_ROOT}/${path}`); }
-  for (const [name, hash] of Object.entries(prepared.migrations)) assert.equal(checksum(parts[`migrations/${name}`]), hash);
+  for (const [name, hash] of Object.entries(migrations)) assert.equal(checksum(parts[`migrations/${name}`]), hash);
   for (const [name, hash] of Object.entries(prepared.publicFiles)) assert.equal(checksum(parts[name]), hash);
   parts['live/backend.json'] = readProtected(`${release.root}/backend.private-origin.json`);
   parts['live/frontend.json'] = readProtected(`${release.root}/frontend.same-origin.json`);
@@ -53,9 +59,10 @@ try {
   parts['live/tunnel-token'] = readProtected('/etc/barber-staging-cloudflared/tunnel-token');
   parts['live/cloudflared.service'] = readProtected('/etc/systemd/system/barber-staging-cloudflared.service');
   mkdirSync(lock, { mode: 0o700 });
-  writeFileSync(`${lock}/journal.json`, JSON.stringify({ version: 1, createdAt: new Date().toISOString(), commit: release.commit,
+  writeFileSync(`${lock}/journal.json`, JSON.stringify({ version: 1, createdAt: new Date().toISOString(), commit: testMode ? context.candidate.commit : release.commit,
     states, frontendSha256: checksum(parts['live/frontend.json']), backendSha256: checksum(parts['live/backend.json']) }), { flag: 'wx', mode: 0o600 });
   flushPath(`${lock}/journal.json`); flushPath(lock); flushPath('/var/backups/barber-staging');
+  assertUnfrozen('checkpoint');
   stage = 'quiesce'; stopped = true;
   docker(['stop', '--time', '15', ...quiesceTargets(states).map(state => state.id)], { timeout: 120000 });
   const captureAt = new Date().toISOString();
@@ -71,23 +78,24 @@ try {
   { encoding: null, maxBuffer: BACKUP_LIMIT, timeout: 60000 });
   docker(['stop', '--time', '15', states.find(state => state.name === `${PROJECT}-db`).id]);
   parts['database-config.tar'] = docker(['cp', `${PROJECT}-db:/etc/postgresql-custom/.`, '-'], { encoding: null, maxBuffer: BACKUP_LIMIT });
-  const bundle = packLiveBackup(parts, { source: context.prepared.approvedSource, host: 'srv1207055', id, createdAt: captureAt,
+  const metadata = { source: context.prepared.approvedSource, host: 'srv1207055', id, createdAt: captureAt,
     counts, recoveryRole, vaultProbe, scope: 'live-nine-service-state', scheduled: process.argv[2] === '--scheduled',
-    ephemeralExclusions: ['Mailpit inbox', 'Realtime connections/cache', 'Functions tmpfs'], imageRecovery: 'separate-off-vps-image-inventory-required' });
+    ephemeralExclusions: ['Mailpit inbox', 'Realtime connections/cache', 'Functions tmpfs'], imageRecovery: 'separate-off-vps-image-inventory-required' };
+  const bundle = testMode ? packTestCheckpoint(parts, metadata, context.candidate) : packLiveBackup(parts, metadata);
   stage = 'encrypt'; scratch = mkdtempSync(join(tmpdir(), 'barber-live-capture-'));
   writeFileSync(join(scratch, 'bundle.json'), bundle, { flag: 'wx', mode: 0o600 });
   const tar = execFileSync('/usr/bin/tar', ['-C', scratch, '-cf', '-', 'bundle.json'], { maxBuffer: BACKUP_LIMIT, stdio: ['ignore', 'pipe', 'pipe'] });
   const encrypted = execFileSync('/usr/bin/age', ['-R', '/etc/barber-staging-backup/recipient.txt'], { input: tar, maxBuffer: BACKUP_LIMIT + 1048576, stdio: ['pipe', 'pipe', 'pipe'] });
   stage = 'resume'; await resumeStates(docker, states); stopped = false;
   // Recheck exact identity and origins after resumption; no publication on drift.
-  liveContext();
+  if (testMode) testCheckpointContext(); else liveContext();
   directory = `${exportRoot}/${id}`; mkdirSync(directory, { mode: 0o700 });
   writeFileSync(`${directory}/payload.tar.age`, encrypted, { flag: 'wx', mode: 0o600 });
   flushPath(`${directory}/payload.tar.age`);
   const manifest = { version: 1, id, environment: 'staging', sourceHost: 'srv1207055', kind: 'staging-backup', file: 'payload.tar.age',
     sha256: checksum(encrypted), bytes: encrypted.length, createdAt: captureAt };
-  writeFileSync(`${directory}/capture.json`, JSON.stringify({ id, commit: release.commit, scheduled: process.argv[2] === '--scheduled',
-    createdAt: captureAt, completedAt: new Date().toISOString(), version: 2, servicesResumed: true }), { flag: 'wx', mode: 0o600 });
+  writeFileSync(`${directory}/capture.json`, JSON.stringify({ id, commit: testMode ? context.candidate.commit : release.commit, scheduled: process.argv[2] === '--scheduled',
+    createdAt: captureAt, completedAt: new Date().toISOString(), version: testMode ? 3 : 2, servicesResumed: true }), { flag: 'wx', mode: 0o600 });
   flushPath(`${directory}/capture.json`); flushPath(directory);
   writeFileSync(`${directory}/manifest.json`, JSON.stringify(manifest), { flag: 'wx', mode: 0o600 });
   flushPath(`${directory}/manifest.json`); flushPath(directory); flushPath(exportRoot);

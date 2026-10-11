@@ -1,5 +1,12 @@
 # Env3 closure execution
 
+> Superseded operating contract on October 11, 2026: the owner approved a shared
+> Test environment with rebuildable synthetic data and manual checkpoints.
+> This document preserves historical results, failures and security evidence.
+> Current transition status: [Test environment](test-environment-status.md).
+> Current procedure: [Test runbook](test-environment-runbook.md).
+> Removed daily-backup/48-hour gates are policy changes, not passed tests.
+
 Status: implementation prepared and locally validated; live installation and
 final acceptance remain blocked/pending. No Env3 closure claimed.
 

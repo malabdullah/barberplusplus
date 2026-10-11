@@ -4,6 +4,8 @@ import { backupRoot, requirePrivate, validateManifest } from './pull-staging-bac
 import { retentionCandidates } from './staging-operations-policy.mjs';
 
 export function pruneMacBackups() {
+  assert.equal(existsSync('/Users/malabdullah/Library/Application Support/BarberTestOperations'), false,
+    'Test checkpoints require an explicit enumerated cleanup decision');
   assert.equal(process.platform, 'darwin'); requirePrivate(backupRoot, true);
   const records = [];
   for (const id of readdirSync(backupRoot).filter(name => /^staging-\d{8}T\d{6}Z-[a-f0-9]{8}$/.test(name))) {

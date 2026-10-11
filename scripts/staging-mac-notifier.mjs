@@ -24,3 +24,8 @@ export function notifyStaging(message) {
   verifyNotifier();
   execFileSync(NOTIFIER, ['-title', 'Barber staging', '-message', message, '-group', 'barber-staging'], { stdio: 'ignore', timeout: 10000 });
 }
+export function notifyTest(message) {
+  assert.equal(typeof message, 'string'); assert.ok(message.length > 0 && message.length <= 500);
+  verifyNotifier();
+  execFileSync(NOTIFIER, ['-title', 'Barber++ Test', '-message', message, '-group', 'barber-test'], { stdio: 'ignore', timeout: 10000 });
+}

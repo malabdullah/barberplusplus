@@ -2,6 +2,13 @@
 
 ## Current staging architecture
 
+The owner-approved user-facing name is **Test** from October 11, 2026.
+`APP_ENV=staging`, hostnames, GitHub environment and internal resource names
+remain compatibility identifiers. Use [Test operations](test-environment-runbook.md)
+and [transition status](test-environment-status.md); the former daily-backup
+Env3 closure contract is superseded. Development stays on the Mac; Test is the
+shared server sandbox and release acceptance environment.
+
 Staging is deployed on `srv1207055` (`185.97.146.8`), the dedicated two-core,
 8 GiB VPS approved for initial testing. The backend is `barber-staging-private`
 (eight services); the frontend is `barber-staging-frontend`. Both Docker networks
@@ -20,7 +27,7 @@ deployment stays disabled. GitHub-hosted CI publishes immutable artifacts.
 
 The Mac is the encrypted recovery destination and planned monitoring host,
 not the current staging application host. Current operational implementation,
-installation gates and pending evidence are in [Env3 operations](env3-operations-runbook.md).
+installation gates and pending evidence are in [Test operations](test-environment-runbook.md).
 Do not use historical Mac deployment helpers for the VPS.
 
 ## Historical Mac architecture — retained for evidence only

@@ -3,6 +3,11 @@ set -eu
 
 node --test scripts/local-service-pins.node-test.mjs
 node --test scripts/check-hardcoded-domains.node-test.mjs
+node --test scripts/test-environment-policy.node-test.mjs
+node --test scripts/test-checkpoint-format.node-test.mjs
+for script in test-environment-control test-environment-runtime monitor-test-mac rehearse-test-synthetic; do
+  node --check "scripts/$script.mjs"
+done
 
 workflow=.github/workflows/deploy-staging.yml
 if grep -Eq 'runs-on:.*self-hosted|DOKPLOY_|STAGING_VPS_AUTOMATION_READY|staging-vps-deploy-preflight' "$workflow"; then

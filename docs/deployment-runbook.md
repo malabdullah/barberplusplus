@@ -2,9 +2,12 @@
 
 ## Current manual VPS staging procedure
 
-Use [Env3 operations](env3-operations-runbook.md) and the exact-release evidence
+Use [Test operations](test-environment-runbook.md) and the exact-release evidence
 in [live staging acceptance](staging-live-acceptance.md). Confirm a healthy
-isolated backend, current security disposition and a fresh verified backup.
+isolated backend and current security disposition. Stateful changes need a new
+verified manual checkpoint; frontend-only changes retain the prior digest and
+configuration. Respect the acceptance freeze and reserve the shared operation
+lock before mutation. Daily backup age is not a Test release gate.
 Changes require a reviewed PR, all five required checks and owner approval of
 the concrete release. Keep deployments manual, preserve prior immutable images
 and configuration, and validate the same-host browser API route after changes.

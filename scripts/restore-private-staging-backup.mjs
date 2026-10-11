@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
 import { APPROVED_SOURCE, INSTALL_ROOT, SERVICES } from './staging-private-model.mjs';
 import { BACKUP_LIMIT, checksum } from './staging-private-backup-format.mjs';
-import { unpackStagingBackup } from './staging-live-backup-format.mjs';
+import { readTestOrHistoricalCheckpoint } from './read-test-checkpoint.mjs';
 import { restoreRecoveryRoleSql, recoveryRoleQuery } from './staging-recovery-roles.mjs';
 import { fullStackClient } from './staging-full-stack-client.mjs';
 import { isPrivateStorageDenied } from './rehearse-staging-core-recovery.mjs';
@@ -37,8 +37,8 @@ try {
   assert.equal(execFileSync('/usr/bin/tar', ['-tf', '-'], tarOptions).toString().trim(), 'bundle.json');
   assert.ok(execFileSync('/usr/bin/tar', ['-tvf', '-'], tarOptions).toString().startsWith('-'), 'Expected one regular archive member');
   const payload = execFileSync('/usr/bin/tar', ['-xOf', '-', 'bundle.json'], tarOptions);
-  const { metadata, entries, model: original, frontend, version } = unpackStagingBackup(payload);
-  if (localMode) assert.equal(version, 2, 'Lost-host rehearsal requires the current live release backup');
+  const { metadata, entries, model: original, frontend, version } = readTestOrHistoricalCheckpoint(payload);
+  if (localMode) assert.ok(version >= 2, 'Lost-host rehearsal requires a live release checkpoint');
   assert.equal(metadata.id, process.argv[2]);
   docker = localDockerProbe();
   const imported = localMode ? await importRecoveryImages(docker) : null;
@@ -51,7 +51,7 @@ try {
     if (path.startsWith('sql/') || path.startsWith('gateway/')) writePublicContainerSource(join(scratch, path), data);
   }
   model = structuredClone(original);
-  if (version === 2) {
+  if (version >= 2) {
     for (const [name, data] of [['runtime-config.same-origin.js', entries['live/runtime-config.js']], ['nginx.same-origin.conf', entries['live/nginx.conf']]]) {
       writePublicContainerSource(join(scratch, name), data);
     }
@@ -110,7 +110,7 @@ try {
     '-d', 'template1', '--create', '--exit-on-error'], { input: entries['database.dump'], maxBuffer: BACKUP_LIMIT, timeout: 90000 });
   assert.equal(sql('SELECT count(*) FROM auth.users;'), String(metadata.counts.users));
   assert.equal(sql('SELECT count(*) FROM storage.objects;'), String(metadata.counts.objects));
-  assert.equal(sql('SELECT count(*) FROM supabase_migrations.schema_migrations;'), '4');
+  assert.equal(sql('SELECT count(*) FROM supabase_migrations.schema_migrations;'), String(version === 3 ? metadata.candidate.migrations.length : 4));
   assert.equal(sql("SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='bootstrap_recovery_probe';"), metadata.vaultProbe);
   stage = 'Storage bytes and extended attributes restore';
   compose(['create', '--no-build', '--pull', 'never']);
@@ -124,7 +124,7 @@ try {
   { input: entries['storage.tar'], maxBuffer: BACKUP_LIMIT, timeout: 60000 });
   stage = 'all eight restored services';
   compose(['up', '-d', '--wait', '--wait-timeout', '240']);
-  if (version === 2) {
+  if (version >= 2) {
     const probe = async () => {
       const response = await fetch('http://frontend:8080/healthz');
       if (response.status !== 200 || (await response.text()).trim() !== 'ok') throw new Error('Restored frontend unhealthy');
@@ -187,7 +187,7 @@ try {
   assert.deepEqual(after, before, 'Existing services changed during restore');
   completed = { backupId: metadata.id, approvedSource: APPROVED_SOURCE, verifiedAt: new Date().toISOString(),
     recoveryStartedAt: new Date(recoveryStartedAt).toISOString(), recoveryDurationMs: Date.now() - recoveryStartedAt,
-    scope: localMode ? 'mac-off-vps-live-release-restore' : candidateMode ? 'published-functions-fresh-restore-rehearsal' : version === 2 ? 'nine-service-new-volume-restore' : 'eight-service-new-volume-restore',
+    scope: localMode ? 'mac-off-vps-live-release-restore' : candidateMode ? 'published-functions-fresh-restore-rehearsal' : version >= 2 ? 'nine-service-new-volume-restore' : 'eight-service-new-volume-restore',
     ...(candidateMode ? { candidateCommit: manualFirstRelease.commit, candidateFunctionsImage: manualFirstRelease.functions } : {}),
     project, bundleSha256: checksum(payload), restoredServices: Object.keys(model.services),
     checks: ['Auth', 'RLS', 'Vault decryption', 'Storage bytes and xattrs', 'SMTP sink', 'gateway boundaries', 'Functions signatures and Flow', 'Realtime events and tenant denial'],

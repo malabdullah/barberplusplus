@@ -7,6 +7,7 @@ import { liveContext, privateRoot } from './staging-live-context.mjs';
 import { validateId, validateManifest } from './pull-staging-backup.mjs';
 import { retentionCandidates } from './staging-operations-policy.mjs';
 import { INSTALL_ROOT } from './staging-private-model.mjs';
+import { TEST_STATE_ROOT } from './test-environment-state.mjs';
 
 const root = '/var/backups/barber-staging/export';
 function readPrivate(path) {
@@ -74,6 +75,7 @@ try {
     else writeFileSync(path, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     console.log(JSON.stringify({ id, acknowledged: true }));
   } else {
+    assert.equal(existsSync(TEST_STATE_ROOT), false, 'Test checkpoints require an explicit enumerated cleanup decision');
     // Pruning is explicit and blocked while a capture/maintenance lock exists.
     assert.equal(existsSync('/var/backups/barber-staging/capture-in-progress'), false);
     const records = exportsInventory(); const candidates = retentionCandidates(records.filter(item => item.status === 'complete'));
