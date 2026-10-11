@@ -2,13 +2,30 @@
 
 Status: implementation in progress; no ready/acceptance claim.
 
+Latest execution: PR #6 merged with owner build-only approval into main
+`b04eacdfd49ce7aa8c7d1a4217c9fe4394078294`; main CI and image publication
+succeeded. The exact published frontend passed its isolated runtime/header/
+translation probe and reported zero HIGH/CRITICAL Trivy matches. Backend risk
+acceptance is explicitly recorded through October 18 at 03:00 Kuwait, with no
+extension or production scope. Reviewed monitoring is installed; supervised,
+notification, first scheduled and injected gap/recovery checks passed. The
+owner subsequently approved and deployed that frontend only. Public role,
+boundary, Storage, Functions and Realtime checks passed; ordinary browser refresh
+reached the new release. Monitoring now warns about the approaching security
+deadline. Live mobile QA found TEST-UI-01: the Test banner obstructs navigation.
+The release remains frozen. TEST-BOOK-01 also blocks acceptance: a manager's
+next-day booking creation receives HTTP 403 / SQLSTATE 42501 for
+`booking_reminders`. A reviewed layout fix, database-fix scope decision,
+final live QA, owner iPhone testing and final acceptance remain pending. See
+[release candidate and execution](test-transition-release-2026-10-11.md).
+
 The approved Test policy replaces the prior Env3 operational closure contract.
 Daily backups/transfers/pruning, 26/30-hour freshness gates, two daily cycles,
 48-hour observation and monthly full restore requirements are retired for
 disposable Test data. The failed Mac Realtime restore remains unresolved.
 Production backup/recovery remains outside this transition.
 
-## Baseline
+## Initial transition baseline — historical, before installation
 
 - srv1207055 SSH verified; nine existing application services running/healthy.
 - Original gateway/frontend origins remain unchanged after the reviewed recovery.
@@ -48,8 +65,8 @@ checks, including Chromium/Firefox/WebKit. A final checkpoint configuration
 binding and exact runtime-hash observation hardening pass is being validated;
 its final head must pass the same CI gates before installation/release.
 
-Pending: latest CI and final review evidence; live monitoring
-installation/supervised/scheduled/resume evidence;
-security dispositions (see `test-security-dispositions-2026-10-11.md`); exact
-release approval/deployment and final browser/iPhone
-acceptance. No production resources or current application images changed.
+Current remaining gates: resolve TEST-UI-01 and TEST-BOOK-01 through reviewed
+changes and appropriate release/checkpoint approvals, retest affected journeys,
+complete owner iPhone testing and obtain explicit final acceptance. The deployed
+frontend and monitoring are operational; the two high functional defects prevent
+a Test-ready claim. Production remains untouched.
