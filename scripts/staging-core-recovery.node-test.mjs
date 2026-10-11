@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isPrivateStorageDenied, packRecoveryFixture, unpackRecoveryFixture } from './rehearse-staging-core-recovery.mjs';
+import { isPrivateStorageDenied, packRecoveryFixture, unpackRecoveryFixture, packBookingCoreRecoveryFixture, unpackBookingCoreRecoveryFixture } from './rehearse-staging-core-recovery.mjs';
+import { bookingReminderRecoveryRole } from './booking-reminder-recovery-role.mjs';
 
 test('Storage denial requires a known authorization response, never server/token errors', () => {
   assert.equal(isPrivateStorageDenied(400, { statusCode: '404', error: 'Bucket not found' }), true);
@@ -49,4 +50,15 @@ test('rehearsal archives are bounded and require binary nonempty inputs', () => 
   assert.throws(() => packRecoveryFixture(Buffer.from('db'), Buffer.alloc(0), Buffer.from('config'), {}));
   assert.throws(() => packRecoveryFixture(Buffer.from('db'), Buffer.from('storage'), Buffer.alloc(0), {}));
   assert.throws(() => unpackRecoveryFixture(Buffer.alloc(33 * 1024 * 1024)));
+});
+test('test-only v3 recovers the fixed writer without reinterpreting historical v2', () => {
+  const args = [Buffer.from('db'),Buffer.from('storage'),Buffer.from('key'),{},null];
+  const legacy = packBookingCoreRecoveryFixture(...args,null);
+  assert.deepEqual(unpackBookingCoreRecoveryFixture(legacy),unpackRecoveryFixture(legacy));
+  const packed = packBookingCoreRecoveryFixture(...args,bookingReminderRecoveryRole);
+  assert.deepEqual(unpackBookingCoreRecoveryFixture(packed).bookingRole,bookingReminderRecoveryRole);
+  assert.throws(()=>unpackRecoveryFixture(packed));
+  for (const mutate of [d=>{d.bookingRole.login=true;},d=>{d.bookingMigration.sha256='0'.repeat(64);},d=>{delete d.bookingRole;}]) {
+    const data=JSON.parse(packed);mutate(data);assert.throws(()=>unpackBookingCoreRecoveryFixture(Buffer.from(JSON.stringify(data))));
+  }
 });
