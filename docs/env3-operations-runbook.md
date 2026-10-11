@@ -51,15 +51,20 @@ the capture/transfer/restore receipt identifiers with the installation decision.
 ## Schedule and recovery
 
 VPS: `barber-staging-backup.timer` triggers at 04:00 Asia/Kuwait with
-`Persistent=false`. A late start outside 04:00–04:15 is rejected. Services stop
-by their prevalidated IDs and restart by the same IDs; no recreation occurs.
+`Persistent=false`. A late start outside 04:00–04:15 is rejected. Backend writers
+stop by their prevalidated IDs and restart by the same IDs; no recreation occurs.
+The validated read-only API gateway and frontend stay running: they cannot
+write without the stopped backend services, and keeping their endpoints alive
+preserves the tunnel origin addresses. Do not stop them merely to capture data.
+The original Docker auto-subnet does not support static endpoint assignments.
 The service times out after fifteen minutes; its stop handler checks the
 protected journal and attempts bounded recovery of only those services.
 
 On success, encrypted payload publication follows healthy resumption and
 configuration revalidation. On failure, retain the capture lock and evidence.
 Disable the timer while investigating; validate service health before manually
-removing an exact reviewed failure lock. Never steal a lock or retry blind.
+archiving an exact reviewed failure journal in the private incidents directory.
+Never delete investigation evidence, steal a lock or retry blind.
 The same lock must be respected by manual maintenance/deployment operators.
 
 Mac: the launch agent runs every 900 seconds and at load. An offline/asleep Mac
@@ -69,8 +74,11 @@ encrypted partial files; existing accepted destinations are revalidated.
 The Mac service uses the checksum-pinned official Node 24.20.0 archive
 (`40e5607e5ecb3db9192723776da2d75d966260fc74a7a9e731c1bd67dda96bc8`),
 installed in its private application directory. Do not depend on the user's
-default Node or replace that executable. Native notifications use the installed
-Homebrew `terminal-notifier`; verify notification delivery before enabling.
+default Node or replace that executable. Native notifications use the registered
+Homebrew 3.1.0 copy in `~/Applications/terminal-notifier.app`, pinned by SHA-256
+in `staging-mac-notifier.mjs`. Authorization and binary identity are rechecked;
+unavailable alerts yield unknown readiness rather than a healthy claim.
+Verify delivery before enabling the monitoring schedule.
 
 ## Freshness, retention and notifications
 

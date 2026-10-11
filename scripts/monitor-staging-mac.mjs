@@ -6,6 +6,7 @@ import { backupRoot, keyRoot, requirePrivate, pullBackup, validateId, validateMa
 import { backupReadiness, changedProblems, maintenanceWindow, POLICY } from './staging-operations-policy.mjs';
 import { manualFirstRelease as release } from './staging-manual-first-release.mjs';
 import { connect } from 'node:tls';
+import { verifyNotifier, notifyStaging } from './staging-mac-notifier.mjs';
 
 const stateRoot = '/Users/malabdullah/Library/Application Support/BarberStagingOperations';
 const accessPath = '/Users/malabdullah/Documents/Barber++ Staging Secrets/cloudflare-access-service-token.env';
@@ -135,6 +136,8 @@ try {
     }
     assert.ok(inventory.credentials.some(item => item.name === 'cloudflare-access'));
   } else checks.push({ check: 'credential-expiry', status: 'unknown', reason: 'verified-expiry-inventory-required' });
+  try { verifyNotifier(); checks.push({ check: 'mac-notifications', status: 'healthy', reason: 'pinned-helper-authorized' }); }
+  catch { checks.push({ check: 'mac-notifications', status: 'unknown', reason: 'notification-authorization-or-helper-unavailable' }); }
   const status = { version: 1, checkedAt: new Date(now).toISOString(), checks,
     overall: checks.some(item => item.status === 'failed') ? 'failed' : checks.some(item => item.status === 'unknown') ? 'unknown' : checks.some(item => item.status === 'degraded') ? 'degraded' : 'healthy',
     releaseAllowed: checks.every(item => ['healthy', 'degraded'].includes(item.status) && item.reason !== 'recorded-backup-window'), ...(remote ? { inventory: remote } : {}) };
@@ -144,9 +147,7 @@ try {
     requirePrivate(`${stateRoot}/failure-notified.json`); rmSync(`${stateRoot}/failure-notified.json`); changes.push('monitor:recovered');
   }
   if (changes.length) {
-    // Optional reputable Homebrew notifier; installation preflight must require
-    // this executable before accepting the monitoring schedule.
-    try { execFileSync('/opt/homebrew/bin/terminal-notifier', ['-title', 'Barber staging', '-message', changes.join('; ').slice(0, 500), '-group', 'barber-staging'], { stdio: 'ignore', timeout: 10000 }); }
+    try { notifyStaging(changes.join('; ').slice(0, 500)); }
     catch { console.error('Staging status changed; macOS notification delivery unavailable.'); }
   }
   console.log(JSON.stringify({ overall: status.overall, checkedAt: status.checkedAt, changes }));
@@ -155,7 +156,7 @@ try {
     requirePrivate(stateRoot, true);
     const marker = `${stateRoot}/failure-notified.json`;
     if (!existsSync(marker)) {
-      execFileSync('/opt/homebrew/bin/terminal-notifier', ['-title', 'Barber staging', '-message', 'Staging monitor unavailable. Inspect the private status/log and failure lock.', '-group', 'barber-staging'], { stdio: 'ignore', timeout: 10000 });
+      notifyStaging('Staging monitor unavailable. Inspect the private status/log and failure lock.');
       writeFileSync(marker, JSON.stringify({ status: 'monitor-unavailable', at: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
     }
   } catch { /* Existing logs remain the fallback when notification delivery fails. */ }

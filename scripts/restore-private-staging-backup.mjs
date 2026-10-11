@@ -19,6 +19,7 @@ import { importRecoveryImages } from './import-staging-recovery-images.mjs';
 import { STAGING_TAR_IMAGE } from './staging-backup-tool.mjs';
 
 const TAR_IMAGE = STAGING_TAR_IMAGE;
+const recoveryStartedAt = Date.now();
 const project = `barber-staging-restore-${randomBytes(8).toString('hex')}`;
 const label = 'cloud.malabdullah.barber.disposable-restore';
 const candidateMode = process.argv[3] === '--rehearse-manual-functions';
@@ -185,13 +186,28 @@ try {
     .filter((line) => line && !line.split(' ')[1].startsWith(`${project}-`)).sort();
   assert.deepEqual(after, before, 'Existing services changed during restore');
   completed = { backupId: metadata.id, approvedSource: APPROVED_SOURCE, verifiedAt: new Date().toISOString(),
+    recoveryStartedAt: new Date(recoveryStartedAt).toISOString(), recoveryDurationMs: Date.now() - recoveryStartedAt,
     scope: localMode ? 'mac-off-vps-live-release-restore' : candidateMode ? 'published-functions-fresh-restore-rehearsal' : version === 2 ? 'nine-service-new-volume-restore' : 'eight-service-new-volume-restore',
     ...(candidateMode ? { candidateCommit: manualFirstRelease.commit, candidateFunctionsImage: manualFirstRelease.functions } : {}),
     project, bundleSha256: checksum(payload), restoredServices: Object.keys(model.services),
     checks: ['Auth', 'RLS', 'Vault decryption', 'Storage bytes and xattrs', 'SMTP sink', 'gateway boundaries', 'Functions signatures and Flow', 'Realtime events and tenant denial'],
     originalServicesUnchanged: true, liveVolumesOverwritten: false, releaseAccepted: false };
-} catch {
+} catch (error) {
   console.error(`Disposable private restore failed at: ${stage}. No restore success claimed.`);
+  const location = String(error?.stack || '').match(/(?:restore-private-staging-backup|staging-[a-z-]+)\.mjs:\d+:\d+/)?.[0];
+  if (location) console.error(`Sanitized check location: ${location}`);
+  if (created && docker && model) {
+    // Report health/exit metadata only. Never print private Compose input,
+    // stderr, container logs, healthcheck output or recovered credentials.
+    for (const service of Object.values(model.services)) {
+      try {
+        const [state] = JSON.parse(docker(['inspect', service.container_name]));
+        if (state.Config.Labels[label] !== project) continue;
+        console.error(JSON.stringify({ service: service.container_name, running: state.State.Running,
+          health: state.State.Health?.Status || null, exitCode: state.State.ExitCode, oom: state.State.OOMKilled }));
+      } catch { /* A not-yet-created disposable service has no diagnostic. */ }
+    }
+  }
   process.exitCode = 1;
 } finally {
   let cleaned = !created;
@@ -217,7 +233,8 @@ try {
     const receiptPath = localMode ? `/Users/malabdullah/BarberBackups/staging/${completed.backupId}/restore-local-${project}.json` : `${INSTALL_ROOT}/${prefix}-${completed.backupId}.json`;
     writeFileSync(receiptPath, JSON.stringify({ ...completed, temporaryResourcesCleaned: true }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
     console.log(JSON.stringify({ backupId: completed.backupId,
-      status: candidateMode ? 'published-functions-rehearsal-verified' : 'eight-service-restore-verified',
+      status: candidateMode ? 'published-functions-rehearsal-verified' : localMode ? 'mac-off-vps-live-release-restore-verified'
+        : completed.restoredServices.length === 9 ? 'nine-service-restore-verified' : 'eight-service-restore-verified',
       temporaryResourcesCleaned: true, releaseAccepted: false }));
   }
 }

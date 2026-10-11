@@ -8,7 +8,7 @@ import { INSTALL_ROOT, PROJECT, SERVICES } from './staging-private-model.mjs';
 import { manualFirstRelease as release } from './staging-manual-first-release.mjs';
 import { BACKUP_LIMIT, checksum, validateBackupFile } from './staging-private-backup-format.mjs';
 import { packLiveBackup, LIVE_ROUTES } from './staging-live-backup-format.mjs';
-import { liveContext, privateRoot, readProtected, resumeStates, flushPath } from './staging-live-context.mjs';
+import { liveContext, privateRoot, readProtected, resumeStates, flushPath, quiesceTargets } from './staging-live-context.mjs';
 import { recoveryRoleQuery, validateRecoveryRole } from './staging-recovery-roles.mjs';
 import { selectBackupVaultProbe } from './staging-backup-vault-probe.mjs';
 import { maintenanceWindow } from './staging-operations-policy.mjs';
@@ -57,7 +57,7 @@ try {
     states, frontendSha256: checksum(parts['live/frontend.json']), backendSha256: checksum(parts['live/backend.json']) }), { flag: 'wx', mode: 0o600 });
   flushPath(`${lock}/journal.json`); flushPath(lock); flushPath('/var/backups/barber-staging');
   stage = 'quiesce'; stopped = true;
-  docker(['stop', '--time', '15', ...states.filter(state => state.name !== `${PROJECT}-db`).map(state => state.id)], { timeout: 120000 });
+  docker(['stop', '--time', '15', ...quiesceTargets(states).map(state => state.id)], { timeout: 120000 });
   const captureAt = new Date().toISOString();
   const id = `staging-${captureAt.slice(0, 19).replaceAll('-', '').replaceAll(':', '')}Z-${randomBytes(4).toString('hex')}`;
   stage = 'capture';
@@ -92,8 +92,10 @@ try {
   writeFileSync(`${directory}/manifest.json`, JSON.stringify(manifest), { flag: 'wx', mode: 0o600 });
   flushPath(`${directory}/manifest.json`); flushPath(directory); flushPath(exportRoot);
   complete = true; console.log(JSON.stringify({ status: 'live-capture-verified', id, sha256: manifest.sha256, bytes: encrypted.length, offVpsVerified: false }));
-} catch {
+} catch (error) {
   console.error(`Live staging capture failed at ${stage}; no success claimed.`); process.exitCode = 1;
+  const location = String(error?.stack || '').match(/(?:capture-live-staging-backup|staging-[a-z-]+)\.mjs:\d+:\d+/)?.[0];
+  if (location) console.error(`Sanitized check location: ${location}`);
 } finally {
   if (stopped && context) {
     try { await resumeStates(context.docker, context.states); stopped = false; }

@@ -3,6 +3,94 @@
 Status: implementation prepared and locally validated; live installation and
 final acceptance remain blocked/pending. No Env3 closure claimed.
 
+## October 11 supervised recovery incident — service recovered
+
+SSH access resumed without a firewall change: the owner's current IP again
+matched the existing rule. All five PR #6 checks at `dd94480` passed.
+The live nine-service identities and configuration hashes matched the recorded
+release. No published ports, OOM events or container restarts were observed;
+Auth users remained synthetic and outbound integration credentials empty.
+The database cron launcher is `off` (one registered active job does not mean it
+is executing). Disk utilization was 44%.
+
+All ten recovery images now have authenticated encrypted Mac copies, including
+the exact Realtime `78f25384...` artifact exported from staging. No private
+recovery key left the Mac. The tested minimal tar image was imported into the
+VPS image store only; no application image was replaced.
+
+Native preflight found two issues: decimal-string Compose memory limits needed
+lossless normalization to Docker's integer bytes; five root-owned migration/test
+files had group-write permissions. The validator fix has rejection tests, and
+the exact files were hardened to `0600` after identity/content verification.
+Neither change altered database contents or live Compose models.
+
+The supervised capture reached resumption in 33 seconds but was rejected by its
+origin check. Docker assigned the same gateway container `172.21.0.9` instead of
+the approved `172.21.0.5`; Storage now occupies `.5`. All nine services resumed,
+but Cloudflare's unchanged API route still targets `.5:8000`, so staging API
+access is affected. The failure journal is deliberately retained. No completed
+backup or transfer receipt was published, and schedules remain disabled.
+Owner approval has been requested to restore/pin the original private gateway
+address while preserving container IDs, volumes and aliases; no automatic
+Cloudflare/DNS edits or production changes are authorized by this incident.
+
+The owner approved recovery. Docker refused static assignment on its original
+auto-subnet, so no static pin was applied. Reconnecting only gateway/Storage in
+the reviewed order restored gateway `.5` and moved Storage to `.9`; IDs,
+volumes and aliases were preserved. Public tests passed again for all four
+roles, and the ordinary owner browser loaded the synthetic barber dashboard.
+The investigated journal is retained under the private VPS incidents directory.
+
+Capture now stops every backend writer but leaves the strictly validated,
+read-only frontend and gateway endpoints alive. Rejection tests cover missing,
+unknown and duplicate service identities. The new supervised capture succeeded
+in 24.120 seconds, with all nine services healthy afterward and both original
+origins preserved. Export `staging-20261011T041322Z-e2704452`: 1,249,784 bytes,
+ciphertext SHA-256
+`d211e35dcdfa6322ef500e74c3947bf004f830cbb7ac4a0c97ee39b5ca1dc649`.
+Transfer authentication and full native restore remain separate gates.
+
+Transfer completed and passed ciphertext size/checksum and full age
+authentication on the Mac. The data archive and receipt are private under
+`BarberBackups/staging/staging-20261011T041322Z-e2704452`.
+Two full Mac-only rehearsals failed at Realtime startup; the other eight
+services were running (all declared health checks healthy), with no OOM events.
+The unchanged exact Realtime image exited with code 1. The existing October 4
+record also reproduced AMD64-on-ARM failure with upstream Realtime. No runtime
+profile was weakened and no full recovery pass was manufactured. Only the
+labelled disposable stacks and synthetic volumes were removed; live services
+and existing Mac containers were preserved. A suitable independent recovery
+runtime is now an owner decision, not an invitation to use production.
+
+macOS refused the notification test from Homebrew's helper. A non-overwriting
+copy of the same installed helper was placed in the owner's Applications
+directory for registration. The agreed notifications were enabled for that
+helper; its diagnostic reports authorized banners/sounds, and the labelled test
+appears in its delivered-notification list at 04:25:09 UTC (07:25:09 Kuwait).
+The implementation now pins its exact binary SHA-256 and checks authorization
+on every monitor run. No other app notification settings were changed. Monitoring
+and recurring backup schedules are still disabled, and observation has not
+started. No installation-ready receipts were fabricated.
+
+Ten authenticated image archives also passed a Mac-only tagless import,
+verifying exact platform manifests, configuration bytes and runtime layers.
+The importer was corrected to use Docker's returned OCI descriptor rather
+than assuming a configuration-blob digest is daemon-addressable. No image tags
+or existing running Mac services were replaced.
+
+Public ingress/headers, all four synthetic role logins and tenant isolation
+passed before the capture. These results do not prove post-incident health.
+The full local repository check passed after a fail-open domain-scan error was
+corrected and covered by four scanner-availability/error regression tests.
+
+The October 11 artifact scan covered all ten exports, without ignore rules:
+DB 3 HIGH, Auth 5 HIGH, Mailpit 4 HIGH, existing frontend 1 HIGH, Realtime 54 HIGH;
+zero CRITICAL. Other artifacts had zero reported HIGH/CRITICAL, subject to the
+previously documented scanner limitations. Realtime's two additional HIGH
+occurrences need explicit reassessment; the prior exception is not automatically
+extended to newly discovered findings. Original expiry remains October 18 at
+03:00 Kuwait. No security acceptance or Env3 closure is claimed.
+
 Approved scope: private synthetic staging on srv1207055, manual deployments,
 daily backup window 04:00–04:15 Asia/Kuwait, encrypted off-VPS copies on the
 owner's Mac, fifteen-minute Mac monitoring and owner iPhone acceptance.
@@ -11,10 +99,13 @@ Production and real AI/WhatsApp integrations are excluded.
 ## Current gates
 
 - October 8 live evidence: `staging-live-acceptance.md`.
-- Fresh VPS inspection: blocked by SSH timeout during the October 10 attempt.
+- Fresh VPS inspection: passed October 11; original gateway address recovered
+  after the supervised capture incident described above.
 - GitHub authentication and main's five strict/admin-enforced protections:
   verified with network access; no policy changes.
 - Two scheduled backup cycles and 48-hour observation: not started.
+- Full independent restore: blocked by Realtime on Apple-Silicon emulation;
+  qualified non-production recovery runtime decision pending.
 - Owner iPhone and release acceptance: pending.
 - Realtime exception expires 2026-10-18T00:00:00Z; no renewal claimed.
 
@@ -79,15 +170,15 @@ before live changes or any bounded owner disposition. See the
 
 ## Remaining execution gates
 
-1. Restore Hostinger access; inspect the exact staging SSH rule and obtain the
-   plan-required separate approval before changing it. Current Mac IP observed:
-   `37.37.150.202`; no firewall modification performed.
-2. Fresh VPS/configuration/synthetic-data and resource validation.
-3. Preserve the exact missing Realtime artifact; complete lost-host recovery.
+1. Select a suitable independent recovery runtime and pass the full v2 restore.
+   SSH, configuration/resource inspection and all ten image exports passed.
+2. Verify native notification authorization/delivery and remaining failure drills.
+3. Record exact reviewed operational-source identities and installation approval.
 4. Resolve new security findings and obtain exact-release approval after CI.
 5. Register approved new release/configuration hashes in the frozen capture
    policy before changing application images; current v2 bindings cover 6217cb3.
-6. Supervised live capture, verified transfer, full v2 restore and failure drills.
+6. Supervised live capture and verified transfer passed October 11; full v2
+   restoration and remaining failure drills still block schedule installation.
 7. Install/enable the reviewed VPS/Mac schedules; two cycles and 48 hours.
 8. Final live regression, iPhone review and explicit owner acceptance.
 

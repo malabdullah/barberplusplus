@@ -3,7 +3,7 @@ import { readFileSync, lstatSync, openSync, fsyncSync, closeSync } from 'node:fs
 import { hostname } from 'node:os';
 import { dirname } from 'node:path';
 import { localDockerProbe } from './local-docker-probe.mjs';
-import { INSTALL_ROOT, PROJECT, APPROVED_SOURCE } from './staging-private-model.mjs';
+import { INSTALL_ROOT, PROJECT, APPROVED_SOURCE, SERVICES } from './staging-private-model.mjs';
 import { manualFirstRelease as release } from './staging-manual-first-release.mjs';
 import { checksum } from './staging-private-backup-format.mjs';
 import { validateLiveModels, LIVE_HASHES, LIVE_ROUTES } from './staging-live-backup-format.mjs';
@@ -26,6 +26,25 @@ export function readProtected(path) {
   assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.uid === 0 && (stat.mode & 0o022) === 0);
   assert.ok(stat.size > 0 && stat.size <= 1024 * 1024);
   return readFileSync(path);
+}
+export function resourceLimitBytes(value) {
+  // Compose preserves decimal string values in some recorded service models;
+  // Docker's inspect API reports the same byte count as an integer. Accept only
+  // this lossless representation, never units, rounding or an absent limit.
+  if (typeof value === 'string') assert.match(value, /^[1-9][0-9]*$/);
+  else assert.equal(typeof value, 'number');
+  const bytes = Number(value);
+  assert.ok(Number.isSafeInteger(bytes) && bytes > 0);
+  return bytes;
+}
+export function quiesceTargets(states) {
+  const expected = [...SERVICES.map(name => `${PROJECT}-${name}`), release.frontendProject];
+  assert.deepEqual(states.map(state => state.name).sort(), expected.sort());
+  assert.equal(new Set(states.map(state => state.id)).size, states.length);
+  // These two validated, read-only services have no database/storage mounts and
+  // cannot write without the stopped backend writers. Keeping their network
+  // endpoints alive preserves the approved tunnel origins across capture.
+  return states.filter(state => ![`${PROJECT}-db`, `${PROJECT}-api-gw`, release.frontendProject].includes(state.name));
 }
 export function liveContext({ health = true } = {}) {
   assert.equal(hostname(), 'srv1207055'); assert.equal(process.getuid(), 0);
@@ -58,7 +77,7 @@ export function liveContext({ health = true } = {}) {
       if (service.read_only) assert.equal(state.HostConfig.ReadonlyRootfs, true);
       if (service.cap_drop) assert.deepEqual(state.HostConfig.CapDrop, service.cap_drop);
       if (service.security_opt) assert.deepEqual(state.HostConfig.SecurityOpt, service.security_opt);
-      assert.equal(state.HostConfig.Memory, service.mem_limit);
+      assert.equal(state.HostConfig.Memory, resourceLimitBytes(service.mem_limit));
       assert.equal(state.HostConfig.NanoCpus, Math.round(service.cpus * 1000000000));
       assert.equal(state.HostConfig.PidsLimit, service.pids_limit);
       if (health) {

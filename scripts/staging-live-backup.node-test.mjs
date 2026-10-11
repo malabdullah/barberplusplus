@@ -5,6 +5,22 @@ import { APPROVED_SOURCE, PROJECT, OWNER_LABEL, SERVICES, IMAGES, privateVariabl
 import { validateLiveModels, validateRoutes, LIVE_ROUTES, unpackStagingBackup } from './staging-live-backup-format.mjs';
 import { manualFirstRelease as release, prepareManualFirstRelease } from './staging-manual-first-release.mjs';
 import { checksum, packPrivateBackup, BACKUP_LIMIT } from './staging-private-backup-format.mjs';
+import { resourceLimitBytes, quiesceTargets } from './staging-live-context.mjs';
+
+test('resource limit normalization is lossless for recorded numeric byte strings', () => {
+  assert.equal(resourceLimitBytes('268435456'), 268435456);
+  assert.equal(resourceLimitBytes(1073741824), 1073741824);
+  for (const value of ['256m', '268435456 ', '0268435456', '-1', '1.5', '', 0, -1, NaN, Infinity, null, undefined, true, '9007199254740992']) {
+    assert.throws(() => resourceLimitBytes(value));
+  }
+});
+test('capture quiesces every backend writer while preserving read-only origin endpoints', () => {
+  const states = [...SERVICES.map(name => ({ name: `${PROJECT}-${name}`, id: name })), { name: release.frontendProject, id: 'frontend' }];
+  assert.deepEqual(quiesceTargets(states).map(state => state.id).sort(), ['auth', 'functions', 'mailpit', 'realtime', 'rest', 'storage']);
+  assert.throws(() => quiesceTargets(states.slice(1)));
+  assert.throws(() => quiesceTargets([...states, { name: 'unreviewed', id: 'other' }]));
+  assert.throws(() => quiesceTargets(states.map(state => ({ ...state, id: 'duplicate' }))));
+});
 
 function fixture() {
   const labels = { [OWNER_LABEL]: APPROVED_SOURCE };

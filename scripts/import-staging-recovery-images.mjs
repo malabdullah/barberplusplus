@@ -8,6 +8,7 @@ import { localDockerProbe } from './local-docker-probe.mjs';
 import { requirePrivate, keyRoot } from './pull-staging-backup.mjs';
 import { recoveryImages, imageRoot, fileHash } from './export-staging-recovery-images.mjs';
 import { assertArchiveConfig } from './staging-image-archive-config.mjs';
+import { inspectPlatformImage } from './staging-postgres-candidate.mjs';
 
 export async function importRecoveryImages(docker = localDockerProbe()) {
   assert.equal(process.platform, 'darwin'); requirePrivate(imageRoot, true); requirePrivate(`${imageRoot}/inventory.json`);
@@ -32,11 +33,19 @@ export async function importRecoveryImages(docker = localDockerProbe()) {
       const config = execFileSync('/usr/bin/tar', ['-xOf', archive, manifest[0].Config], { maxBuffer: 1048576 });
       assert.equal('sha256:' + createHash('sha256').update(config).digest('hex'), record.configId);
       // An authenticated exact export is imported by ID, without changing tags.
-      docker(['image', 'load', '--input', archive], { timeout: 600000 });
-      const [image] = JSON.parse(docker(['image', 'inspect', record.configId]));
-      assert.equal(image.Architecture, 'amd64');
+      const loaded = docker(['image', 'load', '--input', archive], { timeout: 600000 });
+      const identifiers = [...loaded.matchAll(/^Loaded image ID: (sha256:[a-f0-9]{64})$/gm)];
+      assert.equal(identifiers.length, 1, 'Expected one immutable, tagless image import');
+      const source = identifiers[0][1];
+      // Docker's containerd store addresses the loaded OCI descriptor rather
+      // than its configuration blob. Verify the platform manifest and runtime
+      // bytes instead of assuming the config digest is daemon-addressable.
+      const image = inspectPlatformImage(docker, source, 'linux/amd64');
+      assert.equal(image.Id, record.imageId);
+      assert.equal(image.Architecture, 'amd64'); assert.equal(image.Os, 'linux');
       assertArchiveConfig(JSON.parse(config).config, image.Config);
-      mapping[reference] = image.Id;
+      assert.deepEqual(JSON.parse(config).rootfs.diff_ids, image.RootFS.Layers);
+      mapping[reference] = source;
     } finally { rmSync(scratch, { recursive: true }); }
   }
   return mapping;

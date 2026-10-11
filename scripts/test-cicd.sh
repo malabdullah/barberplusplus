@@ -2,6 +2,7 @@
 set -eu
 
 node --test scripts/local-service-pins.node-test.mjs
+node --test scripts/check-hardcoded-domains.node-test.mjs
 
 workflow=.github/workflows/deploy-staging.yml
 if grep -Eq 'runs-on:.*self-hosted|DOKPLOY_|STAGING_VPS_AUTOMATION_READY|staging-vps-deploy-preflight' "$workflow"; then

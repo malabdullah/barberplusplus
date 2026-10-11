@@ -8,9 +8,13 @@ vendor_archive=$2
 case "$vendor_archive" in /private/tmp/barber-node-24.20.*/node.tar.gz) ;; *) exit 1 ;; esac
 test -f "$vendor_archive"
 test ! -L "$vendor_archive"
-test -x /opt/homebrew/bin/terminal-notifier
+test -x /Users/malabdullah/Applications/terminal-notifier.app/Contents/MacOS/terminal-notifier
 test -x /opt/homebrew/opt/node@24/bin/node
 source_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+/opt/homebrew/opt/node@24/bin/node --input-type=module -e '
+  const { verifyNotifier } = await import(process.argv[1] + "/scripts/staging-mac-notifier.mjs");
+  verifyNotifier();
+' "$source_root"
 state_root='/Users/malabdullah/Library/Application Support/BarberStagingOperations'
 agent_path='/Users/malabdullah/Library/LaunchAgents/com.malabdullah.barber-staging-operations.plist'
 test ! -e "$agent_path"
