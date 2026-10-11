@@ -41,5 +41,10 @@ Validation so far: complete repository check passed; 9 local E2E journeys
 passed; current checkpoint/policy/historical negative tests passed. Local
 Firefox cannot launch under macOS sandbox (plugin-container permission and
 framebuffer errors); full three-engine acceptance must be established by Linux
-CI. Native rebuild currently passed core checks but failed Realtime handshake;
-bounded diagnostics and final CI remain required. No ready/GO claim.
+CI. Native full rebuild subsequently passed and its durable receipt preserves
+the exact images and migration hashes. The bounded readiness helper rejects
+authentication/routing failures immediately. Final review additionally bound
+checkpoint receipts to configuration identity and authenticated runtime responses
+to their exact hash. Targeted negative tests and the complete local repository
+check passed. All five CI checks passed at 8defaf4; final source head must pass
+again after this hardening. No ready/GO claim.

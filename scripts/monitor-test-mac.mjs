@@ -5,7 +5,8 @@ import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, rmdirSy
 import { parseEnv } from 'node:util';
 import { connect } from 'node:tls';
 import { requirePrivate } from './pull-staging-backup.mjs';
-import { TEST_POLICY } from './test-environment-policy.mjs';
+import { TEST_POLICY, parseTestRuntime } from './test-environment-policy.mjs';
+import { checksum } from './staging-private-backup-format.mjs';
 import { evaluateTestObservations } from './test-monitor-observations.mjs';
 import { changedProblems } from './staging-operations-policy.mjs';
 import { verifyNotifier, notifyTest } from './staging-mac-notifier.mjs';
@@ -49,8 +50,9 @@ try {
       const text = await response.text();
       if (app) {
         assert.equal(response.status, 200); assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
-        assert.ok(remote && text.includes(remote.candidate.commit) && text.includes(`supabaseUrl: '${origin}'`));
-        anon = text.match(/supabasePublishableKey:\s*'([^']+)'/)?.[1]; assert.ok(anon);
+        assert.ok(remote && checksum(Buffer.from(text)) === remote.candidate.configuration.runtime);
+        const runtime = parseTestRuntime(text); assert.equal(runtime.commit, remote.candidate.commit);
+        anon = runtime.anon;
         const claims = JSON.parse(Buffer.from(anon.split('.')[1], 'base64url')); assert.equal(claims.role, 'anon');
         const days = (claims.exp * 1000 - Date.now()) / 86400000; assert.ok(Number.isFinite(days));
         expiry.push({ check: 'supabase-browser-key-expiry', status: days <= 7 ? 'failed' : days <= 14 ? 'degraded' : 'healthy', reason: days <= 7 ? 'expires-within-seven-days' : days <= 14 ? 'expires-within-fourteen-days' : 'key-current' });

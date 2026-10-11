@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { TEST_POLICY, validateTestCandidate, candidateIdentity, assertTestOperation, boundedMaintenance, testCheckpointRequirement, parseTestRuntime } from './test-environment-policy.mjs';
+import { TEST_POLICY, validateTestCandidate, candidateIdentity, assertTestOperation, boundedMaintenance, testCheckpointRequirement, parseTestRuntime, assertTestCheckpointBinding } from './test-environment-policy.mjs';
 import { makeTestState } from './test-environment-state.mjs';
 import { evaluateTestObservations } from './test-monitor-observations.mjs';
 import { changedProblems } from './staging-operations-policy.mjs';
@@ -103,4 +103,13 @@ test('notification changes include new failure and recovery but exclude unchange
   assert.deepEqual(changedProblems(old, failed), ['tunnel:failed:inactive']);
   assert.deepEqual(changedProblems(failed, failed), []);
   assert.deepEqual(changedProblems(failed, old), ['tunnel:recovered']);
+});
+test('checkpoint approval rejects another configuration even when its commit is unchanged', () => {
+  const manifest = { id: 'staging-20261011T080000Z-12345678' };
+  const capture = { id: manifest.id, commit: candidate.commit, version: 3, servicesResumed: true, candidateIdentity: candidateIdentity(candidate) };
+  assert.equal(assertTestCheckpointBinding(capture, manifest, candidate).historicalLiveValidationRequired, false);
+  const changed = structuredClone(candidate); changed.configuration.backend = '2'.repeat(64);
+  assert.throws(() => assertTestCheckpointBinding(capture, manifest, changed));
+  assert.throws(() => assertTestCheckpointBinding({ ...capture, servicesResumed: false }, manifest, candidate));
+  assert.throws(() => assertTestCheckpointBinding({ ...capture, version: 2 }, manifest, candidate));
 });

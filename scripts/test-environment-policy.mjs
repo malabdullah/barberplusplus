@@ -94,3 +94,13 @@ export function testCheckpointRequirement(operation, receipt, startedAt, now = D
   assert.ok(Number.isFinite(startedAt) && startedAt <= captured && captured <= verified && verified <= now);
   return { required: true, id: receipt.id };
 }
+export function assertTestCheckpointBinding(capture, manifest, candidate) {
+  validateTestCandidate(candidate);
+  assert.equal(capture.id, manifest.id); assert.equal(capture.commit, candidate.commit); assert.equal(capture.servicesResumed, true);
+  if (capture.version === 3) {
+    assert.equal(capture.candidateIdentity, candidateIdentity(candidate));
+    return { historicalLiveValidationRequired: false };
+  }
+  assert.equal(capture.version, 2); assert.equal(candidate.commit, '6217cb33bd9aaf32aa0fa924278f314988449f12');
+  return { historicalLiveValidationRequired: true };
+}

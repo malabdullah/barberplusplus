@@ -95,6 +95,7 @@ try {
   const manifest = { version: 1, id, environment: 'staging', sourceHost: 'srv1207055', kind: 'staging-backup', file: 'payload.tar.age',
     sha256: checksum(encrypted), bytes: encrypted.length, createdAt: captureAt };
   writeFileSync(`${directory}/capture.json`, JSON.stringify({ id, commit: testMode ? context.candidate.commit : release.commit, scheduled: process.argv[2] === '--scheduled',
+    ...(testMode ? { candidateIdentity: context.candidateIdentity } : {}),
     createdAt: captureAt, completedAt: new Date().toISOString(), version: testMode ? 3 : 2, servicesResumed: true }), { flag: 'wx', mode: 0o600 });
   flushPath(`${directory}/capture.json`); flushPath(directory);
   writeFileSync(`${directory}/manifest.json`, JSON.stringify(manifest), { flag: 'wx', mode: 0o600 });

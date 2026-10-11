@@ -4,7 +4,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, rmdirSy
 import { hostname } from 'node:os';
 import { observedTestRuntime, testInventory } from './test-environment-runtime.mjs';
 import { TEST_STATE_ROOT, OPERATION_LOCK, protectedTestPath, readTestJson, saveTestJson, makeTestState, withTestOperation } from './test-environment-state.mjs';
-import { candidateIdentity, assertTestOperation, validateTestCandidate, testCheckpointRequirement } from './test-environment-policy.mjs';
+import { candidateIdentity, assertTestOperation, validateTestCandidate, testCheckpointRequirement, assertTestCheckpointBinding } from './test-environment-policy.mjs';
+import { validateManifest } from './pull-staging-backup.mjs';
+import { privateRoot } from './staging-live-context.mjs';
 
 async function input() {
   const chunks = []; let size = 0;
@@ -44,12 +46,18 @@ try {
     if (request.checkpoint) {
       assert.match(request.checkpoint.id, /^staging-\d{8}T\d{6}Z-[a-f0-9]{8}$/);
       const root = `/var/backups/barber-staging/export/${request.checkpoint.id}`;
+      privateRoot('/var/backups/barber-staging'); privateRoot('/var/backups/barber-staging/export'); privateRoot(root);
       // Existing validated inventory interface owns the historical receipt schema.
       const { lstatSync } = await import('node:fs');
-      for (const path of [root, `${root}/manifest.json`, `${root}/off-vps-receipt.json`]) {
+      for (const path of [root, `${root}/manifest.json`, `${root}/off-vps-receipt.json`, `${root}/capture.json`]) {
         const stat = lstatSync(path); assert.ok(!stat.isSymbolicLink() && stat.uid === 0 && (stat.mode & 0o077) === 0);
       }
       const manifest = JSON.parse(readFileSync(`${root}/manifest.json`)); const receipt = JSON.parse(readFileSync(`${root}/off-vps-receipt.json`));
+      validateManifest(manifest, request.checkpoint.id);
+      const capture = JSON.parse(readFileSync(`${root}/capture.json`));
+      if (assertTestCheckpointBinding(capture, manifest, current).historicalLiveValidationRequired) {
+        const { liveContext } = await import('./staging-live-context.mjs'); liveContext();
+      }
       assert.equal(manifest.id, request.checkpoint.id); assert.equal(receipt.sha256, manifest.sha256);
       assert.equal(receipt.bytes, manifest.bytes);
       request.checkpoint = { ...receipt, createdAt: manifest.createdAt };
