@@ -47,4 +47,8 @@ authentication/routing failures immediately. Final review additionally bound
 checkpoint receipts to configuration identity and authenticated runtime responses
 to their exact hash. Targeted negative tests and the complete local repository
 check passed. All five CI checks passed at 8defaf4; final source head must pass
-again after this hardening. No ready/GO claim.
+again after this hardening. Final dependency review found source-map-js 1.2.1
+in development tooling; the compatible 1.2.2 patch changed only its three
+lockfile fields. Locked reinstall, complete repository validation and npm audit
+passed with zero reported npm vulnerabilities. This does not resolve the
+separate backend image findings. No ready/GO claim.

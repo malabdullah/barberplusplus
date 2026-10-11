@@ -22,6 +22,12 @@ neighboring routes do not. Changing these conditions requires another review.
 
 ## Current findings and dispositions
 
+The image build also reported source-map-js 1.2.1 in development tooling
+(CVE-2026-93749). The lockfile now selects the compatible 1.2.2 patch; only that
+transitive entry changed and npm audit reports zero vulnerabilities. This is
+separate from the runtime image findings below. See the
+[reviewed advisory](https://github.com/advisories/GHSA-68fv-2mgg-jv7q).
+
 | Artifact | HIGH / CRITICAL | Assessment and required decision |
 |---|---|---|
 | DB helper, image b8aebc0a… | 3 / 0 | Go 1.27.1 matches 78667, 78669 and 97031. The helper is gosu, a startup UID/exec CLI, not an HTTP/TLS service. Source-path exclusion is a reachability assessment, not a package fix; preserve findings. Patched Go 1.27.2 is available for a future reviewed rebuild. |
