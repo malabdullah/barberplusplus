@@ -21,3 +21,8 @@ e450135611e6b168a742b33b5276d699bbc5953b:src/lib/runtimeConfigValidation.test.js
 # Public Cloudflare account identifier, verified against the account dashboard
 # URL. No credential value; exact historical match only. Current code names it.
 b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:generic-api-key:97
+# Public RFC 6455 section 1.2 example WebSocket challenge ("the sample nonce"),
+# not authentication material: https://datatracker.ietf.org/doc/html/rfc6455#section-1.2
+# Removed from current source; requests now generate fresh random challenges.
+# Exact historical commit/path/rule/line only; current source remains scanned.
+80c035d5eecce8dbe88dd95dcd034b624880c657:scripts/rehearse-test-synthetic.mjs:generic-api-key:128

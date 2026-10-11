@@ -30,6 +30,13 @@ Review changes incorporated:
 - Retain failed operation journals until investigated; never claim a successful
   rebuild or independent restore on a partial functional pass.
 
+CI follow-up: the fail-closed domain scan exposed missing ripgrep on the hosted
+runner; the existing apt tools step now installs it alongside age. Secret scan
+flagged only the public RFC 6455 section 1.2 nonce in historical commit 80c035d.
+Current WebSocket probes generate random challenges. The existing history-only
+false-positive list records that exact commit/path/rule/line; no credential,
+rule, path or vulnerability finding is suppressed. No scanning rule is disabled.
+
 Validation so far: complete repository check passed; 9 local E2E journeys
 passed; current checkpoint/policy/historical negative tests passed. Local
 Firefox cannot launch under macOS sandbox (plugin-container permission and

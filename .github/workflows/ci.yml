@@ -41,7 +41,7 @@ jobs:
       - name: Test staging backup encryption and safety checks
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends age
+          sudo apt-get install -y --no-install-recommends age ripgrep
           npm run test:staging-backup
       - run: npm run check:supabase-pin
       - name: Validate isolated VPS candidate services
