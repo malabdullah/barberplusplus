@@ -165,7 +165,9 @@ try {
   const migrations = readdirSync('supabase/migrations').filter((name) => name.endsWith('.sql')).sort();
   assert.ok(migrations.length && migrations.every((name) => /^\d{14}_[a-z0-9_]+\.sql$/.test(name)));
   for (const migration of migrations) {
-    sql(readFileSync(`supabase/migrations/${migration}`, 'utf8'));
+    // Match the CLI's atomic migration execution. In particular, SET LOCAL
+    // ownership transitions must not be split across autocommit statements.
+    sql(`BEGIN;\n${readFileSync(`supabase/migrations/${migration}`, 'utf8')}\nCOMMIT;`);
     console.log(`Replayed ${migration}`);
   }
   stage = 'random-password staging fixture rehearsal';

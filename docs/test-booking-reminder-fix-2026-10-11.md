@@ -85,6 +85,12 @@ This is a separate review pass, not independent human review. Repository checks,
 new role/checkpoint tests and migration naming passed. Combined CI must pass
 all five required checks before a proposed main merge.
 
+CI's fresh database replay/schema-drift job passed on the first combined head.
+The separate compatibility driver used autocommit migration execution, unlike
+the CLI and native rehearsal. It now wraps each migration in a transaction;
+the SET LOCAL ownership transition is not changed or bypassed. All five checks
+must pass again on this correction before merge approval is requested.
+
 ## Deployment gates still required
 
 The combined candidate includes the already-reviewed navigation fix from PR #7;
