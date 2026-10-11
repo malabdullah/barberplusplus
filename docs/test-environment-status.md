@@ -2,6 +2,14 @@
 
 Status: implementation in progress; no ready/acceptance claim.
 
+Preparation update: with owner authorization, TEST-BOOK-01 now has an isolated
+validated migration and fixed-purpose writer-role recovery support. Native
+five-service rehearsal passed 67 database assertions, four-role booking API
+journeys, tenant/reminder denial and 35 post-logical-restore assertions. The
+reviewed navigation fix is included in the combined review candidate; neither
+fix is applied live. Eight legacy security-advisor warnings remain recorded,
+not silently accepted. See [booking fix preparation](test-booking-reminder-fix-2026-10-11.md).
+
 Latest execution: PR #6 merged with owner build-only approval into main
 `b04eacdfd49ce7aa8c7d1a4217c9fe4394078294`; main CI and image publication
 succeeded. The exact published frontend passed its isolated runtime/header/
