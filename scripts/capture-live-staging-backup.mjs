@@ -16,6 +16,7 @@ import { STAGING_TAR_IMAGE } from './staging-backup-tool.mjs';
 import { assertUnfrozen } from './test-environment-state.mjs';
 import { testCheckpointContext } from './test-environment-runtime.mjs';
 import { packTestCheckpoint } from './test-checkpoint-format.mjs';
+import { bookingReminderRoleQuery, validateBookingReminderRole } from './booking-reminder-recovery-role.mjs';
 
 const exportRoot = '/var/backups/barber-staging/export';
 const lock = '/var/backups/barber-staging/capture-in-progress';
@@ -69,6 +70,7 @@ try {
   const id = `staging-${captureAt.slice(0, 19).replaceAll('-', '').replaceAll(':', '')}Z-${randomBytes(4).toString('hex')}`;
   stage = 'capture';
   const recoveryRole = validateRecoveryRole(JSON.parse(sql(recoveryRoleQuery)));
+  const bookingReminderRole = testMode ? validateBookingReminderRole(JSON.parse(sql(bookingReminderRoleQuery)), context.candidate) : null;
   const counts = JSON.parse(sql("SELECT json_build_object('users',(SELECT count(*) FROM auth.users),'branches',(SELECT count(*) FROM public.branches),'objects',(SELECT count(*) FROM storage.objects),'migrations',(SELECT count(*) FROM supabase_migrations.schema_migrations));"));
   parts['database.dump'] = docker(['exec', '-u', 'postgres', `${PROJECT}-db`, 'pg_dump', '-U', 'supabase_admin', '-d', 'postgres', '--format=custom'], { encoding: null, maxBuffer: BACKUP_LIMIT, timeout: 120000 });
   parts['storage.tar'] = docker(['run', '--rm', '--name', `${PROJECT}-backup-storage`, '--network', 'none', '--read-only',
@@ -79,7 +81,7 @@ try {
   docker(['stop', '--time', '15', states.find(state => state.name === `${PROJECT}-db`).id]);
   parts['database-config.tar'] = docker(['cp', `${PROJECT}-db:/etc/postgresql-custom/.`, '-'], { encoding: null, maxBuffer: BACKUP_LIMIT });
   const metadata = { source: context.prepared.approvedSource, host: 'srv1207055', id, createdAt: captureAt,
-    counts, recoveryRole, vaultProbe, scope: 'live-nine-service-state', scheduled: process.argv[2] === '--scheduled',
+    counts, recoveryRole, ...(testMode ? { bookingReminderRole } : {}), vaultProbe, scope: 'live-nine-service-state', scheduled: process.argv[2] === '--scheduled',
     ephemeralExclusions: ['Mailpit inbox', 'Realtime connections/cache', 'Functions tmpfs'], imageRecovery: 'separate-off-vps-image-inventory-required' };
   const bundle = testMode ? packTestCheckpoint(parts, metadata, context.candidate) : packLiveBackup(parts, metadata);
   stage = 'encrypt'; scratch = mkdtempSync(join(tmpdir(), 'barber-live-capture-'));

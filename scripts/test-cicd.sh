@@ -5,6 +5,7 @@ node --test scripts/local-service-pins.node-test.mjs
 node --test scripts/check-hardcoded-domains.node-test.mjs
 node --test scripts/test-environment-policy.node-test.mjs
 node --test scripts/test-checkpoint-format.node-test.mjs
+node --test scripts/booking-reminder-recovery-role.node-test.mjs
 node --test scripts/test-realtime-readiness.node-test.mjs
 for script in test-environment-control test-environment-runtime monitor-test-mac rehearse-test-synthetic; do
   node --check "scripts/$script.mjs"

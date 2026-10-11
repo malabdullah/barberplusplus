@@ -7,6 +7,7 @@ import { checksum } from './staging-private-backup-format.mjs';
 import { LIVE_ROUTES } from './staging-live-backup-format.mjs';
 import { packTestCheckpoint, unpackTestCheckpoint } from './test-checkpoint-format.mjs';
 import { readTestOrHistoricalCheckpoint } from './read-test-checkpoint.mjs';
+import { BOOKING_REMINDER_MIGRATION, bookingReminderRecoveryRole } from './booking-reminder-recovery-role.mjs';
 
 function fixture() {
   const labels = { [OWNER_LABEL]: APPROVED_SOURCE };
@@ -58,4 +59,17 @@ test('v3 does not reinterpret a historical kind or accept oversized input', () =
   const input = fixture(); const bundle = JSON.parse(packTestCheckpoint(input.parts, input.metadata, input.candidate)); bundle.kind = 'barber-staging-live-backup/v2';
   assert.throws(() => readTestOrHistoricalCheckpoint(Buffer.from(JSON.stringify(bundle))));
   assert.throws(() => readTestOrHistoricalCheckpoint(Buffer.alloc(64 * 1024 * 1024 + 1)));
+});
+test('v3 binds the writer role to its exact migration and rejects omission or escalation', () => {
+  const input = fixture();
+  const path = 'migrations/' + BOOKING_REMINDER_MIGRATION.file;
+  input.parts[path] = readFileSync(new URL('../supabase/' + path, import.meta.url));
+  input.candidate.migrations.push(BOOKING_REMINDER_MIGRATION);
+  input.metadata.bookingReminderRole = structuredClone(bookingReminderRecoveryRole);
+  const bundle = JSON.parse(packTestCheckpoint(input.parts, input.metadata, input.candidate));
+  assert.deepEqual(unpackTestCheckpoint(Buffer.from(JSON.stringify(bundle))).metadata.bookingReminderRole, bookingReminderRecoveryRole);
+  for (const mutate of [b => { delete b.metadata.bookingReminderRole; }, b => { b.metadata.bookingReminderRole.login = true; },
+    b => { b.metadata.bookingReminderRole.memberships[0].member = 'authenticated'; }]) {
+    const bad = structuredClone(bundle); mutate(bad); assert.throws(() => unpackTestCheckpoint(Buffer.from(JSON.stringify(bad))));
+  }
 });
