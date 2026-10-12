@@ -88,9 +88,20 @@ try {
   const cli = '/opt/barber-staging-closure-preparation/booking-reminders-tools/supabase';
   const cliEnv = {...process.env, PGPASSWORD:synthetic.settings.variables.POSTGRES_PASSWORD, SUPABASE_DB_PASSWORD:synthetic.settings.variables.POSTGRES_PASSWORD};
   const dbUrl = 'postgresql://supabase_admin@' + labIp + ':5432/postgres?sslmode=disable';
-  const advisors = execFileSync(cli,['db','advisors','--db-url',dbUrl,'--type','security','--level','warn','--fail-on','none','--output','json','--agent','no'],{env:cliEnv,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']});
+  stage = 'read-only security advisors';
+  let advisors;
+  try {
+    advisors = execFileSync(cli,['db','advisors','--db-url',dbUrl,'--type','security','--level','warn','--fail-on','none','--output','json','--agent','no'],{env:cliEnv,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']});
+  } catch (error) {
+    const privateDiagnostic = { stage, status:error.status, signal:error.signal,
+      stderr:String(error.stderr||'').replaceAll(synthetic.settings.variables.POSTGRES_PASSWORD,'[synthetic-redacted]') };
+    writeFileSync(project+'-advisor-failure.json',JSON.stringify(privateDiagnostic),{flag:'wx',mode:0o600});
+    console.error(JSON.stringify({stage,status:error.status,signal:error.signal,privateDiagnosticRecorded:true}));
+    throw error;
+  }
   writeFileSync(project + '-advisors.json',advisors,{flag:'wx',mode:0o600});
   assert.ok(!advisors.includes('function_search_path_mutable'));
+  stage = 'public schema export';
   execFileSync(cli,['db','dump','--db-url',dbUrl,'--schema','public','--file',project + '-public-schema.sql'],{env:cliEnv,timeout:60000,stdio:['ignore','pipe','pipe']});
   const probe = randomBytes(24).toString('hex');
   sql(`SELECT vault.create_secret('${probe}', 'synthetic_rebuild_probe');`);
