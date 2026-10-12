@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { ESLint } from 'eslint';
+import globals from 'globals';
+
+const source = readFileSync(new URL('./rehearse-test-security-rebuild.mjs', import.meta.url), 'utf8');
+
+test('native security rehearsal has no undefined process APIs or globals', async () => {
+  const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: [{
+    files: ['**/*.mjs'], languageOptions: { sourceType: 'module', globals: globals.node },
+    rules: { 'no-undef': 'error' },
+  }] });
+  const [result] = await eslint.lintText(source, { filePath: 'rehearse-test-security-rebuild.mjs' });
+  assert.deepEqual(result.messages, []);
+});
+
+test('security rehearsal preserves fixed target and existing acceptance freeze', () => {
+  assert.ok(source.includes("assert.equal(hostname(), 'srv1207055')"));
+  assert.ok(source.includes('assert.equal(existsSync(OPERATION_LOCK), false)'));
+  assert.ok(source.includes("assert.deepEqual(readFileSync('/opt/barber-staging-test-operations/state.json'),freezeBefore)"));
+  assert.ok(source.includes("assert.equal(observedTestRuntime().candidateIdentity,context.candidateIdentity)"));
+});
+
+test('security rehearsal requires all database assertions and real Functions denial', () => {
+  assert.ok(source.includes("['003_legacy_function_hardening.sql',27]"));
+  assert.ok(source.includes('requireRateLimiterFailClosed:true'));
+  assert.ok(source.includes('assert.equal(bundleManifest.sourceCommit,functionCandidate.sourceCommit)'));
+  assert.ok(source.includes("assert.ok(!advisors.includes('function_search_path_mutable'))"));
+});
+
+test('schema export uses container socket and exact pinned official CLI formatting', () => {
+  assert.ok(source.includes("'--schema-only','--quote-all-identifiers'"));
+  assert.ok(source.includes('assert.equal(transformations.length,26)'));
+  assert.ok(source.includes('5c57d52befa24b51df6588fe14f0198481712d1d9ff43a1dc1120133172ae772'));
+});

@@ -77,6 +77,11 @@ export async function fullStackClient(settings, privateStorageDenied) {
   check(gov.status === 200 && govData.count === 1 && govData.data[0].id === 9001, 'Functions real governorates database worker');
   check(gov.headers.get('access-control-allow-origin') === origin && !gov.headers.has('access-control-allow-credentials'), 'Functions gateway CORS');
   check((await fn('auth-rate-limiter', { headers: jwt })).status === 405, 'rate limiter worker');
+  if (settings.requireRateLimiterFailClosed === true) {
+    const limited = await fn('auth-rate-limiter', { method: 'POST', headers: { ...jwt, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'login', identifier: 'synthetic@barber.test' }) });
+    check(limited.status === 503 && (await limited.json()).allowed === false, 'optional limiter fails closed');
+  }
   check((await fn('invite-barber', { method: 'POST', headers: jwt, body: 'x'.repeat(10241) })).status === 413, 'invite worker input limit');
   const send = await fn('send-whatsapp-message', { method: 'POST', headers: jwt, body: '{}' });
   check(send.status === 500 && (await send.json()).error === 'Missing WhatsApp API configuration', 'outbound integration disabled');

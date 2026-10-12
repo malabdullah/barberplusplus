@@ -35,7 +35,7 @@
     "test:staging-edge-runtime": "node scripts/test-staging-edge-runtime.mjs",
     "package:staging-functions": "node scripts/package-staging-functions.mjs",
     "test:staging-backup": "node --test scripts/staging-backup.node-test.mjs scripts/staging-recovery.node-test.mjs scripts/staging-backup-vault-probe.node-test.mjs && bash -n scripts/probe-staging-backup.sh && bash -n scripts/test-staging-recovery-key.sh",
-    "test:staging-operations": "node --test scripts/staging-live-backup.node-test.mjs scripts/staging-operations-policy.node-test.mjs scripts/staging-image-archive-config.node-test.mjs scripts/staging-resumption.node-test.mjs",
+    "test:staging-operations": "node --test scripts/staging-live-backup.node-test.mjs scripts/staging-operations-policy.node-test.mjs scripts/staging-image-archive-config.node-test.mjs scripts/staging-resumption.node-test.mjs scripts/security-rehearsal.node-test.mjs",
     "test:e2e:qa": "playwright test --config playwright.qa.config.js",
     "backup:staging-images": "node scripts/export-staging-recovery-images.mjs",
     "backup:staging-pull": "node scripts/pull-staging-backup.mjs",
