@@ -101,6 +101,27 @@ explicit acceptance of this exact candidate and limitations. Monitoring health
 must not be substituted for that acceptance. The Mac Realtime full restore
 failure and production recovery readiness remain unresolved/outside this release.
 
+### Remaining warning exposure — read-only October 12 assessment
+
+Fresh official security advisors and live catalog observations are retained
+privately. `anon` and `authenticated` cannot CREATE in public; secure is not
+Data-API-exposed. The two replaced legacy reminder triggers are unattached;
+the other three trigger functions cannot be used as ordinary RPCs. These controls
+reduce search-path exposure but do not remove the findings.
+
+`check_auth_rate_limit` and `reset_auth_rate_limit` remain postgres-owned definers,
+callable by anon/authenticated with caller-selected identifiers and no caller
+authorization in their bodies. Access limits Test exposure, but this broader
+rate-limit manipulation surface should be hardened rather than labelled safe.
+The shipped rate-limiter Edge Function uses service_role; no frontend direct call
+was found. A reviewed compatibility/security patch and exact-release approval
+are required before altering these grants/functions. No new acceptance, privilege
+change, warning suppression or deadline extension occurred during this assessment.
+
+The documentation-only local record was committed, but public PR publication was
+blocked pending explicit permission for the operational identifiers. No workaround
+was used and no documentation PR was created in this execution.
+
 ## Recovery and evidence locations
 
 Previous frontend is retained as `barber-staging-frontend-rollback-b04eacd`, with
