@@ -1,6 +1,7 @@
 # Test security hardening preparation — October 12, 2026
 
-Status: owner-approved for public PR/CI; not merged or deployed. Live Test
+Status: PR #10 merged as `051acef07e4405b46a2c51952775b968acdfb968` with
+owner merge/build-only approval; published images tested but not deployed. Live Test
 retains source 7ddcfe45 and its five-migration acceptance freeze. Production,
 shared data, secrets, routes and automatic workers are unchanged.
 
@@ -37,8 +38,9 @@ and [Supabase function privileges](https://supabase.com/docs/guides/database/fun
   JWT, cron, Meta, encrypted Flow and disabled outbound behavior.
 - Separate native nine-service clean rebuild passed six migrations, 94 pgTAP
   assertions, five Auth logins, fresh Vault encryption, private Storage, sink
-  email, frontend, Functions and Realtime delivery/tenant denial. Read-only
-  advisors reported no mutable-search-path findings. The rebuild used the earlier
+  email, frontend, Functions and Realtime delivery/tenant denial. The advisor
+  stdout file was subsequently found empty, so its string-absence check does
+  not prove a zero-warning assessment. That evidence gap is not a pass. The rebuild used the earlier
   fail-closed Functions image at 02b2e05, before the independently tested body-size
   addition; that distinction is retained rather than conflating artifacts.
 - Live container identities and acceptance-freeze bytes stayed unchanged. Only
@@ -47,7 +49,8 @@ and [Supabase function privileges](https://supabase.com/docs/guides/database/fun
 - Actual public DDL now matches the fixture byte-for-byte. The first CI database
   run failed only on one trailing blank line; its generated output matched the
   native export. Only that formatting was corrected. The strict drift validator
-  is unchanged, and all five checks must pass again on the updated head.
+  is unchanged. All five PR checks and the subsequent main CI passed. Main
+  browser evidence includes 13 application journeys and 24 three-engine QA tests.
 
 Private receipts and generated schema/advisors are retained on the Mac and VPS.
 Preserved failures include a transfer timeout, outer-index/platform-ID assumption
@@ -69,8 +72,14 @@ unchanged booking writer/RLS, missing-store deferral, fail-closed/status behavio
 body bounds, no error/credential disclosure, image/manifest binding, capacity
 preflight, labelled cleanup and unchanged live freeze. It is not independent
 human review. Public code/technical-assessment publication was explicitly approved
-on October 12. All five checks and exact merge/build approval remain required.
-No new image is approved for live release.
+on October 12. The owner subsequently approved merge/build only. No new image
+is approved for live release. Published frontend/Functions cold-runtime probes
+passed, but full-severity scans retain unaccepted matches (frontend 9 MEDIUM,
+12 LOW, 2 UNKNOWN; Functions 23 MEDIUM, 8 LOW). Zero HIGH/CRITICAL or secret
+matches does not resolve those findings or establish complete scanner coverage.
+The explicit warning-gate control rejected all eight known live warnings with
+structured output and exit status 1, without modifying the frozen deployment.
+See [image/advisor follow-up](test-image-advisor-followup-2026-10-12.md).
 
 After publication/build: verify signed immutable artifacts, obtain concrete
 release approval and a fresh encrypted Mac-verified checkpoint, then perform the

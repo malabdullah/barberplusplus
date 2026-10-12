@@ -1,6 +1,30 @@
-# Test environment transition — October 11, 2026
+# Test environment transition — October 12, 2026
 
 Status: implementation in progress; no ready/acceptance claim.
+
+## Current execution and follow-up
+
+Live Test remains source `7ddcfe45b6d69da58425ed4ad1e0ddcc635303f9`, frozen
+with five migrations. The banner/navigation and booking fixes were deployed
+with exact owner approval; their four-role live journeys passed. Sanitized
+execution evidence is retained in [PR #9](https://github.com/malabdullah/barberplusplus/pull/9)
+and private receipts. Its documentation PR has not been separately merged.
+
+PR #10 merged as `051acef07e4405b46a2c51952775b968acdfb968` after all five
+checks and recorded review, with owner merge/build-only approval. Main CI and
+image publication passed; both published images passed isolated runtime tests.
+Neither those images nor the sixth hardening migration have been deployed.
+Full all-severity scans retain unaccepted package matches beyond the earlier
+zero-HIGH/CRITICAL records. The empty historical advisor stdout file cannot
+establish a zero-warning result. See [follow-up preparation](test-image-advisor-followup-2026-10-12.md).
+
+Remaining gates: reviewed fixes, final CI and explicit exact-release approval;
+fresh stateful checkpoint and strengthened advisor/rebuild verification;
+current security dispositions, owner iPhone Safari checks and final acceptance.
+Production has separate readiness and approval requirements. No new acceptance,
+security extension, production change or automatic deployment is implied.
+
+## Historical October 11 status — superseded by the current note
 
 Preparation update: with owner authorization, TEST-BOOK-01 now has an isolated
 validated migration and fixed-purpose writer-role recovery support. Native

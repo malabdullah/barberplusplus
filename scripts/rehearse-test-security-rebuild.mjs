@@ -16,6 +16,7 @@ import { fullStackClient } from './staging-full-stack-client.mjs';
 import { isPrivateStorageDenied } from './rehearse-staging-core-recovery.mjs';
 import { OPERATION_LOCK } from './test-environment-state.mjs';
 import { waitForTestWebsocket } from './test-realtime-readiness.mjs';
+import { requireCleanSecurityAdvisors } from './security-advisor-result.mjs';
 
 const project = `barber-test-rebuild-${randomBytes(8).toString('hex')}`;
 const label = 'cloud.malabdullah.barber.synthetic-rebuild';
@@ -92,7 +93,7 @@ try {
   stage = 'read-only security advisors';
   let advisors;
   try {
-    advisors = execFileSync(cli,['db','advisors','--db-url',dbUrl,'--type','security','--level','warn','--fail-on','none','--output','json','--agent','no'],{env:cliEnv,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']});
+    advisors = execFileSync(cli,['db','advisors','--db-url',dbUrl,'--type','security','--level','warn','--fail-on','warn','--output-format','json','--agent','no'],{env:cliEnv,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']});
   } catch (error) {
     const privateDiagnostic = { stage, name:error.name, status:error.status, signal:error.signal,
       stderr:String(error.stderr||'').replaceAll(synthetic.settings.variables.POSTGRES_PASSWORD,'[synthetic-redacted]') };
@@ -101,7 +102,7 @@ try {
     throw error;
   }
   writeFileSync(project + '-advisors.json',advisors,{flag:'wx',mode:0o600});
-  assert.ok(!advisors.includes('function_search_path_mutable'));
+  requireCleanSecurityAdvisors(advisors);
   stage = 'public schema export';
   // Avoid the remote Docker export's credential/network assumptions. Keep
   // credentials out of argv: dump through the fresh container's socket, then
