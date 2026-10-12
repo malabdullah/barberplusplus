@@ -4,6 +4,13 @@ The owner approved this policy on October 11, 2026. It supersedes the Env3
 daily-backup closure contract. Historical execution and recovery failures remain
 in `env3-closure-status.md`; the transition result is `test-environment-status.md`.
 
+Current deployed candidate and checkpoint are recorded in
+[October 12 release execution](test-release-2026-10-12.md). The five-migration
+candidate is frozen pending security/device/owner acceptance. The reviewed
+writer-role checkpoint runtime is installed; preceding runtime and frontend
+are preserved. Do not use clean-replay fixture-count/empty-Vault assumptions
+as live populated-data assertions; retain historical validators unchanged.
+
 ## Identity and boundaries
 
 The Mac is the development workstation. Test uses srv1207055, 185.97.146.8,

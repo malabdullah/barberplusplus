@@ -2,6 +2,15 @@
 
 Status: implementation in progress; no ready/acceptance claim.
 
+October 12 execution supersedes the pending-deployment notes below: PR #8 source
+`7ddcfe45b6d69da58425ed4ad1e0ddcc635303f9` frontend and its exact booking migration
+are deployed after a fresh Mac-verified encrypted checkpoint. Both high functional
+fixes passed live retests; all nine services are healthy and the candidate is frozen.
+Security dispositions and owner iPhone/final acceptance remain pending. See
+[exact release execution](test-release-2026-10-12.md), including the preserved
+capture-preflight failure and two inappropriate clean-replay fixture failures.
+No production change or Test-ready claim is made.
+
 Preparation update: with owner authorization, TEST-BOOK-01 now has an isolated
 validated migration and fixed-purpose writer-role recovery support. Native
 five-service rehearsal passed 67 database assertions, four-role booking API
