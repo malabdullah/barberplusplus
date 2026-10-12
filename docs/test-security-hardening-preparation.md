@@ -44,8 +44,10 @@ and [Supabase function privileges](https://supabase.com/docs/guides/database/fun
 - Live container identities and acceptance-freeze bytes stayed unchanged. Only
   labelled disposable containers, volumes and network were removed. This is
   synthetic reconstruction, not independent lost-server backup restoration.
-- Actual public DDL agrees with the proposed fixture except one trailing blank
-  line from dump tooling. The strict final CI schema-drift gate is not weakened.
+- Actual public DDL now matches the fixture byte-for-byte. The first CI database
+  run failed only on one trailing blank line; its generated output matched the
+  native export. Only that formatting was corrected. The strict drift validator
+  is unchanged, and all five checks must pass again on the updated head.
 
 Private receipts and generated schema/advisors are retained on the Mac and VPS.
 Preserved failures include a transfer timeout, outer-index/platform-ID assumption
