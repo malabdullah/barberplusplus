@@ -59,3 +59,12 @@ Deno.test('rate limiter preserves genuine denial rather than converting it to al
   const response = await handler(request({ action: 'login', identifier: 'synthetic@barber.test' }));
   equal(response.status, 200); equal(await response.json(), { allowed: false, retryAfter: 300, remaining: 0 });
 });
+
+for (const length of [undefined, '1', '5000']) {
+  Deno.test(`rate limiter bounds streamed bodies with Content-Length ${length}`, async () => {
+    const handler = createAuthRateLimiterHandler({ appUrl, checkLimit: () => { throw new Error('Must not call backend'); } });
+    const headers = length ? { 'Content-Length': length } : undefined;
+    const response = await handler(new Request(appUrl, { method: 'POST', headers, body: 'x'.repeat(5000) }));
+    equal(response.status, 413);
+  });
+}

@@ -39,9 +39,35 @@ export function createAuthRateLimiterHandler({ appUrl, checkLimit }: Dependencie
       return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
     }
 
+    const maxBodyBytes = 4096;
+    const declaredLength = req.headers.get('Content-Length');
+    if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBodyBytes) {
+      void req.body?.cancel().catch(() => {});
+      return new Response(JSON.stringify({ error: 'Request too large' }), { status: 413, headers });
+    }
     let body: unknown;
-    try { body = await req.json(); } catch {
+    const reader = req.body?.getReader();
+    try {
+      const chunks: Uint8Array[] = [];
+      let size = 0;
+      if (reader) while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > maxBodyBytes) {
+          void reader.cancel().catch(() => {});
+          return new Response(JSON.stringify({ error: 'Request too large' }), { status: 413, headers });
+        }
+        chunks.push(value);
+      }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch {
       return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400, headers });
+    } finally {
+      reader?.releaseLock();
     }
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400, headers });

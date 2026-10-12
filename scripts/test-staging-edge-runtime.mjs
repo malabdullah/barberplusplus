@@ -74,6 +74,8 @@ async function probe(settings) {
     body: JSON.stringify({ action: 'login', identifier: 'synthetic@barber.test' }) });
   assert.equal(limited.status, 503, 'Optional limiter must fail closed without backend credentials');
   assert.equal((await limited.json()).allowed, false, 'Missing storage must never invent an allowance');
+  assert.equal((await call('/auth-rate-limiter', { method: 'POST', headers: jwt,
+    body: 'x'.repeat(4097) })).status, 413, 'Optional limiter enforces actual streamed size');
   assert.equal((await call('/invite-barber', { method: 'POST', headers: jwt, body: 'x'.repeat(10241) })).status, 413, 'Invite worker');
   const send = await call('/send-whatsapp-message', { method: 'POST', headers: jwt, body: '{}' });
   assert.equal(send.status, 500);
