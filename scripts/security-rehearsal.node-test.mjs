@@ -28,3 +28,9 @@ test('security rehearsal requires all database assertions and real Functions den
   assert.ok(source.includes('assert.equal(bundleManifest.sourceCommit,functionCandidate.sourceCommit)'));
   assert.ok(source.includes("assert.ok(!advisors.includes('function_search_path_mutable'))"));
 });
+
+test('schema export uses container socket and exact pinned official CLI formatting', () => {
+  assert.ok(source.includes("'--schema-only','--quote-all-identifiers'"));
+  assert.ok(source.includes('assert.equal(transformations.length,26)'));
+  assert.ok(source.includes('5c57d52befa24b51df6588fe14f0198481712d1d9ff43a1dc1120133172ae772'));
+});

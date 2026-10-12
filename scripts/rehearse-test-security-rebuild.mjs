@@ -103,7 +103,22 @@ try {
   writeFileSync(project + '-advisors.json',advisors,{flag:'wx',mode:0o600});
   assert.ok(!advisors.includes('function_search_path_mutable'));
   stage = 'public schema export';
-  execFileSync(cli,['db','dump','--db-url',dbUrl,'--schema','public','--file',project + '-public-schema.sql'],{env:cliEnv,timeout:60000,stdio:['ignore','pipe','pipe']});
+  // The remote Docker dump wrapper does not preserve this direct-DB password
+  // environment reliably. Keep credentials out of argv: dump through the fresh
+  // container's socket, then use the exact pinned official CLI formatter.
+  const dryRun = execFileSync(cli,['db','dump','--dry-run','--db-url',
+    'postgresql://postgres:synthetic-placeholder@127.0.0.1:1/postgres?sslmode=disable',
+    '--schema','public','--agent','no'],{encoding:'utf8',timeout:30000,stdio:['ignore','pipe','pipe']});
+  const transformations = dryRun.split('\n').filter(line=>line.startsWith('| sed -E '));
+  assert.equal(transformations.length,26);
+  const formatter = transformations.map((line,index)=>index===0?line.slice(2):line).join('\n');
+  assert.equal(checksum(Buffer.from(formatter)),'5c57d52befa24b51df6588fe14f0198481712d1d9ff43a1dc1120133172ae772');
+  const rawSchema = docker(['exec','-u','postgres',project+'-db','pg_dump','-U','supabase_admin',
+    '--role','postgres','--schema-only','--quote-all-identifiers','--exclude-schema','',
+    '--schema=public','--dbname=postgres'],{encoding:null});
+  const schema = execFileSync('/usr/bin/bash',['-c','set -euo pipefail\n'+formatter],
+    {input:rawSchema,encoding:'utf8',timeout:30000,stdio:['pipe','pipe','pipe']});
+  writeFileSync(project+'-public-schema.sql',schema,{flag:'wx',mode:0o600});
   const probe = randomBytes(24).toString('hex');
   sql(`SELECT vault.create_secret('${probe}', 'synthetic_rebuild_probe');`);
   assert.equal(sql("SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='synthetic_rebuild_probe';"), probe);
