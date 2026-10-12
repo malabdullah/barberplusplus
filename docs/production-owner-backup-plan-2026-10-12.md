@@ -1,0 +1,218 @@
+# Production owner policy and off-site backup preparation
+
+Status: **NO-GO for production release**. This record contains policy and a
+proposed implementation design, not recovery proof or deployment approval.
+Production data, configuration, credentials and inspection receipts stay private.
+
+## Decisions and authority
+
+On October 12, 2026, the owner explicitly approved:
+
+- PR #11 merge and image construction at its reviewed exact head, including
+  cancellation of the superseded waiting signing run. This is not deployment.
+- Production approval by the owner alone, with no second reviewer. This replaces
+  the earlier independent production reviewer requirement, not the other gates.
+- Selecting an off-site backup provider. Selection does not approve purchases,
+  billing, retention locks, credential installation or production uploads.
+
+The `production` GitHub environment has been created and verified:
+
+- Environment ID `24060783658`.
+- Sole required reviewer `malabdullah` (ID `19295903`), self-review permitted.
+- Custom policy ID `62761545`: type `tag`, pattern `v*`; no allowed branches.
+- No deployment secrets; no pending production runs or newly created tags.
+
+Main's PR requirement, five app-bound checks, strict up-to-date checks, admin
+enforcement, conversation resolution and blocked force pushes/deletions remain.
+A separate review is still recorded but is not independent human review. The
+owner must explicitly approve the chosen semantic version, accepted image
+digests, migrations/configuration and the protected production job.
+
+The tag-ref filter above is not a tag-protection ruleset. Repository tag creation,
+update and deletion protections must be established and verified before release.
+The legacy production workflow still expects obsolete accepted-release evidence
+and a deployment executor not verified on this infrastructure. Do not populate
+its secrets or push a release tag merely because the environment now exists.
+
+## Provider decision — B2 free-only fallback, no R2 activation
+
+The initial recommendation was Backblaze B2 for account/provider separation. The
+owner subsequently preferred using the existing **Cloudflare R2** account where
+possible, otherwise the $0-aim fallback. Inspection then showed that activating
+R2 accepts a recurring usage-billed subscription with the saved payment method.
+The owner explicitly chose: **"Use B2 free-only fallback; do not activate R2"**.
+B2's free allowance is the current selected candidate. Do not activate R2, add
+payment details, enable paid B2 usage, create cloud credentials or upload
+production data under this provider-selection approval. Recovery is unverified.
+
+R2 would be outside the production hosting provider, but backup and DNS/Access
+control would share the Cloudflare account. Its account-loss/compromise and
+overage risks remain recorded here as the assessed, unselected alternative.
+B2 provides separate account/provider ownership. Use dedicated private buckets,
+restricted backup credentials, MFA and an independent recovery-key copy; keep
+account-management credentials off the production uploader. Any second copy
+needs its own approved destination and data-handling scope.
+
+Pricing checked October 12: R2 Standard includes 10 GB-month storage, 1 million
+Class A and 10 million Class B operations per month, with no direct Internet
+egress fee. Standard overages are $0.015/GB-month, $4.50/million Class A and
+$0.36/million Class B operations. Infrequent Access is outside the free tier.
+These are account-level allowances, not a dedicated per-backup bucket quota.
+Base backups, WAL, objects, retained exports and recovery images must all be
+measured; database size alone cannot establish the retained backup cost.
+
+Read-only account inspection reached the R2 activation screen: R2 is not enabled.
+It shows $0 due now and $0 monthly **plus additional usage**, charges the existing
+payment method for overages, automatically renews and accepts its terms when the
+subscription button is clicked. No button was clicked, bucket created, token
+generated, billing enabled or production data uploaded during inspection.
+Activation was explicitly declined. Do not equate included free usage
+with a guaranteed $0 cap. The earlier proposed $5/month budget alert is retired
+and was never approved or installed.
+
+Before unattended capture, verify all-account usage, supported alert/control
+mechanisms and conservative headroom for the complete retention policy. Rehearse
+bounded synthetic requests without enabling other metered services. If the
+required retention cannot fit the free allowance, escalate before launch or
+growth; do not silently authorize charges, shorten retention, delete recovery
+dependencies or stop healthy captures to make the budget appear satisfied.
+
+B2 includes the first 10 GB free, and the vendor signup screen states no credit
+card is required. Actual account security, payment, region and quota observations
+belong in private evidence, not this public document. Obtain the owner's
+data-location decision before production bucket creation or uploads. Never
+silently create another account or assume its location is compliant.
+
+Free-only use needs verified account controls, transfer/request limits,
+sufficient retained capacity and restore bandwidth; it
+is not automatically a complete cost-free production recovery system. No paid
+B2 usage is approved. Provider/tool compatibility and achieved recovery targets
+remain unverified for either destination.
+
+Sources:
+
+- [B2 pricing](https://www.backblaze.com/cloud-storage/pricing)
+- [B2 caps and alerts](https://www.backblaze.com/docs/cloud-storage-data-caps-and-alerts)
+- [B2 Object Lock](https://www.backblaze.com/docs/cloud-storage-object-lock)
+- [B2 regions](https://www.backblaze.com/docs/cloud-storage-data-regions)
+- [R2 pricing](https://developers.cloudflare.com/r2/pricing/)
+- [B2 signup](https://www.backblaze.com/sign-up/cloud-storage)
+- [R2 activation — declined](https://developers.cloudflare.com/r2/get-started/)
+- [R2 S3 compatibility](https://developers.cloudflare.com/r2/api/s3/api/)
+- [R2 locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
+- [pgBackRest S3 repositories](https://pgbackrest.org/user-guide.html)
+
+The owner creates/signs into the B2 account, enters the password and accepts
+account terms personally; do not add a payment method. Its region is selected
+during signup and cannot be changed in that account. Confirm data-location
+requirements before bucket creation or customer-data uploads; encryption does
+not establish regulatory compliance. Verify the actual unpaid account's storage,
+download and request controls before unattended capture. If free limits prevent
+the required retention/recovery behavior, production remains NO-GO pending an
+explicit owner decision, not an automatic paid upgrade. Never request passwords
+or API keys in chat.
+
+An unpaid-account download cap can block the two-hour recovery target if required
+restore payloads exceed remaining daily download capacity. Measure the complete
+off-site restore set and request count, not just a logical dump. No full restore,
+continuous WAL capture or production backup-readiness claim follows from this
+account preflight. Do not fill the free quota to test cap failure; use bounded
+synthetic API probes and local failure fixtures first.
+
+## Recovery design to implement and rehearse
+
+Keep the production 15-minute recovery-point and two-hour recovery-time targets.
+They are not met merely by selecting B2, uploading a logical dump or setting up
+a daily timer. No target is marked passed without measured restore evidence.
+
+1. Inventory exact production images, PostgreSQL extension/build compatibility,
+   configuration, database and file volumes privately. Pin reviewed recovery
+   tools. Test the selected B2 S3 upload/download, integrity, encrypted repository operations,
+   expiration and restore behavior on synthetic fixtures first. pgBackRest
+   supports S3-compatible repositories generally; this exact B2/tool combination
+   still requires testing. Do not transplant a Test database binary into production.
+2. Propose a separately approved production maintenance operation for physical
+   database backup and continuous WAL archiving. Enabling archive mode can require
+   a database restart. Bound the window, preserve current configuration/services,
+   verify restart/rollback and never change database major version in this release.
+3. Capture daily base backups plus continuously archived WAL. Propose a maximum
+   five-minute WAL switch interval and independent recovery-point checks at least
+   every five minutes, then prove actual lag stays within fifteen minutes. A
+   configured archive command or a healthy database alone is not archival evidence.
+4. Back up Storage bytes, metadata and changes independently, retaining deletion
+   versions. Rehearse base plus bounded incremental captures at most fifteen
+   minutes apart; bind database and file recovery points and test transaction/file
+   consistency. Preserve ACLs, xattrs and numeric ownership. Never derive file
+   recovery success from PostgreSQL metadata alone.
+5. Capture necessary Auth/JWT, Vault/root-key material, database configuration,
+   Functions, routing and other recovery configuration into separately encrypted
+   exports. Keep daily data archives separate from once-per-digest image archives.
+   Recover exact image/tool archives without relying on the original VPS cache.
+6. Use new production-only backup credentials and encryption material. Repository
+   encryption credentials needed for unattended capture stay in a restricted
+   production secret store; their independent recovery copy stays in the owner's
+   password manager. Separately encrypted configuration exports can use an
+   asymmetric recipient whose private key is not on the uploader. Never reuse
+   Test recovery, Auth/JWT, Vault or integration credentials.
+7. Use private buckets and least-privilege, bucket-restricted operational keys;
+   separate recovery and retention administration. Test the permissions actually
+   needed by the selected tools, including repository metadata reads/updates.
+   No master account key on the VPS, no public bucket and no secrets in CI logs.
+8. Retain 30 daily and 12 monthly recovery points and their required WAL/file
+   dependencies. Measure compressed size and WAL growth before authorizing a
+   budget. No automatic pruning until dependency and last-good refusal tests pass.
+9. Rehearse immutability on a separate append-only recovery-export prefix or
+   bucket. Do **not** apply default Object Lock blindly to mutable pgBackRest
+   metadata: it can break repository updates and expiration. Confirm every
+   protected recovery point includes its base/WAL/files/config dependencies.
+   B2 enabling Object Lock cannot be disabled; compliance retention cannot be
+   shortened. Exact retention/mode and management permissions need approval before
+   enabling locks. If a later separately approved provider change chooses R2,
+   validate its bucket-lock interface and supported S3 operations independently:
+   authorized managers can remove R2 locks, so do not claim irreversible
+   compliance protection against full account takeover.
+10. Restore into a separately approved isolated recovery runtime, with no access
+    to Test, customer-facing routes or real outbound integrations. Do not copy
+    production data into the synthetic Test environment. A drill on the original
+    source server/cache does not establish independent lost-server recovery.
+    Runtime capacity, region, credentials and any rental cost need approval.
+11. Verify PostgreSQL recovery timestamp, schema/history, Auth, new-session
+    authorization, Vault decryption, Storage bytes/metadata, Functions and Realtime
+    using approved non-destructive probes. Record measured recovery-point loss
+    and total time; retain private logs and publish only sanitized conclusions.
+12. Install independent always-on backup monitoring and owner alerts. Unknown or
+    stale observations fail readiness. The production readiness endpoint must
+    enforce the existing freshness/lag/off-host/restore schema; a Mac asleep or
+    offline cannot be the sole production recovery monitor.
+
+## Remaining release sequence
+
+1. Finish exact new-image construction, signature verification, all-severity
+   security dispositions and native synthetic regression testing.
+2. Obtain a fresh Test checkpoint and exact Test deployment approval; apply only
+   reviewed compatible migrations without resetting data. Complete live QA,
+   owner iPhone checks and exact release acceptance. Existing bounded Test risk
+   does not apply to production or newly scanned images.
+3. Implement and prove the off-site production recovery design above. Obtain
+   separate production infrastructure/maintenance approvals before mutation.
+4. Reconcile production migration history using read-only schema evidence and an
+   approved rehearsal. Never replay a baseline over a populated database or mark
+   migrations applied solely because object names look similar. Authorization
+   claim changes require a tested session-refresh plan.
+5. Assess exact production components against current upstream changes and
+   vulnerability data. Any upgrade is separately reviewed, backed up and rehearsed;
+   production risk requires its own disposition, not a Test exception extension.
+6. Approve frontend hosting, domain, TLS/callbacks and runtime configuration. Adapt
+   the promotion protocol to signed **final Test acceptance** for both exact
+   frontend and Functions images; a non-deploying request is not acceptance.
+7. Configure protected tags/executor/monitoring without granting public PR jobs
+   credentials or placing a general-purpose runner on a production server.
+8. Fill the chosen version's record only when preparation/compatibility actually
+   pass; obtain exact tag/digest/migration approval, then protected-job approval.
+   Run non-destructive production checks and the required observation window.
+
+No production version is inferred. No image is rebuilt for production promotion.
+Application rollback uses the previous approved digest/configuration; database
+remediation is a reviewed forward fix or explicitly approved recovery, never an
+automatic migration downgrade. Policy setup and healthy Test monitoring are not
+production readiness or permission to publish.

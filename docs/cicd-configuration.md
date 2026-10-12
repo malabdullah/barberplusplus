@@ -3,7 +3,9 @@
 The hosted non-production environment is now called Test; `staging` remains
 the GitHub/runtime compatibility identifier. The approved manual flow and
 candidate freeze are in [Test operations](test-environment-runbook.md).
-Production controls and all five required checks remain unchanged.
+All five required checks remain unchanged. The separately approved October 12
+production owner-only policy is recorded in
+[production preparation](production-owner-backup-plan-2026-10-12.md).
 
 > The repository now contains a fail-closed evidence workflow plus the local
 > verifier and constrained request adapters. It builds immutable frontend and
@@ -25,7 +27,7 @@ Staging and production configuration must remain separate.
   hook. A future server-side pull verifier may read evidence outbound only.
 - `Promote production` runs only for a protected semantic `vX.Y.Z` tag. It must
   reuse the accepted staging digest without rebuilding and must receive an
-  independent production approval.
+  separate, release-specific production owner approval.
 - `supabase/.baseline-ready` remains an intentional hard gate. Migration pushes
   use `--skip-vault`.
 
@@ -115,9 +117,18 @@ origins, direct migration URL, function deploy hook and secret, backup monitor
 URL and token, Dokploy URL/application/API key, and read-only GHCR pull
 credentials. Do not copy staging values into these fields.
 
-Production must allow only protected `v*` tags, require an independent reviewer,
-prevent self-review, and expose secrets only after approval. If the GitHub plan
-does not support these controls, production promotion is not ready.
+On October 12 the owner explicitly replaced the second-person production
+review requirement with owner-only approval. The `production` environment now
+requires `malabdullah`, permits self-review, and allows only tag refs matching
+`v*`; no branch policy permits deployment. It has no secrets. This is approval
+policy setup, not permission for a specific release or a working executor.
+
+Protected semantic tags, separate recorded code review, all five CI checks,
+signed accepted Test evidence, compatibility, verified backup/recovery and
+exact-release owner approval remain required. The environment tag filter is
+not a repository tag-protection ruleset: that protection and the replacement
+promotion evidence/executor still need implementation and verification.
+No production version has been chosen or tag created.
 
 `GITHUB_TOKEN` is created per workflow run. Do not create a stored secret with
 that name. Keep default workflow permissions read-only; individual deployment

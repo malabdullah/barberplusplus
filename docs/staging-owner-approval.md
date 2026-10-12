@@ -40,11 +40,12 @@ Do not infer permission to merge or deploy from policy-change approval.
 
 ## Production is separate and not ready
 
-Read-only inspection found only a `staging` GitHub environment and no repository
-rulesets. Do not claim that production environment approval or tag protection
-has been configured. Production workflow/code, secrets and resources were not
-changed. A separately approved production setup must establish and verify its
-release/tag restrictions and independent environment approval before release.
+The September inspection found only `staging` and no repository rulesets. On
+October 12 the owner separately approved production owner-only review. Its
+environment reviewer and tag-ref filter are now configured; no release was
+approved, deployment secret added, tag created or production server changed.
+Repository tag protection and the production executor remain pending. See
+[current production policy and backup preparation](production-owner-backup-plan-2026-10-12.md).
 
 ## Recovery
 
