@@ -103,9 +103,9 @@ try {
   writeFileSync(project + '-advisors.json',advisors,{flag:'wx',mode:0o600});
   assert.ok(!advisors.includes('function_search_path_mutable'));
   stage = 'public schema export';
-  // The remote Docker dump wrapper does not preserve this direct-DB password
-  // environment reliably. Keep credentials out of argv: dump through the fresh
-  // container's socket, then use the exact pinned official CLI formatter.
+  // Avoid the remote Docker export's credential/network assumptions. Keep
+  // credentials out of argv: dump through the fresh container's socket, then
+  // use the exact pinned official CLI formatter without relaxing schema checks.
   const dryRun = execFileSync(cli,['db','dump','--dry-run','--db-url',
     'postgresql://postgres:synthetic-placeholder@127.0.0.1:1/postgres?sslmode=disable',
     '--schema','public','--agent','no'],{encoding:'utf8',timeout:30000,stdio:['ignore','pipe','pipe']});
