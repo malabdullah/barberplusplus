@@ -3,7 +3,7 @@ import base from './playwright.config.js';
 
 export default defineConfig({
   ...base,
-  testMatch: /navigation\.spec\.js/,
+  testMatch: /(navigation|test-banner)\.spec\.js/,
   // Projects share synthetic profile settings, so serialize their UI changes.
   workers: 1,
   retries: 0,

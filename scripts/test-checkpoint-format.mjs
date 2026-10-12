@@ -6,6 +6,7 @@ import { LIVE_FILES, validateRoutes } from './staging-live-backup-format.mjs';
 import { validateTestCandidate, candidateIdentity, parseTestRuntime } from './test-environment-policy.mjs';
 import { INSTALL_ROOT, PROJECT, SERVICES } from './staging-private-model.mjs';
 import { manualFirstRelease as release } from './staging-manual-first-release.mjs';
+import { validateBookingReminderRole } from './booking-reminder-recovery-role.mjs';
 
 export function packTestCheckpoint(parts, metadata, candidate) {
   validateTestCandidate(candidate);
@@ -24,6 +25,7 @@ export function unpackTestCheckpoint(bytes) {
   const bundle = JSON.parse(bytes); assert.equal(bundle.kind, 'barber-test-checkpoint/v3');
   assert.deepEqual(Object.keys(bundle).sort(), ['entries', 'kind', 'metadata']);
   const candidate = validateTestCandidate(bundle.metadata.candidate);
+  validateBookingReminderRole(bundle.metadata.bookingReminderRole, candidate);
   assert.equal(bundle.metadata.candidateIdentity, candidateIdentity(candidate));
   assert.deepEqual(Object.keys(bundle.metadata.liveFiles).sort(), [...LIVE_FILES].sort());
   const remaining = { ...bundle.entries }; const live = {};

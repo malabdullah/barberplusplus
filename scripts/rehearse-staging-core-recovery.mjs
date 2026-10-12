@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { recoveryRoleQuery, restoreRecoveryRoleSql, validateRecoveryRole } from './staging-recovery-roles.mjs';
+import { BOOKING_REMINDER_MIGRATION, bookingReminderRoleQuery, validateBookingReminderRole, restoreBookingReminderRoleSql } from './booking-reminder-recovery-role.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const LIMIT = 32 * 1024 * 1024;
@@ -48,6 +49,28 @@ export function unpackRecoveryFixture(value) {
   validateRecoveryRole(data.recoveryRole);
   assert.equal(digest(JSON.stringify(data.recoveryRole)), data.recoveryRoleSha256);
   return { database, storage, databaseConfig, config: data.config, recoveryRole: data.recoveryRole };
+}
+
+// Separate test-only version; historical synthetic v2/live v1/v2 readers stay
+// unchanged. Role creation is constant SQL, never a command from an archive.
+export function packBookingCoreRecoveryFixture(database, storage, databaseConfig, config, recoveryRole, bookingRole) {
+  const legacy = packRecoveryFixture(database, storage, databaseConfig, config, recoveryRole);
+  if (bookingRole === null) return legacy;
+  validateBookingReminderRole(bookingRole, { migrations: [BOOKING_REMINDER_MIGRATION] });
+  const value = Buffer.from(JSON.stringify({ ...JSON.parse(legacy), version: 3, bookingRole,
+    bookingMigration: BOOKING_REMINDER_MIGRATION, bookingRoleSha256: digest(JSON.stringify(bookingRole)) }));
+  assert.ok(value.length <= LIMIT); return value;
+}
+export function unpackBookingCoreRecoveryFixture(value) {
+  assert.ok(Buffer.isBuffer(value) && value.length <= LIMIT);
+  const data = JSON.parse(value);
+  if (data.version === 2) return unpackRecoveryFixture(value);
+  assert.equal(data.version, 3); assert.equal(data.kind, 'local-synthetic-core');
+  assert.deepEqual(data.bookingMigration, BOOKING_REMINDER_MIGRATION);
+  validateBookingReminderRole(data.bookingRole, { migrations: [data.bookingMigration] });
+  assert.equal(digest(JSON.stringify(data.bookingRole)), data.bookingRoleSha256);
+  const legacy = { ...data, version: 2 }; delete legacy.bookingRole; delete legacy.bookingMigration; delete legacy.bookingRoleSha256;
+  return { ...unpackRecoveryFixture(Buffer.from(JSON.stringify(legacy))), bookingRole: data.bookingRole };
 }
 
 export async function rehearseCoreRecovery({ model, upstream, docker, compose, accounts, key, anon }) {
@@ -121,6 +144,8 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     compose(['stop', 'auth', 'rest', 'storage', 'mailpit'], { timeout: 60000 });
     stage = 'allowlisted recovery role capture';
     const recoveryRole = validateRecoveryRole(JSON.parse(query(source, recoveryRoleQuery)));
+    const bookingRole = JSON.parse(query(source, bookingReminderRoleQuery));
+    if (bookingRole !== null) validateBookingReminderRole(bookingRole, { migrations: [BOOKING_REMINDER_MIGRATION] });
     console.log(`Recovery role metadata: ${recoveryRole ? 'supabase_realtime_admin (reviewed non-login role)' : 'no additional role'}`);
     stage = 'capture';
     const database = docker(['exec', '-u', 'postgres', `${source}-db`,
@@ -140,14 +165,15 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     const identity = join(scratch, 'disposable-identity.txt');
     run('age-keygen', ['-o', identity]);
     const recipient = run('age-keygen', ['-y', identity], { encoding: 'utf8' }).trim();
-    const packed = packRecoveryFixture(database, storage, databaseConfig, model, recoveryRole);
+    const packed = packBookingCoreRecoveryFixture(database, storage, databaseConfig, model, recoveryRole, bookingRole);
     const ciphertext = run('age', ['-r', recipient], { input: packed });
-    const unpacked = unpackRecoveryFixture(run('age', ['--decrypt', '-i', identity], { input: ciphertext }));
+    const unpacked = unpackBookingCoreRecoveryFixture(run('age', ['--decrypt', '-i', identity], { input: ciphertext }));
     assert.deepEqual(unpacked.config, model);
     assert.equal(digest(unpacked.database), digest(database));
     assert.equal(digest(unpacked.storage), digest(storage));
     assert.equal(digest(unpacked.databaseConfig), digest(databaseConfig));
     assert.deepEqual(unpacked.recoveryRole, recoveryRole);
+    assert.deepEqual(unpacked.bookingRole || null, bookingRole);
     const damaged = Buffer.from(ciphertext);
     damaged[damaged.length - 1] ^= 1;
     assert.throws(() => run('age', ['--decrypt', '-i', identity], { input: damaged }));
@@ -172,6 +198,12 @@ export async function rehearseCoreRecovery({ model, upstream, docker, compose, a
     if (roleSql) docker(['exec', '-i', '-u', 'postgres', `${project}-db`, 'psql',
       '-U', 'supabase_admin', '-d', 'postgres', '-X', '-q', '-v', 'ON_ERROR_STOP=1'], { input: roleSql });
     assert.deepEqual(JSON.parse(query(project, recoveryRoleQuery)), unpacked.recoveryRole);
+    assert.equal(JSON.parse(query(project, bookingReminderRoleQuery)), null);
+    if (unpacked.bookingRole) {
+      const bookingSql = restoreBookingReminderRoleSql(unpacked.bookingRole, { migrations: [BOOKING_REMINDER_MIGRATION] });
+      docker(['exec','-i','-u','postgres', `${project}-db`, 'psql','-U','postgres','-d','postgres','-X','-q','-v','ON_ERROR_STOP=1'], { input: bookingSql });
+      assert.deepEqual(JSON.parse(query(project, bookingReminderRoleQuery)), unpacked.bookingRole);
+    }
     stage = 'logical database import';
     // Background extension workers can keep the empty default database open.
     // Drop ONLY this newly initialized recovery target, never the source DB.

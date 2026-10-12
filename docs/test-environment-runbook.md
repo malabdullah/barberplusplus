@@ -80,6 +80,12 @@ compatible reader dispatches by explicit kind; historical constants are never
 changed to make a newer release pass. The outer encrypted transfer format stays
 compatible. v3 retains the 64 MiB limit and writer-only interruption behavior.
 
+Before applying the reviewed reminder migration, install its reviewed v3
+checkpoint/recovery support. It binds the no-login writer to the exact migration
+hash and recreates only that validated role before import into fresh labelled
+targets. Do not alter existing roles or broaden historical readers. See
+[migration and recovery preparation](test-booking-reminder-fix-2026-10-11.md).
+
 There is no daily backup schedule or 24-hour recovery promise for Test. New
 synthetic records can be lost. Preserve all existing archives, incident pins,
 Apple Passwords key recovery and exact custom image archives. Future cleanup

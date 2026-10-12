@@ -1,7 +1,7 @@
 /* TopBar Container */
 .topbar {
   position: fixed;
-  top: 0;
+  top: var(--environment-banner-height, 0px);
   left: var(--sidebar-width);
   right: 0;
   height: var(--topbar-height);
@@ -464,7 +464,7 @@
 
   .topbar-branch-dropdown {
     position: fixed;
-    top: calc(var(--topbar-height) + var(--space-sm) + env(safe-area-inset-top, 0));
+    top: calc(var(--environment-banner-height, 0px) + var(--topbar-height) + var(--space-sm) + env(safe-area-inset-top, 0));
     left: var(--space-md);
     right: var(--space-md);
     min-width: auto;

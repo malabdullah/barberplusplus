@@ -35,7 +35,7 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  120::bigint,
+  123::bigint,
   'all baseline and trusted-role RLS policies are present'
 );
 

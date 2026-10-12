@@ -1,0 +1,31 @@
+{
+  "schema": "barber-test-booking-migration-rehearsal/v1",
+  "at": "2026-10-11T09:42:43.693Z",
+  "project": "barber-test-rebuild-4c1028837d8018dd",
+  "host": "srv1207055",
+  "migration": "20261011085658_private_booking_reminder_triggers.sql",
+  "migrationSha256": "37877dc53acdb831f6845adc5eee7af51a3a1791d4a44a05af86f0a9ee172ca9",
+  "images": {
+    "db": "sha256:b8aebc0a7bdcfd3eadc557f0d19999ee5f5d4a29590e03ba34d90acf783cbd92",
+    "auth": "sha256:aa5adadc5b0e338b64d2d4565c6f7820989f778cb9e89895b1c4a07ed079302d",
+    "rest": "postgrest/postgrest@sha256:c847127074bd26e1b8d3f7c0e6e01e5346f4b85dd34f5d699fd230af960827c0",
+    "storage": "sha256:ffc760ae7a04b0790ba3988c31916a586790db88b66f53d7f307dfe297231613",
+    "mailpit": "axllent/mailpit@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d"
+  },
+  "pgTap": {
+    "001_baseline_security.sql": 32,
+    "002_booking_reminder_writes.sql": 35
+  },
+  "negativeControlPassed": true,
+  "fourRoleBookingCreateModifyCancel": true,
+  "directReminderAccessDenied": true,
+  "tenantDenial": true,
+  "securityAdvisorRun": true,
+  "writerRoleLogicalRestorePassed": true,
+  "fullIndependentBackupRestore": false,
+  "liveContainersAndFreezeUnchanged": true,
+  "freshSecretsAndVolumes": true,
+  "liveMigrationApplied": false,
+  "productionApproved": false,
+  "labelledResourcesRemoved": true
+}

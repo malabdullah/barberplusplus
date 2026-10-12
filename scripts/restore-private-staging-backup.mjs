@@ -17,6 +17,7 @@ import { writePublicContainerSource } from './write-public-container-source.mjs'
 import { manualFirstRelease } from './staging-manual-first-release.mjs';
 import { importRecoveryImages } from './import-staging-recovery-images.mjs';
 import { STAGING_TAR_IMAGE } from './staging-backup-tool.mjs';
+import { restoreBookingReminderRoleSql, bookingReminderRoleQuery } from './booking-reminder-recovery-role.mjs';
 
 const TAR_IMAGE = STAGING_TAR_IMAGE;
 const recoveryStartedAt = Date.now();
@@ -103,6 +104,13 @@ try {
   assert.equal(JSON.parse(sql(recoveryRoleQuery)), null);
   const roleSql = restoreRecoveryRoleSql(metadata.recoveryRole); if (roleSql) sql(roleSql);
   assert.deepEqual(JSON.parse(sql(recoveryRoleQuery)), metadata.recoveryRole);
+  if (version === 3) {
+    assert.equal(JSON.parse(sql(bookingReminderRoleQuery)), null);
+    const reminderRoleSql = restoreBookingReminderRoleSql(metadata.bookingReminderRole, metadata.candidate);
+    if (reminderRoleSql) docker(['exec', '-i', '-u', 'postgres', `${project}-db`, 'psql', '-U', 'postgres',
+      '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-d', 'postgres'], { input: reminderRoleSql });
+    assert.deepEqual(JSON.parse(sql(bookingReminderRoleQuery)), metadata.bookingReminderRole || null);
+  }
   stage = 'logical import into disposable target';
   assertOwned();
   sql('DROP DATABASE postgres WITH (FORCE);', 'template1');

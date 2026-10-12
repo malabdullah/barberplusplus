@@ -1481,11 +1481,11 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
-CREATE OR REPLACE TRIGGER "cancel_reminder_on_booking_cancel" AFTER UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."cancel_booking_reminder"();
+CREATE OR REPLACE TRIGGER "cancel_reminder_on_booking_cancel" AFTER UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."maintain_booking_reminder"();
 
 
 
-CREATE OR REPLACE TRIGGER "create_reminder_on_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."create_booking_reminder"();
+CREATE OR REPLACE TRIGGER "create_reminder_on_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."maintain_booking_reminder"();
 
 
 
@@ -1956,6 +1956,18 @@ CREATE POLICY "Barbers view own notifications" ON "public"."notifications" FOR S
 
 
 
+CREATE POLICY "Internal trigger cancels reminders" ON "public"."booking_reminders" FOR UPDATE TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1)) WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
+
+
+
+CREATE POLICY "Internal trigger creates reminders" ON "public"."booking_reminders" FOR INSERT TO "barber_reminder_writer" WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
+
+
+
+CREATE POLICY "Internal trigger reads reminder identifiers" ON "public"."booking_reminders" FOR SELECT TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
+
+
+
 CREATE POLICY "Managers can delete barbers in own branches" ON "public"."barbers" FOR DELETE USING (("branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")));
 
 
@@ -2236,6 +2248,7 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+GRANT USAGE ON SCHEMA "public" TO "barber_reminder_writer";
 
 
 
@@ -2407,6 +2420,18 @@ GRANT ALL ON TABLE "public"."barbers" TO "service_role";
 
 
 GRANT ALL ON TABLE "public"."booking_reminders" TO "service_role";
+
+
+
+GRANT SELECT("booking_id"),INSERT("booking_id") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
+
+
+
+GRANT INSERT("scheduled_at") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
+
+
+
+GRANT SELECT("status"),UPDATE("status") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
 
 
 
