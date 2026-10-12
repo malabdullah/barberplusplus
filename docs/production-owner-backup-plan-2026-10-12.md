@@ -78,8 +78,13 @@ growth; do not silently authorize charges, shorten retention, delete recovery
 dependencies or stop healthy captures to make the budget appear satisfied.
 
 B2 includes the first 10 GB free, and the vendor signup screen states no credit
-card is required. The account has not yet been created or verified. Free-only use needs verified
-account controls, transfer/request limits and sufficient retained capacity; it
+card is required. Actual account security, payment, region and quota observations
+belong in private evidence, not this public document. Obtain the owner's
+data-location decision before production bucket creation or uploads. Never
+silently create another account or assume its location is compliant.
+
+Free-only use needs verified account controls, transfer/request limits,
+sufficient retained capacity and restore bandwidth; it
 is not automatically a complete cost-free production recovery system. No paid
 B2 usage is approved. Provider/tool compatibility and achieved recovery targets
 remain unverified for either destination.
@@ -87,6 +92,7 @@ remain unverified for either destination.
 Sources:
 
 - [B2 pricing](https://www.backblaze.com/cloud-storage/pricing)
+- [B2 caps and alerts](https://www.backblaze.com/docs/cloud-storage-data-caps-and-alerts)
 - [B2 Object Lock](https://www.backblaze.com/docs/cloud-storage-object-lock)
 - [B2 regions](https://www.backblaze.com/docs/cloud-storage-data-regions)
 - [R2 pricing](https://developers.cloudflare.com/r2/pricing/)
@@ -105,6 +111,13 @@ download and request controls before unattended capture. If free limits prevent
 the required retention/recovery behavior, production remains NO-GO pending an
 explicit owner decision, not an automatic paid upgrade. Never request passwords
 or API keys in chat.
+
+An unpaid-account download cap can block the two-hour recovery target if required
+restore payloads exceed remaining daily download capacity. Measure the complete
+off-site restore set and request count, not just a logical dump. No full restore,
+continuous WAL capture or production backup-readiness claim follows from this
+account preflight. Do not fill the free quota to test cap failure; use bounded
+synthetic API probes and local failure fixtures first.
 
 ## Recovery design to implement and rehearse
 
