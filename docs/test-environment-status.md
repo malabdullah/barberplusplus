@@ -18,6 +18,14 @@ Full all-severity scans retain unaccepted package matches beyond the earlier
 zero-HIGH/CRITICAL records. The empty historical advisor stdout file cannot
 establish a zero-warning result. See [follow-up preparation](test-image-advisor-followup-2026-10-12.md).
 
+PR #11 passed all five checks and its separate review at
+`aa42978479bc83b866d76809dc5b480c95d775d4`. With exact owner merge/build-only
+approval, it merged as `c82c6539ed1fd2db6eb39bd0dd7c7569bc938877` (identical Git
+tree). The superseded evidence-only run `38212399672` was explicitly cancelled;
+new main CI is `38221700345`. Its image construction and signing gates must be
+observed separately. No new image, migration or configuration is deployed by
+this merge, and no remaining Functions findings are accepted by it.
+
 Remaining gates: reviewed fixes, final CI and explicit exact-release approval;
 fresh stateful checkpoint and strengthened advisor/rebuild verification;
 current security dispositions, owner iPhone Safari checks and final acceptance.

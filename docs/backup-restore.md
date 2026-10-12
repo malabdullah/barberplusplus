@@ -28,8 +28,18 @@ credentials, object names, customer records, or raw backup logs in this response
 6. record achieved RPO/RTO, missing objects, errors, and corrective owners; and
 7. destroy the drill environment after evidence and encrypted logs are retained.
 
-Staging keeps seven days of backups and is disposable. Local is always recreated
-from migrations and synthetic seed data.
+Hosted non-production is now **Test**, with `staging` retained as the technical
+identifier. Its superseding policy uses manual encrypted, Mac-verified
+checkpoints before stateful changes, retains the latest two verified points
+plus incident/rollback points, and enables no automatic pruning. Preserve all
+existing archives during the transition. See [Test operations](test-environment-runbook.md).
+Local and disposable rehearsals use migrations and synthetic fixtures; resetting
+shared Test still needs explicit resource-specific approval.
+
+The selected production destination and pending implementation gates are in
+[production backup preparation](production-owner-backup-plan-2026-10-12.md).
+Neither Test's lighter policy nor provider selection changes the production
+recovery requirements above.
 
 ## Monitoring
 
