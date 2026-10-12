@@ -25,6 +25,7 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 CREATE OR REPLACE FUNCTION "public"."cancel_booking_reminder"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 BEGIN
   IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
@@ -42,7 +43,8 @@ ALTER FUNCTION "public"."cancel_booking_reminder"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."check_auth_rate_limit"("p_identifier" "text", "p_max_attempts" integer DEFAULT 5, "p_window_seconds" integer DEFAULT 60, "p_lockout_seconds" integer DEFAULT 300) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 DECLARE
   v_record auth_rate_limits%ROWTYPE;
@@ -247,6 +249,7 @@ ALTER FUNCTION "public"."count_users_by_role"("role_filter" "text") OWNER TO "po
 
 CREATE OR REPLACE FUNCTION "public"."create_booking_reminder"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 DECLARE
   booking_datetime TIMESTAMPTZ;
@@ -278,6 +281,7 @@ ALTER FUNCTION "public"."create_booking_reminder"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 DECLARE
   recent_bookings INTEGER;
@@ -348,6 +352,7 @@ ALTER FUNCTION "public"."detect_suspicious_booking_activity"() OWNER TO "postgre
 
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_login_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 DECLARE
   recent_failures INTEGER;
@@ -545,7 +550,8 @@ ALTER FUNCTION "public"."is_manager"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 BEGIN
   DELETE FROM auth_rate_limits WHERE identifier = p_identifier;
@@ -662,6 +668,7 @@ ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."update_whatsapp_conversation_timestamp"() RETURNS "trigger"
     LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
     AS $$
 BEGIN
   NEW.updated_at = now();
@@ -2258,8 +2265,7 @@ GRANT ALL ON FUNCTION "public"."cancel_booking_reminder"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."check_auth_rate_limit"("p_identifier" "text", "p_max_attempts" integer, "p_window_seconds" integer, "p_lockout_seconds" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."check_auth_rate_limit"("p_identifier" "text", "p_max_attempts" integer, "p_window_seconds" integer, "p_lockout_seconds" integer) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."check_auth_rate_limit"("p_identifier" "text", "p_max_attempts" integer, "p_window_seconds" integer, "p_lockout_seconds" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_auth_rate_limit"("p_identifier" "text", "p_max_attempts" integer, "p_window_seconds" integer, "p_lockout_seconds" integer) TO "service_role";
 
 
@@ -2359,8 +2365,7 @@ GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "service_role";
 
 
@@ -2548,7 +2553,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 
