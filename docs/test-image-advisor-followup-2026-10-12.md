@@ -3,6 +3,37 @@
 Status: local preparation only; no merge, image publication or deployment of
 this follow-up has occurred. The live five-migration Test release is unchanged.
 
+## Actual preparation evidence
+
+- Repository check/build passed, with 34 Functions tests. The separate operations
+  suite passed 26 checks, including silent/malformed/nonzero/finding rejection.
+- Local Chromium: 13 journeys passed after supplying the actual loopback browser
+  key. The first attempt had four setup failures because that key was absent;
+  those failures are not passes. WebKit: eight responsive/language/theme checks
+  passed. Final Linux Chromium/Firefox/WebKit CI remains required.
+- A sealed-source AMD64 frontend at application preparation source `b2b79c4`
+  passed health, release/runtime, CSP/cache/noindex, unprivileged execution and
+  English/Arabic indicator checks, without network or published ports. Trivy
+  0.74.0 / October 12 data reported zero matches at every severity and zero secret
+  matches across 70 Alpine packages. This is not a complete application audit.
+- Investigated local probe failures were an image-manifest/configuration identity
+  assumption and archive/umask file-mode normalization. Strict configuration
+  bytes and RootFS binding resolved the former; committed public 0644/0755 modes
+  within an owner-only workspace resolved the latter. No live failure occurred.
+- Native fresh nine-service rehearsal `barber-test-rebuild-1021889c1797be21`
+  used validation source `221cd55` and the exact published 051acef Functions
+  artifact. Six migrations / 94 pgTAP assertions, five synthetic logins, new
+  Vault encryption, Storage, sink mail, Functions/Flow, Realtime update delivery
+  and tenant denial passed. The CLI exited successfully with explicit structured
+  empty results, and public DDL matched the fixture byte-for-byte. The rehearsal
+  retained the currently deployed frontend; its result is separate from the
+  patched frontend probe, not one conflated exact candidate acceptance.
+- Advisor receipt SHA-256 is recorded privately along with complete evidence.
+  Original container/freeze identities remained unchanged and only labelled
+  disposable resources were removed. Lost-server restoration remains unverified.
+
+These results are preparation, not approval of a published follow-up release.
+
 ## Narrow changes
 
 Keep the reviewed Nginx base digest and unprivileged UID. Pin the supported
