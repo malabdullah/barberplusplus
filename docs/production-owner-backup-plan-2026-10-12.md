@@ -34,23 +34,55 @@ The legacy production workflow still expects obsolete accepted-release evidence
 and a deployment executor not verified on this infrastructure. Do not populate
 its secrets or push a release tag merely because the environment now exists.
 
-## Provider decision
+## Provider decision — B2 free-only fallback, no R2 activation
 
-Recommend **Backblaze B2**, S3-compatible private object storage, as the off-site
-production destination. It is outside both the hosting provider and the DNS/
-access provider's account, supports Object Lock and avoids a capacity commitment.
-Cloudflare R2 is an alternative with no Internet egress charge, but concentrates
-backup ownership and public-routing/access administration in the same account.
-The provider recommendation is an architecture choice, not demonstrated tool
-compatibility or a guarantee of availability.
+The initial recommendation was Backblaze B2 for account/provider separation. The
+owner subsequently preferred using the existing **Cloudflare R2** account where
+possible, otherwise the $0-aim fallback. Inspection then showed that activating
+R2 accepts a recurring usage-billed subscription with the saved payment method.
+The owner explicitly chose: **"Use B2 free-only fallback; do not activate R2"**.
+B2's free allowance is the current selected candidate. Do not activate R2, add
+payment details, enable paid B2 usage, create cloud credentials or upload
+production data under this provider-selection approval. Recovery is unverified.
 
-Pricing checked October 12: B2 is $6.95/TB per 30 days, with the first 10 GB
-free and free egress up to three times average monthly stored data; excess egress
-is $0.01/GB. At 100 GB of **billed** storage, storage is approximately $0.70/month.
-Retained base backups, WAL, file versions and recovery images all count. Charges,
-taxes and account eligibility must be confirmed before enabling billing.
-A proposed $5/month alert is a warning, not a hard spending cap; do not interrupt
-healthy backups automatically when an alert fires.
+R2 would be outside the production hosting provider, but backup and DNS/Access
+control would share the Cloudflare account. Its account-loss/compromise and
+overage risks remain recorded here as the assessed, unselected alternative.
+B2 provides separate account/provider ownership. Use dedicated private buckets,
+restricted backup credentials, MFA and an independent recovery-key copy; keep
+account-management credentials off the production uploader. Any second copy
+needs its own approved destination and data-handling scope.
+
+Pricing checked October 12: R2 Standard includes 10 GB-month storage, 1 million
+Class A and 10 million Class B operations per month, with no direct Internet
+egress fee. Standard overages are $0.015/GB-month, $4.50/million Class A and
+$0.36/million Class B operations. Infrequent Access is outside the free tier.
+These are account-level allowances, not a dedicated per-backup bucket quota.
+Base backups, WAL, objects, retained exports and recovery images must all be
+measured; database size alone cannot establish the retained backup cost.
+
+Read-only account inspection reached the R2 activation screen: R2 is not enabled.
+It shows $0 due now and $0 monthly **plus additional usage**, charges the existing
+payment method for overages, automatically renews and accepts its terms when the
+subscription button is clicked. No button was clicked, bucket created, token
+generated, billing enabled or production data uploaded during inspection.
+Activation was explicitly declined. Do not equate included free usage
+with a guaranteed $0 cap. The earlier proposed $5/month budget alert is retired
+and was never approved or installed.
+
+Before unattended capture, verify all-account usage, supported alert/control
+mechanisms and conservative headroom for the complete retention policy. Rehearse
+bounded synthetic requests without enabling other metered services. If the
+required retention cannot fit the free allowance, escalate before launch or
+growth; do not silently authorize charges, shorten retention, delete recovery
+dependencies or stop healthy captures to make the budget appear satisfied.
+
+B2 includes the first 10 GB free, and the vendor signup screen states no credit
+card is required. The account has not yet been created or verified. Free-only use needs verified
+account controls, transfer/request limits and sufficient retained capacity; it
+is not automatically a complete cost-free production recovery system. No paid
+B2 usage is approved. Provider/tool compatibility and achieved recovery targets
+remain unverified for either destination.
 
 Sources:
 
@@ -58,15 +90,21 @@ Sources:
 - [B2 Object Lock](https://www.backblaze.com/docs/cloud-storage-object-lock)
 - [B2 regions](https://www.backblaze.com/docs/cloud-storage-data-regions)
 - [R2 pricing](https://developers.cloudflare.com/r2/pricing/)
+- [B2 signup](https://www.backblaze.com/sign-up/cloud-storage)
+- [R2 activation — declined](https://developers.cloudflare.com/r2/get-started/)
+- [R2 S3 compatibility](https://developers.cloudflare.com/r2/api/s3/api/)
 - [R2 locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
 - [pgBackRest S3 repositories](https://pgbackrest.org/user-guide.html)
 
-Before account setup, obtain pay-as-you-go and region approval. Proposed region:
-EU Central; selection is made during B2 signup and cannot be changed in that
-account. Confirm applicable data-residency requirements before customer-data
-uploads. Do not claim that encryption establishes regulatory compliance.
-The owner creates/signs into the account, enables MFA, handles payment and saves
-recovery credentials privately. Never request passwords or API keys in chat.
+The owner creates/signs into the B2 account, enters the password and accepts
+account terms personally; do not add a payment method. Its region is selected
+during signup and cannot be changed in that account. Confirm data-location
+requirements before bucket creation or customer-data uploads; encryption does
+not establish regulatory compliance. Verify the actual unpaid account's storage,
+download and request controls before unattended capture. If free limits prevent
+the required retention/recovery behavior, production remains NO-GO pending an
+explicit owner decision, not an automatic paid upgrade. Never request passwords
+or API keys in chat.
 
 ## Recovery design to implement and rehearse
 
@@ -76,7 +114,7 @@ a daily timer. No target is marked passed without measured restore evidence.
 
 1. Inventory exact production images, PostgreSQL extension/build compatibility,
    configuration, database and file volumes privately. Pin reviewed recovery
-   tools. Test B2 S3 upload/download, integrity, encrypted repository operations,
+   tools. Test the selected B2 S3 upload/download, integrity, encrypted repository operations,
    expiration and restore behavior on synthetic fixtures first. pgBackRest
    supports S3-compatible repositories generally; this exact B2/tool combination
    still requires testing. Do not transplant a Test database binary into production.
@@ -115,7 +153,11 @@ a daily timer. No target is marked passed without measured restore evidence.
    metadata: it can break repository updates and expiration. Confirm every
    protected recovery point includes its base/WAL/files/config dependencies.
    B2 enabling Object Lock cannot be disabled; compliance retention cannot be
-   shortened. Exact retention/mode needs explicit approval before enabling it.
+   shortened. Exact retention/mode and management permissions need approval before
+   enabling locks. If a later separately approved provider change chooses R2,
+   validate its bucket-lock interface and supported S3 operations independently:
+   authorized managers can remove R2 locks, so do not claim irreversible
+   compliance protection against full account takeover.
 10. Restore into a separately approved isolated recovery runtime, with no access
     to Test, customer-facing routes or real outbound integrations. Do not copy
     production data into the synthetic Test environment. A drill on the original
