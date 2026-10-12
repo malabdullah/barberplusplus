@@ -1,6 +1,6 @@
 # Test security hardening preparation — October 12, 2026
 
-Status: local preparation only; not published, merged or deployed. Live Test
+Status: owner-approved for public PR/CI; not merged or deployed. Live Test
 retains source 7ddcfe45 and its five-migration acceptance freeze. Production,
 shared data, secrets, routes and automatic workers are unchanged.
 
@@ -66,8 +66,9 @@ Separate solo-owner review checks the trusted paths, invoker/ACL changes,
 unchanged booking writer/RLS, missing-store deferral, fail-closed/status behavior,
 body bounds, no error/credential disclosure, image/manifest binding, capacity
 preflight, labelled cleanup and unchanged live freeze. It is not independent
-human review. This preparation still needs public-PR authorization, all five
-checks and exact merge/build approval. No new image is approved for live release.
+human review. Public code/technical-assessment publication was explicitly approved
+on October 12. All five checks and exact merge/build approval remain required.
+No new image is approved for live release.
 
 After publication/build: verify signed immutable artifacts, obtain concrete
 release approval and a fresh encrypted Mac-verified checkpoint, then perform the
