@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, rmSync, rmdirSync, unlinkSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { readProtected } from './staging-live-context.mjs';
 import { observedTestRuntime } from './test-environment-runtime.mjs';
 import { INSTALL_ROOT } from './staging-private-model.mjs';
@@ -93,10 +94,10 @@ try {
   try {
     advisors = execFileSync(cli,['db','advisors','--db-url',dbUrl,'--type','security','--level','warn','--fail-on','none','--output','json','--agent','no'],{env:cliEnv,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe']});
   } catch (error) {
-    const privateDiagnostic = { stage, status:error.status, signal:error.signal,
+    const privateDiagnostic = { stage, name:error.name, status:error.status, signal:error.signal,
       stderr:String(error.stderr||'').replaceAll(synthetic.settings.variables.POSTGRES_PASSWORD,'[synthetic-redacted]') };
     writeFileSync(project+'-advisor-failure.json',JSON.stringify(privateDiagnostic),{flag:'wx',mode:0o600});
-    console.error(JSON.stringify({stage,status:error.status,signal:error.signal,privateDiagnosticRecorded:true}));
+    console.error(JSON.stringify({stage,name:error.name,status:error.status,signal:error.signal,privateDiagnosticRecorded:true}));
     throw error;
   }
   writeFileSync(project + '-advisors.json',advisors,{flag:'wx',mode:0o600});
