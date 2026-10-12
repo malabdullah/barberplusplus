@@ -118,9 +118,11 @@ was found. A reviewed compatibility/security patch and exact-release approval
 are required before altering these grants/functions. No new acceptance, privilege
 change, warning suppression or deadline extension occurred during this assessment.
 
-The documentation-only local record was committed, but public PR publication was
-blocked pending explicit permission for the operational identifiers. No workaround
-was used and no documentation PR was created in this execution.
+Public publication was initially blocked pending explicit permission for the
+operational identifiers. No workaround was used. The owner subsequently approved
+publishing this sanitized documentation in a public GitHub PR on October 12.
+That approval does not authorize merging, deploying, accepting security risks or
+declaring Test ready.
 
 ## Recovery and evidence locations
 
