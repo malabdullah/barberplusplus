@@ -1,4 +1,4 @@
-const ENVIRONMENTS = new Set(['development', 'test', 'staging', 'production']);
+const ENVIRONMENTS = new Set(['development', 'test', 'production']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 const normalizeOrigin = (value, label, environment) => {
@@ -59,7 +59,7 @@ const validatePublishableKey = (value) => {
 export const validateRuntimeConfig = (rawConfig) => {
   const environment = rawConfig?.environment?.trim();
   if (!ENVIRONMENTS.has(environment)) {
-    throw new Error('APP_ENV must be development, test, staging, or production.');
+    throw new Error('APP_ENV must be development, test, or production.');
   }
 
   return Object.freeze({

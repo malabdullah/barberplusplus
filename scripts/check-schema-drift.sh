@@ -1,21 +1,15 @@
 #!/bin/sh
 set -eu
-
-expected=supabase/schema.expected.sql
-if [ ! -f "$expected" ]; then
-  echo "Missing $expected; generate it during the approved baseline review." >&2
+test -f supabase/.baseline-ready
+mkdir -p .local-test
+chmod 700 .local-test
+umask 077
+node scripts/local-test.mjs status >/dev/null
+npx supabase db dump --local --schema public --file .local-test/schema.actual.sql >/dev/null
+python3 scripts/normalize-schema.py supabase/schema.expected.sql > .local-test/schema.expected.normalized.sql
+python3 scripts/normalize-schema.py .local-test/schema.actual.sql > .local-test/schema.actual.normalized.sql
+if ! diff -u .local-test/schema.expected.normalized.sql .local-test/schema.actual.normalized.sql > .local-test/schema.diff; then
+  echo 'SCHEMA_DRIFT_FAIL: inspect private .local-test/schema.diff' >&2
   exit 1
 fi
-
-actual=$(mktemp)
-normalized_expected=$(mktemp)
-normalized_actual=$(mktemp)
-trap 'rm -f "$actual" "$normalized_expected" "$normalized_actual"' EXIT
-
-npx supabase db dump --local --schema public --file "$actual"
-
-# Dump headers contain tool timestamps/version chatter that are not schema.
-sed '/^-- Dumped /d; /^-- Started on /d; /^-- Completed on /d' "$expected" > "$normalized_expected"
-sed '/^-- Dumped /d; /^-- Started on /d; /^-- Completed on /d' "$actual" > "$normalized_actual"
-
-diff -u "$normalized_expected" "$normalized_actual"
+echo SCHEMA_EQUIVALENT_PASS

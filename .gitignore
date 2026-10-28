@@ -33,3 +33,9 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Isolated local state and private release receipts
+.local-test/
+.release-private/
+__pycache__/
+*.pyc

@@ -5,8 +5,8 @@ import {
   hasValidSharedSecret,
 } from './environment.ts';
 
-Deno.test('staging WhatsApp Flow requests must be encrypted', () => {
-  Deno.env.set('APP_ENV', 'staging');
+Deno.test('production WhatsApp Flow requests must be encrypted', () => {
+  Deno.env.set('APP_ENV', 'production');
 
   let rejected = false;
   try {
@@ -42,7 +42,7 @@ Deno.test('cron shared secret uses the dedicated header', async () => {
 });
 
 Deno.test('non-production outbound recipients require the allowlist', () => {
-  Deno.env.set('APP_ENV', 'staging');
+  Deno.env.set('APP_ENV', 'test');
   Deno.env.set('OUTBOUND_RECIPIENT_ALLOWLIST', '96500000000');
   assertOutboundRecipientAllowed('+965 0000 0000');
 

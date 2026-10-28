@@ -1,21 +1,24 @@
-# Legacy Decommission Checklist
+# Exact-resource cleanup
 
-Start this checklist only after the first controlled production release has been
-healthy for 72 hours. The active production database, Storage, and customer data
-are never cleanup targets.
+Use the private live inventory and deletion manifest, with an explicit keep,
+remove or investigate decision for every resource. Check container IDs, Compose
+ownership, all volume consumers, bind mounts, networks, domain routers, schedules,
+credentials and deployment triggers immediately before deletion.
 
-- Inventory traffic, callbacks, schedules, DNS, TLS routes, redirect URLs,
-  containers, volumes, images, networks, Vault entries, and credentials.
-- Verify the current digest, migration version, backup freshness, rollback
-  digest, and a final encrypted backup.
-- Remove the superseded frontend deployment and old Dokploy build configuration.
-- Remove only confirmed-unused containers, images, networks, and frontend volumes.
-- Remove obsolete cron jobs and Vault entries.
-- Revoke old publishable, service-role, webhook, provider, and deploy credentials.
-- Remove stale DNS, OAuth redirects, webhook registrations, and TLS routes.
-- Prove the former hosted Supabase project receives no requests, callbacks,
-  files, or jobs before removing references.
-- Delete former database or Storage resources only with explicit inventory
-  approval; retain the final backup under the production policy.
-- Search code, CI, documentation, DNS, Dokploy, cron, and integrations for every
-  old implementation identifier and attach zero-result evidence to the change.
+Keep production Supabase/customer data/backups and Dokploy's own PostgreSQL,
+Redis and Traefik. Never infer ownership from the database technology or a short
+container name. Remove only manifest entries; never use global Docker pruning.
+
+The owner approved permanent discard of n8n/workers/their database/Redis, Ollama
+models and retired Test/Staging data, without a new recovery archive. Production
+data is excluded. Treat old Supabase data directories of uncertain ownership as
+investigate until their contents/ownership are established.
+
+After canonical-app cutover, remove duplicate Barber++ applications and domain
+ownership, obsolete hooks/runners/secrets, cloud environments/preview resources,
+and retired local stacks. Verify cloud Auth cleanup and remote tunnel deletion
+with actual service evidence. A stopped listener does not prove tunnel deletion.
+
+Re-inventory retained services and volumes, documenting their production purpose.
+Remove temporary SSH firewall access and close the management tunnel at the end
+of the implementation session. Preserve the original firewall rules.

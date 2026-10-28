@@ -23,6 +23,45 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE OR REPLACE FUNCTION "public"."can_write_avatar_object"("object_name" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
+    AS $_$
+  select (select auth.uid()) is not null
+    and object_name ~ '^(branches|barbers)/[0-9a-f-]{36}-[0-9]+\.(jpg|jpeg|png|webp|gif)$'
+    and (
+      (select auth.jwt()->'app_metadata'->>'role') = 'admin'
+      or (
+        (select auth.jwt()->'app_metadata'->>'role') = 'manager'
+        and (
+          (split_part(object_name,'/',1) = 'branches' and exists (
+            select 1 from public.branches b
+            where b.id::text = left(split_part(object_name,'/',2),36)
+              and b.manager_id = (select auth.uid())
+          ))
+          or (split_part(object_name,'/',1) = 'barbers' and exists (
+            select 1 from public.barbers b join public.branches branch on branch.id=b.branch_id
+            where b.id::text = left(split_part(object_name,'/',2),36)
+              and branch.manager_id = (select auth.uid())
+          ))
+        )
+      )
+      or (
+        (select auth.jwt()->'app_metadata'->>'role') = 'barber'
+        and split_part(object_name,'/',1) = 'barbers'
+        and exists (
+          select 1 from public.barbers b
+          where b.id::text = left(split_part(object_name,'/',2),36)
+            and b.user_id = (select auth.uid())
+        )
+      )
+    );
+$_$;
+
+
+ALTER FUNCTION "public"."can_write_avatar_object"("object_name" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."cancel_booking_reminder"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -2256,6 +2295,12 @@ GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT USAGE ON SCHEMA "public" TO "barber_reminder_writer";
+
+
+
+REVOKE ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "service_role";
 
 
 

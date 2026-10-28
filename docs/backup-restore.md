@@ -1,40 +1,31 @@
-# Backup, Restore, and Monitoring
+# Production backup and restoration
 
-## Production target
+Production backups are separate from disposable local Test and retired workloads.
+The permanent-discard policy for n8n/Ollama/old Test does not apply to production
+Supabase or Dokploy's own database.
 
-Production is designed for a 15-minute RPO and two-hour RTO. Configure encrypted
-continuous PostgreSQL WAL archiving plus daily base backups, and independent
-object Storage backups. The destination must be outside the production VPS
-failure domain. Keep 30 daily copies and 12 monthly copies.
+The existing backend backup service writes database, roles and
+config/Storage/Functions archives. Inspection on 2026-10-28 found plaintext
+root-only copies on the same VPS. A scheduled job and file existence alone do not
+prove encryption, off-host recovery or successful restoration.
 
-Monitor backup freshness, WAL archival lag/failure, restore-point age, and
-destination capacity from an external service. The production promotion workflow
-must query an authenticated endpoint that fails unless the newest recoverable
-point is within 15 minutes and the latest base/object backup is healthy.
+Before initial cutover, verify source checksums and a fresh encrypted off-host
+copy, then restore it in a dedicated isolated recovery container/host. Disable
+network access, cron and outbound integrations during the drill. Validate database
+integrity, Auth records, Storage objects, Functions and relevant configuration.
+Retain aggregate evidence only; never publish customer records or credentials.
 
-The endpoint returns JSON matching `docs/backup-readiness-example.json`. CI
-rejects evidence older than five minutes, WAL or recoverable-point age above 15
-minutes, base/object backups older than 25 hours, a non-off-site destination, or
-a restore drill older than 92 days or exceeding the RPO/RTO. Do not include
-credentials, object names, customer records, or raw backup logs in this response.
+Keep encryption identities outside Git and Test, with a separately protected
+recovery copy. Document who can recover the encryption key if the Mac or VPS is
+lost. Encrypt before retaining or transferring off-host data. Never put backups
+in a public repository or a publicly accessible bucket.
 
-## Quarterly restore drill
+The target recovery objectives are a 15-minute RPO and two-hour RTO. Daily backups
+alone do not meet the RPO; continuous WAL/object protection and an independent
+destination need verified operational evidence. Do not claim those objectives
+are achieved until a timed drill establishes them. Monitor backup freshness,
+recoverability, capacity and credential/key expiry.
 
-1. Provision an isolated host from current infrastructure documentation.
-2. Restore the selected base backup and replay WAL to the declared timestamp.
-3. Restore object Storage to isolated volumes.
-4. rotate JWT, database, Vault, SMTP, WhatsApp, and deployment credentials;
-5. run schema checks and non-destructive role journeys;
-6. record achieved RPO/RTO, missing objects, errors, and corrective owners; and
-7. destroy the drill environment after evidence and encrypted logs are retained.
-
-Staging keeps seven days of backups and is disposable. Local is always recreated
-from migrations and synthetic seed data.
-
-## Monitoring
-
-Probe frontend, Auth, REST, Realtime, Storage, and Edge Functions. Alert on
-PostgreSQL connections, CPU, memory, disk, certificates, backups, deploys,
-migrations, cron, email, WhatsApp, authentication failures, and application
-errors. Tag logs with `environment`, redact credentials and personal data, and
-send alerts through a service independent of Barber++.
+A release must fail closed when fresh backup evidence is missing or stale.
+Automatic frontend/Functions rollback preserves customer writes and never blindly
+restores a database backup. Disaster recovery is a separate operator procedure.

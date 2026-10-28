@@ -1,0 +1,11 @@
+{
+  "project": "barber-local-test",
+  "cli": "2.116.0",
+  "node": "24.20.0",
+  "appPort": 5173,
+  "apiPort": 55321,
+  "databasePort": 55322,
+  "studioPort": 55323,
+  "mailPort": 55324,
+  "productionImageParity": false
+}

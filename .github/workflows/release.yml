@@ -1,0 +1,73 @@
+name: Production release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+    permissions: { contents: read, pull-requests: read }
+  package:
+    if: github.repository == 'malabdullah/barberplusplus'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.20.0, cache: npm }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: frontend
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          build-args: APP_RELEASE=${{ github.sha }}
+          provenance: mode=max
+          sbom: true
+      - name: Verify the exact release container
+        run: |
+          docker pull "$TEST_IMAGE"
+          node scripts/test-production-image.mjs
+        env:
+          TEST_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.frontend.outputs.digest }}
+          TEST_EXPECTED_RELEASE: ${{ github.sha }}
+      - name: Scan the exact published image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: ghcr.io/${{ github.repository }}@${{ steps.frontend.outputs.digest }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - run: node ops/release/package.mjs .release-private/package
+        env:
+          FRONTEND_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.frontend.outputs.digest }}
+      - uses: actions/attest@v4
+        with:
+          subject-path: .release-private/package/*
+      - uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.frontend.outputs.digest }}
+          push-to-registry: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-release-${{ github.sha }}
+          path: .release-private/package/*
+          if-no-files-found: error
+          retention-days: 90

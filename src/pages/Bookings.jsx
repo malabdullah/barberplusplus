@@ -351,7 +351,7 @@ export default function Bookings() {
   };
 
   return (
-    <div className="bookings-page">
+    <div className="bookings-page manager-bookings-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('nav.bookings')}</h2>

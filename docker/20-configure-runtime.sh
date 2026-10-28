@@ -11,9 +11,9 @@ for variable_name in $required_variables; do
 done
 
 case "$APP_ENV" in
-  staging|production) ;;
+  production) ;;
   *)
-    echo "APP_ENV must be staging or production in the container." >&2
+    echo "APP_ENV must be production in the container." >&2
     exit 1
     ;;
 esac
@@ -84,11 +84,7 @@ esac
 case "$APP_RELEASE" in
   *[!A-Za-z0-9._-]*) echo "APP_RELEASE contains unsupported characters." >&2; exit 1 ;;
 esac
-if [ "$APP_ENV" = staging ]; then
-  ROBOTS_HEADER='noindex, nofollow'
-else
-  ROBOTS_HEADER='index, follow'
-fi
+ROBOTS_HEADER='index, follow'
 export SUPABASE_REALTIME_URL APP_RELEASE ROBOTS_HEADER
 
 envsubst '${APP_ENV} ${APP_URL} ${SUPABASE_PUBLIC_URL} ${SUPABASE_PUBLISHABLE_KEY} ${APP_RELEASE}' \

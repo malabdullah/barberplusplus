@@ -20,10 +20,12 @@ export function localDockerProbe({ sourceEnv = process.env, execute = execFileSy
   const socket = resolveSocket(host.slice('unix://'.length));
   assert.ok(socket.startsWith('/') && inspectSocket(socket).isSocket(), 'Local Docker endpoint is not a socket');
   const endpoint = `unix://${socket}`;
-  return (args, { input, timeout = 180000, encoding = 'utf8', maxBuffer = 8 * 1024 * 1024 } = {}) => {
+  const run = (args, { input, timeout = 180000, encoding = 'utf8', maxBuffer = 8 * 1024 * 1024 } = {}) => {
     const output = execute('docker', ['--host', endpoint, ...args],
       { ...options, timeout, input, encoding, maxBuffer });
     // Recovery archives are binary: never trim or decode their bytes.
     return typeof output === 'string' ? output.trim() : output;
   };
+  Object.defineProperty(run, 'endpoint', { value: endpoint });
+  return run;
 }

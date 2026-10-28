@@ -8,13 +8,13 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.30.4-alpine3.24@sha256:45ce1e2e699234253d1def7baa96218a5d00b498d1ba0cbb1a17b6bdf73d1351
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6
 
-# Keep the upstream runtime pinned while applying supported security patches.
-# Return to the original unprivileged UID before any application startup.
+# Apply the pinned distribution's available security updates at build time.
+# The resulting image is scanned and deployed by immutable digest, never rebuilt
+# between acceptance and production. Exact APK contents are recorded in the image.
 USER root
-RUN apk add --no-cache libexpat=2.8.5-r0 libuuid=2.42.3-r1 pcre2=10.49-r0 tiff=4.7.2-r0 \
-    curl=8.22.0-r0 libcurl=8.22.0-r0 libpng=1.6.59-r0 nghttp2-libs=1.70.0-r0 zlib=1.3.2-r1
+RUN apk upgrade --no-cache && apk info -vv > /opt/apk-manifest.txt
 USER 101
 
 ARG APP_RELEASE=unknown

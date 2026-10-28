@@ -14,4 +14,4 @@ export const appConfig = validateRuntimeConfig(
   injectedConfig?.environment ? injectedConfig : localConfig
 );
 
-export const isStaging = appConfig.environment === 'staging';
+export const isTest = appConfig.environment === 'test' || appConfig.environment === 'development';

@@ -1,25 +1,14 @@
 import { expect, test } from '@playwright/test';
 
 for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']]) {
-  test(`${role} Test banner leaves navigation and drawer controls unobscured`, async ({ page, context }) => {
+  test(`${role} Test banner leaves navigation and drawer controls unobscured`, async ({ page }) => {
     test.setTimeout(120000);
     const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:4173');
     expect(['localhost', '127.0.0.1', '::1']).toContain(base.hostname);
-    const localApi = new URL('http://127.0.0.1:54321');
-    const runtime = { environment: 'staging', appUrl: 'https://barber-test-ui.invalid',
-      supabaseUrl: 'https://barber-test-api.invalid', supabasePublishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY, release: 'local-banner-regression' };
+    const localApi = new URL('http://127.0.0.1:55321');
+    const runtime = { environment: 'test', appUrl: base.origin,
+      supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY, release: 'local-banner-regression' };
     expect(runtime.supabasePublishableKey).toBeTruthy();
-    // Exercise the real Test-only component, but proxy only to isolated local
-    // fixtures. Neither .invalid origin is contacted; no live Test credentials.
-    await context.route('https://barber-test-api.invalid/**', async route => {
-      const requested = new URL(route.request().url());
-      expect(requested.origin).toBe(runtime.supabaseUrl);
-      const response = await context.request.fetch(new URL(requested.pathname + requested.search, localApi).href, {
-        method: route.request().method(), headers: { ...route.request().headers(), host: localApi.host }, data: route.request().postData(), maxRedirects: 0,
-      });
-      await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': base.origin } });
-    });
-    await context.routeWebSocket('wss://barber-test-api.invalid/**', socket => socket.close());
     await page.addInitScript(value => { window.__BARBER_CONFIG__ = Object.freeze(value); }, runtime);
     await page.goto('/login');
     await expect(page.getByRole('status')).toContainText('TEST — synthetic data');
