@@ -2,6 +2,7 @@
 """Root-owned, outbound-only release consumer. Disabled until initial cutover passes."""
 import argparse, fcntl, hashlib, io, json, os, pathlib, re, stat
 import subprocess, time, urllib.request, urllib.error, urllib.parse, zipfile
+from state_store import atomic_json
 
 REPO = 'malabdullah/barberplusplus'
 WORKFLOW = '.github/workflows/release.yml'
@@ -32,7 +33,7 @@ def unpack_release(raw, expected_digest, destination):
     if expected_digest != 'sha256:' + digest(raw): raise ValueError('GitHub artifact archive digest mismatch')
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         entries = z.infolist()
-        if sorted(x.filename for x in entries) != ['backend.tar.gz', 'release.json'] or any(x.file_size > 256 * 1024 * 1024 for x in entries): raise ValueError('Unexpected artifact members/size')
+        if sorted(x.filename for x in entries) != ['backend.tar.gz', 'release.json'] or sum(x.file_size for x in entries) > 256 * 1024 * 1024: raise ValueError('Unexpected artifact members/size')
         for entry in entries:
             if stat.S_ISLNK(entry.external_attr >> 16): raise ValueError('Artifact symlink refused')
             (destination / entry.filename).write_bytes(z.read(entry))
@@ -57,7 +58,7 @@ def resume_policy(previous, commit):
     phase = previous.get('phase', '')
     if phase.startswith('FAILED'):
         raise ValueError('Failed release requires operator acknowledgement before retry')
-    if phase in ['RECEIVED', 'BACKEND_APPLIED', 'FRONTEND_REQUESTED']:
+    if phase in ['VERIFIED','RECEIVED','BACKEND_APPLYING','BACKEND_APPLIED','FRONTEND_REQUESTED']:
         # An interrupted operation may have completed remotely. Do not infer its
         # outcome or overwrite the original rollback image on the next poll.
         raise ValueError('Interrupted release requires operator reconciliation')
@@ -73,6 +74,7 @@ class Controller:
         self.token = private_file(config['githubTokenFile']) if config.get('githubTokenFile') else None
         self.key = private_file(config['dokployKeyFile'])
         self.env = dict(os.environ, GH_CONFIG_DIR=str(self.root / 'gh'), XDG_CACHE_HOME=str(self.root / 'cache'))
+        self.env.pop('GH_TOKEN',None); self.env.pop('GITHUB_TOKEN',None)
         if self.token: self.env['GH_TOKEN'] = self.token
 
     def github(self, path):
@@ -133,8 +135,7 @@ class Controller:
         return json.loads(output)
 
     def state(self, record):
-        path = self.root / 'state.json'; tmp = self.root / 'state.next'
-        tmp.write_text(json.dumps(record, indent=2)); tmp.chmod(0o600); tmp.replace(path)
+        atomic_json(self.root/'state.json',record)
 
     def frontend(self, image):
         if not IMAGE.fullmatch(image): raise ValueError('Frontend digest required')
@@ -171,8 +172,12 @@ class Controller:
             if len(ref) != 2 or ref[1] != 'refs/heads/main' or not SHA.fullmatch(ref[0]): raise ValueError('Invalid main ref')
             commit = ref[0]
             previous = json.loads((self.root / 'state.json').read_text()) if (self.root / 'state.json').exists() else {}
-            if previous.get('deployedCommit') == commit: return {'status': 'UNCHANGED', 'commit': commit}
             resume_policy(previous, commit)
+            if previous.get('deployedCommit') == commit: return {'status': 'UNCHANGED', 'commit': commit}
+            if not previous and commit==accepted['commit']:
+                self.healthy({'commit':commit,'frontendImage':accepted['frontendImage']})
+                self.state({'phase':'COMPLETE','commit':commit,'deployedCommit':commit,'deployedImage':accepted['frontendImage']})
+                return {'status':'INITIAL_ACCEPTED_RELEASE_OBSERVED','commit':commit}
             repo = self.github('')
             if repo['id'] != self.c['repositoryId']: raise ValueError('Repository identity changed')
             runs = self.github('/actions/workflows/release.yml/runs?branch=main&event=push&status=success&per_page=100')['workflow_runs']
@@ -193,16 +198,22 @@ class Controller:
             if not IMAGE.fullmatch(previous_image or ''): raise ValueError('Verified rollback image required')
             previous_commit = previous.get('deployedCommit') or accepted['commit']
             if not SHA.fullmatch(previous_commit): raise ValueError('Previous release identity missing')
-            record = {'commit': commit, 'runId': run['id'], 'previousImage': previous_image, 'deployedCommit': previous_commit, 'phase': 'RECEIVED'}
-            self.backend('receive', m, raw); self.backend('preflight', m)
+            self.healthy({'commit':previous_commit,'frontendImage':previous_image})
+            record = {'commit': commit, 'runId': run['id'], 'previousImage': previous_image, 'deployedCommit': previous_commit, 'phase': 'VERIFIED'}
             self.state(record)
             try:
+                self.backend('receive', m, raw); record['phase']='RECEIVED'; self.state(record)
+                self.backend('preflight', m)
+                record['phase']='BACKEND_APPLYING'; self.state(record)
                 self.backend('apply', m); record['phase'] = 'BACKEND_APPLIED'; self.state(record)
                 self.frontend(m['frontendImage']); record['phase'] = 'FRONTEND_REQUESTED'; self.state(record)
                 self.healthy(m)
                 record.update(phase='COMPLETE', deployedCommit=commit, deployedImage=m['frontendImage']); self.state(record)
                 return {'status': 'DEPLOYED', 'commit': commit}
             except Exception:
+                if record['phase'] in ['VERIFIED','RECEIVED']:
+                    record['phase']='FAILED_PREPARATION'; self.state(record)
+                    raise RuntimeError(record['phase']) from None
                 # Backend rollback restores Functions only, never undoes SQL/data.
                 rollback_ok = True
                 try: self.frontend(previous_image)
@@ -211,7 +222,9 @@ class Controller:
                 except Exception: rollback_ok = False
                 try: self.healthy({'commit': previous_commit, 'frontendImage': previous_image})
                 except Exception: rollback_ok = False
-                record['phase'] = 'FAILED_ROLLED_BACK' if rollback_ok else 'FAILED_REQUIRES_OPERATOR'; self.state(record)
+                record['phase'] = 'FAILED_ROLLED_BACK' if rollback_ok else 'FAILED_REQUIRES_OPERATOR'
+                record['deployedCommit']=previous_commit if rollback_ok else None
+                self.state(record)
                 raise RuntimeError(record['phase']) from None
 
 def main():

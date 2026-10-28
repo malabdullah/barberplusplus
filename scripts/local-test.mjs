@@ -41,9 +41,17 @@ function guard() {
   dockerProbe ||= localDockerProbe();
   env.DOCKER_HOST = dockerProbe.endpoint;
   delete env.DOCKER_CONTEXT;
+  functionSecrets();
   if (supabase('--version').trim() !== lock.cli) throw Error('Unreviewed CLI version');
 }
 function privateWrite(path, contents) { writeFileSync(path, contents, { mode: 0o600 }); chmodSync(path, 0o600); }
+function functionSecrets() {
+  const path = resolve(root, 'supabase/functions/.env.local');
+  if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\nAI_OUTBOUND_ENABLED=false\nOUTBOUND_RECIPIENT_ALLOWLIST=96500000000\nWHATSAPP_ACCESS_TOKEN=local-disabled\nWHATSAPP_PHONE_NUMBER_ID=local-disabled\nWHATSAPP_VERIFY_TOKEN=local-disabled\nWHATSAPP_APP_SECRET=local-disabled\n`);
+  const secret = readFileSync(path, 'utf8').match(/^CRON_SHARED_SECRET=([A-Za-z0-9_-]{32,128})$/m)?.[1];
+  if (!secret) throw Error('A private local cron secret is required');
+  env.BARBER_LOCAL_CRON_SECRET = secret;
+}
 function owned(name) {
   const c = inspect(name);
   if (c.Config.Labels?.['com.supabase.cli.project'] !== lock.project) throw Error('Container ownership mismatch');
@@ -116,8 +124,7 @@ function configure() {
   const key = values.PUBLISHABLE_KEY || values.ANON_KEY;
   if (!key || new URL(values.API_URL).hostname !== '127.0.0.1' || new URL(values.API_URL).port !== String(lock.apiPort)) throw Error('Unexpected local API status');
   privateWrite(resolve(root, '.env.local'), `VITE_APP_ENV=test\nVITE_APP_URL=http://localhost:5173\nVITE_SUPABASE_URL=http://127.0.0.1:${lock.apiPort}\nVITE_SUPABASE_PUBLISHABLE_KEY=${key}\n`);
-  const path = resolve(root, 'supabase/functions/.env.local');
-  if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\nAI_OUTBOUND_ENABLED=false\nOUTBOUND_RECIPIENT_ALLOWLIST=96500000000\nWHATSAPP_ACCESS_TOKEN=local-disabled\nWHATSAPP_PHONE_NUMBER_ID=local-disabled\nWHATSAPP_VERIFY_TOKEN=local-disabled\nWHATSAPP_APP_SECRET=local-disabled\n`);
+  functionSecrets();
 }
 async function startBackend() {
   prepareLocalServicePins(root);

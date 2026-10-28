@@ -48,7 +48,16 @@ runtime changes, stale backup evidence and migrations outside the narrow reviewe
 additive SQL subset. New tables, RLS changes, routines, backfills and destructive
 SQL require a separately reviewed release.
 
-The controller serializes delivery and journals each phase. Failed or interrupted
+The initial adoption records the managed Function directories. Frontend-only
+releases leave unchanged Functions running. Changed Functions are fully backed
+up and staged before the runtime drains; the runtime then stops briefly while
+the directories are replaced. The main gateway and protected configuration stay
+outside managed application source. Rollback restores removed/changed workers
+and removes newly introduced workers. A partial backup never authorizes deleting
+a live worker. Account for this short Functions availability gap during release
+planning.
+
+The controller serializes delivery and flushes each journal phase to disk. Failed or interrupted
 delivery stops future automatic advancement until an operator reconciles actual
 remote state. Health verification checks HTTPS, the deployed commit and actual
 Swarm image digest. An API acknowledgement alone is not deployment success.

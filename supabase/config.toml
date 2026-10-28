@@ -433,6 +433,7 @@ enabled = true
 [edge_runtime.secrets]
 APP_ENV = "development"
 APP_URL = "http://localhost:5173"
+CRON_SHARED_SECRET = "env(BARBER_LOCAL_CRON_SECRET)"
 AI_OUTBOUND_ENABLED = "false"
 OUTBOUND_RECIPIENT_ALLOWLIST = "96500000000"
 WHATSAPP_ACCESS_TOKEN = "local-disabled"

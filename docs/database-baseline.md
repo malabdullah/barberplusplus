@@ -20,9 +20,12 @@ The reviewed initial adoption must:
    history and a private ordered name/SHA-256 ledger in the same reviewed adoption.
    Record the resulting schema fingerprint. Never mark unapplied effects as applied.
 
-The first schema-only rehearsal executes the five post-baseline migrations
+The schema-only rehearsal executes the six post-baseline migrations
 against the installed schema without rerunning baseline creation. Production
 already has trusted app roles; no user-metadata role promotion is needed.
+The newest migration adds the previously absent avatar ownership policies and
+enforces the application's existing five-megabyte/image-type upload limits in
+Storage. It preserves existing objects and requires the initial cutover review.
 The full comparison retains production documentation comments and an equivalent
 rate-limit policy role ordering difference. Behavioral comparison may ignore only
 parsed top-level COMMENT statements and that exact reviewed role list; it must

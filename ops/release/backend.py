@@ -6,6 +6,7 @@ forwarding, agent forwarding or user rc. It never accepts an arbitrary shell.
 """
 import fcntl, hashlib, importlib.util, io, json, os, pathlib, re, shutil, stat
 import subprocess, sys, tarfile, time, zipfile
+from state_store import atomic_json
 
 SHA = re.compile(r'[a-f0-9]{40}')
 HASH = re.compile(r'[a-f0-9]{64}')
@@ -13,6 +14,7 @@ MIGRATION = re.compile(r'\d{14}_[a-z0-9_]+\.sql')
 LIMIT = 256 * 1024 * 1024
 
 def digest(data): return hashlib.sha256(data).hexdigest()
+def staged_path(live, commit, name): return live / ('.barber-next-' + commit + '-' + name)
 
 def private_json(path):
     p = pathlib.Path(path)
@@ -95,6 +97,10 @@ class Backend:
         for name, expected in lock['containers'].items():
             actual = json.loads(self.command(['docker', 'inspect', name]))[0]
             if actual['Image'] != expected['imageId'] or not actual['State']['Running']: raise ValueError('Production runtime changed/unhealthy')
+        runtime = json.loads(self.command(['docker','inspect',self.c['functionsContainer']]))[0]
+        environment = dict(item.split('=',1) for item in runtime['Config']['Env'] if '=' in item)
+        if environment.get('APP_ENV')!='production' or environment.get('APP_URL')!=self.c['appUrl'] or not all(environment.get(name) for name in ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_ANON_KEY','CRON_SHARED_SECRET']):
+            raise ValueError('Production Functions environment is incomplete')
         # This private hash table is created in the separately reviewed adoption
         # transaction, never by the automatic release path.
         applied = json.loads(self.sql("BEGIN READ ONLY; SELECT coalesce(json_agg(json_build_object('name',name,'sha256',sha256) ORDER BY name),'[]') FROM barber_release.migrations; COMMIT;"))
@@ -107,6 +113,7 @@ class Backend:
 
     def apply(self, target, m):
         pending = self.preflight(target, m)
+        self.journal({'commit':m['commit'], 'phase':'SQL_APPLYING', 'names':[]})
         # SQL and hash history commit together. Repeated delivery never reapplies
         # committed migrations; interrupted Functions changes require inspection.
         if pending:
@@ -121,6 +128,7 @@ class Backend:
         # fails closed on the next attempt, requiring operator reconciliation.
         fingerprint = self.schema_fingerprint()
         self.sql("UPDATE barber_release.schema_state SET fingerprint='" + fingerprint + "' WHERE singleton=true;")
+        self.journal({'commit':m['commit'], 'phase':'SQL_APPLIED', 'names':[]})
         self.functions(target, m['commit'])
         return {'status': 'BACKEND_APPLIED', 'migrationsApplied': len(pending)}
 
@@ -128,40 +136,78 @@ class Backend:
         source = target / 'supabase/functions'
         live = pathlib.Path(self.c['functionsDirectory'])
         # Preserve the separately managed production main gateway and secrets.
-        names = sorted(p.name for p in source.iterdir() if p.is_dir())
+        incoming = sorted(p.name for p in source.iterdir() if p.is_dir())
+        active_file = self.root / 'active-functions.json'
+        previous = private_json(active_file)['names'] if active_file.exists() else private_json(self.c['adoptionFile'])['functionNames']
+        if not isinstance(previous,list) or any(not isinstance(n,str) for n in previous) or len(previous)!=len(set(previous)): raise ValueError('Invalid managed Function inventory')
+        names = sorted(set(previous) | set(incoming))
         if 'main' in names or any(not re.fullmatch(r'[a-z0-9_-]+', n) for n in names): raise ValueError('Unexpected Function name')
+        def tree(directory):
+            return {str(p.relative_to(directory)):digest(p.read_bytes()) for p in directory.rglob('*') if p.is_file() and p.suffix in ['.ts','.js','.json'] and not p.name.endswith('_test.ts')}
+        if set(incoming)==set(previous) and all((live/name).is_dir() and tree(source/name)==tree(live/name) for name in incoming):
+            self.journal({'commit':commit,'phase':'FUNCTIONS_UNCHANGED','names':[]})
+            return
         before = self.root / commit / 'functions-before'
         if before.exists(): raise ValueError('Function operation already attempted; reconcile interruption')
         before.mkdir(mode=0o700)
-        state = {'commit': commit, 'names': names, 'phase': 'FUNCTIONS_CHANGING'}
+        state = {'commit': commit, 'names': names, 'previousNames':previous, 'newNames':incoming, 'existed':[], 'phase': 'FUNCTIONS_PREPARING'}
         self.journal(state)
+        # Finish every backup and staged replacement before changing any live
+        # code. A failed copy cannot cause rollback to erase an unbacked worker.
         for name in names:
             current = live / name
             if current.is_symlink(): raise ValueError('Function symlink refused')
-            if current.exists(): shutil.copytree(current, before / name)
-            prepared = live / ('.barber-next-' + name)
+            if current.exists():
+                if any(p.name.startswith('.env') or p.suffix in ['.pem','.key'] for p in current.rglob('*')): raise ValueError('Move Function-local secrets to protected configuration before deployment')
+                shutil.copytree(current, before / name); state['existed'].append(name)
+            prepared = staged_path(live,commit,name)
             if prepared.exists(): raise ValueError('Unresolved Function staging directory')
-            shutil.copytree(source / name, prepared)
+            if name in incoming: shutil.copytree(source / name, prepared)
+        state['phase']='FUNCTIONS_CHANGING'; self.journal(state)
+        self.command(['docker','stop','--time','30',self.c['functionsContainer']])
+        for name in names:
+            current = live/name; prepared = staged_path(live,commit,name)
             # Bind mount root stays in place; child-directory replacement is
-            # visible inside the runtime. Restart discards cached old workers.
+            # visible inside the runtime. Drain before replacing shared modules.
             if current.exists(): shutil.rmtree(current)
-            prepared.rename(current)
-        self.command(['docker', 'restart', self.c['functionsContainer']])
+            if name in incoming: prepared.rename(current)
+        self.command(['docker','start',self.c['functionsContainer']])
+        self.wait_functions()
+        atomic_json(active_file,{'names':incoming})
         state['phase'] = 'FUNCTIONS_APPLIED'; self.journal(state)
 
     def journal(self, value):
-        p = self.root / 'state.next'; p.write_text(json.dumps(value)); p.chmod(0o600); p.replace(self.root / 'state.json')
+        atomic_json(self.root/'state.json',value)
+
+    def wait_functions(self):
+        for _ in range(30):
+            container=json.loads(self.command(['docker','inspect',self.c['functionsContainer']]))[0]
+            state=container['State']
+            if state.get('Running') and state.get('Health',{}).get('Status','healthy')=='healthy':return
+            time.sleep(1)
+        raise RuntimeError('Functions runtime did not become healthy')
 
     def rollback(self, commit):
         state = private_json(self.root / 'state.json')
         if state.get('commit') != commit: raise ValueError('Rollback identity mismatch')
         before = self.root / commit / 'functions-before'
         live = pathlib.Path(self.c['functionsDirectory'])
+        if state['phase'] in ['SQL_APPLYING','SQL_APPLIED','FUNCTIONS_UNCHANGED','FUNCTIONS_PREPARING']:
+            # No live Function was changed in these phases. In particular an
+            # incomplete backup must never be interpreted as a deleted worker.
+            for name in state['names']:
+                prepared=staged_path(live,commit,name)
+                if prepared.exists():shutil.rmtree(prepared)
+            return {'status':'FUNCTIONS_UNCHANGED_SQL_PRESERVED'}
+        if any(not (before/name).is_dir() for name in state['existed']):raise ValueError('Incomplete rollback backup')
+        self.command(['docker','stop','--time','30',self.c['functionsContainer']])
         for name in state['names']:
             current = live / name
             if current.exists(): shutil.rmtree(current)
             if (before / name).exists(): shutil.copytree(before / name, current)
-        self.command(['docker', 'restart', self.c['functionsContainer']])
+        self.command(['docker','start',self.c['functionsContainer']])
+        self.wait_functions()
+        atomic_json(self.root/'active-functions.json',{'names':state['previousNames']})
         state['phase'] = 'FUNCTIONS_ROLLED_BACK'; self.journal(state)
         return {'status': 'FUNCTIONS_ROLLED_BACK_SQL_PRESERVED'}
 
@@ -170,6 +216,7 @@ def main():
     if len(parts) not in [3, 4] or parts[0] != 'barber-backend' or parts[1] not in ['receive', 'preflight', 'apply', 'rollback'] or not SHA.fullmatch(parts[2]): raise ValueError('Restricted command refused')
     mode, commit = parts[1:3]
     config = private_json('/etc/barber-release/backend.json'); backend = Backend(config)
+    if mode in ['apply','rollback'] and not config.get('enabled'):raise ValueError('Backend release path is disabled')
     with (backend.root / 'backend.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         target = backend.root / commit / 'source'
@@ -180,7 +227,7 @@ def main():
             if target.exists(): raise ValueError('Existing release requires operator reconciliation')
             target.mkdir(parents=True, mode=0o700)
             m = extract_bundle(raw, commit, target)
-            p = backend.root / commit / 'manifest.json'; p.write_text(json.dumps(m)); p.chmod(0o600)
+            atomic_json(backend.root / commit / 'manifest.json',m)
             result = {'status': 'RECEIVED'}
         else:
             m = private_json(backend.root / commit / 'manifest.json')

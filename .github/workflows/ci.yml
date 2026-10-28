@@ -11,11 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install the required domain scanner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
       - uses: actions/setup-node@v4
         with: { node-version: 24.20.0, cache: npm }
       - run: npm ci
       - run: npm run check
       - run: npm run test:production-image
+      - name: Compile Functions on the exact production Linux runtime
+        run: python3 ops/release/test-functions-image.py
       - name: Scan the production image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -48,8 +54,12 @@ jobs:
       - run: npm run check:migrations
       - run: npx supabase test db
       - run: npm run check:schema
+      - name: Replay on the exact production PostgreSQL image
+        run: python3 ops/release/test-postgres-image.py
       - name: Verify local backend across service boundaries
         run: node scripts/probe-local-backend.mjs
+      - name: Verify synthetic invitations and local email
+        run: node scripts/probe-local-invitations.mjs
       - name: Verify persistence and explicit synthetic reset
         run: node scripts/verify-local-lifecycle.mjs
       - if: always()
