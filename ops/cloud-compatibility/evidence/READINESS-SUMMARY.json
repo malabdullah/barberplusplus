@@ -1,0 +1,59 @@
+{
+  "at": "2026-10-28T14:55:12.349446+00:00",
+  "base_main": "c82c6539ed1fd2db6eb39bd0dd7c7569bc938877",
+  "frozen_runtime_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+  "native_compatibility": "PASS scoped disposable dual profiles",
+  "exact_deployed_images": "NOT RUN - native versions differ",
+  "production_acceptance_bridge": "BLOCKED - root-owned provenance workflow gap",
+  "owner_preview_current": "EXPIRED/DELETED - no new OAuth or tunnel",
+  "historical_owner_browser": "PASS original preview; not newly provisioned profiles",
+  "clean_cycles_per_profile": 2,
+  "pgtap_per_cycle": 94,
+  "backend_checks_per_cycle": 32,
+  "edge_checks_per_cycle": 10,
+  "strict_realtime_per_cycle": "PASS",
+  "held_actual_backend": "PASS 71088ms, two physical sockets, 4 heartbeat ACKs total, post-hold delivery and live denial",
+  "cross_profile_isolation_checks": 23,
+  "frontend_independence_checks": 10,
+  "final_browser_checks": 11,
+  "existing_chromium_e2e": 13,
+  "test_sidebar_matrix": 12,
+  "final_english_arabic_profile_screenshots": 4,
+  "app_unit_tests": 31,
+  "schema_normalizer_tests": 18,
+  "profile_safety_tests": 9,
+  "frontend_pid_tests": 3,
+  "auth_recovery_tests": 3,
+  "frozen_function_typecheck": "PASS fresh Deno cache",
+  "private_source_credentials": "NONE",
+  "profiles_each": {
+    "users": 5,
+    "bookings": 1,
+    "cron": "off"
+  },
+  "not_run": [
+    "fresh-profile owner external browser access",
+    "Firefox/WebKit",
+    "exact Docker deployed-image parity",
+    "new OAuth/tunnel/production acceptance"
+  ],
+  "historical_failures_preserved": [
+    "Test-banner pending-route teardown",
+    "initial new sidebar harness URL/text matching errors",
+    "partial native bootstrap without Auth helpers/transactions",
+    "second cycle failed-closed frontend zombie guard before corrected retry"
+  ],
+  "existing_chromium_e2e_scope": "13 passed after teardown fix before cloudProfile integration; final integrated frozen app checked by31 unit tests and11 local browser checks",
+  "preview_offline_scope": "12 full helper test files passed; pin-handoff corrected and passed focused; MSAL actual dummy serializer passed; no live preview",
+  "post_transfer_cleanup_fix": {
+    "cloud_commit": "6a5a07f2a96315715544b097e20d9cf0b33d85be",
+    "parent_restore_reference": "routing-recovery-reference.json",
+    "recovery_fixtures": 6,
+    "bootstrap_checks": 12,
+    "root_file_hash_match": "PASS",
+    "root_integrated_npm_run_check": "PASS",
+    "root_normalizer_tests": 18,
+    "root_profile_safety_tests": 9,
+    "root_frontend_pid_tests": 3
+  }
+}

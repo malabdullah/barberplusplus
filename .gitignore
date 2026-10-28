@@ -33,3 +33,7 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Cloud candidate Python bytecode (state is outside checkout).
+__pycache__/
+*.pyc

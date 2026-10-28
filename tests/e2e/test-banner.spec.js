@@ -1,11 +1,17 @@
 import { expect, test } from '@playwright/test';
 
+// Await in-flight fixture forwarding before Playwright closes its request context.
+test.afterEach(async ({ context }) => {
+  await context.unrouteAll({ behavior: 'wait' });
+});
+
 for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']]) {
   test(`${role} Test banner leaves navigation and drawer controls unobscured`, async ({ page, context }) => {
     test.setTimeout(120000);
     const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:4173');
     expect(['localhost', '127.0.0.1', '::1']).toContain(base.hostname);
-    const localApi = new URL('http://127.0.0.1:54321');
+    const localApi = new URL(process.env.BARBER_QA_API || 'http://127.0.0.1:54321');
+    expect(['127.0.0.1', 'localhost']).toContain(localApi.hostname);
     const runtime = { environment: 'staging', appUrl: 'https://barber-test-ui.invalid',
       supabaseUrl: 'https://barber-test-api.invalid', supabasePublishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY, release: 'local-banner-regression' };
     expect(runtime.supabasePublishableKey).toBeTruthy();

@@ -1,0 +1,71 @@
+{
+  "result": "PASS",
+  "held": {
+    "elapsedMs": 71088,
+    "socketsCreated": 2,
+    "socketsClosed": 0,
+    "heartbeatSent": 4,
+    "heartbeatAck": 4
+  },
+  "checks": [
+    {
+      "name": "no prior probe subscriptions remain",
+      "status": "PASS",
+      "rows": 0
+    },
+    {
+      "name": "manager database/system registration barrier",
+      "status": "PASS"
+    },
+    {
+      "name": "manager-two database/system registration barrier",
+      "status": "PASS"
+    },
+    {
+      "name": "both authenticated subscriptions registered in database and live",
+      "status": "PASS",
+      "waitMs": 1733
+    },
+    {
+      "name": "bounded held interval configured",
+      "status": "PASS"
+    },
+    {
+      "name": "same two physical sockets held over70s",
+      "status": "PASS"
+    },
+    {
+      "name": "both subscriptions live after held idle",
+      "status": "PASS"
+    },
+    {
+      "name": "held heartbeat acknowledgements",
+      "status": "PASS"
+    },
+    {
+      "name": "authorized write committed",
+      "status": "PASS"
+    },
+    {
+      "name": "authorized UPDATE delivered",
+      "status": "PASS"
+    },
+    {
+      "name": "denied subscriber stays registered and joined during positive control",
+      "status": "PASS",
+      "state": "joined",
+      "rows": 1
+    },
+    {
+      "name": "cross-tenant receives zero changes",
+      "status": "PASS",
+      "received": 0
+    }
+  ],
+  "cleanup": {
+    "rows": 0,
+    "channelsClosed": true
+  },
+  "noteRestoration": true,
+  "scope": "actual native application API gateway; not external owner browser"
+}

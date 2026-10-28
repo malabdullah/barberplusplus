@@ -1,0 +1,30 @@
+[
+  {
+    "profile": "staging",
+    "cycle": 1,
+    "result": "PASS",
+    "source_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+    "baseline": {
+      "users": 5,
+      "bookings": 1,
+      "cron": "off"
+    },
+    "seconds": 99.7,
+    "cached_native_binary_copy": false,
+    "log": "/workspace/barber-cloud-candidate-state/staging-cycle-20261028T144115Z-1.log"
+  },
+  {
+    "profile": "staging",
+    "cycle": 2,
+    "result": "PASS",
+    "source_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+    "baseline": {
+      "users": 5,
+      "bookings": 1,
+      "cron": "off"
+    },
+    "seconds": 92.926,
+    "cached_native_binary_copy": false,
+    "log": "/workspace/barber-cloud-candidate-state/staging-cycle-20261028T144256Z-2.log"
+  }
+]

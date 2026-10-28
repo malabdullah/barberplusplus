@@ -1,0 +1,22 @@
+{
+  "platform": "linux-x86_64",
+  "versions": {
+    "node": "24.20.0",
+    "native_cli": "3.0.0-next.25",
+    "deno": "2.9.5",
+    "microsoft_sdk": "1.3.61"
+  },
+  "installed_binary_sha256": {
+    "native_cli": "21d25b4bfb1870db0aaf0963c028b10d0b0b431485f119abd704c1396c7991e6",
+    "node": "89af8424dd53e560b1933f87ba650d8bf57c83ca5a04600eefb31f416aabbae7",
+    "deno": "dc480c462c8c3582524f3e75c160613d0a975e1f66b5465995d58bae236da7d3",
+    "native_host": "6d7e628ab9da68715bd005bbbb67562d283034e7d6d4fbe2296e17d257d03d18"
+  },
+  "service_pins": "runtime/native-services.lock.json",
+  "npm_dependency_locks": [
+    "tooling/node/package-lock.json",
+    "tooling/native/package-lock.json",
+    "preview/sdk-scratch/package-lock.json"
+  ],
+  "native_is_deployed_image_parity": false
+}

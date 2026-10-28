@@ -1,0 +1,131 @@
+[
+  {
+    "name": "real proxy runtime config pinned to assigned origin",
+    "status": "PASS"
+  },
+  {
+    "name": "real frontend through pinned proxy route",
+    "status": "PASS"
+  },
+  {
+    "name": "admin proxy Auth login",
+    "status": "PASS"
+  },
+  {
+    "name": "admin proxy Auth refresh and preserved issuer",
+    "status": "PASS"
+  },
+  {
+    "name": "manager proxy Auth login",
+    "status": "PASS"
+  },
+  {
+    "name": "manager proxy Auth refresh and preserved issuer",
+    "status": "PASS"
+  },
+  {
+    "name": "manager own branch",
+    "status": "PASS"
+  },
+  {
+    "name": "manager cross-tenant branch denial",
+    "status": "PASS"
+  },
+  {
+    "name": "agent proxy Auth login",
+    "status": "PASS"
+  },
+  {
+    "name": "agent proxy Auth refresh and preserved issuer",
+    "status": "PASS"
+  },
+  {
+    "name": "barber proxy Auth login",
+    "status": "PASS"
+  },
+  {
+    "name": "barber proxy Auth refresh and preserved issuer",
+    "status": "PASS"
+  },
+  {
+    "name": "barber own branch",
+    "status": "PASS"
+  },
+  {
+    "name": "barber cross-tenant branch denial",
+    "status": "PASS"
+  },
+  {
+    "name": "manager-two proxy Auth login",
+    "status": "PASS"
+  },
+  {
+    "name": "manager-two proxy Auth refresh and preserved issuer",
+    "status": "PASS"
+  },
+  {
+    "name": "manager-two own branch",
+    "status": "PASS"
+  },
+  {
+    "name": "manager-two cross-tenant branch denial",
+    "status": "PASS"
+  },
+  {
+    "name": "read own synthetic booking",
+    "status": "PASS"
+  },
+  {
+    "name": "real authorized proxy REST write",
+    "status": "PASS"
+  },
+  {
+    "name": "other owner booking read denial",
+    "status": "PASS"
+  },
+  {
+    "name": "other owner booking write denial",
+    "status": "PASS"
+  },
+  {
+    "name": "real Storage upload through proxy",
+    "status": "PASS"
+  },
+  {
+    "name": "real Storage download bytes through proxy",
+    "status": "PASS"
+  },
+  {
+    "name": "cross-tenant private Storage download denied",
+    "status": "PASS"
+  },
+  {
+    "name": "browser private Storage upload denied by RLS",
+    "status": "PASS"
+  },
+  {
+    "name": "restore only this probe note without overwriting owner edits",
+    "status": "PASS",
+    "rows": 1
+  },
+  {
+    "name": "probe-local logout preserves owner sessions",
+    "status": "PASS"
+  },
+  {
+    "name": "probe-local logout preserves owner sessions",
+    "status": "PASS"
+  },
+  {
+    "name": "probe-local logout preserves owner sessions",
+    "status": "PASS"
+  },
+  {
+    "name": "probe-local logout preserves owner sessions",
+    "status": "PASS"
+  },
+  {
+    "name": "probe-local logout preserves owner sessions",
+    "status": "PASS"
+  }
+]

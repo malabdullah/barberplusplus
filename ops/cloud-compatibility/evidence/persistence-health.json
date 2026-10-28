@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-28T14:47:27.750962+00:00",
+  "separate_later_tool_call": true,
+  "profiles": {
+    "test": {
+      "frontend_pid": 73708,
+      "process_state": "S",
+      "health": {
+        "frontend": 200,
+        "runtime_config": 200,
+        "auth_health": 200
+      },
+      "running_after_start_command_return": true
+    },
+    "staging": {
+      "frontend_pid": 73931,
+      "process_state": "S",
+      "health": {
+        "frontend": 200,
+        "runtime_config": 200,
+        "auth_health": 200
+      },
+      "running_after_start_command_return": true
+    }
+  }
+}

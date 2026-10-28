@@ -1,12 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isStaging } from '../lib/runtimeConfig';
+import { appConfig, isStaging } from '../lib/runtimeConfig';
 
 export default function EnvironmentBanner() {
   const { t } = useTranslation();
   const bannerRef = useRef(null);
+  const showBanner = isStaging || Boolean(appConfig.cloudProfile);
   useLayoutEffect(() => {
-    if (!isStaging) return undefined;
+    if (!showBanner) return undefined;
 
     const style = document.documentElement.style;
     const property = '--environment-banner-height';
@@ -22,9 +23,9 @@ export default function EnvironmentBanner() {
       if (previous) style.setProperty(property, previous);
       else style.removeProperty(property);
     };
-  }, []);
+  }, [showBanner]);
   useEffect(() => {
-    if (!isStaging) return undefined;
+    if (!showBanner) return undefined;
 
     let robots = document.querySelector('meta[name="robots"]');
     const created = !robots;
@@ -38,13 +39,13 @@ export default function EnvironmentBanner() {
     return () => {
       if (created) robots.remove();
     };
-  }, []);
+  }, [showBanner]);
 
-  if (!isStaging) return null;
+  if (!showBanner) return null;
 
   return (
     <div className="environment-banner" role="status" ref={bannerRef}>
-      {t('environment.testBanner')}
+      {t(appConfig.cloudProfile === 'staging' ? 'environment.stagingBanner' : 'environment.testBanner')}
     </div>
   );
 }

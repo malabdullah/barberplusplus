@@ -1,0 +1,21 @@
+import{bindEndpointOrigin}from'./service-origin-pin.mjs';
+import assert from'node:assert/strict';import{inspectUri,validateUriDiagnostic}from'./origin-diagnostics.mjs';import{assignedOrigin,originStructure}from'./origin-pin.mjs';import{receipt}from'./lifecycle-receipts.mjs';
+const id='barber-'+'a'.repeat(24),base=`https://${id}-5180.use.devtunnels.ms`;const results=[];
+bindEndpointOrigin({controlOrigin:'https://use.rel.tunnels.api.visualstudio.com',resourceId:id,clusterId:'use',portNumber:5180,endpointId:'SYNTHETIC_ENDPOINT',hostId:'SYNTHETIC_HOST',hostKeySha256:'0'.repeat(64)},base);
+function test(name,f){try{f();results.push({name,status:'PASS',evidence:'SYNTHETIC diagnostics; no service request'});}catch{results.push({name,status:'FAIL'});}}
+const t=uri=>({tunnelId:id,clusterId:'use',ports:[{portNumber:5180,portForwardingUris:[uri]}]});
+test('canonical scheme/443/identity/port/region and redacted template',()=>{const d=inspectUri(base+'/',id);assert.equal(d.scheme,'HTTPS');assert(d.default443);assert.equal(d.knownNewId,'MATCH');assert.equal(d.knownPort,'MATCH');assert.equal(d.knownRegion,'MATCH');assert(d.canonicalAfterNormalization);assert.equal(d.hostnameTemplate,'{newId}-5180.use.devtunnels.ms');assert(!JSON.stringify(d).includes(id));});
+test('explicit443 normalizes to the same authorized canonical literal',()=>{const uri=base+':443/';assert(inspectUri(uri,id).canonicalAfterNormalization);assert.equal(assignedOrigin(t(uri)),base);});
+test('HTTP classified, not accepted',()=>{const uri=base.replace('https:','http:');const d=inspectUri(uri,id);assert.equal(d.scheme,'HTTP');assert(!d.default443);assert(!d.canonicalAfterNormalization);assert.throws(()=>assignedOrigin(t(uri)));});
+test('non443 classified without leaking port string',()=>{assert(!inspectUri(base+':8443/',id).default443);});
+test('userinfo/query/fragment/path flags exclude private values',()=>{const d=inspectUri(base.replace('https://','https://SYNTHETIC_PRIVATE_USER:SYNTHETIC_PRIVATE_PASSWORD@')+'/SYNTHETIC_PRIVATE_PATH?token=SYNTHETIC_PRIVATE_QUERY#SYNTHETIC_PRIVATE_FRAGMENT',id);assert(d.userinfoPresent&&d.queryPresent&&d.fragmentPresent);assert.equal(d.pathClass,'NON_ROOT');assert(!JSON.stringify(d).includes('SYNTHETIC_PRIVATE'));});
+test('empty query/fragment delimiters counted',()=>{const d=inspectUri(base+'/?#',id);assert(d.queryPresent&&d.fragmentPresent);assert(!d.canonicalAfterNormalization);});
+test('wrong region marked, not authorized',()=>{const uri=base.replace('.use.','.euw.');assert.equal(inspectUri(uri,id).knownRegion,'MISMATCH');assert.throws(()=>assignedOrigin(t(uri)));});
+test('missing region marked',()=>{assert.equal(inspectUri(base.replace('.use.','.'),id).knownRegion,'ABSENT');});
+test('wrong newID masked',()=>{const d=inspectUri(base.replace(id,'barber-'+'f'.repeat(24)),id);assert.equal(d.knownNewId,'MISMATCH');assert.equal(d.hostnameTemplate,'{other}.devtunnels.ms');});
+test('wrong published port marked',()=>{assert.equal(inspectUri(base.replace('-5180','-5181'),id).knownPort,'MISMATCH');});
+test('nonservice hostname never retained',()=>{const d=inspectUri('https://SYNTHETIC_PRIVATE_HOST.example/?secret=SYNTHETIC_PRIVATE_QUERY',id);assert(!d.serviceOwnedHost);assert.equal(d.hostnameTemplate,undefined);assert(!JSON.stringify(d).includes('SYNTHETIC_PRIVATE'));});
+test('arbitrary service-owned hostname labels masked',()=>{const d=inspectUri('https://SYNTHETIC_PRIVATE_TOKEN.devtunnels.ms/',id);assert.equal(d.hostnameTemplate,'{other}.devtunnels.ms');});
+test('invalid/nonstring input fixed categories',()=>{assert.equal(inspectUri('SYNTHETIC_PRIVATE_TOKEN not a URL',id).parse,'INVALID');assert.equal(inspectUri({},id).parse,'NOT_STRING');});
+test('receipt bounds diagnostics and rejects injected fields',()=>{const shape=originStructure({...t(base),ports:[{portNumber:5180,portForwardingUris:Array(5).fill(base)}]});assert.equal(shape.validatedHostname,undefined);assert.equal(shape.validatedOrigin,base);assert.equal(shape.uriDiagnostics.length,3);assert(shape.diagnosticsTruncated);receipt('CREATE_ORIGIN_METADATA',id,'NONE',shape);assert.throws(()=>validateUriDiagnostic({...inspectUri(base,id),responseBody:'SYNTHETIC_PRIVATE'}));});
+console.log(JSON.stringify(results,null,2));process.exitCode=results.some(x=>x.status==='FAIL')?1:0;

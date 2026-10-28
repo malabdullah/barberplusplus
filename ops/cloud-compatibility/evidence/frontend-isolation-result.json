@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "staging_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+  "checks": [
+    {
+      "name": "reversible Test source edit actually dirty",
+      "status": "PASS"
+    },
+    {
+      "name": "Test rebuilt its own HTML",
+      "status": "PASS"
+    },
+    {
+      "name": "frozen Staging health works while Test source dirty",
+      "status": "PASS"
+    },
+    {
+      "name": "frozen Staging frontend stop/start permitted while Test dirty",
+      "status": "PASS"
+    },
+    {
+      "name": "frozen Staging backend stop/start permitted while Test dirty",
+      "status": "PASS"
+    },
+    {
+      "name": "Staging source and build hashes unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "Staging config unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "Test source restored byte-for-byte",
+      "status": "PASS"
+    },
+    {
+      "name": "Test rebuild restored original HTML",
+      "status": "PASS"
+    },
+    {
+      "name": "candidate source checkout clean",
+      "status": "PASS"
+    }
+  ]
+}

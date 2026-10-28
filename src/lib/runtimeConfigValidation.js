@@ -62,10 +62,27 @@ export const validateRuntimeConfig = (rawConfig) => {
     throw new Error('APP_ENV must be development, test, staging, or production.');
   }
 
+  const appUrl = normalizeOrigin(rawConfig.appUrl, 'Application URL', environment);
+  const supabaseUrl = normalizeOrigin(rawConfig.supabaseUrl, 'Supabase URL', environment);
+  const cloudProfile = rawConfig.cloudProfile;
+  if (cloudProfile !== undefined) {
+    if (!['test', 'staging'].includes(cloudProfile) || !['test', 'staging'].includes(environment)) {
+      throw new Error('Cloud profiles are restricted to synthetic Test and Staging.');
+    }
+    // The profile identifies the data/build under review. The existing
+    // environment field continues to enforce local versus HTTPS transport.
+    // This label does not grant access: the preview host enforces its owner ACL.
+    if (environment === 'staging' && (appUrl !== supabaseUrl ||
+        !/^https:\/\/[a-z0-9]+-5180\.use\.devtunnels\.ms$/.test(appUrl))) {
+      throw new Error('Cloud preview must use one assigned private preview origin.');
+    }
+  }
+
   return Object.freeze({
     environment,
-    appUrl: normalizeOrigin(rawConfig.appUrl, 'Application URL', environment),
-    supabaseUrl: normalizeOrigin(rawConfig.supabaseUrl, 'Supabase URL', environment),
+    appUrl,
+    supabaseUrl,
+    ...(cloudProfile === undefined ? {} : { cloudProfile }),
     supabasePublishableKey: validatePublishableKey(rawConfig.supabasePublishableKey),
     release: typeof rawConfig.release === 'string' && rawConfig.release.trim()
       ? rawConfig.release.trim()

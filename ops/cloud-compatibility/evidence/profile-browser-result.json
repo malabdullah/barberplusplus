@@ -1,0 +1,50 @@
+{
+  "result": "PASS",
+  "evidence": "Actual local browser/services with test-only read date projection; no owner/tunnel proof",
+  "checks": [
+    {
+      "name": "test English cloud profile banner",
+      "status": "PASS"
+    },
+    {
+      "name": "test session survives navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "test no booking writes",
+      "status": "PASS"
+    },
+    {
+      "name": "staging English cloud profile banner",
+      "status": "PASS"
+    },
+    {
+      "name": "staging session survives navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "Staging Arabic banner",
+      "status": "PASS"
+    },
+    {
+      "name": "Arabic Staging close hit 360",
+      "status": "PASS"
+    },
+    {
+      "name": "Arabic Staging panel closes 360",
+      "status": "PASS"
+    },
+    {
+      "name": "Arabic Staging close hit 467",
+      "status": "PASS"
+    },
+    {
+      "name": "Arabic Staging panel closes 467",
+      "status": "PASS"
+    },
+    {
+      "name": "staging no booking writes",
+      "status": "PASS"
+    }
+  ]
+}

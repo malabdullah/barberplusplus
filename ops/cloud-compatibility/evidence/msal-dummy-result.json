@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "actual_pinned_cli_serializer": true,
+  "fields": [
+    "accessToken",
+    "expiration",
+    "login",
+    "refreshExpiration",
+    "refreshToken",
+    "scopes",
+    "userId"
+  ],
+  "user_id_type": "int",
+  "scopes_type": "list",
+  "expiry_type": "int",
+  "basename": "devtunnels-tokens-github",
+  "state_empty": true,
+  "dummy_only": true,
+  "no_login": true,
+  "new_ram_removed": true
+}

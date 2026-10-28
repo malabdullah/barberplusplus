@@ -1,0 +1,30 @@
+[
+  {
+    "profile": "test",
+    "cycle": 1,
+    "result": "PASS",
+    "source_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+    "baseline": {
+      "users": 5,
+      "bookings": 1,
+      "cron": "off"
+    },
+    "seconds": 87.141,
+    "cached_native_binary_copy": false,
+    "log": "/workspace/barber-cloud-candidate-state/test-cycle-20261028T144119Z-1.log"
+  },
+  {
+    "profile": "test",
+    "cycle": 2,
+    "result": "PASS",
+    "source_commit": "bff9fdd4c005761f849c8ff8ece539896ec84618",
+    "baseline": {
+      "users": 5,
+      "bookings": 1,
+      "cron": "off"
+    },
+    "seconds": 82.473,
+    "cached_native_binary_copy": false,
+    "log": "/workspace/barber-cloud-candidate-state/test-cycle-20261028T144246Z-2.log"
+  }
+]

@@ -1,0 +1,10 @@
+import fs from 'node:fs';import path from 'node:path';import{createRequire}from'node:module';import{fileURLToPath}from'node:url';
+const profile=process.argv[2];if(!['test','staging'].includes(profile))throw Error('PROFILE_ALLOWLIST');
+export const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
+export const root='/workspace/barber-cloud-candidate-state/'+profile;
+const m=JSON.parse(fs.readFileSync(root+'/profile.json'));if(m.profile!==profile||m.synthetic_only!==true)throw Error('PROFILE_GUARD');
+export const env=JSON.parse(fs.readFileSync(root+'/status-private.json')).env;
+const u=new URL(env.API_URL);if(u.hostname!=='127.0.0.1'||u.port!==String(m.ports[0]))throw Error('API_LOOPBACK_PROFILE_GUARD');
+export const secrets=JSON.parse(fs.readFileSync(root+'/synthetic-secrets.json'));
+export const{createClient}=createRequire(repo+'/package.json')('@supabase/supabase-js');
+export const client=(key=env.PUBLISHABLE_KEY)=>createClient(env.API_URL,key,{auth:{persistSession:false,autoRefreshToken:false},realtime:{timeout:30000}});

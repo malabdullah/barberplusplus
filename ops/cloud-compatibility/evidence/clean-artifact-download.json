@@ -1,0 +1,50 @@
+[
+  {
+    "service": "database",
+    "version": "17.11.0.006-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "auth",
+    "version": "v2.197.0-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "rest",
+    "version": "v16.5-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "realtime",
+    "version": "v2.147.1-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "storage",
+    "version": "v1.84.21-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "functions",
+    "version": "v1.77.8-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "mail",
+    "version": "v1.31.3-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  },
+  {
+    "service": "imgproxy",
+    "version": "v3.26.0-r0",
+    "manifest_archive_sha256": "PASS",
+    "source": "official GitHub release; inherited proxy/CA; TLS verification ON"
+  }
+]

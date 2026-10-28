@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@microsoft/dev-tunnels-connections": "1.3.61",
+    "@microsoft/dev-tunnels-management": "1.3.61",
+    "@microsoft/dev-tunnels-ssh": "3.12.42",
+    "https-proxy-agent": "9.1.0"
+  }
+}

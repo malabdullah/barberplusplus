@@ -277,9 +277,9 @@
 /* Booking Sidebar */
 .booking-sidebar-overlay {
   position: fixed;
-  inset: 0;
+  inset: var(--environment-banner-height, 0px) 0 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 200;
+  z-index: 1000;
   display: flex;
   justify-content: flex-end;
   animation: fadeIn var(--transition-fast) ease-out;
@@ -776,7 +776,7 @@
 
   .booking-sidebar {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    max-height: 95vh;
+    max-height: 100%;
   }
 
   .booking-details {

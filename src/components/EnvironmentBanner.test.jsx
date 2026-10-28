@@ -6,15 +6,39 @@ import { createInstance } from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 
-vi.mock('../lib/runtimeConfig', () => ({ isStaging: true }));
+const runtime = vi.hoisted(() => ({ isStaging: true, appConfig: {} }));
+vi.mock('../lib/runtimeConfig', () => runtime);
 import EnvironmentBanner from './EnvironmentBanner';
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   document.documentElement.style.removeProperty('--environment-banner-height');
+  runtime.isStaging = true;
+  runtime.appConfig = {};
 });
 describe('Test environment indicator', () => {
+  it.each([
+    ['test', 'en', 'TEST — synthetic data'],
+    ['test', 'ar', 'بيئة اختبار — بيانات تجريبية'],
+    ['staging', 'en', 'STAGING — synthetic data'],
+    ['staging', 'ar', 'بيئة مراجعة قبل النشر — بيانات تجريبية'],
+  ])('labels cloud %s in %s independently of transport', async (profile, language, label) => {
+    runtime.isStaging = false;
+    runtime.appConfig = { cloudProfile: profile };
+    const i18n = createInstance();
+    await i18n.init({ lng: language, resources: { en: { translation: en }, ar: { translation: ar } } });
+    render(<I18nextProvider i18n={i18n}><EnvironmentBanner /></I18nextProvider>);
+    expect(screen.getByRole('status')).toHaveTextContent(label);
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow, noarchive');
+  });
+  it('keeps the banner absent in production', async () => {
+    runtime.isStaging = false;
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } } });
+    render(<I18nextProvider i18n={i18n}><EnvironmentBanner /></I18nextProvider>);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
   it.each([['en', 'TEST — synthetic data'], ['ar', 'بيئة اختبار — بيانات تجريبية']])('labels synthetic data in %s and preserves noindex', async (language, label) => {
     const i18n = createInstance(); await i18n.init({ lng: language, resources: { en: { translation: en }, ar: { translation: ar } } });
     render(<I18nextProvider i18n={i18n}><EnvironmentBanner /></I18nextProvider>);

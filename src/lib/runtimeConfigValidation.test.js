@@ -8,6 +8,33 @@ const localAnonKey = [
 ].join('.');
 
 describe('validateRuntimeConfig', () => {
+  const preview = {
+    environment: 'staging',
+    appUrl: 'https://fixture-5180.use.devtunnels.ms',
+    supabaseUrl: 'https://fixture-5180.use.devtunnels.ms',
+    supabasePublishableKey: 'sb_publishable_example',
+  };
+  it.each(['test', 'staging'])('retains the selected cloud %s profile over HTTPS', (cloudProfile) => {
+    expect(validateRuntimeConfig({ ...preview, cloudProfile })).toMatchObject({ cloudProfile });
+  });
+  it.each(['test', 'staging'])('allows cloud %s on isolated loopback origins', (cloudProfile) => {
+    expect(validateRuntimeConfig({ ...preview, environment: 'test', cloudProfile,
+      appUrl: 'http://127.0.0.1:55173', supabaseUrl: 'http://127.0.0.1:55321',
+    })).toMatchObject({ cloudProfile });
+  });
+  it.each([
+    { cloudProfile: 'production' },
+    { cloudProfile: null },
+    { cloudProfile: 'test', environment: 'production' },
+    { cloudProfile: 'test', environment: 'development' },
+    { cloudProfile: 'test', environment: 'test' },
+    { cloudProfile: 'test', supabaseUrl: 'https://other-5180.use.devtunnels.ms' },
+    { cloudProfile: 'test', appUrl: 'https://app.example.com', supabaseUrl: 'https://app.example.com' },
+    { cloudProfile: 'test', appUrl: 'https://fixture-5180.use.devtunnels.ms.evil.example', supabaseUrl: 'https://fixture-5180.use.devtunnels.ms.evil.example' },
+    { cloudProfile: 'test', appUrl: 'https://fixture-5180.use.devtunnels.ms:8443', supabaseUrl: 'https://fixture-5180.use.devtunnels.ms:8443' },
+  ])('rejects incompatible cloud profile configuration %#', (override) => {
+    expect(() => validateRuntimeConfig({ ...preview, ...override })).toThrow();
+  });
   it('accepts loopback HTTP for development', () => {
     expect(validateRuntimeConfig({
       environment: 'development',

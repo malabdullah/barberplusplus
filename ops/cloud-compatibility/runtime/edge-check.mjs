@@ -1,0 +1,18 @@
+import fs from'node:fs';import{execFileSync}from'node:child_process';import{createHmac,randomBytes,publicEncrypt,createCipheriv,createDecipheriv,constants}from'node:crypto';
+import{root,env as e,secrets as s}from'./context.mjs';const results=[];
+async function probe(name,path,options,expected,validate){let result;try{const r=await fetch(e.API_URL+'/functions/v1/'+path,{...options,signal:AbortSignal.timeout(15000)});const body=await r.text();result={name,status:r.status===expected&&(!validate||validate(body))?'PASS':'FAIL',httpStatus:r.status,expected};}catch(err){result={name,status:'FAIL',error:err.name};}results.push(result);console.log(JSON.stringify(result));}
+const preflight=JSON.parse(execFileSync('python3',[new URL('./psql.py',import.meta.url).pathname,'-Atc',"SELECT json_build_object('cron',current_setting('cron.launch_active_jobs'),'due',(SELECT count(*) FROM public.booking_reminders WHERE status='pending' AND scheduled_at<=now()),'old',(SELECT count(*) FROM public.notifications WHERE created_at<now()-interval '30 days'));"],{encoding:'utf8'}));if(preflight.cron!=='off'||preflight.due!==0||preflight.old!==0)throw Error('EMPTY_JOB_PREFLIGHT_REQUIRED');
+const post=(body,headers={})=>({method:'POST',headers:{apikey:e.PUBLISHABLE_KEY,'Content-Type':'application/json',...headers},body:typeof body==='string'?body:JSON.stringify(body)});
+await probe('JWT missing denied','invite-barber',post({}),401);
+await probe('JWT invalid denied','invite-barber',post({},{Authorization:'Bearer invalid-synthetic-jwt'}),401);
+await probe('cron missing secret denied','cleanup-notifications',post({}),401);
+await probe('cron wrong secret denied','send-booking-reminders',post({},{'x-cron-secret':'wrong-synthetic-secret'}),401);
+await probe('valid cleanup invocation','cleanup-notifications',post({},{'x-cron-secret':s.CLOUD_CRON_SHARED_SECRET}),200,b=>JSON.parse(b).success===true);
+await probe('valid reminder invocation','send-booking-reminders',post({},{'x-cron-secret':s.CLOUD_CRON_SHARED_SECRET}),200);
+const webhook=JSON.stringify({object:'whatsapp_business_account',entry:[]});
+await probe('webhook invalid signature denied','whatsapp-webhook',post(webhook,{'X-Hub-Signature-256':'sha256=invalid'}),401);
+await probe('valid synthetic signed webhook','whatsapp-webhook',post(webhook,{'X-Hub-Signature-256':'sha256='+createHmac('sha256',s.CLOUD_WHATSAPP_APP_SECRET).update(webhook).digest('hex')}),200);
+const key=randomBytes(16),iv=randomBytes(12),cipher=createCipheriv('aes-128-gcm',key,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify({version:'3.0',action:'ping'})),cipher.final(),cipher.getAuthTag()]);const encryptedKey=publicEncrypt({key:s.CLOUD_WHATSAPP_FLOW_PUBLIC_KEY,padding:constants.RSA_PKCS1_OAEP_PADDING,oaepHash:'sha256'},key);
+await probe('valid encrypted synthetic Flow ping','whatsapp-flow-endpoint',post({encrypted_flow_data:encrypted.toString('base64'),encrypted_aes_key:encryptedKey.toString('base64'),initial_vector:iv.toString('base64')}),200,b=>{try{const bytes=Buffer.from(b,'base64'),d=createDecipheriv('aes-128-gcm',key,Buffer.from(iv.map(x=>~x&255)));d.setAuthTag(bytes.subarray(-16));const payload=JSON.parse(Buffer.concat([d.update(bytes.subarray(0,-16)),d.final()]));return payload.data.status==='active';}catch{return false;}});
+await probe('malformed encrypted Flow denied','whatsapp-flow-endpoint',post({encrypted_flow_data:'bad',encrypted_aes_key:'bad',initial_vector:'bad'}),200,b=>{const d=JSON.parse(b);return d.version==='5.1'&&d.data?.error===true&&typeof d.data.error_message==='string'&&!d.data.status;});
+fs.writeFileSync(root+'/results/edge.json',JSON.stringify(results,null,2));process.exitCode=results.some(r=>r.status==='FAIL')?1:0;

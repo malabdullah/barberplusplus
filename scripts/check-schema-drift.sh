@@ -14,8 +14,8 @@ trap 'rm -f "$actual" "$normalized_expected" "$normalized_actual"' EXIT
 
 npx supabase db dump --local --schema public --file "$actual"
 
-# Dump headers contain tool timestamps/version chatter that are not schema.
-sed '/^-- Dumped /d; /^-- Started on /d; /^-- Completed on /d' "$expected" > "$normalized_expected"
-sed '/^-- Dumped /d; /^-- Started on /d; /^-- Completed on /d' "$actual" > "$normalized_actual"
+# Normalize only dump metadata, blank lines outside bodies, and adjacent GRANT order.
+python3 scripts/normalize-schema.py "$expected" > "$normalized_expected"
+python3 scripts/normalize-schema.py "$actual" > "$normalized_actual"
 
 diff -u "$normalized_expected" "$normalized_actual"

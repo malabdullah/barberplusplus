@@ -1,0 +1,97 @@
+{
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "separate API ports",
+      "status": "PASS"
+    },
+    {
+      "name": "independent PUBLISHABLE_KEY",
+      "status": "PASS"
+    },
+    {
+      "name": "independent SECRET_KEY",
+      "status": "PASS"
+    },
+    {
+      "name": "independent ES256 signing keys",
+      "status": "PASS"
+    },
+    {
+      "name": "independent HS JWT and job secrets",
+      "status": "PASS"
+    },
+    {
+      "name": "test positive Auth login",
+      "status": "PASS"
+    },
+    {
+      "name": "test positive REST read",
+      "status": "PASS"
+    },
+    {
+      "name": "staging positive Auth login",
+      "status": "PASS"
+    },
+    {
+      "name": "staging positive REST read",
+      "status": "PASS"
+    },
+    {
+      "name": "test JWT rejected by staging",
+      "status": "PASS"
+    },
+    {
+      "name": "test API key rejected by staging",
+      "status": "PASS"
+    },
+    {
+      "name": "staging JWT rejected by test",
+      "status": "PASS"
+    },
+    {
+      "name": "staging API key rejected by test",
+      "status": "PASS"
+    },
+    {
+      "name": "Test-only data write",
+      "status": "PASS"
+    },
+    {
+      "name": "Staging data unaffected by Test write",
+      "status": "PASS"
+    },
+    {
+      "name": "test isolated Storage upload",
+      "status": "PASS"
+    },
+    {
+      "name": "test same object name returns own bytes",
+      "status": "PASS"
+    },
+    {
+      "name": "staging isolated Storage upload",
+      "status": "PASS"
+    },
+    {
+      "name": "staging same object name returns own bytes",
+      "status": "PASS"
+    },
+    {
+      "name": "distinct native data/cache/upload roots",
+      "status": "PASS"
+    },
+    {
+      "name": "Test notes restored conditionally",
+      "status": "PASS"
+    },
+    {
+      "name": "test own object cleanup",
+      "status": "PASS"
+    },
+    {
+      "name": "staging own object cleanup",
+      "status": "PASS"
+    }
+  ]
+}

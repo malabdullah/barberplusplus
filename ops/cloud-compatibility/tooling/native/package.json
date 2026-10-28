@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "supabase": "3.0.0-next.25"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية" },
+  "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية", "stagingBanner": "بيئة مراجعة قبل النشر — بيانات تجريبية" },
   "common": {
     "navigation": "التنقل",
     "save": "حفظ",

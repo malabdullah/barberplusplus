@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "version": "0.1.0-candidate.1",
+  "source_sha": "c82c6539ed1fd2db6eb39bd0dd7c7569bc938877",
+  "runtime": "native Supabase experimental 3.0.0-next.25",
+  "node": "24.20.0",
+  "deno": "2.9.5",
+  "preview_sdk": "1.3.61",
+  "cli": "1.0.2115+e16833f284",
+  "status": "SOURCE_CANDIDATE_NOT_RELEASE_ACCEPTED",
+  "auto_login": false,
+  "auto_tunnel": false,
+  "auto_publish": false
+}

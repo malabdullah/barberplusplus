@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-28T13:44:52.397654+00:00",
+  "new_resource_id": "barber-8f17d3fb516e94eec745c4b4",
+  "hard_cutoff": "2026-10-28T10:39:21.564Z",
+  "host_disposed": "2026-10-28T10:39:12.144Z",
+  "delete_confirmed": "2026-10-28T10:39:12.594Z",
+  "ram_profile_removed": "2026-10-28T10:39:25.356Z",
+  "ram_profiles_present": false,
+  "preview_port_open": false,
+  "auth_routing_restored": true,
+  "baseline": {
+    "users": 5,
+    "bookings": 1,
+    "cron": "off",
+    "original_notes_restored": true
+  },
+  "earliest_attempt_resource_deletion": "UNKNOWN - preserved"
+}

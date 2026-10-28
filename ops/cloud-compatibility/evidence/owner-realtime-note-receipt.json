@@ -1,0 +1,21 @@
+{
+  "booking_id": "50000000-0000-4000-8000-000000000001",
+  "original_notes": "Synthetic registered realtime startup-20261028T061336Z-2452 1793168019873",
+  "marker": "CLOUD_BROWSER_RT_20261028_1253",
+  "saved_at": "2026-10-28T09:54:33.991827+00:00",
+  "state": "RESTORED_VERIFIED",
+  "source_sha": "c82c6539ed1fd2db6eb39bd0dd7c7569bc938877",
+  "mutation_time": "2026-10-28T09:54:34.046087+00:00",
+  "changed_columns": [
+    "notes",
+    "updated_at"
+  ],
+  "restoration": "EXACT_ORIGINAL_NOTES",
+  "restored_at": "2026-10-28T10:00:10.669252+00:00",
+  "owner_external_realtime": "PASS reported approximately 09:57 UTC; reopened without reload/navigation",
+  "baseline": {
+    "users": 5,
+    "bookings": 1,
+    "cron": "off"
+  }
+}
