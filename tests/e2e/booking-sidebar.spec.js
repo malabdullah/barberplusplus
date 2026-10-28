@@ -1,7 +1,8 @@
 import {expect,test} from '@playwright/test';
 
 test.afterEach(async({context})=>{await context.unrouteAll({behavior:'wait'});});
-test('synthetic manager booking close is unobscured with Test banner',async({page,context})=>{
+for (const [role, home] of [['manager', '/dashboard'], ['barber', '/barber']]) {
+test(`synthetic ${role} booking close is unobscured with Test banner`,async({page,context})=>{
  test.setTimeout(120000);
  const base=new URL(test.info().project.use.baseURL||'http://127.0.0.1:4173');
  expect(['localhost','127.0.0.1','::1']).toContain(base.hostname);
@@ -30,8 +31,8 @@ test('synthetic manager booking close is unobscured with Test banner',async({pag
    contentType: 'application/javascript', body: 'window.__BARBER_CONFIG__ = ' + JSON.stringify(runtime) + ';',
  }));
  await page.addInitScript(value=>{window.__BARBER_CONFIG__=Object.freeze(value);},runtime);
- await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill('manager@barber.test');await page.getByLabel('Password',{exact:true}).fill('LocalOnly123!');await page.locator('button[type="submit"]').click();await expect(page).toHaveURL(/\/dashboard(?:\/|$)/);
- await page.goto('/dashboard/bookings');await expect(page.locator('.booking-card').filter({hasText:'Synthetic Customer'})).toHaveCount(1);
+ await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(`${role}@barber.test`);await page.getByLabel('Password',{exact:true}).fill('LocalOnly123!');await page.locator('button[type="submit"]').click();await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));
+ await page.goto(`${home}/bookings`);await expect(page.locator('.booking-card').filter({hasText:'Synthetic Customer'})).toHaveCount(1);
  for(const language of ['en','ar']){
   await page.locator('.preferences-selector').first().locator('button').first().click();await page.getByRole('button',{name:language==='ar'?'العربية':'English',exact:true}).click();
   for(const theme of ['dark','light']){
@@ -39,6 +40,7 @@ test('synthetic manager booking close is unobscured with Test banner',async({pag
    for(const width of [360,467,1365]){
     await page.setViewportSize({width,height:900});await page.locator('.booking-card').filter({hasText:'Synthetic Customer'}).click();
     const close=page.locator('.booking-close-btn');await expect(close).toBeVisible();await close.click({trial:true});
+    const overlay=page.locator(`.${role}-bookings-page .booking-sidebar-overlay`);await expect(overlay).toHaveCSS('z-index','1000');await expect.poll(()=>overlay.evaluate(el=>Math.abs(el.getBoundingClientRect().top-parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--environment-banner-height')))<1)).toBe(true);
     const geometry=await close.evaluate(el=>{const b=el.getBoundingClientRect(),banner=document.querySelector('.environment-banner').getBoundingClientRect();const hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);const traps=[];for(let p=document.querySelector('.booking-sidebar-overlay').parentElement;p;p=p.parentElement){const s=getComputedStyle(p);if(s.transform!=='none'||s.filter!=='none'||s.perspective!=='none'||/paint|layout|strict|content/.test(s.contain))traps.push(p.tagName);}return{aboveBanner:b.top>=banner.bottom-1,inViewport:b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth,hit:el.contains(hit),traps};});
     expect(geometry,`${language}/${theme}/${width}`).toEqual({aboveBanner:true,inViewport:true,hit:true,traps:[]});
     await page.screenshot({path:test.info().outputPath(`booking-${language}-${theme}-${width}.png`)});
@@ -48,3 +50,5 @@ test('synthetic manager booking close is unobscured with Test banner',async({pag
  }
  expect(bookingWrites).toBe(0);
 });
+
+}
