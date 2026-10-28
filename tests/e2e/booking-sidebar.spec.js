@@ -13,7 +13,7 @@ test('synthetic manager booking close is unobscured with Test banner',async({pag
  await context.route('https://barber-test-api.invalid/**',async route=>{
   const u=new URL(route.request().url());expect(u.origin).toBe(runtime.supabaseUrl);
   if(u.pathname.startsWith('/rest/v1/bookings')&&route.request().method()!=='GET')bookingWrites++;
-  const response=await context.request.fetch(new URL(u.pathname+u.search,api).href,{method:route.request().method(),headers:{...route.request().headers(),host:api.host},data:route.request().postData(),maxRedirects:0});
+  const response=await route.fetch({url:new URL(u.pathname+u.search,api).href,headers:{...route.request().headers(),host:api.host},maxRedirects:0});
   // Test-only date projection puts the existing 2030 fixture in the current
   // calendar week. It never writes a row or substitutes backend authorization.
   let body=await response.body();
@@ -25,6 +25,10 @@ test('synthetic manager booking close is unobscured with Test banner',async({pag
   await route.fulfill({response,body,headers:{...response.headers(),'access-control-allow-origin':base.origin}});
  });
  await context.routeWebSocket('wss://barber-test-api.invalid/**',socket=>socket.close());
+ // The served local asset runs after addInitScript; keep this fixture authoritative.
+ await context.route(new URL('/runtime-config.js', base).href, route => route.fulfill({
+   contentType: 'application/javascript', body: 'window.__BARBER_CONFIG__ = ' + JSON.stringify(runtime) + ';',
+ }));
  await page.addInitScript(value=>{window.__BARBER_CONFIG__=Object.freeze(value);},runtime);
  await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill('manager@barber.test');await page.getByLabel('Password',{exact:true}).fill('LocalOnly123!');await page.locator('button[type="submit"]').click();await expect(page).toHaveURL(/\/dashboard(?:\/|$)/);
  await page.goto('/dashboard/bookings');await expect(page.locator('.booking-card').filter({hasText:'Synthetic Customer'})).toHaveCount(1);

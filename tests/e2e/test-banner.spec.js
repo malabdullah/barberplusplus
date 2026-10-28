@@ -20,12 +20,16 @@ for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['ag
     await context.route('https://barber-test-api.invalid/**', async route => {
       const requested = new URL(route.request().url());
       expect(requested.origin).toBe(runtime.supabaseUrl);
-      const response = await context.request.fetch(new URL(requested.pathname + requested.search, localApi).href, {
-        method: route.request().method(), headers: { ...route.request().headers(), host: localApi.host }, data: route.request().postData(), maxRedirects: 0,
+      const response = await route.fetch({url: new URL(requested.pathname + requested.search, localApi).href,
+        headers: { ...route.request().headers(), host: localApi.host }, maxRedirects: 0,
       });
       await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': base.origin } });
     });
     await context.routeWebSocket('wss://barber-test-api.invalid/**', socket => socket.close());
+    // The served local asset runs after addInitScript; keep this fixture authoritative.
+    await context.route(new URL('/runtime-config.js', base).href, route => route.fulfill({
+      contentType: 'application/javascript', body: 'window.__BARBER_CONFIG__ = ' + JSON.stringify(runtime) + ';',
+    }));
     await page.addInitScript(value => { window.__BARBER_CONFIG__ = Object.freeze(value); }, runtime);
     await page.goto('/login');
     await expect(page.getByRole('status')).toContainText('TEST — synthetic data');
