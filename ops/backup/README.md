@@ -107,10 +107,14 @@ never enters local Test. The producer expects the measured proof fields from
 `readiness.measured`; it cannot generate a restore PASS.
 
 Run `readiness.py once` and the shared backup-policy CLI against the resulting
-evidence. Only then enable `barber-backup-readiness.timer`. It refreshes every
-minute. Failed checks write explicit blocked evidence; stale reports fail the
-existing five-minute release check. Readiness does not enable application releases
-or replace initial cutover acceptance.
+evidence. Only then enable `barber-backup-readiness.timer`. It refreshes three
+minutes after each completed check to reduce off-site API traffic. A slow or
+failed check can leave evidence older than five minutes, which blocks releases;
+the gate also adds elapsed report age to backup ages. This schedule alone does not
+guarantee that a free account stays under its daily transaction limits. Monitor
+actual account-wide usage and keep the five-minute recovery-point and file
+backup schedules unchanged. Readiness does not enable application releases or
+replace initial cutover acceptance.
 
 ## Recovery keys, retention and cost
 

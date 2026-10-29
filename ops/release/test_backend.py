@@ -109,6 +109,22 @@ class BackupReadinessSafety(unittest.TestCase):
         evidence, now = self.fixture()
         backup.verify_backup_readiness(evidence, now)
 
+    def test_backup_ages_continue_to_advance_after_evidence_is_written(self):
+        evidence, now = self.fixture()
+        for path, limit in [('recoverable_point_age_seconds', 900), ('wal_archive.lag_seconds', 900),
+                            ('base_backup.age_seconds', 90000), ('object_backup.age_seconds', 90000)]:
+            with self.subTest(path=path):
+                near_limit = self.change(evidence, path, limit - 50)
+                backup.verify_backup_readiness(near_limit, now + 50)
+                with self.assertRaises(ValueError):
+                    backup.verify_backup_readiness(near_limit, now + 51)
+
+    def test_restore_drill_durations_do_not_age_with_the_evidence(self):
+        evidence, now = self.fixture()
+        evidence['latest_restore_drill']['achieved_rpo_seconds'] = 900
+        evidence['latest_restore_drill']['achieved_rto_seconds'] = 7200
+        backup.verify_backup_readiness(evidence, now + 60)
+
     def test_fresh_pass_summary_cannot_replace_wal_and_restore_evidence(self):
         evidence = {'status':'PASS','offHost':True,'restoreDrill':'PASS','checkedAt':1234567890}
         with self.assertRaises(ValueError): backup.verify_backup_readiness(evidence, 1234567890)

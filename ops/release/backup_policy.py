@@ -18,9 +18,9 @@ def verify_backup_readiness(evidence, now=None):
     def required_true(path):
         if field(path) is not True: raise ValueError('Unverified backup requirement: ' + path)
 
-    def bounded_age(path, limit):
+    def bounded_age(path, limit, elapsed=0):
         value = field(path)
-        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= limit:
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0 or value + elapsed > limit:
             raise ValueError('Backup recovery limit exceeded or invalid: ' + path)
 
     def recent_timestamp(path, limit):
@@ -32,16 +32,18 @@ def verify_backup_readiness(evidence, now=None):
             age = now - stamp.timestamp()
         except (ValueError, OverflowError): raise ValueError('Invalid backup timestamp: ' + path) from None
         if not 0 <= age <= limit: raise ValueError('Stale or future-dated backup evidence: ' + path)
+        return age
 
-    recent_timestamp('checked_at', 300)
+    evidence_age = recent_timestamp('checked_at', 300)
     recent_timestamp('latest_restore_drill.completed_at', 92 * 24 * 60 * 60)
     for path in ['offsite_destination', 'wal_archive.healthy', 'base_backup.healthy',
                  'object_backup.healthy', 'latest_restore_drill.database_restored',
                  'latest_restore_drill.storage_restored']:
         required_true(path)
     for path, limit in [('recoverable_point_age_seconds', 900), ('wal_archive.lag_seconds', 900),
-                        ('base_backup.age_seconds', 90000), ('object_backup.age_seconds', 90000),
-                        ('latest_restore_drill.achieved_rpo_seconds', 900),
+                        ('base_backup.age_seconds', 90000), ('object_backup.age_seconds', 90000)]:
+        bounded_age(path, limit, evidence_age)
+    for path, limit in [('latest_restore_drill.achieved_rpo_seconds', 900),
                         ('latest_restore_drill.achieved_rto_seconds', 7200)]:
         bounded_age(path, limit)
 
