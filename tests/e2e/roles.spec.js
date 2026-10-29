@@ -12,6 +12,9 @@ async function login(page, email, expectedPath) {
 
 test('administrator reaches only the administrator workspace', async ({ page }) => {
   await login(page, 'admin@barber.test', '/admin');
+  await expect(page.locator('a[href*="whatsapp"]')).toHaveCount(0);
+  await page.goto('/admin/whatsapp');
+  await expect(page).toHaveURL(/\/admin\/?$/);
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/\/admin(?:\/|$)/);
 });
@@ -27,6 +30,9 @@ test('manager sees only their own tenant branch', async ({ page }) => {
 
 test('agent reaches only the agent workspace', async ({ page }) => {
   await login(page, 'agent@barber.test', '/agent');
+  await expect(page.locator('a[href*="conversations"]')).toHaveCount(0);
+  await page.goto('/agent/conversations');
+  await expect(page).toHaveURL(/\/agent\/?$/);
   await page.goto('/admin');
   await expect(page).toHaveURL(/\/agent(?:\/|$)/);
 });

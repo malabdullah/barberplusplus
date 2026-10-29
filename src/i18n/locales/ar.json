@@ -498,7 +498,7 @@
       "at": "في",
       "manager": "المدير",
       "barber": "الحلاق",
-      "whatsapp": "واتساب",
+      "agent": "وكيل",
       "admin": "المسؤول",
       "system": "النظام"
     },
@@ -833,8 +833,7 @@
       "users": "المستخدمون",
       "analytics": "التحليلات",
       "configuration": "الإعدادات",
-      "audit": "السجلات والتدقيق",
-      "whatsapp": "واتساب"
+      "audit": "السجلات والتدقيق"
     },
     "metrics": {
       "totalManagers": "إجمالي المديرين",
@@ -1052,100 +1051,6 @@
         "older": "أقدم"
       }
     },
-    "whatsapp": {
-      "title": "واتساب",
-      "subtitle": "إدارة محادثات ورسائل وسجلات واتساب",
-      "conversations": "المحادثات",
-      "conversationsDesc": "عرض سلاسل محادثات العملاء",
-      "conversationsSubtitle": "تصفح جميع محادثات واتساب",
-      "messages": "الرسائل",
-      "messagesDesc": "عرض وإدارة الرسائل الفردية",
-      "messagesSubtitle": "تصفح وحذف رسائل واتساب",
-      "logs": "السجلات",
-      "logsDesc": "سجلات النظام وتتبع الأخطاء",
-      "logsSubtitle": "سجلات التصحيح ورسائل الخطأ",
-      "totalConversations": "إجمالي المحادثات",
-      "totalMessages": "إجمالي الرسائل",
-      "messagesToday": "رسائل اليوم",
-      "errorsLast7d": "الأخطاء (7 أيام)",
-      "inbound": "وارد",
-      "outbound": "صادر",
-      "unknownCustomer": "عميل غير معروف",
-      "conversationThread": "سلسلة المحادثة",
-      "conversationContext": "سياق المحادثة",
-      "noMessages": "لا توجد رسائل في هذه المحادثة",
-      "noConversations": "لم يتم العثور على محادثات",
-      "noConversationsDesc": "ستظهر محادثات واتساب هنا",
-      "noMessagesFound": "لم يتم العثور على رسائل",
-      "noMessagesDesc": "ستظهر رسائل واتساب هنا",
-      "noLogsFound": "لم يتم العثور على سجلات",
-      "noLogsDesc": "ستظهر سجلات واتساب هنا",
-      "searchConversations": "البحث بالهاتف أو الاسم...",
-      "searchMessages": "البحث في الرسائل...",
-      "loadingConversations": "جاري تحميل المحادثات...",
-      "loadingMessages": "جاري تحميل الرسائل...",
-      "loadingLogs": "جاري تحميل السجلات...",
-      "filterState": "الحالة",
-      "allStates": "جميع الحالات",
-      "filterDirection": "الاتجاه",
-      "allDirections": "جميع الاتجاهات",
-      "filterStatus": "الوضع",
-      "allStatuses": "جميع الأوضاع",
-      "filterEventType": "نوع الحدث",
-      "allEventTypes": "جميع أنواع الأحداث",
-      "moreFilters": "المزيد من الفلاتر",
-      "allLevels": "جميع المستويات",
-      "deleteMessage": "حذف الرسالة",
-      "deleteMessageTitle": "حذف الرسالة",
-      "deleteMessageConfirm": "هل أنت متأكد من حذف هذه الرسالة؟ لا يمكن التراجع عن هذا الإجراء.",
-      "filterPhone": "رقم الهاتف",
-      "selectAll": "تحديد الكل",
-      "selectedCount": "{{count}} محدد",
-      "deleteSelected": "حذف المحدد",
-      "deleteSelectedTitle": "حذف الرسائل المحددة",
-      "deleteSelectedConfirm": "هل أنت متأكد من حذف {{count}} رسالة؟ لا يمكن التراجع عن هذا الإجراء.",
-      "messageId": "معرف رسالة واتساب",
-      "messageType": "نوع الرسالة",
-      "phone": "الهاتف",
-      "customer": "العميل",
-      "conversationId": "معرف المحادثة",
-      "fullContent": "المحتوى الكامل",
-      "noContent": "لا يوجد محتوى",
-      "eventType": "نوع الحدث",
-      "toolName": "الأداة",
-      "executionTime": "وقت التنفيذ",
-      "fullMessage": "الرسالة الكاملة",
-      "noMessage": "لا توجد رسالة",
-      "errorDetails": "تفاصيل الخطأ",
-      "errorCode": "رمز الخطأ",
-      "stackTrace": "تتبع المكدس",
-      "toolInput": "مدخلات الأداة",
-      "toolOutput": "مخرجات الأداة",
-      "contextSnapshot": "لقطة السياق",
-      "direction": {
-        "inbound": "وارد",
-        "outbound": "صادر"
-      },
-      "status": {
-        "sent": "مُرسل",
-        "delivered": "تم التسليم",
-        "read": "مقروء",
-        "failed": "فشل"
-      },
-      "states": {
-        "greeting": "ترحيب",
-        "booking_flow": "عملية الحجز",
-        "completed": "مكتمل",
-        "cancelled": "ملغي",
-        "awaiting_response": "بانتظار الرد"
-      },
-      "logLevel": {
-        "debug": "تصحيح",
-        "info": "معلومات",
-        "warn": "تحذير",
-        "error": "خطأ"
-      }
-    },
     "globalSettings": {
       "title": "الإعدادات العامة",
       "subtitle": "تكوين الإعدادات الافتراضية على مستوى المنصة",
@@ -1261,17 +1166,13 @@
       "dashboard": "لوحة التحكم",
       "bookings": "الحجوزات",
       "customers": "العملاء",
-      "conversations": "المحادثات",
       "settings": "الإعدادات"
     },
     "dashboard": {
       "title": "لوحة تحكم الوكيل",
-      "subtitle": "نظرة عامة على دعم عملاء واتساب",
+      "subtitle": "نظرة عامة على دعم العملاء",
       "bookingsCreatedToday": "الحجوزات المنشأة اليوم",
-      "activeConversations": "المحادثات النشطة",
-      "customersHelped": "العملاء الذين تمت مساعدتهم",
-      "recentConversations": "المحادثات الأخيرة",
-      "noRecentConversations": "لا توجد محادثات حديثة"
+      "customersHelped": "العملاء الذين تمت مساعدتهم"
     },
     "bookings": {
       "title": "إدارة الحجوزات",
@@ -1333,26 +1234,6 @@
       },
       "cancelBookingTitle": "إلغاء الحجز؟",
       "cancelBookingMessage": "هل أنت متأكد من إلغاء الحجز في {{date}} الساعة {{time}}؟"
-    },
-    "conversations": {
-      "title": "محادثات واتساب",
-      "subtitle": "عرض وإدارة محادثات العملاء",
-      "selectConversation": "اختر محادثة",
-      "selectConversationDesc": "اختر محادثة لعرض الرسائل",
-      "createBooking": "إنشاء حجز",
-      "sendMessage": "إرسال",
-      "typeMessage": "اكتب رسالة...",
-      "sending": "جاري الإرسال...",
-      "messageSent": "تم إرسال الرسالة",
-      "sendFailed": "فشل إرسال الرسالة",
-      "agentTakeover": "استحواذ الوكيل",
-      "releaseToAI": "إرجاع للذكاء الاصطناعي",
-      "releaseToAIDesc": "إرجاع هذه المحادثة لبوت الذكاء الاصطناعي",
-      "takeover": "استلام المحادثة",
-      "takeoverDesc": "تولي السيطرة على هذه المحادثة",
-      "sentByAgent": "وكيل",
-      "composerHint": "اضغط Ctrl+Enter للإرسال",
-      "conversationReleased": "تم إرجاع المحادثة للذكاء الاصطناعي"
     }
   },
   "countries": {
@@ -1375,26 +1256,17 @@
       "benefits": "الفوائد"
     },
     "hero": {
-      "badge": "تكامل الحجز عبر واتساب",
+      "badge": "إدارة صالون الحلاقة",
       "titleStart": "أدر صالونك",
       "titleAccent": "بذكاء",
-      "subtitle": "دع العملاء يحجزون مواعيدهم عبر واتساب. أدر الفروع والحلاقين والحجوزات من لوحة تحكم أنيقة مصممة لصالون الحلاقة العصري.",
+      "subtitle": "أدر الفروع والحلاقين والمواعيد من لوحة تحكم واحدة مصممة لصالونك.",
       "cta": "ابدأ مجاناً",
       "secondaryCta": "تسجيل الدخول",
-      "mockupAlt": "عرض توضيحي لمحادثة حجز واتساب",
+      "preview": {"alt": "رسم توضيحي للوحة إدارة الحجوزات", "eyebrow": "صالونك", "title": "نظرة على يومك", "appointments": "المواعيد", "manage": "راجع الحجوزات وأدرها", "team": "فريقك", "branches": "أدر الحلاقين والفروع"},
       "stats": {
         "barbershops": "صالون حلاقة",
         "bookings": "حجز شهرياً",
         "rating": "متوسط التقييم"
-      },
-      "whatsapp": {
-        "online": "متصل",
-        "msg1": "مرحباً، أريد حجز قص شعر للغد",
-        "msg2": "أهلاً! يرجى اختيار الحلاق:",
-        "msg3": "اختيار ممتاز! إليك الأوقات المتاحة:",
-        "msg4": "غداً الساعة 10:00 صباحاً مع محمد. نراك!",
-        "confirmed": "تم تأكيد الحجز",
-        "inputPlaceholder": "اكتب رسالة..."
       }
     },
     "features": {
@@ -1429,28 +1301,24 @@
     "howItWorks": {
       "eyebrow": "كيف يعمل",
       "title": "الحجز أصبح بسيطاً",
-      "subtitle": "ثلاث خطوات سهلة لعملائك لحجز موعدهم القادم",
+      "subtitle": "ثلاث خطوات لإدارة المواعيد في صالونك",
       "step1": {
-        "title": "العميل يراسل",
-        "description": "يرسل عميلك رسالة واتساب إلى رقم الحجز الخاص بك"
+        "title": "إضافة حجز",
+        "description": "سجّل بيانات العميل والخدمة في لوحة التحكم"
       },
       "step2": {
         "title": "الاختيار والجدولة",
-        "description": "يختارون الحلاق المفضل ويحددون وقتاً متاحاً"
+        "description": "اختر الحلاق والوقت المتاح"
       },
       "step3": {
-        "title": "تأكيد فوري",
-        "description": "يتم تأكيد الحجز فوراً. تتلقى أنت وعميلك إشعاراً"
+        "title": "إدارة المواعيد",
+        "description": "راجع المواعيد وأدرها من لوحة التحكم"
       }
     },
     "benefits": {
       "eyebrow": "الفوائد",
       "title": "لماذا تختار ⁦Barber++⁩؟",
       "subtitle": "مصمم لصالونات الحلاقة العصرية، لتوفير وقتك وإسعاد عملائك",
-      "whatsapp": {
-        "title": "الحجز عبر واتساب",
-        "description": "العملاء يحجزون عبر واتساب - لا حاجة لتحميل تطبيق"
-      },
       "multilingual": {
         "title": "إنجليزي وعربي",
         "description": "دعم كامل للغة العربية من اليمين لليسار"

@@ -16,7 +16,6 @@ import {
   Umbrella,
   XCircle,
   UserCog,
-  MessageCircle,
   Shield,
   Bot,
 } from 'lucide-react';
@@ -45,7 +44,7 @@ import './MyBookings.css';
 const ADDED_BY_ICONS = {
   manager: UserCog,
   barber: Scissors,
-  whatsapp_agent: MessageCircle,
+  whatsapp_agent: UserCog,
   admin: Shield,
   system: Bot,
 };

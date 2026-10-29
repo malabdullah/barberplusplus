@@ -1,11 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Scissors, CheckCircle } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Scissors } from 'lucide-react';
 
 export default function HeroSection() {
-  const { t, i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const { t } = useTranslation();
 
   return (
     <section className="hero-section" aria-labelledby="hero-title">
@@ -52,81 +51,15 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* WhatsApp Mockup */}
-        <div className="hero-visual">
+        <div className="hero-visual" role="img" aria-label={t('landing.hero.preview.alt')}>
           <div className="mockup-glow" aria-hidden="true" />
-          <div className="whatsapp-mockup" role="img" aria-label={t('landing.hero.mockupAlt')}>
-            <div className="phone-frame">
-              <div className="phone-screen">
-                {/* WhatsApp Header */}
-                <div className="whatsapp-header">
-                  <div className="whatsapp-avatar">
-                    <Scissors size={18} strokeWidth={1.5} />
-                  </div>
-                  <div className="whatsapp-contact">
-                    <div className="whatsapp-name">Barber++ Booking</div>
-                    <div className="whatsapp-status">{t('landing.hero.whatsapp.online')}</div>
-                  </div>
-                </div>
-
-                {/* Chat Messages */}
-                <div className="whatsapp-chat">
-                  {/* Customer Message */}
-                  <div className="chat-bubble customer">
-                    {t('landing.hero.whatsapp.msg1')}
-                    <div className="chat-time">9:41 AM</div>
-                  </div>
-
-                  {/* Bot Response */}
-                  <div className="chat-bubble bot">
-                    {t('landing.hero.whatsapp.msg2')}
-                    <div className="chat-options">
-                      <span className="chat-option">Mohammed</span>
-                      <span className="chat-option">Ali</span>
-                      <span className="chat-option">Hassan</span>
-                    </div>
-                  </div>
-
-                  {/* Customer Selection */}
-                  <div className="chat-bubble customer">
-                    Mohammed
-                    <div className="chat-time">9:41 AM</div>
-                  </div>
-
-                  {/* Time Selection */}
-                  <div className="chat-bubble bot">
-                    {t('landing.hero.whatsapp.msg3')}
-                    <div className="chat-options">
-                      <span className="chat-option">10:00 AM</span>
-                      <span className="chat-option">11:30 AM</span>
-                      <span className="chat-option">2:00 PM</span>
-                    </div>
-                  </div>
-
-                  {/* Customer Time */}
-                  <div className="chat-bubble customer">
-                    10:00 AM
-                    <div className="chat-time">9:42 AM</div>
-                  </div>
-
-                  {/* Confirmation */}
-                  <div className="chat-bubble bot chat-confirmation">
-                    <div className="confirmation-icon">
-                      <CheckCircle size={14} />
-                      {t('landing.hero.whatsapp.confirmed')}
-                    </div>
-                    {t('landing.hero.whatsapp.msg4')}
-                    <div className="chat-time">9:42 AM</div>
-                  </div>
-                </div>
-
-                {/* Input Bar */}
-                <div className="whatsapp-input">
-                  <div className="whatsapp-input-field">
-                    {t('landing.hero.whatsapp.inputPlaceholder')}
-                  </div>
-                </div>
-              </div>
+          <div className="booking-preview">
+            <div className="booking-preview-header"><Scissors size={22} /> <strong>Barber++</strong></div>
+            <div className="booking-preview-body">
+              <span className="booking-preview-eyebrow">{t('landing.hero.preview.eyebrow')}</span>
+              <h2>{t('landing.hero.preview.title')}</h2>
+              <div className="booking-preview-card"><CalendarCheck size={24} /><div><strong>{t('landing.hero.preview.appointments')}</strong><span>{t('landing.hero.preview.manage')}</span></div></div>
+              <div className="booking-preview-card"><Scissors size={24} /><div><strong>{t('landing.hero.preview.team')}</strong><span>{t('landing.hero.preview.branches')}</span></div></div>
             </div>
           </div>
         </div>

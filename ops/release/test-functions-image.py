@@ -40,12 +40,7 @@ Deno.serve(async (request) => {
         ['SUPABASE_URL','http://127.0.0.1:1'],
         ['SUPABASE_ANON_KEY','synthetic-unusable-key'],
         ['SUPABASE_SERVICE_ROLE_KEY','synthetic-unusable-key'],
-        ['CRON_SHARED_SECRET','synthetic-not-supplied'],
-        ['AI_OUTBOUND_ENABLED','false'], ['OUTBOUND_RECIPIENT_ALLOWLIST','96500000000'],
-        ['WHATSAPP_ACCESS_TOKEN','local-disabled'],
-        ['WHATSAPP_PHONE_NUMBER_ID','local-disabled'],
-        ['WHATSAPP_VERIFY_TOKEN','local-disabled'],
-        ['WHATSAPP_APP_SECRET','local-disabled']
+        ['CRON_SHARED_SECRET','synthetic-not-supplied']
       ]
     });
     // This production runtime requires its original native request, whose

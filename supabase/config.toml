@@ -387,16 +387,7 @@ deno_version = 2
 
 # Public webhook/cron endpoints authenticate with their own dedicated secrets.
 # Browser-invoked privileged functions retain the default JWT verification.
-[functions.send-booking-reminders]
-verify_jwt = false
-
 [functions.cleanup-notifications]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.whatsapp-flow-endpoint]
 verify_jwt = false
 
 # [edge_runtime.secrets]
@@ -434,8 +425,3 @@ enabled = true
 APP_ENV = "development"
 APP_URL = "http://localhost:5173"
 CRON_SHARED_SECRET = "env(BARBER_LOCAL_CRON_SECRET)"
-AI_OUTBOUND_ENABLED = "false"
-OUTBOUND_RECIPIENT_ALLOWLIST = "96500000000"
-WHATSAPP_ACCESS_TOKEN = "local-disabled"
-WHATSAPP_PHONE_NUMBER_ID = "local-disabled"
-WHATSAPP_APP_SECRET = "local-disabled"

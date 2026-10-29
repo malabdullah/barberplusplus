@@ -553,192 +553,12 @@
   margin-top: var(--space-xs);
 }
 
-/* WhatsApp Mockup */
+/* Dashboard preview */
 .hero-visual {
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-}
-
-.whatsapp-mockup {
-  position: relative;
-  width: 320px;
-  transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
-  transition: transform var(--transition-slow);
-}
-
-.whatsapp-mockup:hover {
-  transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
-}
-
-.phone-frame {
-  background: #1a1a1a;
-  border-radius: 40px;
-  padding: 12px;
-  box-shadow:
-    0 50px 100px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  position: relative;
-}
-
-.phone-frame::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 28px;
-  background: #1a1a1a;
-  border-radius: 0 0 20px 20px;
-  z-index: 10;
-}
-
-.phone-screen {
-  background: #0b141a;
-  border-radius: 32px;
-  overflow: hidden;
-  position: relative;
-}
-
-.whatsapp-header {
-  background: #1f2c34;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.whatsapp-avatar {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--bg-primary);
-  font-size: 14px;
-}
-
-.whatsapp-contact {
-  flex: 1;
-}
-
-.whatsapp-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: #e9edef;
-}
-
-.whatsapp-status {
-  font-size: 12px;
-  color: #8696a0;
-}
-
-.whatsapp-chat {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 380px;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L30 60M0 30L60 30' stroke='%23ffffff' stroke-opacity='0.02' stroke-width='1'/%3E%3C/svg%3E") repeat;
-}
-
-.chat-bubble {
-  max-width: 85%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: bubbleIn 0.4s ease forwards;
-}
-
-.chat-bubble.customer {
-  align-self: flex-end;
-  background: #005c4b;
-  color: #e9edef;
-  border-bottom-right-radius: 2px;
-}
-
-.chat-bubble.bot {
-  align-self: flex-start;
-  background: #1f2c34;
-  color: #e9edef;
-  border-bottom-left-radius: 2px;
-}
-
-.chat-bubble:nth-child(1) { animation-delay: 0.5s; }
-.chat-bubble:nth-child(2) { animation-delay: 1.2s; }
-.chat-bubble:nth-child(3) { animation-delay: 1.9s; }
-.chat-bubble:nth-child(4) { animation-delay: 2.6s; }
-.chat-bubble:nth-child(5) { animation-delay: 3.3s; }
-.chat-bubble:nth-child(6) { animation-delay: 4s; }
-.chat-bubble:nth-child(7) { animation-delay: 4.7s; }
-
-@keyframes bubbleIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.chat-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.chat-option {
-  padding: 6px 12px;
-  background: rgba(212, 168, 83, 0.15);
-  border: 1px solid rgba(212, 168, 83, 0.3);
-  border-radius: 16px;
-  font-size: 12px;
-  color: var(--accent-primary);
-}
-
-.chat-time {
-  font-size: 10px;
-  color: #8696a0;
-  margin-top: 4px;
-  text-align: right;
-}
-
-.chat-confirmation {
-  background: rgba(91, 168, 88, 0.15) !important;
-  border-left: 3px solid var(--status-success);
-}
-
-.chat-confirmation .confirmation-icon {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--status-success);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.whatsapp-input {
-  background: #1f2c34;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.whatsapp-input-field {
-  flex: 1;
-  background: #2a3942;
-  border-radius: 20px;
-  padding: 10px 16px;
-  font-size: 13px;
-  color: #8696a0;
 }
 
 /* Mockup decorations */
@@ -1310,10 +1130,6 @@
     order: -1;
   }
 
-  .whatsapp-mockup {
-    transform: none;
-  }
-
   .features-grid,
   .benefits-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1377,10 +1193,6 @@
     flex-direction: column;
     gap: var(--space-lg);
     align-items: center;
-  }
-
-  .whatsapp-mockup {
-    width: 280px;
   }
 
   .features-section,
@@ -1455,30 +1267,6 @@
   transform: translateX(-4px);
 }
 
-[dir="rtl"] .whatsapp-mockup {
-  transform: perspective(1000px) rotateY(5deg) rotateX(2deg);
-}
-
-[dir="rtl"] .whatsapp-mockup:hover {
-  transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
-}
-
-[dir="rtl"] .chat-bubble.customer {
-  align-self: flex-start;
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 2px;
-}
-
-[dir="rtl"] .chat-bubble.bot {
-  align-self: flex-end;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 2px;
-}
-
-[dir="rtl"] .chat-time {
-  text-align: left;
-}
-
 [dir="rtl"] .footer-main {
   direction: rtl;
 }
@@ -1508,17 +1296,6 @@
     animation: none;
   }
 
-  .chat-bubble {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .whatsapp-mockup {
-    transform: none;
-    transition: none;
-  }
-
   .hero-btn-primary:hover,
   .hero-btn-secondary:hover,
   .landing-btn-primary:hover,
@@ -1529,3 +1306,31 @@
     transform: none;
   }
 }
+
+/* Booking dashboard illustration */
+.booking-preview {
+  position: relative;
+  width: min(100%, 420px);
+  margin: auto;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 20px;
+  background: var(--bg-secondary, #191714);
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+}
+
+.booking-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color, #444);
+  color: var(--accent-gold, #d4a853);
+}
+
+.booking-preview-body { padding: 28px 24px; text-align: start; }
+.booking-preview-eyebrow { color: var(--text-secondary, #aaa); font-size: 0.8rem; }
+.booking-preview-body h2 { margin: 8px 0 24px; font-size: 1.5rem; }
+.booking-preview-card { display: flex; align-items: center; gap: 16px; padding: 18px; margin-top: 12px; border: 1px solid var(--border-color, #444); border-radius: 12px; }
+.booking-preview-card div { display: grid; gap: 4px; }
+.booking-preview-card span { color: var(--text-secondary, #aaa); font-size: 0.85rem; }

@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
-  MessageCircle,
   Settings,
   Scissors,
   X,
@@ -19,7 +18,6 @@ const navItems = [
   { path: '/agent', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
   { path: '/agent/bookings', icon: Calendar, labelKey: 'nav.bookings' },
   { path: '/agent/customers', icon: Users, labelKey: 'agent.nav.customers' },
-  { path: '/agent/conversations', icon: MessageCircle, labelKey: 'agent.nav.conversations' },
   { path: '/agent/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

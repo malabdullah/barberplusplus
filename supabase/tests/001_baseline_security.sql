@@ -149,15 +149,8 @@ select ok(
   'trusted-role policies never authorize from editable user_metadata'
 );
 
-select is(
-  (
-    select command
-    from cron.job
-    where jobname = 'send-booking-reminders'
-  ),
-  'select private.invoke_booking_reminders();',
-  'booking reminder cron invokes only the hardened private function'
-);
+select is((select count(*) from cron.job where jobname = 'send-booking-reminders'),
+  0::bigint, 'WhatsApp reminder scheduler is retired');
 
 select is(
   (select count(*) from vault.secrets),
