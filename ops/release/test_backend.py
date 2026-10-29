@@ -11,6 +11,58 @@ bundle = module('bundle')
 backup = module('backup_policy')
 
 
+class ProductionRuntimeHealth(unittest.TestCase):
+    def test_unhealthy_starting_stopped_or_unprobed_runtime_blocks_before_sql(self):
+        evidence = json.loads((pathlib.Path(__file__).resolve().parents[2] / 'docs/backup-readiness-example.json').read_text())
+        stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        evidence['checked_at'] = stamp; evidence['latest_restore_drill']['completed_at'] = stamp
+        states = [
+            {'Running':True,'Health':{'Status':'unhealthy'}},
+            {'Running':True,'Health':{'Status':'starting'}},
+            {'Running':True},
+            {'Running':False,'Health':{'Status':'healthy'}},
+        ]
+        for state in states:
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp); target = root/'source'; (target/'ops/release').mkdir(parents=True)
+                (target/'ops/release/runtime-lock.json').write_text(json.dumps({'containers':{'synthetic':{'imageId':'synthetic-image'}}}))
+                backend = b.Backend({'enabled':True,'stateDirectory':str(root/'state'),'adoptionFile':'adoption','backupEvidenceFile':'evidence'})
+                backend.command = mock.Mock(return_value=json.dumps([{'Image':'synthetic-image','State':state}]))
+                backend.sql = mock.Mock()
+                with mock.patch.object(b,'private_json',side_effect=lambda path: {'status':'PASS','rehearsal':'PASS'} if path=='adoption' else evidence):
+                    with self.assertRaisesRegex(ValueError,'runtime changed/unhealthy'): backend.preflight(target,{})
+                backend.sql.assert_not_called()
+
+    def apply_fixture(self, tmp, postflight):
+        backend = b.Backend({'stateDirectory':tmp})
+        backend.preflight = mock.Mock(side_effect=[[],postflight])
+        backend.schema_fingerprint = mock.Mock(return_value='f'*64)
+        backend.sql = mock.Mock()
+        backend.functions = mock.Mock()
+        return backend
+
+    def test_backend_success_requires_post_update_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self.apply_fixture(tmp, ValueError('synthetic service failed during update'))
+            with self.assertRaisesRegex(ValueError,'service failed'): backend.apply(pathlib.Path(tmp),{'commit':'a'*40})
+            self.assertEqual(backend.preflight.call_count,2)
+            backend.functions.assert_called_once()
+            self.assertEqual(len(backend.sql.call_args_list),1)
+            self.assertTrue(backend.sql.call_args[0][0].startswith('UPDATE barber_release.schema_state'))
+
+    def test_remaining_migration_after_update_cannot_report_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self.apply_fixture(tmp, [{'name':'synthetic-pending'}])
+            with self.assertRaisesRegex(ValueError,'Unapplied migrations'): backend.apply(pathlib.Path(tmp),{'commit':'a'*40})
+
+    def test_successful_update_checks_readiness_before_and_after(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self.apply_fixture(tmp, [])
+            result = backend.apply(pathlib.Path(tmp),{'commit':'a'*40})
+            self.assertEqual(result,{'status':'BACKEND_APPLIED','migrationsApplied':0})
+            self.assertEqual(backend.preflight.call_count,2)
+
+
 class BackupReadinessSafety(unittest.TestCase):
     def fixture(self):
         root = pathlib.Path(__file__).resolve().parents[2]

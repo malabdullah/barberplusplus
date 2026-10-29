@@ -51,9 +51,13 @@ The backend SSH key must use a forced command invoking `ops/release/backend.py`,
 with forwarding, PTY and user rc disabled. The helper has fixed database,
 Functions and state paths. Only the reviewed adoption process may initialize
 its migration/hash ledger. Automatic releases reject edits to applied migrations,
-runtime changes, stale backup evidence and migrations outside the narrow reviewed
+runtime changes, containers without a successful health check, stale backup evidence and migrations outside the narrow reviewed
 additive SQL subset. New tables, RLS changes, routines, backfills and destructive
 SQL require a separately reviewed release.
+
+The backend repeats readiness after applying SQL and Functions, before acknowledging
+success. A service failure, schema/history drift or remaining migration at that
+point blocks frontend deployment and enters the existing recovery path.
 
 The initial adoption records the managed Function directories. Frontend-only
 releases leave unchanged Functions running. Changed Functions are fully backed
