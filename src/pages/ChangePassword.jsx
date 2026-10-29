@@ -21,7 +21,7 @@ export default function ChangePassword() {
       const result = await supabase.auth.updateUser({password});
       if (result.error) throw result.error;
       setPassword(''); setConfirm(''); setSuccess(true);
-    } catch { setError(t('admin.passwordReset.failed')); }
+    } catch { setError(t('admin.passwordReset.ownFailed')); }
     finally { setBusy(false); }
   };
   return <main className="admin-page">

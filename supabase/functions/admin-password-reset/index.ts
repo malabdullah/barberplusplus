@@ -18,20 +18,13 @@ Deno.serve(createAdminPasswordResetHandler({
     return {users:data.users,hasMore:data.users.length === 100};
   },
   get: async id => { const {data,error}=await admin.auth.admin.getUserById(id); return error ? null : data.user; },
-  allow: async adminId => {
-    const since = new Date(Date.now() - 3600_000).toISOString();
-    const {count,error} = await admin.from('audit_logs').select('id', {count:'exact',head:true})
-      .eq('admin_user_id', adminId).eq('action_type', 'password_reset_requested')
-      .gte('created_at', since);
-    return !error && count !== null && count < 10;
-  },
-  audit: async (adminId,targetId) => {
-    const {error} = await admin.from('audit_logs').insert({admin_user_id:adminId,target_user_id:targetId,action_type:'password_reset_requested',target_entity_type:'user',target_entity_id:targetId,metadata:{source:'admin_password_reset'}});
-    return !error;
+  begin: async (adminId,targetId) => {
+    const {data,error} = await admin.rpc('begin_admin_password_reset', {p_actor:adminId,p_target:targetId});
+    return !error && typeof data === 'string' ? data : null;
   },
   update: async (id,password) => { const {error}=await admin.auth.admin.updateUserById(id,{password}); return !error; },
-  complete: async (adminId,targetId) => {
-    const {error} = await admin.from('audit_logs').insert({admin_user_id:adminId,target_user_id:targetId,action_type:'password_reset_completed',target_entity_type:'user',target_entity_id:targetId,metadata:{source:'admin_password_reset'}});
-    return !error;
+  complete: async (guardId,adminId,targetId) => {
+    const {data,error} = await admin.rpc('finish_admin_password_reset', {p_guard:guardId,p_actor:adminId,p_target:targetId});
+    return !error && data === true;
   },
 }));

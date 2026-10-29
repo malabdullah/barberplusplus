@@ -4,10 +4,9 @@ type Dependencies = {
   authenticate: (authorization: string) => Promise<User | null>;
   list: (page: number) => Promise<{ users: User[]; hasMore: boolean }>;
   get: (id: string) => Promise<User | null>;
-  allow: (adminId: string) => Promise<boolean>;
-  audit: (adminId: string, targetId: string) => Promise<boolean>;
+  begin: (adminId: string, targetId: string) => Promise<string | null>;
   update: (id: string, password: string) => Promise<boolean>;
-  complete: (adminId: string, targetId: string) => Promise<boolean>;
+  complete: (guardId: string, adminId: string, targetId: string) => Promise<boolean>;
 };
 const allowedRoles = new Set(['manager', 'barber', 'agent', 'customer']);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,11 +42,11 @@ export function createAdminPasswordResetHandler(deps: Dependencies) {
       if (body.userId === caller.id) return reply(403, {error:'Forbidden'});
       const target = await deps.get(body.userId);
       if (!target || !allowedRoles.has(role(target))) return reply(403, {error:'Forbidden'});
-      if (!(await deps.allow(caller.id))) return reply(429, {error:'Reset temporarily unavailable'});
-      if (!(await deps.audit(caller.id, target.id))) return reply(503, {error:'Reset unavailable'});
+      const guard = await deps.begin(caller.id, target.id);
+      if (!guard) return reply(503, {error:'Reset unavailable'});
       if (!(await deps.update(target.id, body.password))) return reply(503, {error:'Reset unavailable'});
       let auditComplete = false;
-      try { auditComplete = await deps.complete(caller.id, target.id); } catch { /* The password was already changed. */ }
+      try { auditComplete = await deps.complete(guard, caller.id, target.id); } catch { /* The password was already changed. */ }
       return reply(200, {success:true, auditComplete});
     } catch { return reply(503, {error:'Reset unavailable'}); }
   };
