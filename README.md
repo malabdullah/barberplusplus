@@ -29,7 +29,7 @@ A modern barbershop management dashboard built with React and Supabase. Manage m
 
 | Category | Technology |
 |----------|------------|
-| Frontend | React 18, React Router v6, Vite 7 |
+| Frontend | React 18, React Router 7, Vite 7 |
 | Backend | Supabase (Auth, PostgreSQL, Edge Functions, Storage) |
 | Styling | CSS Custom Properties, responsive design |
 | i18n | i18next (English, Arabic) |
@@ -38,16 +38,17 @@ A modern barbershop management dashboard built with React and Supabase. Manage m
 
 ## Environments
 
-Barber++ uses one codebase and three isolated environments:
+Barber++ uses one codebase and two environments:
 
 | Environment | Frontend | Supabase | Data |
 |-------------|----------|----------|------|
-| Local | Vite | Local CLI stack | Deterministic synthetic fixtures |
-| Staging | Immutable Docker image on Dokploy | Separate self-hosted stack | Synthetic only |
-| Production | The staging-tested image digest on Dokploy | Existing self-hosted stack | Live customer data |
+| Local Test (`dev`) | Vite on the Mac, port 5173 | Dedicated Docker Supabase stack | Synthetic fixtures only |
+| Production (`main`) | Immutable image managed by Dokploy | Existing production Supabase VPS | Live customer data |
 
 Runtime browser configuration is injected when the Nginx container starts. A
-frontend image never contains staging or production credentials or origins.
+frontend image contains no deployment credentials. Browser configuration contains
+only the public backend origin and publishable key. There is no permanent staging
+environment. See [the operating guide](docs/environments.md).
 
 ## Getting Started
 
@@ -66,9 +67,7 @@ frontend image never contains staging or production credentials or origins.
 
 2. **Bootstrap the complete local environment**
    ```bash
-   cp .env.local.example .env.local
-   cp supabase/functions/.env.example supabase/functions/.env.local
-   npm run local:bootstrap
+   npm run local:setup
    ```
 
 3. **Start Supabase, Edge Functions, and Vite**
@@ -76,28 +75,33 @@ frontend image never contains staging or production credentials or origins.
    npm run local:start
    ```
 
-The bootstrap intentionally stops until the authoritative production schema
-baseline has been reviewed and committed. See
-[`docs/database-baseline.md`](docs/database-baseline.md) for that one-time gate.
+Setup creates isolated Test data from the committed migrations and seed. Repeating
+setup preserves an initialized Test database. Use `npm run local:reset` only when
+you explicitly want to discard local Test data. Setup generates ignored local
+credentials; never copy production credentials into this checkout.
 
 Local startup and browser CI pin PostgREST to `v16.4` using the reviewed Supabase
 CLI `2.116.0` override. This includes the upstream fix for intermittent
 `PGRST303` errors immediately after login. Existing different overrides are
 preserved and cause startup to stop for review. A running stack is not replaced
 automatically: changing its service version requires a project-scoped stop/start
-that preserves volumes, followed by verification. Do not use bootstrap, database
+that preserves volumes, followed by verification. Do not use setup, database
 reset or `stop --no-backup` to update an existing development stack.
 
 ## Scripts
 
 ```bash
 npm run dev      # Start development server
-npm run local:bootstrap # Install and rebuild the complete local stack
+npm run local:setup     # Install and initialize fresh local Test
 npm run local:start     # Start Supabase, Edge Functions, and Vite
+npm run local:stop      # Stop this Test stack, preserving data
+npm run local:reset     # Explicitly discard/reseed only this Test database
+npm run local:status    # Inspect local Test readiness
 npm run build    # Production build
 npm run preview  # Preview production build
 npm run check    # Lint, unit tests, build, and domain safety checks
 npm run test:e2e # Browser journeys
+npm run test:production-image # Container health, routing and runtime configuration
 ```
 
 ## Project Structure

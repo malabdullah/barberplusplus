@@ -1,4 +1,10 @@
 import { defineConfig } from '@playwright/test';
+import { loadEnv } from 'vite';
+
+const localBrowser = loadEnv('development', process.cwd(), 'VITE_');
+if (!process.env.VITE_SUPABASE_PUBLISHABLE_KEY && localBrowser.VITE_SUPABASE_PUBLISHABLE_KEY) {
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = localBrowser.VITE_SUPABASE_PUBLISHABLE_KEY;
+}
 
 const localAnonKey = [
   Buffer.from(JSON.stringify({ alg: 'none' })).toString('base64url'),
@@ -12,10 +18,6 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
-    extraHTTPHeaders: process.env.ACCESS_CLIENT_ID ? {
-      'CF-Access-Client-Id': process.env.ACCESS_CLIENT_ID,
-      'CF-Access-Client-Secret': process.env.ACCESS_CLIENT_SECRET,
-    } : undefined,
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
     command: 'npm run build && npm run preview -- --host 127.0.0.1',
@@ -25,7 +27,7 @@ export default defineConfig({
       ...process.env,
       VITE_APP_ENV: 'development',
       VITE_APP_URL: 'http://127.0.0.1:4173',
-      VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
+      VITE_SUPABASE_URL: 'http://127.0.0.1:55321',
       VITE_SUPABASE_PUBLISHABLE_KEY: process.env.VITE_SUPABASE_PUBLISHABLE_KEY || localAnonKey,
     },
   },

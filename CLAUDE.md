@@ -8,7 +8,7 @@ Barber++ is a barbershop manager dashboard built with React 18 and Vite. It prov
 
 ## Supabase Environments
 
-Local, staging, and production use separate Supabase stacks. Never hardcode a
+Local Test and production use separate Supabase stacks. Never hardcode a
 project reference or remote origin; use `supabase/config.toml` locally and the
 environment-owned runtime/secret values documented in `docs/environments.md`.
 
@@ -16,8 +16,10 @@ environment-owned runtime/secret values documented in `docs/environments.md`.
 
 ```bash
 npm run dev      # Start development server (Vite)
-npm run local:bootstrap # Recreate local Supabase and synthetic fixtures
+npm run local:setup # Initialize local Supabase with synthetic fixtures
 npm run local:start     # Start the complete local stack
+npm run local:stop      # Stop local Test while preserving data
+npm run local:reset     # Explicitly discard/reseed local Test only
 npm run build    # Production build
 npm run preview  # Preview production build
 npm run check    # Run repository validation
@@ -26,7 +28,7 @@ npm run check    # Run repository validation
 ## Architecture
 
 ### Tech Stack
-- **Frontend**: React 18, React Router v6, Vite 7
+- **Frontend**: React 18, React Router 7, Vite 7
 - **Backend**: Supabase (Auth + PostgreSQL + Edge Functions)
 - **Styling**: CSS with custom properties (design system in `src/styles/index.css`)
 - **i18n**: i18next with English and Arabic locales (`src/i18n/locales/`)

@@ -1825,7 +1825,7 @@
         "npm:@vitejs/plugin-react@^4.2.0",
         "npm:date-fns@^2.30.0",
         "npm:deno@2.9.5",
-        "npm:dompurify@3.4.16",
+        "npm:dompurify@3.4.17",
         "npm:eslint@10.9.1",
         "npm:globals@16.3.0",
         "npm:i18next@^25.7.3",

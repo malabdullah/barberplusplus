@@ -12,4 +12,9 @@ test-results
 coverage
 supabase/.temp
 supabase/.branches
+.local-test
+.release-private
+supabase/functions/.env.local
+**/__pycache__
+**/*.pyc
 

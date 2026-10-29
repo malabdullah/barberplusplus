@@ -39,7 +39,7 @@ test('barber reaches only the barber workspace', async ({ page }) => {
     const session = sessionKey ? JSON.parse(localStorage.getItem(sessionKey)) : null;
     const accessToken = session?.access_token;
     const runtime = window.__BARBER_CONFIG__;
-    const supabaseUrl = runtime?.supabaseUrl || 'http://127.0.0.1:54321';
+    const supabaseUrl = runtime?.supabaseUrl || 'http://127.0.0.1:55321';
     const publishableKey = runtime?.supabasePublishableKey || fallbackKey;
     const headers = {
       apikey: publishableKey,

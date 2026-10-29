@@ -1,98 +1,84 @@
-# Deployment Runbook
+# Production releases
 
-## Current manual VPS staging procedure
+## Initial cutover
 
-Use [Test operations](test-environment-runbook.md) and the exact-release evidence
-in [live staging acceptance](staging-live-acceptance.md). Confirm a healthy
-isolated backend and current security disposition. Stateful changes need a new
-verified manual checkpoint; frontend-only changes retain the prior digest and
-configuration. Respect the acceptance freeze and reserve the shared operation
-lock before mutation. Daily backup age is not a Test release gate.
-Changes require a reviewed PR, all five required checks and owner approval of
-the concrete release. Keep deployments manual, preserve prior immutable images
-and configuration, and validate the same-host browser API route after changes.
-Do not reset/seed live data or automatically reverse database migrations.
+Do not enable automatic releases until all of these are evidenced for a concrete
+commit and frontend image digest:
 
-The old cross-origin browser configuration restores a known login defect and
-is not a healthy fallback. Production promotion remains separately authorized.
+1. Adopt the existing database baseline without rerunning table creation.
+   Rehearse the precise remaining migrations on the exact production PostgreSQL
+   image with schema-only metadata and synthetic data. Record schema differences,
+   including documentation-only differences. Verify Auth, Storage, permissions,
+   triggers, Realtime publications and scheduled jobs separately.
+2. Verify a fresh encrypted off-host production backup and a restoration drill
+   in a dedicated isolated recovery target. Production data never enters Test.
+3. Preserve and test the previous frontend and Functions artifacts. SQL rollback
+   must preserve customer writes; never automatically restore an old database.
+4. Configure one canonical Dokploy app and one HTTPS domain owner. Disable old
+   direct GitHub hooks before publishing main, keeping management port 3000
+   private. Verify production runtime configuration, Auth redirects and SPA routes.
+5. Review the concrete cutover, execute it, and record actual health, running
+   digest, commit identity and production smoke results in a root-owned acceptance
+   record. Then enable the controller timer.
 
-## Historical Mac staging setup — superseded
+The first release is a controlled cutover. Existing customer data and Dokploy's
+database are preserved. Never satisfy readiness by creating unevidenced PASS
+records or modifying the required tests.
 
-Protect `main` with pull requests and all CI jobs under the approved solo-owner
-policy in `staging-owner-approval.md`. Record a separate code-review pass and
-obtain owner release-specific approval. Stop using `dev` as an
-environment branch only after comparing it with `main` and preserving every
-unique commit and working-tree change. Protect `v*` tags and configure GitHub
-environments named `staging` and `production`; production requires an approver.
+## Routine releases
 
-Register the dedicated Mac runner only to this repository and label it
-`barber-staging`. Install it as a launch service outside Documents. Configure
-the `staging` environment with its two public URL variables and Cloudflare
-Access secrets. Production retains its separate Dokploy application and API
-credential. Configure runtime values from `docs/environments.md`.
+Merge reviewed development work into main. GitHub runs application, database,
+browser, dependency and secret checks before publishing one immutable image and
+public prerelease assets. The package job alone receives temporary contents-write
+permission; it creates a unique build-run/attempt tag at the exact commit and
+publishes an attested ZIP containing only `release.json` and `backend.tar.gz`,
+plus those two individually attested subjects. Existing assets are never overwritten.
+`release.json` binds the source commit, workflow run,
+frontend digest, backend archive digest, production runtime lock and ordered
+migration hashes. The backend archive contains versioned Functions and migrations,
+with environment files excluded.
 
-The local staging workflow directly manages the isolated Docker stack. The
-production Supabase host must expose a narrowly scoped authenticated deploy hook
-that:
+Install `ops/release/controller.py` on the frontend VPS with root-owned config,
+state and credentials. Its timer runs every 60 seconds; it exposes no HTTP port.
+The consumer uses anonymous public GitHub/GHCR downloads and verifies the release
+identity, asset size/digest and GitHub/Sigstore attestations for the bundle, its
+subjects and frontend image. It follows only reviewed HTTPS redirect hosts and
+never forwards a GitHub credential. No persistent GitHub token is needed on the VPS.
+The Dokploy key stays in a protected file; track and rotate its expiry. That key
+has organization permissions because this Dokploy UI offers no per-app scope.
 
-1. checks out the requested commit from this repository;
-2. refuses commits not reachable from `main`;
-3. installs locked dependencies;
-4. atomically replaces the Edge Function bundle;
-5. restarts only the Edge Runtime; and
-6. health-checks functions and rolls back the bundle on failure.
+The backend SSH key must use a forced command invoking `ops/release/backend.py`,
+with forwarding, PTY and user rc disabled. The helper has fixed database,
+Functions and state paths. Only the reviewed adoption process may initialize
+its migration/hash ledger. Automatic releases reject edits to applied migrations,
+runtime changes, stale backup evidence and migrations outside the narrow reviewed
+additive SQL subset. New tables, RLS changes, routines, backfills and destructive
+SQL require a separately reviewed release.
 
-The hook secret is environment-specific. It must never accept arbitrary shell
-commands or repository URLs.
+The initial adoption records the managed Function directories. Frontend-only
+releases leave unchanged Functions running. Changed Functions are fully backed
+up and staged before the runtime drains; the runtime then stops briefly while
+the directories are replaced. The main gateway and protected configuration stay
+outside managed application source. Rollback restores removed/changed workers
+and removes newly introduced workers. A partial backup never authorizes deleting
+a live worker. Account for this short Functions availability gap during release
+planning.
 
-## Historical Mac staging release — superseded
+The controller serializes delivery and flushes each journal phase to disk. Failed or interrupted
+delivery stops future automatic advancement until an operator reconciles actual
+remote state. Health verification checks HTTPS, the deployed commit and actual
+Swarm task, running container and pulled image identities. A desired image in
+the Swarm specification or an API acknowledgement alone is not deployment success.
 
-Before the deployment job starts, the owner must approve the specific run in
-the GitHub `staging` environment. This gate was enabled on 2026-09-28; it allows
-the owner to approve a run they triggered. The owner explicitly authorized
-removing main's independent PR approval requirement, not its PR or CI
-requirements. See `staging-owner-approval.md`. Approval of that policy is not
-permission to merge or deploy any particular release.
+## Recovery
 
-A successful CI run on `main` builds one image tagged by commit SHA on a
-GitHub-hosted runner and pushes it to GHCR. The dedicated Mac runner backs up the
-local database and Storage, applies local migrations, starts Edge Functions as a
-persistent launch service from a commit-addressed immutable directory, and
-deploys the frontend by immutable digest. It retains both previous runtimes until
-smoke, security-boundary, and Playwright checks pass. The accepted manifest
-records the complete migration set. Migration pushes use `--skip-vault`; secrets
-are never changed as a schema side effect.
+For failure after backend application, restore compatible prior frontend and
+Functions artifacts; retain committed SQL and customer writes. Verify the restored
+release's health and digest. Record the incident and reconcile the private journal
+before retrying. Never force-clear a failed state or reverse SQL automatically.
 
-Do not merge to `main` when its required pull-request and CI protection rules
-are unavailable. A private GitHub Free repository does not satisfy this gate.
-
-## Production promotion
-
-1. Confirm staging E2E/security tests, restore rehearsal, and at least 72 hours
-   for a Supabase component upgrade.
-2. Create an annotated semantic tag on the accepted commit:
-   `git tag -a vX.Y.Z <commit> -m "Release vX.Y.Z"`.
-3. Push the tag. The protected production environment pauses for approval.
-4. The workflow verifies the exact commit is still running in staging, confirms
-   the complete migration set still matches the staging artifact, verifies the
-   repaired baseline is already present in production migration history and that
-   no unknown remote-only migrations exist, confirms backup freshness, runs a
-   non-mutating migration dry run, applies reviewed compatible migrations and
-   functions, and promotes the existing GHCR digest without rebuilding.
-5. Complete non-destructive admin, manager, agent, and barber smoke journeys.
-
-## Rollback
-
-For staging, a failed acceptance run invokes the frontend and Edge Function
-rollback helpers. The function helper restores the exact retained launch-agent
-configuration; a first deployment is stopped and removed if it has no prior
-release. Do not reverse a destructive migration; restore the protected local
-backup or apply a reviewed forward fix.
-
-The production workflow captures the previous Dokploy image reference before
-every deployment and retains it as a protected artifact. For an application
-rollback, redeploy that digest with `scripts/dokploy-deploy.sh`; target completion
-is 15 minutes. The first cutover must record the final legacy release separately
-because it is not an OCI digest. Do not reverse a destructive migration. Use forward remediation
-or the rehearsed restore procedure. Record the incident, affected release,
-database migration version, decision maker, and verification evidence.
+For an interrupted migration, inspect the transactional hash ledger before any
+retry. For an interrupted Functions update, inspect the recorded prior code and
+runtime state. Keep production secrets and the separately managed gateway out of
+the release source archive. Do not upgrade Supabase/Dokploy as part of an app
+release.

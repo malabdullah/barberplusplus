@@ -10,11 +10,18 @@ Barber++ is a React 18/Vite application backed by Supabase. Application code liv
 - `npm run dev` starts the Vite development server with hot reload.
 - `npm run build` creates the production bundle in `dist/`; run this before opening a PR.
 - `npm run preview` serves the built bundle for local production checks.
-- `npm run local:bootstrap` installs dependencies and rebuilds local Supabase.
+- `npm run local:setup` installs dependencies and initializes fresh local Test; repeating it preserves initialized data.
 - `npm run local:start` starts local Supabase, Edge Functions, and Vite.
+- `npm run local:stop` stops only this Test stack and preserves data.
+- `npm run local:reset` explicitly discards and recreates only local Test data.
+- `npm run check` runs the maintained lint, application, Functions and operational checks, then builds the app.
+- `npm run test:production-image` validates the frontend container locally.
 
-Copy `.env.local.example` to `.env.local`; the bootstrap command replaces its
-local browser values from `supabase status`. Never commit credentials.
+Setup generates `.env.local` from local Supabase status. Never commit credentials
+or copy production credentials into Test. `dev` is the development branch; `main`
+is the production release branch. Feature work may use `codex/` branches and merge
+normally into `dev`. There is no always-running staging environment. Read
+`docs/environments.md` and `docs/deployment-runbook.md` for release rules.
 
 ## Coding Style & Naming Conventions
 
@@ -22,7 +29,12 @@ Follow the existing style: two-space indentation, semicolons in JavaScript/JSX, 
 
 ## Testing Guidelines
 
-No automated test framework or coverage threshold is configured yet. For every change, run `npm run build` and manually exercise the affected role, route, responsive layout, theme, and English/Arabic direction where applicable. If adding tests, colocate them as `*.test.jsx` or `*.test.js` and add the runner command to `package.json`.
+Vitest covers application units, Deno covers Functions, Node/Python cover local
+and release safety, pgTAP covers database authorization, and Playwright covers
+browser journeys. Run checks appropriate to the change and `npm run check` before
+a PR. Exercise the affected roles, responsive layouts, themes and English/Arabic
+direction. Database changes require migration replay and `npm run check:schema`.
+Never describe local CLI images as identical to the pinned production images.
 
 ## Commit & Pull Request Guidelines
 

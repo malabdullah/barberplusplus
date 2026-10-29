@@ -1,20 +1,10 @@
-# Production Release Records
+# Release records
 
-Copy `template.md` to `vX.Y.Z.md` before creating a release tag. The completed
-record must be committed on the exact staging-accepted commit. Production CI
-requires the two literal decisions below before it can reach the protected
-GitHub `production` approval gate:
+Use template.md for the initial controlled cutover and separately planned
+incompatible releases. Routine compatible main releases are recorded by the
+controller's durable private journal and verified GitHub build manifest.
 
-- `Release preparation decision: PASS`
-- `Migration compatibility decision: PASS`
-
-The preparation marker confirms that the candidate's release record, owners,
-rollback procedure, and staging acceptance criteria were reviewed before merge.
-The successful staging artifact created from that exact commit is the authority
-for the final commit, digest, migration set, run ID, and acceptance time. This
-avoids requiring a post-acceptance documentation commit that would change the
-commit and image identity. The markers do not authorize deployment. The owner
-must still explicitly approve the specific tag and staging digest, then approve
-that same pending deployment in the protected GitHub environment.
-
-Never put credentials, tokens, customer records, or unredacted logs here.
+Records must bind the source commit, workflow run/attempt, frontend digest,
+backend archive digest and ordered migration hashes. Record actual verification
+and unresolved limitations. Keep credentials, production schema exports, customer
+data and infrastructure inventories outside this public repository.

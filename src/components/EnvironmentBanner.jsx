@@ -1,12 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isStaging } from '../lib/runtimeConfig';
+import { isTest } from '../lib/runtimeConfig';
 
 export default function EnvironmentBanner() {
   const { t } = useTranslation();
   const bannerRef = useRef(null);
   useLayoutEffect(() => {
-    if (!isStaging) return undefined;
+    if (!isTest) return undefined;
 
     const style = document.documentElement.style;
     const property = '--environment-banner-height';
@@ -24,7 +24,7 @@ export default function EnvironmentBanner() {
     };
   }, []);
   useEffect(() => {
-    if (!isStaging) return undefined;
+    if (!isTest) return undefined;
 
     let robots = document.querySelector('meta[name="robots"]');
     const created = !robots;
@@ -40,7 +40,7 @@ export default function EnvironmentBanner() {
     };
   }, []);
 
-  if (!isStaging) return null;
+  if (!isTest) return null;
 
   return (
     <div className="environment-banner" role="status" ref={bannerRef}>

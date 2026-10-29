@@ -1,4 +1,4 @@
-export type AppEnvironment = 'development' | 'staging' | 'production';
+export type AppEnvironment = 'development' | 'test' | 'production';
 
 export function getRequiredEnv(name: string): string {
   const value = Deno.env.get(name)?.trim();
@@ -8,8 +8,8 @@ export function getRequiredEnv(name: string): string {
 
 export function getAppEnvironment(): AppEnvironment {
   const value = getRequiredEnv('APP_ENV');
-  if (value !== 'development' && value !== 'staging' && value !== 'production') {
-    throw new Error('APP_ENV must be development, staging, or production');
+  if (value !== 'development' && value !== 'test' && value !== 'production') {
+    throw new Error('APP_ENV must be development, test, or production');
   }
   return value;
 }

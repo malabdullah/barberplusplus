@@ -26,9 +26,9 @@ describe('validateRuntimeConfig', () => {
     })).toThrow(/loopback host/);
   });
 
-  it('requires HTTPS for staging and production', () => {
+  it('requires HTTPS for production', () => {
     expect(() => validateRuntimeConfig({
-      environment: 'staging',
+      environment: 'production',
       appUrl: 'https://staging.example.com',
       supabaseUrl: 'http://database.example.com',
       supabasePublishableKey: 'sb_publishable_example',

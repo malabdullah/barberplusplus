@@ -452,7 +452,7 @@ export default function MyBookings() {
   if (!currentBarber) return null;
 
   return (
-    <div className="bookings-page">
+    <div className="bookings-page barber-bookings-page">
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('nav.myBookings')}</h2>

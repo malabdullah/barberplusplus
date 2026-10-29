@@ -1,89 +1,47 @@
-# Environment Architecture
+# Two environments
 
-## Current staging architecture
+## Local Test
 
-The owner-approved user-facing name is **Test** from October 11, 2026.
-`APP_ENV=staging`, hostnames, GitHub environment and internal resource names
-remain compatibility identifiers. Use [Test operations](test-environment-runbook.md)
-and [transition status](test-environment-status.md); the former daily-backup
-Env3 closure contract is superseded. Development stays on the Mac; Test is the
-shared server sandbox and release acceptance environment.
+Use Node 24.20.0 and Docker Desktop. Work on `dev` or a feature branch based on
+it. Run `npm run local:setup`, then `npm run local:start`; review the app at
+http://localhost:5173. Pushing `dev` runs CI; local files already update Vite
+through hot reload.
 
-Staging is deployed on `srv1207055` (`185.97.146.8`), the dedicated two-core,
-8 GiB VPS approved for initial testing. The backend is `barber-staging-private`
-(eight services); the frontend is `barber-staging-frontend`. Both Docker networks
-are internal, with no published container ports. Cloudflare Tunnel reaches the
-private bridge origins documented in [live acceptance](staging-live-acceptance.md).
+The dedicated project is `barber-local-test`. API: 55321; database: 55322;
+Studio: 55323; mail viewer: 55324. Published ports are restricted to loopback.
+Credentials and operational state are ignored by Git. Setup refuses a linked
+remote project and generates its own local credentials. The browser validator
+rejects non-loopback backends for Test. A visible Test banner identifies the app.
+The named profile belongs to one checkout; another checkout cannot silently
+reset or stop its data. Retire or deliberately migrate the owned profile before
+switching its canonical checkout.
 
-Browser HTTP and WSS calls use `https://staging-barber.malabdullah.cloud`.
-The ordered `/v1` API-family route precedes the frontend catch-all. The separate
-`supabase-staging.malabdullah.cloud` hostname retains the two exact signed Meta
-exceptions; their neighboring paths and all frontend-host API paths need Access.
+`local:stop` preserves data. `local:start` preserves data. `local:reset`
+explicitly destroys and rebuilds this Test database from migrations and synthetic
+fixtures. Five synthetic users cover admin, manager, agent and barber roles,
+including another tenant. Their test-only password is `LocalOnly123!`;
+the manager is `manager@barber.test`. Never use these credentials in production.
 
-Data, Auth/JWT, Vault, Storage, mail sink and integration configuration are
-dedicated to staging. Synthetic fixtures only; external AI/WhatsApp and database
-cron remain disabled. Deployment is manual and owner-approved; automatic
-deployment stays disabled. GitHub-hosted CI publishes immutable artifacts.
+Auth, REST, Realtime, Storage and Edge Functions run locally. Email stays in the
+local viewer. Real messaging and paid integrations are disabled by default.
+Local CLI service versions differ from production: PostgREST is pinned to v16.4
+for the reviewed login fix, while production uses v14.12. Production image
+identities are recorded separately in `ops/release/runtime-lock.json`.
+Successful local startup proves local functionality, not exact production parity.
 
-The Mac is the encrypted recovery destination and planned monitoring host,
-not the current staging application host. Current operational implementation,
-installation gates and pending evidence are in [Test operations](test-environment-runbook.md).
-Do not use historical Mac deployment helpers for the VPS.
+## Production
 
-## Historical Mac architecture — retained for evidence only
+The frontend Hostinger VPS runs Dokploy, its own PostgreSQL/Redis, Traefik,
+one Barber++ application, and required release/monitoring services. The existing
+Supabase installation on the backend VPS retains all production customer data,
+Auth, Storage, Functions and backups.
 
-The following describes the superseded Mac staging lab and is not an active
-deployment procedure. Development may still use its own local Supabase stack.
+`main` is the production release branch. A successful main workflow builds
+immutable frontend and Functions source artifacts. An outbound-only controller
+polls GitHub every 60 seconds. It verifies repository, workflow, commit, artifact
+digests, migration hashes and attestations, then applies compatible backend
+changes before requesting the frontend deployment through the local Dokploy API.
+The controller stays disabled until the first cutover is accepted.
 
-## Isolation contract
-
-Local staging and production must not share a database, Storage volume, JWT
-secret, Vault secret, SMTP credential, WhatsApp application/number, OpenAI
-key, or infrastructure credential. Production data must never be restored into
-the local staging lab.
-
-Staging runs on the dedicated Docker Desktop stack on the approved Mac. GitHub
-Actions uses the repository-scoped `barber-staging-mac` runner only for the
-deployment job; CI and image construction remain on GitHub-hosted runners.
-Production remains on its existing self-hosted Supabase and Dokploy services.
-
-## Runtime values
-
-The local staging deploy helper and production Dokploy supply these frontend
-container values:
-
-| Value | Staging | Production |
-|-------|---------|------------|
-| `APP_ENV` | `staging` | `production` |
-| `APP_URL` | `https://staging-barber.malabdullah.cloud` | production origin |
-| `SUPABASE_PUBLIC_URL` | `https://supabase-staging.malabdullah.cloud` | production API origin |
-| `SUPABASE_REALTIME_URL` | derived staging WSS origin | production WSS origin |
-| `SUPABASE_PUBLISHABLE_KEY` | local staging browser key | production browser key |
-
-The image supplies `APP_RELEASE` from the source commit. The startup script
-rejects missing, insecure, or non-browser configuration and generates
-`runtime-config.js` and the environment-specific CSP before Nginx starts.
-
-Server-only staging values are stored at owner-only permissions below the
-runner root, outside Git, and are read only by the Edge Functions service.
-Production values remain in the production secret store. Never use a `VITE_`
-name for server-only values.
-
-## Staging boundary
-
-Cloudflare Tunnel exposes only the frontend on local port `8080` and the
-Supabase gateway on local port `54321`. Cloudflare Access defaults to deny and
-permits the owner identity and the CI service token. Bypass rules apply only to
-the exact Meta webhook and Flow paths; those handlers still validate their
-staging-specific signatures and encrypted payload requirements.
-
-The lab contains deterministic synthetic data only. Sandbox or sink credentials
-and recipient allowlists are required before testing outbound email, WhatsApp,
-or OpenAI behavior. The database, Studio, Mailpit, Kong, and analytics port
-bindings must be restricted to loopback as a separate host-hardening task.
-
-## Local production guard
-
-Runtime validation accepts HTTP only on `localhost`, `127.0.0.1`, or `::1` in
-development/test, and rejects any remote Supabase origin. Production and staging
-require HTTPS. Local function secrets are ignored by Git.
+There is no permanent staging environment and no cloud preview dependency.
+Platform upgrades and incompatible migrations require a separate planned release.

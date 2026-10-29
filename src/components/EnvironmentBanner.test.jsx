@@ -6,7 +6,7 @@ import { createInstance } from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 
-vi.mock('../lib/runtimeConfig', () => ({ isStaging: true }));
+vi.mock('../lib/runtimeConfig', () => ({ isTest: true }));
 import EnvironmentBanner from './EnvironmentBanner';
 afterEach(() => {
   cleanup();
