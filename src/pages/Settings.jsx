@@ -310,7 +310,7 @@ export default function Settings() {
           title={t('settings.security')}
           description={t('settings.securityDescription')}
         >
-          <button className="settings-link-btn">
+          <button className="settings-link-btn" onClick={() => navigate('/change-password')}>
             {t('settings.changePassword')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
