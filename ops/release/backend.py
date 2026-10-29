@@ -7,6 +7,7 @@ forwarding, agent forwarding or user rc. It never accepts an arbitrary shell.
 import fcntl, hashlib, importlib.util, io, json, os, pathlib, re, shutil, stat
 import subprocess, sys, tarfile, time, zipfile
 from state_store import atomic_json
+from backup_policy import verify_backup_readiness
 
 SHA = re.compile(r'[a-f0-9]{40}')
 HASH = re.compile(r'[a-f0-9]{64}')
@@ -91,8 +92,7 @@ class Backend:
         adoption = private_json(self.c['adoptionFile'])
         if adoption.get('status') != 'PASS' or adoption.get('rehearsal') != 'PASS': raise ValueError('Unaccepted production migration baseline')
         evidence = private_json(self.c['backupEvidenceFile'])
-        if evidence.get('status') != 'PASS' or evidence.get('offHost') is not True or evidence.get('restoreDrill') != 'PASS' or not 0 <= time.time() - evidence.get('checkedAt', 0) <= 300:
-            raise ValueError('Fresh verified backup/restore evidence required')
+        verify_backup_readiness(evidence)
         lock = json.loads((target / 'ops/release/runtime-lock.json').read_text())
         for name, expected in lock['containers'].items():
             actual = json.loads(self.command(['docker', 'inspect', name]))[0]

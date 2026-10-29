@@ -1,4 +1,4 @@
-import importlib.util, io, json, pathlib, tarfile, tempfile, unittest, zipfile
+import copy, datetime, importlib.util, io, json, os, pathlib, subprocess, tarfile, tempfile, unittest, zipfile
 from unittest import mock
 
 def module(name):
@@ -8,6 +8,82 @@ def module(name):
 b = module('backend')
 c = module('controller')
 bundle = module('bundle')
+backup = module('backup_policy')
+
+
+class BackupReadinessSafety(unittest.TestCase):
+    def fixture(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        evidence = json.loads((root / 'docs/backup-readiness-example.json').read_text())
+        now = datetime.datetime.fromisoformat(evidence['checked_at'].replace('Z', '+00:00')).timestamp()
+        return evidence, now
+
+    def change(self, evidence, path, value):
+        evidence = copy.deepcopy(evidence); target = evidence
+        names = path.split('.')
+        for name in names[:-1]: target = target[name]
+        target[names[-1]] = value
+        return evidence
+
+    def test_complete_documented_recovery_evidence_passes(self):
+        evidence, now = self.fixture()
+        backup.verify_backup_readiness(evidence, now)
+
+    def test_fresh_pass_summary_cannot_replace_wal_and_restore_evidence(self):
+        evidence = {'status':'PASS','offHost':True,'restoreDrill':'PASS','checkedAt':1234567890}
+        with self.assertRaises(ValueError): backup.verify_backup_readiness(evidence, 1234567890)
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = b.Backend({'enabled':True,'stateDirectory':tmp,'adoptionFile':'synthetic-adoption','backupEvidenceFile':'synthetic-backup'})
+            backend.command = mock.Mock(); backend.sql = mock.Mock()
+            with mock.patch.object(b,'private_json',side_effect=[{'status':'PASS','rehearsal':'PASS'},evidence]):
+                with self.assertRaises(ValueError): backend.preflight(pathlib.Path(tmp),{})
+            backend.command.assert_not_called(); backend.sql.assert_not_called()
+
+    def test_each_required_protection_must_be_verified(self):
+        evidence, now = self.fixture()
+        paths = ['offsite_destination','wal_archive.healthy','base_backup.healthy','object_backup.healthy','latest_restore_drill.database_restored','latest_restore_drill.storage_restored']
+        for path in paths:
+            for value in [False,None,1,'true']:
+                with self.subTest(path=path,value=value):
+                    with self.assertRaises(ValueError): backup.verify_backup_readiness(self.change(evidence,path,value),now)
+
+    def test_stale_recovery_points_and_backups_block_releases(self):
+        evidence, now = self.fixture()
+        for path, limit in [('recoverable_point_age_seconds',900),('wal_archive.lag_seconds',900),('base_backup.age_seconds',90000),('object_backup.age_seconds',90000),('latest_restore_drill.achieved_rpo_seconds',900),('latest_restore_drill.achieved_rto_seconds',7200)]:
+            for value in [-1,limit+1,True,None,'0',float('nan'),float('inf')]:
+                with self.subTest(path=path,value=value):
+                    with self.assertRaises(ValueError): backup.verify_backup_readiness(self.change(evidence,path,value),now)
+
+    def test_fresh_report_does_not_refresh_old_recovery_point(self):
+        evidence, now = self.fixture()
+        evidence['recoverable_point_age_seconds'] = 901
+        with self.assertRaises(ValueError): backup.verify_backup_readiness(evidence,now)
+
+    def test_report_and_restore_timestamps_must_be_recent_and_timezone_aware(self):
+        evidence, now = self.fixture()
+        stamp = lambda seconds: datetime.datetime.fromtimestamp(seconds,datetime.timezone.utc).isoformat()
+        for path, values in [('checked_at',[stamp(now+1),stamp(now-301),'2026-09-02T10:00:00','invalid',None]),('latest_restore_drill.completed_at',[stamp(now+1),stamp(now-92*86400-1),'invalid',None])]:
+            for value in values:
+                with self.subTest(path=path,value=value):
+                    with self.assertRaises(ValueError): backup.verify_backup_readiness(self.change(evidence,path,value),now)
+
+    def test_backend_policy_ignores_cli_clock_override(self):
+        evidence, now = self.fixture()
+        with mock.patch.dict(os.environ,{'BACKUP_CHECK_NOW_EPOCH':str(int(now))}):
+            with mock.patch.object(backup.time,'time',return_value=now+301):
+                with self.assertRaises(ValueError): backup.verify_backup_readiness(evidence)
+
+    def test_operator_cli_and_backend_use_the_same_policy(self):
+        evidence, now = self.fixture(); root = pathlib.Path(__file__).resolve().parents[2]
+        env = dict(os.environ,BACKUP_CHECK_NOW_EPOCH=str(int(now)),PYTHONDONTWRITEBYTECODE='1')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / 'evidence.json'
+            for valid in [True,False]:
+                evidence['wal_archive']['healthy'] = valid; path.write_text(json.dumps(evidence))
+                result = subprocess.run(['sh',str(root/'scripts/verify-backup-readiness.sh'),str(path)],env=env,text=True,capture_output=True)
+                self.assertEqual(result.returncode==0,valid,result.stderr)
+            env['BACKUP_CHECK_NOW_EPOCH']='not-a-clock'
+            self.assertNotEqual(subprocess.run(['sh',str(root/'scripts/verify-backup-readiness.sh'),str(path)],env=env,capture_output=True).returncode,0)
 
 class ReleaseSafety(unittest.TestCase):
     def test_sql_rejects_side_effect_expressions_and_exposed_tables(self):

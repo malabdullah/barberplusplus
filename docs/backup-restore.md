@@ -27,5 +27,11 @@ are achieved until a timed drill establishes them. Monitor backup freshness,
 recoverability, capacity and credential/key expiry.
 
 A release must fail closed when fresh backup evidence is missing or stale.
+The backend helper and `scripts/verify-backup-readiness.sh` share
+`ops/release/backup_policy.py`; install that module alongside the backend helper.
+Evidence uses the structure in `docs/backup-readiness-example.json`, including
+verified WAL, base/object backups and database/Storage restoration. A fresh report
+or a generic PASS/restore summary alone cannot satisfy the release gate. Report
+actual recovery ages; refreshing a report must never refresh a backup's age.
 Automatic frontend/Functions rollback preserves customer writes and never blindly
 restores a database backup. Disaster recovery is a separate operator procedure.
