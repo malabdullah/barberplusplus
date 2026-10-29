@@ -1,0 +1,11 @@
+[Unit]
+Description=Barber production objects backup schedule
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+Unit=barber-backup-objects.service
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

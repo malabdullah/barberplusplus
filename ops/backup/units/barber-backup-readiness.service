@@ -1,0 +1,16 @@
+[Unit]
+Description=Measured Barber encrypted backup readiness
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/barber-backup/readiness.py once
+NoNewPrivileges=true
+Nice=10
+CPUQuota=25%
+MemoryMax=512M
+TimeoutStartSec=100s

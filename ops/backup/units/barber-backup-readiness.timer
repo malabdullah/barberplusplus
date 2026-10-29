@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh measured Barber backup readiness
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Unit=barber-backup-readiness.service
+
+[Install]
+WantedBy=timers.target

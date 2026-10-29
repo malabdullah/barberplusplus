@@ -1,0 +1,16 @@
+{
+  "enabled": false,
+  "host": "srv1073968",
+  "bucket": "barber-production-recovery-malabdullah-20261012",
+  "endpoint": "https://s3.us-east-005.backblazeb2.com",
+  "prefix": "production/v1/",
+  "role": "barber_backup",
+  "slot": "barber_production_recovery",
+  "systemId": "REPLACE_WITH_VERIFIED_SYSTEM_IDENTIFIER",
+  "originalHbaSha256": "REPLACE_WITH_ORIGINAL_AUTHENTICATION_SHA256",
+  "composeFiles": [
+    "/root/supabase/docker/docker-compose.yml"
+  ],
+  "walgSha256": "8015836f246a978f27b31a2462eac7765312558ae5b11ac033322b555abf9e22",
+  "resticSha256": "20d4142678d0d95ec11a4759def1b73fd9190abc9ca19e4b62d067c0b387e639"
+}
