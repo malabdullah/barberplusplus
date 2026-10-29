@@ -11,6 +11,34 @@ bundle = module('bundle')
 backup = module('backup_policy')
 
 
+class DokployAcknowledgement(unittest.TestCase):
+    def client(self):
+        client = c.Controller.__new__(c.Controller); client.key = 'synthetic-management-key'
+        return client
+
+    def test_empty_deploy_acknowledgement_allows_actual_health_verification(self):
+        client = self.client()
+        for body in [b'', b'  \n']:
+            with self.subTest(body=body), mock.patch.object(c.urllib.request, 'urlopen', return_value=io.BytesIO(body)):
+                self.assertEqual(client.dokploy('POST', 'application.deploy', {'applicationId':'synthetic'}), {})
+
+    def test_empty_reads_or_other_writes_remain_invalid(self):
+        for method, action in [('GET','application.one?applicationId=synthetic'), ('POST','application.saveDockerProvider')]:
+            with self.subTest(action=action), mock.patch.object(c.urllib.request, 'urlopen', return_value=io.BytesIO(b'')):
+                with self.assertRaises(json.JSONDecodeError): self.client().dokploy(method, action)
+
+    def test_nonempty_deploy_response_requires_valid_json(self):
+        with mock.patch.object(c.urllib.request, 'urlopen', return_value=io.BytesIO(b'not-json')):
+            with self.assertRaises(json.JSONDecodeError): self.client().dokploy('POST', 'application.deploy')
+        with mock.patch.object(c.urllib.request, 'urlopen', return_value=io.BytesIO(b'{"queued":true}')):
+            self.assertEqual(self.client().dokploy('POST','application.deploy'), {'queued':True})
+
+    def test_failed_http_deployment_is_not_an_acknowledgement(self):
+        error = c.urllib.error.HTTPError('http://synthetic.invalid', 500, 'failure', {}, None)
+        with mock.patch.object(c.urllib.request, 'urlopen', side_effect=error):
+            with self.assertRaises(c.urllib.error.HTTPError): self.client().dokploy('POST','application.deploy')
+
+
 class ProductionRuntimeHealth(unittest.TestCase):
     def test_unhealthy_starting_stopped_or_unprobed_runtime_blocks_before_sql(self):
         evidence = json.loads((pathlib.Path(__file__).resolve().parents[2] / 'docs/backup-readiness-example.json').read_text())
