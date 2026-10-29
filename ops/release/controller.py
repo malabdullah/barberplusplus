@@ -127,7 +127,11 @@ class Controller:
     def dokploy(self, method, action, payload=None):
         data = json.dumps(payload).encode() if payload is not None else None
         req = urllib.request.Request('http://127.0.0.1:3000/api/' + action, method=method, data=data, headers={'x-api-key': self.key, 'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=30) as response: return json.load(response)
+        with urllib.request.urlopen(req, timeout=30) as response: body = response.read()
+        # Dokploy 0.30 sends a successful deployment acknowledgement with no
+        # body. Health/image verification still determines release success.
+        if method == 'POST' and action == 'application.deploy' and not body.strip(): return {}
+        return json.loads(body)
 
     def command(self, args, input=None):
         p = subprocess.run(args, input=input, capture_output=True, env=self.env, timeout=900)
