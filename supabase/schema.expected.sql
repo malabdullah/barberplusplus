@@ -1527,14 +1527,6 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
-CREATE OR REPLACE TRIGGER "cancel_reminder_on_booking_cancel" AFTER UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."maintain_booking_reminder"();
-
-
-
-CREATE OR REPLACE TRIGGER "create_reminder_on_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."maintain_booking_reminder"();
-
-
-
 CREATE OR REPLACE TRIGGER "prevent_booking_conflicts_insert" BEFORE INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."check_booking_conflict"();
 
 

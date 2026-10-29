@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
-select plan(35);
+select plan(36);
 
 select ok((select not rolcanlogin and not rolsuper and not rolbypassrls
   and not rolcreaterole and not rolcreatedb and not rolreplication
@@ -27,9 +27,10 @@ select ok(not pg_has_role('authenticated', 'barber_reminder_writer', 'MEMBER'), 
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status)
   values ('61000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 3, '12:30', 'confirmed')$$, 'manager creates a future booking without direct reminder access');
 reset role;
-select is((select count(*) from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'), 1::bigint, 'one internal reminder created');
-select is((select scheduled_at from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'),
-  ((current_date + 3 + time '12:30') at time zone 'Asia/Kuwait') - interval '1 hour', 'reminder retains Kuwait-time scheduling');
+select is((select count(*) from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'), 0::bigint, 'booking creates no WhatsApp reminder');
+select ok(not exists (select 1 from pg_trigger where tgrelid = 'public.bookings'::regclass and tgname = 'create_reminder_on_booking'), 'reminder creation trigger is absent');
+insert into public.booking_reminders (booking_id, scheduled_at)
+values ('61000000-0000-4000-8000-000000000001', now() + interval '1 day');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}', true);
@@ -39,7 +40,8 @@ select lives_ok($$update public.bookings set status = 'cancelled' where id = '61
 select throws_ok($$insert into public.bookings (branch_id, barber_id, date, time, status)
   values ('10000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002', current_date + 4, '12:30', 'confirmed')$$, '42501');
 reset role;
-select is((select status from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'), 'cancelled', 'internal cancellation persisted');
+select ok(not exists (select 1 from pg_trigger where tgrelid = 'public.bookings'::regclass and tgname = 'cancel_reminder_on_booking_cancel'), 'reminder cancellation trigger is absent');
+select is((select status from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'), 'pending', 'an existing historical reminder is not modified by cancellation');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"}}', true);
@@ -62,7 +64,7 @@ select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, t
   values ('61000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 6, '12:30', 'confirmed')$$, 'admin retains existing booking authorization');
 select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000004'$$, 'admin cancels booking');
 reset role;
-select is((select count(*) from public.booking_reminders where booking_id::text like '61000000-%' and status = 'cancelled'), 4::bigint, 'all four role journeys cancelled only their own new reminders');
+select is((select count(*) from public.booking_reminders where booking_id::text like '61000000-%'), 1::bigint, 'only the explicitly inserted historical reminder exists');
 
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
@@ -77,7 +79,7 @@ select is((select count(booking_id) from public.booking_reminders), 0::bigint, '
 select throws_ok($$insert into public.booking_reminders (booking_id, scheduled_at) values ('50000000-0000-4000-8000-000000000001', now())$$, '42501');
 reset role;
 select ok(not exists (select 1 from public.booking_reminders r join public.bookings b on b.id = r.booking_id
-  where b.id::text like '61000000-%' and r.status <> 'cancelled'), 'no active test reminder left after cancellation');
+  where b.id::text like '61000000-%' and b.id <> '61000000-0000-4000-8000-000000000001'), 'no new reminders were created for other role journeys');
 
 select * from finish();
 rollback;

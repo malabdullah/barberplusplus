@@ -5,7 +5,8 @@
 export const ADDED_BY_TYPES = {
   MANAGER: 'manager',
   BARBER: 'barber',
-  WHATSAPP_AGENT: 'whatsapp_agent',
+  // Historical database value used for staff-agent bookings.
+  AGENT: 'whatsapp_agent',
   ADMIN: 'admin',
   SYSTEM: 'system',
 };
@@ -23,8 +24,8 @@ export const ADDED_BY_CONFIG = {
     icon: 'Scissors',
   },
   whatsapp_agent: {
-    labelKey: 'bookings.addedBy.whatsapp',
-    icon: 'MessageCircle',
+    labelKey: 'bookings.addedBy.agent',
+    icon: 'UserCog',
   },
   admin: {
     labelKey: 'bookings.addedBy.admin',

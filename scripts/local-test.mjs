@@ -47,7 +47,7 @@ function guard() {
 function privateWrite(path, contents) { writeFileSync(path, contents, { mode: 0o600 }); chmodSync(path, 0o600); }
 function functionSecrets() {
   const path = resolve(root, 'supabase/functions/.env.local');
-  if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\nAI_OUTBOUND_ENABLED=false\nOUTBOUND_RECIPIENT_ALLOWLIST=96500000000\nWHATSAPP_ACCESS_TOKEN=local-disabled\nWHATSAPP_PHONE_NUMBER_ID=local-disabled\nWHATSAPP_VERIFY_TOKEN=local-disabled\nWHATSAPP_APP_SECRET=local-disabled\n`);
+  if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\n`);
   const secret = readFileSync(path, 'utf8').match(/^CRON_SHARED_SECRET=([A-Za-z0-9_-]{32,128})$/m)?.[1];
   if (!secret) throw Error('A private local cron secret is required');
   env.BARBER_LOCAL_CRON_SECRET = secret;

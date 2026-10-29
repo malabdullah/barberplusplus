@@ -42,10 +42,6 @@ import GlobalSettings from './pages/admin/GlobalSettings';
 import AuditCompliance from './pages/admin/AuditCompliance';
 import ActivityLogs from './pages/admin/ActivityLogs';
 import SecurityEvents from './pages/admin/SecurityEvents';
-import WhatsAppManagement from './pages/admin/WhatsAppManagement';
-import WhatsAppConversations from './pages/admin/WhatsAppConversations';
-import WhatsAppMessages from './pages/admin/WhatsAppMessages';
-import WhatsAppLogs from './pages/admin/WhatsAppLogs';
 // Agent Pages
 import AgentLayout from './components/Layout/AgentLayout';
 import AgentDashboard from './pages/agent/AgentDashboard';
@@ -53,7 +49,6 @@ import AgentBookings from './pages/agent/AgentBookings';
 import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
-import AgentConversations from './pages/agent/AgentConversations';
 import EnvironmentBanner from './components/EnvironmentBanner';
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -220,10 +215,6 @@ function AppRoutes() {
         <Route path="audit" element={<AuditCompliance />} />
         <Route path="audit/activity" element={<ActivityLogs />} />
         <Route path="audit/security" element={<SecurityEvents />} />
-        <Route path="whatsapp" element={<WhatsAppManagement />} />
-        <Route path="whatsapp/conversations" element={<WhatsAppConversations />} />
-        <Route path="whatsapp/messages" element={<WhatsAppMessages />} />
-        <Route path="whatsapp/logs" element={<WhatsAppLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>
@@ -242,7 +233,6 @@ function AppRoutes() {
         <Route path="bookings/new" element={<AgentNewBooking />} />
         <Route path="bookings/:id/edit" element={<AgentEditBooking />} />
         <Route path="customers" element={<AgentCustomers />} />
-        <Route path="conversations" element={<AgentConversations />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
       </Route>

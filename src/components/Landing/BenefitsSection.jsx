@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  MessageSquare,
   Languages,
   Smartphone,
   Bell,
@@ -10,11 +9,6 @@ import {
 } from 'lucide-react';
 
 const benefits = [
-  {
-    icon: MessageSquare,
-    titleKey: 'landing.benefits.whatsapp.title',
-    descKey: 'landing.benefits.whatsapp.description'
-  },
   {
     icon: Languages,
     titleKey: 'landing.benefits.multilingual.title',
