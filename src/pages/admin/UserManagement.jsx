@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, UserCheck, ArrowRight } from 'lucide-react';
+import { Users, UserCheck, ArrowRight, KeyRound } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import './AdminPages.css';
 
@@ -41,6 +41,13 @@ export default function UserManagement() {
       description: t('admin.users.barbersDesc'),
       path: '/admin/users/barbers',
       count: counts.barbers,
+    },
+    {
+      icon: KeyRound,
+      title: t('admin.passwordReset.title'),
+      description: t('admin.passwordReset.description'),
+      path: '/admin/users/passwords',
+      count: '-',
     },
   ];
 

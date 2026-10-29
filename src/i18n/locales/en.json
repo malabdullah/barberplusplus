@@ -898,6 +898,7 @@
     "verifyIdentity": "Verify Your Identity"
   },
   "admin": {
+    "passwordReset": {"title":"Reset a user password","description":"Set a temporary password for a non-admin account.","account":"User account","select":"Select an account","previous":"Previous","next":"Next","page":"Page {{page}}","password":"New password","confirm":"Confirm password","guidance":"Share the password securely. The user can change it from Settings after signing in; the change is not forced automatically.","rules":"Use at least 12 characters, including uppercase, lowercase, a number and a symbol.","invalid":"Select an account and enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","loadError":"Could not load user accounts.","failed":"The reset could not be confirmed. Do not retry; contact the system administrator to check its status.","success":"Password changed. Share it privately with the user.","submit":"Reset password","auditWarning":"Password changed, but its completion audit could not be recorded. Contact the system administrator.","ownInvalid":"Enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","ownFailed":"The password could not be changed. Please try again.","ownSuccess":"Your password has been changed."},
     "searchPlatform": "Search platform...",
     "comingSoon": "Coming Soon",
     "comingSoonDesc": "This feature is currently under development and will be available soon.",
