@@ -20,6 +20,10 @@ Deno.test('completion audit failure cannot misreport an already completed reset 
 Deno.test('listed accounts omit admins, secrets, and unrelated metadata',async()=>{
  const {handler}=setup();const r=await handler(request({action:'list',page:1}));equal(r.status,200);equal(await r.json(),{users:[{id:target.id,email:target.email,role:'manager'}],hasMore:false});
 });
+Deno.test('phone-only non-admin accounts can be selected',async()=>{
+ const phoneUser={id:'40000000-0000-4000-8000-000000000004',phone:'96500000000',app_metadata:{role:'customer'}};
+ const {handler}=setup({list:async()=>({users:[phoneUser],hasMore:false})});const r=await handler(request({action:'list',page:1}));equal(await r.json(),{users:[{id:phoneUser.id,phone:phoneUser.phone,role:'customer'}],hasMore:false});
+});
 for(const caller of [null,{...admin,app_metadata:{role:'manager'}},{...admin,app_metadata:{role:'agent'}},{...admin,app_metadata:{}},{...admin,app_metadata:{},user_metadata:{role:'admin'}}]) {
  Deno.test(`untrusted caller denied ${JSON.stringify(caller)}`,async()=>{const {handler,calls}=setup({authenticate:async()=>caller});const r=await handler(request(valid));equal(r.status,caller ? 403 : 401);equal(calls,{audit:0,update:0});});
 }

@@ -1,4 +1,4 @@
-type User = { id: string; email?: string; app_metadata?: Record<string, unknown> };
+type User = { id: string; email?: string; phone?: string; app_metadata?: Record<string, unknown> };
 type Dependencies = {
   appUrl: string;
   authenticate: (authorization: string) => Promise<User | null>;
@@ -37,7 +37,7 @@ export function createAdminPasswordResetHandler(deps: Dependencies) {
       if (body.action === 'list') {
         if (!Number.isSafeInteger(body.page) || Number(body.page) < 1 || Number(body.page) > 1000) return reply(400, {error:'Invalid page'});
         const result = await deps.list(Number(body.page));
-        return reply(200, {users: result.users.filter(user => allowedRoles.has(role(user)) && user.email).map(user => ({id:user.id,email:user.email,role:role(user)})), hasMore:result.hasMore});
+        return reply(200, {users: result.users.filter(user => allowedRoles.has(role(user)) && (user.email || user.phone)).map(user => ({id:user.id,...(user.email ? {email:user.email} : {phone:user.phone}),role:role(user)})), hasMore:result.hasMore});
       }
       if (body.action !== 'reset' || typeof body.userId !== 'string' || !uuid.test(body.userId) || !passwordValid(body.password)) return reply(400, {error:'Invalid request'});
       if (body.userId === caller.id) return reply(403, {error:'Forbidden'});
