@@ -96,7 +96,9 @@ class Backend:
         lock = json.loads((target / 'ops/release/runtime-lock.json').read_text())
         for name, expected in lock['containers'].items():
             actual = json.loads(self.command(['docker', 'inspect', name]))[0]
-            if actual['Image'] != expected['imageId'] or not actual['State']['Running']: raise ValueError('Production runtime changed/unhealthy')
+            state = actual['State']
+            if actual['Image'] != expected['imageId'] or state.get('Running') is not True or state.get('Health', {}).get('Status') != 'healthy':
+                raise ValueError('Production runtime changed/unhealthy')
         runtime = json.loads(self.command(['docker','inspect',self.c['functionsContainer']]))[0]
         environment = dict(item.split('=',1) for item in runtime['Config']['Env'] if '=' in item)
         if environment.get('APP_ENV')!='production' or environment.get('APP_URL')!=self.c['appUrl'] or not all(environment.get(name) for name in ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_ANON_KEY','CRON_SHARED_SECRET']):
@@ -130,6 +132,9 @@ class Backend:
         self.sql("UPDATE barber_release.schema_state SET fingerprint='" + fingerprint + "' WHERE singleton=true;")
         self.journal({'commit':m['commit'], 'phase':'SQL_APPLIED', 'names':[]})
         self.functions(target, m['commit'])
+        # A healthy start is insufficient if another service failed during the
+        # update, or the resulting schema/history no longer matches this release.
+        if self.preflight(target, m): raise ValueError('Unapplied migrations remain after backend update')
         return {'status': 'BACKEND_APPLIED', 'migrationsApplied': len(pending)}
 
     def functions(self, target, commit):
