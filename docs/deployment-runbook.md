@@ -29,15 +29,22 @@ records or modifying the required tests.
 
 Merge reviewed development work into main. GitHub runs application, database,
 browser, dependency and secret checks before publishing one immutable image and
-a release artifact. `release.json` binds the source commit, workflow run,
+public prerelease assets. The package job alone receives temporary contents-write
+permission; it creates a unique build-run/attempt tag at the exact commit and
+publishes an attested ZIP containing only `release.json` and `backend.tar.gz`,
+plus those two individually attested subjects. Existing assets are never overwritten.
+`release.json` binds the source commit, workflow run,
 frontend digest, backend archive digest, production runtime lock and ordered
 migration hashes. The backend archive contains versioned Functions and migrations,
 with environment files excluded.
 
 Install `ops/release/controller.py` on the frontend VPS with root-owned config,
 state and credentials. Its timer runs every 60 seconds; it exposes no HTTP port.
-The GitHub read credential, registry pull credential and Dokploy key stay in
-protected files on that VPS. Track and rotate credential expiry. The Dokploy key
+The consumer uses anonymous public GitHub/GHCR downloads and verifies the release
+identity, asset size/digest and GitHub/Sigstore attestations for the bundle, its
+subjects and frontend image. It follows only reviewed HTTPS redirect hosts and
+never forwards a GitHub credential. No persistent GitHub token is needed on the VPS.
+The Dokploy key stays in a protected file; track and rotate its expiry. That key
 has organization permissions because this Dokploy UI offers no per-app scope.
 
 The backend SSH key must use a forced command invoking `ops/release/backend.py`,
@@ -60,7 +67,8 @@ planning.
 The controller serializes delivery and flushes each journal phase to disk. Failed or interrupted
 delivery stops future automatic advancement until an operator reconciles actual
 remote state. Health verification checks HTTPS, the deployed commit and actual
-Swarm image digest. An API acknowledgement alone is not deployment success.
+Swarm task, running container and pulled image identities. A desired image in
+the Swarm specification or an API acknowledgement alone is not deployment success.
 
 ## Recovery
 

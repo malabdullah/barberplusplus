@@ -29,8 +29,35 @@ def validate(m, run, repo_id):
         previous = row['name']
     return m
 
+def build_tag(run):
+    run_id, attempt = run.get('id'), run.get('run_attempt')
+    if type(run_id) is not int or run_id <= 0 or type(attempt) is not int or attempt <= 0 or not SHA.fullmatch(run.get('head_sha', '')):
+        raise ValueError('Invalid release run identity')
+    return 'build-' + str(run_id) + '-' + str(attempt)
+
+def release_asset(release, run):
+    if release.get('tag_name') != build_tag(run) or release.get('draft') is not False or release.get('prerelease') is not True or release.get('target_commitish') != run['head_sha']:
+        raise ValueError('Public build identity mismatch')
+    name = 'production-release-' + run['head_sha'] + '.zip'
+    matches = [asset for asset in release.get('assets', []) if asset.get('name') == name]
+    if len(matches) != 1: raise ValueError('Missing/ambiguous public release bundle')
+    asset = matches[0]; asset_id = asset.get('id')
+    if type(asset_id) is not int or asset_id <= 0 or asset.get('state') != 'uploaded': raise ValueError('Incomplete release asset')
+    if type(asset.get('size')) is not int or not 0 < asset['size'] <= 256 * 1024 * 1024: raise ValueError('Invalid release size')
+    if not re.fullmatch(r'sha256:[a-f0-9]{64}', asset.get('digest', '')): raise ValueError('Release asset digest required')
+    if asset.get('url') != 'https://api.github.com/repos/' + REPO + '/releases/assets/' + str(asset_id): raise ValueError('Foreign release asset URL')
+    return asset
+
+def download_url(url):
+    parsed = urllib.parse.urlsplit(url); host = parsed.hostname or ''
+    if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.port not in [None, 443] or parsed.fragment:
+        raise ValueError('Unsafe release download URL')
+    if host not in ['api.github.com', 'github.com'] and not host.endswith('.githubusercontent.com'):
+        raise ValueError('Untrusted release redirect')
+    return url
+
 def unpack_release(raw, expected_digest, destination):
-    if expected_digest != 'sha256:' + digest(raw): raise ValueError('GitHub artifact archive digest mismatch')
+    if expected_digest != 'sha256:' + digest(raw): raise ValueError('GitHub release bundle digest mismatch')
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         entries = z.infolist()
         if sorted(x.filename for x in entries) != ['backend.tar.gz', 'release.json'] or sum(x.file_size for x in entries) > 256 * 1024 * 1024: raise ValueError('Unexpected artifact members/size')
@@ -71,32 +98,31 @@ class Controller:
         self.c = config
         self.root = pathlib.Path(config['stateDirectory'])
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        self.token = private_file(config['githubTokenFile']) if config.get('githubTokenFile') else None
         self.key = private_file(config['dokployKeyFile'])
         self.env = dict(os.environ, GH_CONFIG_DIR=str(self.root / 'gh'), XDG_CACHE_HOME=str(self.root / 'cache'))
         self.env.pop('GH_TOKEN',None); self.env.pop('GITHUB_TOKEN',None)
-        if self.token: self.env['GH_TOKEN'] = self.token
 
     def github(self, path):
         headers = {'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
-        if self.token: headers['Authorization'] = 'Bearer ' + self.token
         req = urllib.request.Request('https://api.github.com/repos/' + REPO + path, headers=headers)
         with urllib.request.urlopen(req, timeout=30) as response: return json.load(response)
 
-    def artifact(self, artifact):
-        # Never forward GitHub authorization to signed storage redirects.
-        url = artifact['archive_download_url']
-        if urllib.parse.urlsplit(url).hostname != 'api.github.com': raise ValueError('Foreign artifact API URL')
-        req = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + self.token} if self.token else {})
-        try:
-            with urllib.request.build_opener(NoRedirect).open(req, timeout=30) as response: data = response.read(256 * 1024 * 1024 + 1)
-        except urllib.error.HTTPError as e:
-            if e.code not in [301, 302, 303, 307, 308]: raise
-            target = e.headers['Location']; parsed = urllib.parse.urlsplit(target)
-            if parsed.scheme != 'https' or not any((parsed.hostname or '').endswith(s) for s in ['.blob.core.windows.net', '.actions.githubusercontent.com', '.githubusercontent.com']): raise ValueError('Untrusted artifact redirect')
-            with urllib.request.urlopen(target, timeout=60) as response: data = response.read(256 * 1024 * 1024 + 1)
-        if len(data) > 256 * 1024 * 1024: raise ValueError('Oversized release')
-        return data
+    def artifact(self, asset):
+        # Public downloads carry no GitHub credential. Validate every redirect,
+        # including secondary storage redirects, before following it.
+        url = asset['url']; opener = urllib.request.build_opener(NoRedirect)
+        for _ in range(5):
+            req = urllib.request.Request(download_url(url), headers={'Accept': 'application/octet-stream'})
+            try:
+                with opener.open(req, timeout=60) as response: data = response.read(256 * 1024 * 1024 + 1)
+            except urllib.error.HTTPError as error:
+                if error.code not in [301, 302, 303, 307, 308]: raise
+                location = error.headers.get('Location')
+                if not location: raise ValueError('Missing release redirect')
+                url = urllib.parse.urljoin(url, location); continue
+            if len(data) != asset['size'] or asset['digest'] != 'sha256:' + digest(data): raise ValueError('Release asset size/digest mismatch')
+            return data
+        raise ValueError('Too many release redirects')
 
     def dokploy(self, method, action, payload=None):
         data = json.dumps(payload).encode() if payload is not None else None
@@ -132,7 +158,10 @@ class Controller:
         command = 'barber-backend ' + mode + ' ' + manifest['commit']
         if raw is not None: command += ' ' + digest(raw)
         output = self.command(['ssh', '-T', '-i', self.c['backendKeyFile'], '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=15', host, command], input=raw)
-        return json.loads(output)
+        result = json.loads(output)
+        allowed = {'receive':['RECEIVED'],'preflight':['PREFLIGHT_PASS'],'apply':['BACKEND_APPLIED'],'rollback':['FUNCTIONS_ROLLED_BACK_SQL_PRESERVED','FUNCTIONS_UNCHANGED_SQL_PRESERVED']}
+        if result.get('status') not in allowed[mode]: raise ValueError('Unexpected backend acknowledgement')
+        return result
 
     def state(self, record):
         atomic_json(self.root/'state.json',record)
@@ -142,6 +171,19 @@ class Controller:
         token = private_file(self.c['registryTokenFile']) if self.c.get('registryTokenFile') else None
         self.dokploy('POST', 'application.saveDockerProvider', {'applicationId': self.c['applicationId'], 'dockerImage': image, 'registryUrl': 'ghcr.io', 'username': self.c.get('registryUsername') if token else None, 'password': token})
         self.dokploy('POST', 'application.deploy', {'applicationId': self.c['applicationId'], 'title': 'Verified immutable production release'})
+
+    def running_image(self, image):
+        # The desired Swarm spec alone does not prove which image is serving.
+        # Require the single live task/container to use the pulled digest's ID.
+        ids = self.command(['docker','service','ps','--filter','desired-state=running','--quiet','--no-trunc',self.c['appName']]).decode().split()
+        if len(ids) != 1 or not re.fullmatch(r'[a-z0-9]+', ids[0]): return False
+        task = json.loads(self.command(['docker','inspect','--type','task',ids[0]]))[0]
+        if task['DesiredState'] != 'running' or task['Status']['State'] != 'running' or task['Spec']['ContainerSpec']['Image'] != image: return False
+        container_id = task['Status'].get('ContainerStatus',{}).get('ContainerID','')
+        if not HASH.fullmatch(container_id): return False
+        container = json.loads(self.command(['docker','inspect','--type','container',container_id]))[0]
+        installed = json.loads(self.command(['docker','image','inspect',image]))[0]
+        return container['State']['Running'] is True and container['Config']['Image'] == image and container['Image'] == installed['Id']
 
     def healthy(self, manifest):
         origin = self.c['appUrl']
@@ -153,7 +195,7 @@ class Controller:
                 service = json.loads(self.command(['docker', 'service', 'inspect', self.c['appName']]))[0]
                 image = service['Spec']['TaskTemplate']['ContainerSpec']['Image']
                 runtime = dict(re.findall(r"\b(environment|appUrl|release)\s*:\s*'([^'\\\n]*)'", config))
-                if health and runtime == {'environment': 'production', 'appUrl': origin, 'release': manifest['commit']} and image == manifest['frontendImage']: return
+                if health and runtime == {'environment': 'production', 'appUrl': origin, 'release': manifest['commit']} and image == manifest['frontendImage'] and self.running_image(image): return
             except (OSError, ValueError, RuntimeError): pass
             time.sleep(5)
         raise RuntimeError('Production health/release/image verification failed')
@@ -184,12 +226,13 @@ class Controller:
             selected = next((x for x in runs if x['head_sha'] == commit), None)
             if selected is None: return {'status': 'WAITING_FOR_MAIN_VALIDATION', 'commit': commit}
             run = self.github('/actions/runs/' + str(selected['id']))
-            artifacts = self.github('/actions/runs/' + str(run['id']) + '/artifacts?per_page=100')['artifacts']
-            matches = [a for a in artifacts if a['name'] == 'production-release-' + commit and not a['expired']]
-            if len(matches) != 1: raise ValueError('Missing/ambiguous release artifact')
-            raw = self.artifact(matches[0]); destination = self.root / commit
+            published = self.github('/releases/tags/' + build_tag(run))
+            asset = release_asset(published, run)
+            raw = self.artifact(asset); destination = self.root / commit
             destination.mkdir(mode=0o700, exist_ok=True)
-            m = unpack_release(raw, matches[0].get('digest'), destination); validate(m, run, repo['id'])
+            bundle = destination / asset['name']; bundle.write_bytes(raw); bundle.chmod(0o600)
+            self.attest(bundle, commit, digest(raw))
+            m = unpack_release(raw, asset['digest'], destination); validate(m, run, repo['id'])
             if digest((destination / 'backend.tar.gz').read_bytes()) != m['backendSha256']: raise ValueError('Backend payload mismatch')
             for p in [destination / 'release.json', destination / 'backend.tar.gz']: self.attest(p, commit, digest(p.read_bytes()))
             self.attest('oci://' + m['frontendImage'], commit, m['frontendImage'].split('sha256:')[1])

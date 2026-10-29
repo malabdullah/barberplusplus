@@ -7,6 +7,7 @@ def module(name):
 
 b = module('backend')
 c = module('controller')
+bundle = module('bundle')
 
 class ReleaseSafety(unittest.TestCase):
     def test_sql_rejects_side_effect_expressions_and_exposed_tables(self):
@@ -48,6 +49,116 @@ class ReleaseSafety(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p = pathlib.Path(tmp) / 'secret'; p.write_text('{}'); p.chmod(0o644)
             with self.assertRaises(ValueError): b.private_json(p)
+
+    def public_release(self):
+        run={'id':123,'run_attempt':2,'head_sha':'a'*40}
+        asset={'id':7,'name':'production-release-'+run['head_sha']+'.zip','state':'uploaded','size':25,'digest':'sha256:'+'b'*64,'url':'https://api.github.com/repos/malabdullah/barberplusplus/releases/assets/7'}
+        release={'tag_name':'build-123-2','draft':False,'prerelease':True,'target_commitish':run['head_sha'],'assets':[asset]}
+        return run,release,asset
+
+    def test_public_build_is_bound_to_commit_run_attempt_and_digest(self):
+        run,release,asset=self.public_release()
+        self.assertEqual(c.release_asset(release,run),asset)
+        for fields in [{'tag_name':'build-123-1'},{'draft':True},{'prerelease':False},{'target_commitish':'main'},{'assets':[asset,asset]}]:
+            with self.subTest(fields=fields):
+                with self.assertRaises(ValueError):c.release_asset(dict(release,**fields),run)
+        for fields in [{'digest':None},{'size':0},{'size':True},{'state':'new'},{'url':'https://api.github.com/repos/other/repo/releases/assets/7'}]:
+            with self.subTest(fields=fields):
+                with self.assertRaises((ValueError,TypeError)):c.release_asset(dict(release,assets=[dict(asset,**fields)]),run)
+
+    def test_public_bundle_excludes_environment_files_and_is_reproducible(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp);source=root/'subjects';source.mkdir()
+            (source/'release.json').write_text('{}');(source/'backend.tar.gz').write_bytes(b'public source')
+            (source/'.env').write_text('SYNTHETIC_PRIVATE_VALUE=must-never-publish')
+            one=bundle.bundle(source,root/'one.zip');two=bundle.bundle(source,root/'two.zip')
+            self.assertEqual(one.read_bytes(),two.read_bytes())
+            with zipfile.ZipFile(one) as z:self.assertEqual(sorted(z.namelist()),['backend.tar.gz','release.json'])
+            self.assertNotIn(b'must-never-publish',one.read_bytes())
+            with self.assertRaises(FileExistsError):bundle.bundle(source,one)
+
+    def test_download_refuses_credential_urls_non_https_and_host_suffix_tricks(self):
+        for url in ['http://release-assets.githubusercontent.com/file','https://github.com.evil.test/file','https://githubusercontent.com.evil.test/file','https://api.github.com@evil.test/file','https://api.github.com:444/file','file:///etc/passwd','https://user:secret@github.com/file']:
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError):c.download_url(url)
+        c.download_url('https://release-assets.githubusercontent.com/file?signed=public-download')
+
+    def test_download_checks_every_redirect_and_never_sends_credentials(self):
+        controller=c.Controller.__new__(c.Controller);payload=b'public bundle';asset={'url':'https://api.github.com/repos/malabdullah/barberplusplus/releases/assets/7','size':len(payload),'digest':'sha256:'+c.digest(payload)}
+        calls=[]
+        def respond(request,timeout):
+            calls.append(request)
+            self.assertIsNone(request.get_header('Authorization'))
+            if len(calls)==1:raise c.urllib.error.HTTPError(request.full_url,302,'redirect',{'Location':'https://release-assets.githubusercontent.com/file'},None)
+            return io.BytesIO(payload)
+        opener=mock.Mock();opener.open.side_effect=respond
+        with mock.patch.object(c.urllib.request,'build_opener',return_value=opener):self.assertEqual(controller.artifact(asset),payload)
+        self.assertEqual(len(calls),2)
+        opener.open.side_effect=[c.urllib.error.HTTPError(asset['url'],302,'redirect',{'Location':'https://release-assets.githubusercontent.com/file'},None),c.urllib.error.HTTPError('https://release-assets.githubusercontent.com/file',302,'redirect',{'Location':'https://evil.test/steal'},None)]
+        with mock.patch.object(c.urllib.request,'build_opener',return_value=opener):
+            with self.assertRaises(ValueError):controller.artifact(asset)
+        self.assertEqual(opener.open.call_count,4)
+
+    def test_download_rejects_truncated_or_changed_public_asset(self):
+        controller=c.Controller.__new__(c.Controller);asset={'url':'https://api.github.com/repos/malabdullah/barberplusplus/releases/assets/7','size':4,'digest':'sha256:'+c.digest(b'good')}
+        for payload in [b'bad',b'evil']:
+            opener=mock.Mock();opener.open.return_value=io.BytesIO(payload)
+            with mock.patch.object(c.urllib.request,'build_opener',return_value=opener):
+                with self.assertRaises(ValueError):controller.artifact(asset)
+
+    def test_desired_swarm_image_is_not_accepted_as_running_release(self):
+        controller=c.Controller.__new__(c.Controller);controller.c={'appName':'synthetic-app'}
+        image='ghcr.io/malabdullah/barberplusplus@sha256:'+'a'*64
+        task={'DesiredState':'running','Status':{'State':'running','ContainerStatus':{'ContainerID':'b'*64}},'Spec':{'ContainerSpec':{'Image':image}}}
+        container={'State':{'Running':True},'Config':{'Image':image},'Image':'sha256:actual-image-content'}
+        def command(args):
+            if args[:3]==['docker','service','ps']:return b'synthetictask123\n'
+            if args[:4]==['docker','inspect','--type','task']:return json.dumps([task]).encode()
+            if args[:4]==['docker','inspect','--type','container']:return json.dumps([container]).encode()
+            if args[:3]==['docker','image','inspect']:return json.dumps([{'Id':'sha256:actual-image-content'}]).encode()
+            raise AssertionError(args)
+        controller.command=command
+        self.assertTrue(controller.running_image(image))
+        task['Status']['State']='starting';self.assertFalse(controller.running_image(image))
+        task['Status']['State']='running';task['Spec']['ContainerSpec']['Image']='old-image';self.assertFalse(controller.running_image(image))
+        task['Spec']['ContainerSpec']['Image']=image;container['Image']='sha256:old-content';self.assertFalse(controller.running_image(image))
+        container['Image']='sha256:actual-image-content';container['State']['Running']=False;self.assertFalse(controller.running_image(image))
+
+    def test_backend_exit_zero_with_wrong_acknowledgement_is_refused(self):
+        controller=c.Controller.__new__(c.Controller);controller.c={'backendHost':'release@synthetic.invalid','backendKeyFile':'/synthetic/private-key'}
+        controller.command=lambda *args,**kwargs:b'{"status":"BACKEND_BLOCKED"}'
+        with self.assertRaises(ValueError):controller.backend('apply',{'commit':'a'*40})
+        controller.command=lambda *args,**kwargs:b'{"status":"BACKEND_APPLIED"}'
+        self.assertEqual(controller.backend('apply',{'commit':'a'*40})['status'],'BACKEND_APPLIED')
+
+    def test_unsigned_public_bundle_never_reaches_backend_or_frontend(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp);controller=c.Controller.__new__(c.Controller);controller.root=root
+            controller.c={'enabled':True,'repositoryId':1123713308,'applicationId':'synthetic-app'}
+            previous='a'*40;commit='b'*40;old_image='ghcr.io/malabdullah/barberplusplus@sha256:'+'c'*64
+            (root/'state.json').write_text(json.dumps({'phase':'COMPLETE','deployedCommit':previous}))
+            run,release,asset=self.public_release();run.update(head_sha=commit,path=c.WORKFLOW,event='push',head_branch='main',conclusion='success',repository={'id':1123713308},head_repository={'id':1123713308})
+            manifest={'schemaVersion':1,'repository':c.REPO,'ref':'refs/heads/main','workflow':c.WORKFLOW,'commit':commit,'runId':str(run['id']),'runAttempt':run['run_attempt'],'backendFile':'backend.tar.gz','compatibility':'backward-compatible','frontendImage':'ghcr.io/malabdullah/barberplusplus@sha256:'+'d'*64,'backendSha256':c.digest(b'source'),'runtimeLockSha256':'e'*64,'expectedSchemaSha256':'f'*64,'migrations':[{'name':'20260901000000_baseline.sql','sha256':'e'*64}]}
+            raw=io.BytesIO()
+            with zipfile.ZipFile(raw,'w') as z:z.writestr('release.json',json.dumps(manifest));z.writestr('backend.tar.gz',b'source')
+            raw=raw.getvalue();asset.update(name='production-release-'+commit+'.zip',size=len(raw),digest='sha256:'+c.digest(raw));release.update(target_commitish=commit)
+            def github(path):
+                if path=='':return {'id':1123713308}
+                if path.startswith('/actions/workflows/'):return {'workflow_runs':[run]}
+                if path.startswith('/actions/runs/'):return run
+                if path=='/releases/tags/build-123-2':return release
+                raise AssertionError(path)
+            controller.github=github;controller.command=lambda args:(commit+'\trefs/heads/main\n').encode()
+            controller.artifact=lambda value:raw;calls=[]
+            controller.backend=lambda *args,**kwargs:calls.append('backend')
+            controller.frontend=lambda *args,**kwargs:calls.append('frontend')
+            controller.attest=mock.Mock(side_effect=ValueError('synthetic untrusted signature'))
+            with mock.patch.object(c,'acceptance',return_value={'commit':previous,'frontendImage':old_image}):
+                with self.assertRaises(ValueError):controller.once()
+            self.assertEqual(calls,[])
+            self.assertEqual(controller.attest.call_count,1)
+            self.assertTrue(str(controller.attest.call_args[0][0]).endswith('.zip'))
+            self.assertEqual(json.loads((root/'state.json').read_text())['deployedCommit'],previous)
 
     def function_fixture(self, folder):
         root=pathlib.Path(folder);live=root/'live';live.mkdir();target=root/'candidate';(target/'supabase/functions').mkdir(parents=True)

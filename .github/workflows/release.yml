@@ -16,12 +16,13 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
       attestations: write
     steps:
       - uses: actions/checkout@v4
+        with: { persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 24.20.0, cache: npm }
       - uses: docker/setup-buildx-action@v3
@@ -57,9 +58,13 @@ jobs:
       - run: node ops/release/package.mjs .release-private/package
         env:
           FRONTEND_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.frontend.outputs.digest }}
+      - name: Bundle the two public release files
+        run: python3 ops/release/bundle.py .release-private/package ".release-private/production-release-${GITHUB_SHA}.zip"
       - uses: actions/attest@v4
         with:
-          subject-path: .release-private/package/*
+          subject-path: |
+            .release-private/package/*
+            .release-private/production-release-*.zip
       - uses: actions/attest@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}
@@ -71,3 +76,13 @@ jobs:
           path: .release-private/package/*
           if-no-files-found: error
           retention-days: 90
+      - name: Publish the verified public build assets
+        run: |
+          gh release create "build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            ".release-private/production-release-${GITHUB_SHA}.zip" \
+            .release-private/package/release.json .release-private/package/backend.tar.gz \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Verified build $GITHUB_SHA" --prerelease --latest=false \
+            --notes "Verified source $GITHUB_SHA from release workflow run $GITHUB_RUN_ID, attempt $GITHUB_RUN_ATTEMPT. Deployment remains subject to VPS verification and initial cutover acceptance."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
