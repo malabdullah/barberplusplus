@@ -1,0 +1,20 @@
+[Unit]
+Description=Barber production encrypted Storage, Functions and configuration snapshot
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/barber-backup/runtime.py objects
+NoNewPrivileges=true
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=50%
+MemoryMax=512M
+TimeoutStopSec=10s
+KillMode=control-group
+TimeoutStartSec=1900s

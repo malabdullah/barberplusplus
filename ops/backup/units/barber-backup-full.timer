@@ -1,0 +1,11 @@
+[Unit]
+Description=Barber production full backup schedule
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+Persistent=true
+Unit=barber-backup-full.service
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

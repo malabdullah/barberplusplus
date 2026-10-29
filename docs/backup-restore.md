@@ -35,3 +35,14 @@ or a generic PASS/restore summary alone cannot satisfy the release gate. Report
 actual recovery ages; refreshing a report must never refresh a backup's age.
 Automatic frontend/Functions rollback preserves customer writes and never blindly
 restores a database backup. Disaster recovery is a separate operator procedure.
+
+
+The 2026-10-29 implementation adds encrypted B2 physical/WAL and file backups;
+see [the production recovery runbook](../ops/backup/README.md). Daily full backups,
+continuous streamed WAL, five-minute file snapshots and measured readiness use
+pinned tools on the existing backend. A real isolated B2 recovery drill verified
+database/Storage/Functions/configuration and cleanup. Readiness still requires
+fresh measured evidence, initial release acceptance and operational review of
+retention and independently accessible recovery keys. Historical same-host
+plaintext backup findings above describe the earlier audit, not the new off-host
+protection. Existing backups are preserved.

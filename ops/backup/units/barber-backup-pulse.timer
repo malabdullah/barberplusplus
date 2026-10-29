@@ -1,0 +1,11 @@
+[Unit]
+Description=Barber production pulse backup schedule
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=5min
+Unit=barber-backup-pulse.service
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
