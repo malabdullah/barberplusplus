@@ -1,0 +1,26 @@
+.cb-account-link { margin-inline-start: auto; color: var(--booking-link); text-decoration: none; max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-height: 44px; display: block; align-content: center; font-size: 14px; }
+.cb-account-link + .cb-language { margin-inline-start: 0; }
+.ca-main { max-width: 560px; padding: 32px 24px 64px; margin-inline: auto; }
+.ca-main h1 { font-size: 32px; line-height: 1.3; margin: 8px 0 12px; }
+.ca-main .cb-intro { font-size: 16px; }
+.ca-main a { color: var(--booking-link); }
+.ca-main .cb-primary { color: var(--booking-text); }
+.ca-main .cb-field-label { margin-top: 20px; }
+.ca-password { position: relative; }
+.ca-password input { padding-inline-end: 54px; }
+.ca-password button { position: absolute; inset-inline-end: 0; inset-block: 0; background: transparent; border: 0; padding: 12px; min-width: 48px; color: var(--booking-muted); }
+.ca-submit { width: 100%; margin-top: 24px; }
+.ca-account { max-width: 820px; }
+.ca-account-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ca-account dl { margin-block: 12px 24px; }
+.ca-account dl div { padding-block: 12px; border-bottom: 1px solid var(--booking-divider); }
+.ca-account dt { color: var(--booking-muted); font-size: 14px; }
+.ca-account dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.ca-booking-row { padding-block: 20px; border-bottom: 1px solid var(--booking-divider); }
+.ca-booking-row h3 { margin: 0 0 8px; font-size: 18px; }
+.ca-booking-row p { margin: 4px 0; color: var(--booking-muted); }
+.ca-status { font-size: 14px; }
+.ca-account-actions { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+.ca-empty { color: var(--booking-muted); margin-block: 24px; }
+@media (max-width: 767px) { .cb-account-link { max-width: 94px; } .ca-main { padding: 20px 22px 40px; } .ca-main h1 { font-size: 28px; } }
+@media (max-width: 374px) { .cb-header { gap: 10px; } .cb-account-link { max-width: 68px; } .cb-language { padding-inline-start: 8px; } }

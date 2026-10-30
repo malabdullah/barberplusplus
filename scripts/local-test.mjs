@@ -48,6 +48,9 @@ function privateWrite(path, contents) { writeFileSync(path, contents, { mode: 0o
 function functionSecrets() {
   const path = resolve(root, 'supabase/functions/.env.local');
   if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\n`);
+  if (!/^CUSTOMER_BOOKING_TEST_API_URL=/m.test(readFileSync(path, 'utf8'))) {
+    privateWrite(path, readFileSync(path, 'utf8').trimEnd() + `\nCUSTOMER_BOOKING_TEST_API_URL=http://127.0.0.1:${lock.apiPort}\n`);
+  }
   const secret = readFileSync(path, 'utf8').match(/^CRON_SHARED_SECRET=([A-Za-z0-9_-]{32,128})$/m)?.[1];
   if (!secret) throw Error('A private local cron secret is required');
   env.BARBER_LOCAL_CRON_SECRET = secret;
@@ -105,6 +108,23 @@ async function loopbackOnly() {
     if (Object.values(c.HostConfig.PortBindings || {}).flat().some(b => !['127.0.0.1', '::1'].includes(b.HostIp))) throw Error('Non-loopback Docker publish refused');
   }
 }
+async function configurePhonePassword() {
+  const configText = readFileSync(resolve(root, 'supabase/config.toml'), 'utf8');
+  const sms = configText.match(/^\[auth\.sms\]\s*\n([\s\S]*?)(?=^\[|(?![\s\S]))/m)?.[1];
+  if (!sms || !/^enable_signup\s*=\s*true\s*$/m.test(sms)) return;
+  // The CLI disables the entire phone provider when no paid SMS provider is
+  // configured. Test uses its own displayed codes, but needs phone/password
+  // login. Change only this flag on the owned, exact-image Auth container.
+  const name = `supabase_auth_${lock.project}`;
+  const c = owned(name);
+  const flag = 'GOTRUE_EXTERNAL_PHONE_ENABLED=true';
+  if (c.Config.Env.includes(flag)) return;
+  const config = { ...c.Config, Image: c.Image, Hostname: '', Env: [...c.Config.Env.filter(value => !value.startsWith('GOTRUE_EXTERNAL_PHONE_ENABLED=')), flag], HostConfig: c.HostConfig, NetworkingConfig: { EndpointsConfig: Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n, v]) => [n, { Aliases: (v.Aliases || []).filter(a => !c.Id.startsWith(a)) }])) } };
+  await engine('POST', `/containers/${c.Id}/stop?t=15`);
+  await engine('DELETE', `/containers/${c.Id}`);
+  const created = await engine('POST', `/containers/create?name=${encodeURIComponent(name)}`, config);
+  await engine('POST', `/containers/${created.Id}/start`);
+}
 async function ready() {
   for (let i = 0; i < 90; i++) {
     try {
@@ -130,6 +150,7 @@ async function startBackend() {
   prepareLocalServicePins(root);
   supabase('start', '--exclude', 'logflare,vector');
   disableCron();
+  await configurePhonePassword();
   await loopbackOnly();
   await ready();
   configure();

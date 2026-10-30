@@ -67,7 +67,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./seed-customer-booking.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -258,10 +258,10 @@ otp_expiry = 3600
 # content_path = "./supabase/templates/password_changed_notification.html"
 
 [auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = false
-# If enabled, users need to confirm their phone number before signing in.
-enable_confirmations = false
+# Phone/password login is enabled; our Test gateway verifies signup codes.
+enable_signup = true
+# Native phone registrations require confirmation and receive no staff role.
+enable_confirmations = true
 # Template for sending OTP to users
 template = "Your code is {{ .Code }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
@@ -422,6 +422,15 @@ enabled = true
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
 [edge_runtime.secrets]
+CUSTOMER_BOOKING_TEST_API_URL = "http://127.0.0.1:55321"
 APP_ENV = "development"
 APP_URL = "http://localhost:5173"
 CRON_SHARED_SECRET = "env(BARBER_LOCAL_CRON_SECRET)"
+
+# Public guest handler is independently restricted to loopback Test at runtime.
+[functions.customer-booking]
+verify_jwt = false
+
+# Phone customer registration/recovery simulator is loopback Test only.
+[functions.customer-auth]
+verify_jwt = false

@@ -1,3 +1,4 @@
+import { setTerminologyRole } from '../utils/customerTerminology';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import {
   authService,
@@ -24,6 +25,7 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  useEffect(() => { setTerminologyRole(userRole); i18n.emit('languageChanged', i18n.language); }, [userRole]);
   const [branches, setBranches] = useState([]);
   const [barbers, setBarbers] = useState([]);
   const [services, setServices] = useState([]);

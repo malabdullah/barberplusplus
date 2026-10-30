@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
@@ -52,6 +52,12 @@ import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import EnvironmentBanner from './components/EnvironmentBanner';
+import { isTest } from './lib/runtimeConfig';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
+
+const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
+const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
+const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -123,6 +129,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {isTest && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
+      {isTest && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
+      {isTest && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
       {/* Landing Page - Public */}
       <Route
         path="/"
@@ -252,7 +261,7 @@ export default function App() {
     <>
       <EnvironmentBanner />
       <AppProvider>
-        <AppRoutes />
+        <CustomerAuthProvider><AppRoutes /></CustomerAuthProvider>
       </AppProvider>
     </>
   );
