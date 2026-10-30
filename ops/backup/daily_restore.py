@@ -12,6 +12,9 @@ def run():
     start=time.monotonic();failure_at=datetime.datetime.now(datetime.timezone.utc)
     base=pathlib.Path(tempfile.mkdtemp(prefix='barber-daily-recovery-',dir='/dev/shm'));base.chmod(0o700)
     created=False
+    lease=m.STATE/'daily-restore-lease.json'
+    if lease.exists():raise ValueError('Unreconciled daily restore lease')
+    lease.write_text(json.dumps({'directory':str(base),'container':name}));lease.chmod(0o600)
     progress=pathlib.Path('/var/lib/barber-r2-backup/restore-drill-progress.json')
     def stage(value):
      progress.write_text(json.dumps({'stage':value,'at':m.utc()}));progress.chmod(0o600)
@@ -89,6 +92,6 @@ def run():
     finally:
      if created:run(['docker','rm','-f',name],strict=False)
      assert base.parent==pathlib.Path('/dev/shm') and base.name.startswith('barber-daily-recovery-');shutil.rmtree(base)
-    result['plaintextRecoveryTargetRemoved']=not base.exists();result['disposableContainerRemoved']=subprocess.run(['docker','inspect',name],capture_output=True).returncode!=0
+    lease.unlink();result['plaintextRecoveryTargetRemoved']=not base.exists();result['disposableContainerRemoved']=subprocess.run(['docker','inspect',name],capture_output=True).returncode!=0
     assert result['plaintextRecoveryTargetRemoved'] and result['disposableContainerRemoved']
     f=m.STATE/'restore-drill.json';f.write_text(json.dumps(result,indent=2)+'\n');f.chmod(0o600);stage('complete');return result

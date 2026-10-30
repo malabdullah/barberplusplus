@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import subprocess
+import shutil
 import sys
 import time
 import runtime as m
@@ -41,11 +42,28 @@ def evidence(c, b, o, w, d, provider='b2'):
 
 
 def cleanup():
+    subprocess.run(['systemctl', 'stop', 'barber-backup-full.service', 'barber-backup-objects.service', 'barber-backup-pulse.service'], check=True, timeout=60, capture_output=True)
     subprocess.run(['systemctl', 'stop', STREAM], check=True, timeout=45, capture_output=True)
     row = json.loads(m.sql("BEGIN READ ONLY; SELECT coalesce((SELECT json_build_object('active',active,'type',slot_type) FROM pg_replication_slots WHERE slot_name='barber_production_recovery'),'null'::json); COMMIT;"))
     if row:
         if row != {'active': False, 'type': 'physical'}: raise ValueError('Refuse to remove an active or unexpected slot')
         m.sql("SELECT pg_drop_replication_slot('barber_production_recovery');")
+
+
+    lease = m.STATE/'daily-restore-lease.json'
+    if lease.exists():
+        state = json.loads(m.private(lease)); base = pathlib.Path(state['directory'])
+        if state['container'] != 'barber-production-daily-b2-drill' or base.parent != pathlib.Path('/dev/shm') or not base.name.startswith('barber-daily-recovery-') or base.is_symlink():
+            raise ValueError('Unrecognized interrupted recovery target')
+        probe = subprocess.run(['docker','inspect',state['container']],capture_output=True,text=True,timeout=30)
+        if probe.returncode == 0:
+            container = json.loads(probe.stdout)[0]
+            mounts = [x for x in container['Mounts'] if x['Destination']=='/recovery']
+            if container['Image'] != m.PG_IMAGE or container['HostConfig']['NetworkMode'] != 'none' or len(mounts)!=1 or mounts[0]['Source']!=str(base):
+                raise ValueError('Interrupted recovery identity mismatch')
+            subprocess.run(['docker','rm','-f',state['container']],check=True,capture_output=True,timeout=60)
+        if base.exists(): shutil.rmtree(base)
+        lease.unlink()
 
 
 def cycle(invoke, restore, finish):
