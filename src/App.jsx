@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
@@ -52,6 +52,9 @@ import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import EnvironmentBanner from './components/EnvironmentBanner';
+import { isTest } from './lib/runtimeConfig';
+
+const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -123,6 +126,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {isTest && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
       {/* Landing Page - Public */}
       <Route
         path="/"

@@ -48,6 +48,9 @@ function privateWrite(path, contents) { writeFileSync(path, contents, { mode: 0o
 function functionSecrets() {
   const path = resolve(root, 'supabase/functions/.env.local');
   if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\n`);
+  if (!/^CUSTOMER_BOOKING_TEST_API_URL=/m.test(readFileSync(path, 'utf8'))) {
+    privateWrite(path, readFileSync(path, 'utf8').trimEnd() + `\nCUSTOMER_BOOKING_TEST_API_URL=http://127.0.0.1:${lock.apiPort}\n`);
+  }
   const secret = readFileSync(path, 'utf8').match(/^CRON_SHARED_SECRET=([A-Za-z0-9_-]{32,128})$/m)?.[1];
   if (!secret) throw Error('A private local cron secret is required');
   env.BARBER_LOCAL_CRON_SECRET = secret;

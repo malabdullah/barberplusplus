@@ -39,3 +39,8 @@ Never describe local CLI images as identical to the pinned production images.
 ## Commit & Pull Request Guidelines
 
 History uses concise, imperative, category-prefixed subjects such as `Fix: ...`, `Feature: ...`, `Refactor: ...`, `Security: ...`, and `Docs: ...`. Keep commits focused. PRs should explain the user-visible change, list validation performed, link related issues, and include screenshots for UI changes. Call out migrations, new environment variables, security implications, and deployment steps explicitly.
+
+## Customer terminology
+
+Use **shop** (صالون) in customer and other non-admin interface wording. Reserve
+**branch** (فرع) for admin-facing wording. Keep database/API identifiers unchanged.

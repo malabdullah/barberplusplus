@@ -56,7 +56,9 @@ def main():
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')
         for p in sorted((root/'supabase/migrations').glob('*.sql')): sql(p.read_text())
-        sql((root/'supabase/seed.sql').read_text())
+        for seed_name in ['seed.sql', 'seed-customer-booking.sql']:
+            seed_path = root / 'supabase' / seed_name
+            if seed_path.exists(): sql(seed_path.read_text())
         total = 0
         for p in sorted((root/'supabase/tests').glob('*.sql')):
             output = sql(p.read_text())

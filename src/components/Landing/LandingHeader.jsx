@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Scissors, Menu, X } from 'lucide-react';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
+import { isTest } from '../../lib/runtimeConfig';
 
 export default function LandingHeader() {
   const { t } = useTranslation();
@@ -67,6 +68,7 @@ export default function LandingHeader() {
 
           {/* Actions */}
           <div className="landing-nav-actions">
+            {isTest && <Link to="/book" className="landing-btn landing-btn-ghost">{t('customerBooking.entry')}</Link>}
             <div className="landing-nav-selectors">
               <LanguageSelector />
               <ThemeSelector />
@@ -118,6 +120,7 @@ export default function LandingHeader() {
               {t('landing.nav.benefits')}
             </button>
             <div className="landing-mobile-divider" />
+            {isTest && <Link to="/book" className="landing-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>{t('customerBooking.entry')}</Link>}
             <Link
               to="/login"
               className="landing-mobile-link"

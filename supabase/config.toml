@@ -67,7 +67,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./seed-customer-booking.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -422,6 +422,11 @@ enabled = true
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
 [edge_runtime.secrets]
+CUSTOMER_BOOKING_TEST_API_URL = "http://127.0.0.1:55321"
 APP_ENV = "development"
 APP_URL = "http://localhost:5173"
 CRON_SHARED_SECRET = "env(BARBER_LOCAL_CRON_SECRET)"
+
+# Guest booking is independently restricted to loopback Test at runtime.
+[functions.customer-booking]
+verify_jwt = false
