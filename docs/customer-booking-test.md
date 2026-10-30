@@ -2,26 +2,41 @@
 
 Open http://localhost:5173/book. This implementation is on
 `codex/customer-booking-test` in the checkout that owns the existing local
-`barber-local-test` stack. Nothing has been pushed, merged or deployed to live.
+`barber-local-test` stack. The booking-only revision is pushed to dev at `c74a849`. Customer accounts
+remain local to this Test branch; live has not changed.
 
 Customer-facing wording now uses shop (صالون); technical identifiers below remain unchanged.
 Customer accounts and phone recovery are described in `customer-accounts-test.md`.
 
-The customer journey has three screens:
+The customer journey is one page with six guided sections:
 
-1. **Find a branch:** choose a city. Search and logo rows appear on the same
-   screen immediately after city selection. Select a branch and continue.
-2. **Your appointment:** choose a barber first. Their services appear below;
-   select one or more services to reveal available dates and times. Choose a
-   time. Completed sections collapse to summaries with Edit controls. Continue.
-3. **Confirm booking:** review the appointment summary and enter name, GCC
-   mobile number and optional notes. Get the verification code, enter the
-   six-digit **Test code displayed on this same screen**, then select
-   **Verify & confirm booking**. No SMS is sent and there is no separate review
-   or verification screen.
+1. **City:** choose a city to collapse its section and open shop search.
+2. **Shop:** search logo rows and select a shop to open its barbers.
+3. **Barber:** choose a barber to open their services.
+4. **Services:** select one or more services, then tap **Continue to date & time**.
+   Services remain expanded during multiple selection.
+5. **Date & time:** choose a date and available time to open details.
+6. **Your details & confirmation:** review the summary, enter name, GCC mobile
+   number and optional notes, then request verification. Enter the six-digit
+   **Test code displayed in this section** and select **Verify & confirm booking**.
+   No SMS is sent. Existing signed-in customers use their unchanged account
+   verification behavior.
+
+Completed sections show compact summaries and Edit controls; future sections show
+what is needed first. Only one task is expanded at a time, and section changes
+move keyboard focus and scroll to the current task, respecting reduced motion.
+Editing unchanged selections offers Done to keep them. Changing city, shop,
+barber or services clears only dependent selections. Customer details and verified
+identity are preserved during appointment edits. Errors appear inside the active
+section. The mobile footer shows total price, duration and the current action.
+
+The one-page guest booking flow is now on dev. Customer account creation,
+sign-in, recovery, sessions and account editing remain in this Test checkout
+and are unchanged. The dev version has its existing guest header and phone
+verification, without customer account dependencies.
 
 After success, a receipt shows the reference and calendar download. Payment is
-at the shop. The branch manager can see the confirmed booking.
+at the shop. The shop manager can see the confirmed booking.
 
 Price, duration and the primary action stay in the mobile footer. Changing the
 city clears branch/barber/services/time; changing the barber clears incompatible
@@ -51,7 +66,7 @@ booking overlap exclusion constraint that also covers staff booking writes.
 Before any future production release, review existing overlaps and compatibility
 with the pinned production backend separately; no release is part of this task.
 
-Validation on 30 October 2026 (including the three-screen revision):
+Earlier backend and three-screen validation on 30 October 2026:
 
 - `npm run check`: passed (lint, Function checks, 62 Function tests, 34 app tests,
   41 operational tests, migration/domain checks and build).
@@ -76,3 +91,42 @@ Validation on 30 October 2026 (including the three-screen revision):
 The integration probe asserts the exact loopback API URL and checks local stack
 ownership before using the socket-bound Docker helper. It only uses synthetic
 data and rolls back/removes its mutations. Do not point it at another backend.
+
+Earlier three-screen guided-section validation on 30 October 2026:
+
+- `npm run check`: passed, including all 38 application tests, 62 Function
+  tests, operational checks, migration/domain checks, lint and production build.
+- Twelve booking UI tests cover the six sections, automatic collapse and focus,
+  editable summaries, multiple services, date edits preserving details,
+  unavailable-time and availability-request recovery, guest confirmation,
+  signed-in booking restoration and Arabic RTL.
+- `/book` responds successfully from the running local Vite server.
+- Customer account files and `customerAuth` translations are unchanged. No
+  migration, Function, service, database or environment change was needed.
+- Rendered mobile/desktop/theme acceptance remains pending because the browser
+  runtime still reports local browser use disabled; no visual pass is claimed.
+
+
+One-page validation on 30 October 2026:
+
+- `npm run check`: passed, including 42 application tests, 62 Function tests,
+  41 operational tests, lint, migration/domain checks and production build.
+- Sixteen booking UI tests cover the full one-page sequence, one active section,
+  editable summaries, multiple services, preserving unchanged selections, active
+  section restoration, inline errors, availability failures/conflicts, details
+  retention, guest verification, signed-in booking and Arabic RTL.
+- The running `/book` route responds HTTP 200. Browser setup was attempted again;
+  access still reports local browser use disabled, so visual acceptance remains
+  pending. No alternative browser access was used.
+- Only booking UI/styles/tests/translations and booking documentation changed;
+  customer account code and translations, backend, database and environment are
+  unchanged. Nothing pushed to dev or deployed.
+
+
+Dev promotion (30 October 2026): pushed booking-only commit `c74a849` to dev.
+The isolated dev checkout passed all 15 guest booking tests and `npm run check`
+(35 application, 53 Function and 41 operational tests, lint and build).
+No account files, account translations, account migration, backend changes,
+environment changes or production release changes were included. The complete
+local Test version, including accounts, remains in this checkout. Remote main
+was verified unchanged after the push.

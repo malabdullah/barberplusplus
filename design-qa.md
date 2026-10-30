@@ -2,9 +2,11 @@
 
 final result: blocked
 
-The three-screen implementation and functional checks are ready for local Test
-review. The user explicitly approved the revised flow: city and branch together,
-barber/services/date/time together, and details/summary/verification together.
+The approved implementation is one booking page with six guided sections:
+city, shop, barber, services, date/time, and details/confirmation. Only the active
+task is expanded. Completed choices collapse into editable summaries. Shop,
+barber and time choices open the next section automatically; services require
+Continue to allow multiple choices. There is no separate-screen navigation.
 The existing visual reference supplies colors, typography, logo rows and actions;
 its original six-step composition has been superseded by this approved journey.
 Visual acceptance has not passed: the browser runtime returns
@@ -31,8 +33,8 @@ Required fidelity surfaces, all awaiting rendered comparison:
 
 - Fonts and typography: Outfit and Noto Sans Arabic, hierarchy, wrapping and
   Arabic glyph fallback.
-- Spacing and layout rhythm: mobile step/context/search/logo rows and sticky
-  action; desktop sidebar and form width; short screens and keyboard visibility.
+- Spacing and layout rhythm: mobile section summaries/search/logo rows and sticky
+  action; desktop single-column layout and form width; short screens and keyboard visibility.
 - Colors and tokens: white/charcoal/amber design tokens, focus and selection
   contrast, and the Test-only banner.
 - Image quality: three generated raster branch logos are installed and inspected
@@ -44,7 +46,7 @@ Expected differences from the source: the mandatory Test banner, additional
 pre-existing synthetic branches, actual fixture ordering, and sample logo art.
 Do not remove existing Test data to imitate the mock's three-result count.
 
-Functional evidence: seven three-screen journey checks pass in jsdom, covering
+Earlier functional evidence: the previous three-screen journey checks passed in jsdom, covering
 inline verification/confirmation, search and city changes, barber dependency
 resets, invalid details/code, idempotent network retry, slot conflict recovery
 and Arabic RTL rendering;
@@ -62,13 +64,14 @@ accepted without evidence.
 Remaining acceptance checklist:
 
 1. Connect the user's in-app browser and open the Test URL.
-2. Capture all three approved screens at 390 × 844 and desktop width, and Arabic
-   at mobile width. Check a narrow 320-pixel layout and short viewport as well.
+2. Capture the one-page flow with each of its six sections expanded, at 390 × 844
+   and desktop width, plus Arabic at mobile width. Check a narrow 320-pixel layout and short viewport as well.
 3. Combine normalized source and implementation captures in one comparison image,
    including focused logo/typography/selection and footer comparisons.
-4. Exercise city change and search/no results on screen 1; barber before services
-   and date/time on screen 2; summary edits, invalid details, displayed Test code
-   and direct verification/confirmation on screen 3; then calendar export.
+4. Exercise city change and search/no results; barber before services; multiple
+   services and Continue; date/time, summary edits, invalid details, displayed
+   Test code and verification/confirmation; then calendar export. Confirm one
+   expanded task and editable completed summaries throughout.
 5. Check browser console errors, keyboard focus and sticky actions. Fix and
    recapture any P0/P1/P2 issues, then update this report with evidence.
 
@@ -82,3 +85,30 @@ Browser capture remains unavailable for these screens as well. Check all auth
 forms, account editing/history, logged-in and guest booking at desktop and mobile
 sizes in both English and Arabic before visual acceptance. No visual pass is
 claimed from code, tests or HTTP responses. final result remains blocked.
+
+
+Earlier guided-section revision (30 October 2026): local Test had exactly two task
+sections per screen: city/shop, barber/services, and date-time/details. Completed
+sections collapse to editable summaries; multi-select services remain open until
+Continue. Twelve booking UI tests and the full `npm run check` pass (38 application
+tests). Date edits preserve entered details, and availability failures and taken
+times reopen date/time. Customer account behavior is unchanged. This revision
+has not been pushed to dev or deployed. Visual capture remains blocked by the
+browser runtime; responsive layout, theme appearance and real browser focus
+still require rendered checks. final result remains blocked.
+
+
+One-page revision (30 October 2026): supersedes the earlier separate-screen flow.
+Sixteen booking UI tests pass, and the full `npm run check` passes (42 application,
+62 Function and 41 operational tests, lint and build). The local route responds
+HTTP 200. Customer account functionality is preserved; no backend or database
+changes were made, and nothing has been pushed to dev. Browser access was
+attempted again and still reports local browser use disabled. No rendered mobile,
+desktop, theme or browser-console acceptance is claimed. final result: blocked.
+
+
+Dev promotion (30 October 2026): guest-only one-page booking pushed to dev at
+`c74a849`. Customer account code remains in local Test. The isolated guest
+version passes all maintained checks and 15 booking tests; main is unchanged.
+Browser visual acceptance is still pending; promotion does not imply a new
+rendered comparison or a production release.

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, Calendar, Check, CheckCircle2, ChevronDown, Clock, Download, Loader2, MapPin, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
+import { ArrowRight, Calendar, Check, CheckCircle2, ChevronDown, Clock, Download, Loader2, MapPin, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import CustomerHeader from '../components/Customer/CustomerHeader';
 import { shopWording } from '../utils/customerTerminology';
@@ -14,7 +14,7 @@ import { addBookingDays, bookingCalendar, getBarberServices, getKuwaitDate, safe
 import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
-const SCREENS = ['location', 'appointment', 'confirm'];
+const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
 const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE'];
 
 function BookingImage({ src, name, person = false }) {
@@ -27,13 +27,15 @@ function BookingImage({ src, name, person = false }) {
   </span>;
 }
 
-function AppointmentSection({ id, title, summary, open, onEdit, editLabel, children, disabled }) {
-  return <section className={`cb-appointment-section ${open ? 'is-open' : ''}`} aria-labelledby={`${id}-title`}>
+function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, pendingHint, feedback, children, disabled }) {
+  return <section id={id} className={`cb-appointment-section ${open ? 'is-open' : ''} ${!open && !summary ? 'is-pending' : ''}`} aria-labelledby={`${id}-title`} data-booking-section={id}>
     <div className="cb-section-heading">
       <h2 id={`${id}-title`} tabIndex={-1}>{title}</h2>
-      {!open && summary && <button type="button" className="cb-text-button" onClick={onEdit} disabled={disabled} aria-label={`${editLabel}: ${title}`}>{editLabel}</button>}
+      {!open && summary && <button type="button" className="cb-text-button" onClick={onEdit} disabled={disabled} aria-label={`${editLabel}: ${title}`} aria-expanded={false} aria-controls={`${id}-content`}>{editLabel}</button>}
+      {open && summary && onDone && <button type="button" className="cb-text-button" onClick={onDone} disabled={disabled} aria-expanded={true} aria-controls={`${id}-content`}>{doneLabel}</button>}
     </div>
-    {!open && summary ? <p className="cb-section-summary"><CheckCircle2 size={18} aria-hidden="true" /><span>{summary}</span></p> : children}
+    {!open && (summary ? <p className="cb-section-summary"><CheckCircle2 size={18} aria-hidden="true" /><span>{summary}</span></p> : <p className="cb-section-pending">{pendingHint}</p>)}
+    <div id={`${id}-content`} hidden={!open}>{feedback}{children}</div>
   </section>;
 }
 
@@ -50,8 +52,7 @@ export default function CustomerBooking() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
   const [reload, setReload] = useState(0);
-  const [step, setStep] = useState(0);
-  const [panel, setPanel] = useState('barber');
+  const [panel, setPanel] = useState('city');
   const [city, setCity] = useState(draft?.city || '');
   const [query, setQuery] = useState('');
   const [branchId, setBranchId] = useState(draft?.branchId || '');
@@ -90,12 +91,20 @@ export default function CustomerBooking() {
   const dateLabel = value => new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeZone: 'Asia/Kuwait' }).format(new Date(`${value}T12:00:00+03:00`));
   const timeLabel = value => new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(new Date(`2000-01-01T${value}:00+03:00`));
   const totalLabel = `${tr('minutes', { count: duration })} · ${money(price)}`;
-  const go = target => { setStep(target); setError(''); };
-  const openPanel = target => { appointmentFocusRef.current = target === 'done' ? 'booking-next' : `choose-${target}-title`; setPanel(target); };
-  const editAppointment = target => { openPanel(target); go(1); };
-  const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); setPanel('barber'); };
-  const changeCity = value => { setCity(value); setBranchId(''); setQuery(''); clearAfterBranch(); setError(''); };
-  const selectBranch = id => { if (id !== branchId) { setBranchId(id); clearAfterBranch(); } };
+  const openPanel = target => {
+    appointmentFocusRef.current = `choose-${target}-title`;
+    setPanel(target);
+  };
+  const editSection = target => { setError(''); openPanel(target); };
+  const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); };
+  const changeCity = value => {
+    if (value !== city) { setCity(value); setBranchId(''); setQuery(''); clearAfterBranch(); }
+    openPanel(value ? 'shop' : 'city'); setError('');
+  };
+  const selectBranch = id => {
+    if (id !== branchId) { setBranchId(id); clearAfterBranch(); }
+    openPanel('barber'); setError('');
+  };
   const selectBarber = id => {
     if (id !== barberId) { setBarberId(id); setServiceIds([]); setTime(''); setSlots([]); }
     openPanel('services'); setError('');
@@ -112,12 +121,22 @@ export default function CustomerBooking() {
   useEffect(() => {
     if (catalogLoading || catalogError || restoredDraft.current) return;
     restoredDraft.current = true;
-    if (!draft || !branch || branch.city !== city) { if (draft) { setBranchId(''); clearAfterBranch(); } return; }
-    const valid = barber && serviceIds.length && selectedServices.length === serviceIds.length && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= getKuwaitDate() && date <= addBookingDays(getKuwaitDate(), barber.maxBookingDays || 30) && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-    if (valid) { setPanel('done'); setStep(draft.step); }
-    else { clearAfterBranch(); setStep(Math.min(draft.step, 1)); }
+    if (!draft) return;
+    if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); return; }
+    if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); return; }
+    const validServices = barber && serviceIds.length > 0 && selectedServices.length === serviceIds.length;
+    const validDate = barber && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= getKuwaitDate() && date <= addBookingDays(getKuwaitDate(), barber.maxBookingDays || 30);
+    const validTime = validDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
+    if (!barber) clearAfterBranch();
+    else if (!validServices) { setServiceIds([]); setTime(''); }
+    if (!validDate) { setDate(getKuwaitDate()); setTime(''); }
+    if (!validTime) setTime('');
+    const nextIncomplete = !barber ? 'barber' : !validServices ? 'services' : validTime ? 'details' : 'time';
+    const requestedPanel = PANELS.includes(draft.panel) ? draft.panel : draft.step === 0 ? 'barber' : draft.step === 1 ? 'services' : nextIncomplete;
+    const available = { city: true, shop: Boolean(city), barber: Boolean(branch), services: Boolean(barber), time: validServices, details: validServices && validTime };
+    openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
-  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, step }); }, [city, branchId, barberId, serviceIds, date, time, step, receipt]);
+  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2) }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
@@ -134,24 +153,30 @@ export default function CustomerBooking() {
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [step, receipt]);
+  }, [receipt]);
   useEffect(() => {
-    if (step !== 1 || !appointmentFocusRef.current) return;
+    if (!appointmentFocusRef.current) return;
     const target = document.getElementById(appointmentFocusRef.current);
-    if (target) { target.focus({ preventScroll: true }); target.scrollIntoView?.({ block: 'nearest' }); appointmentFocusRef.current = ''; }
-  }, [panel, step]);
+    if (target) {
+      target.focus({ preventScroll: true });
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      document.getElementById(`choose-${panel}`)?.scrollIntoView?.({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
+      appointmentFocusRef.current = '';
+    }
+  }, [panel, catalogLoading]);
   useEffect(() => { if (challenge && !verification) codeRef.current?.focus(); }, [challenge, verification]);
   const serviceKey = serviceIds.join(',');
+  const checkingAvailability = (panel === 'time' || panel === 'details') && Boolean(branch && barber && selectedServices.length);
   useEffect(() => {
-    if (step !== 1 || !barberId || !serviceKey || !date) return undefined;
+    if (!checkingAvailability || !date) return undefined;
     let active = true;
     setSlotsLoading(true); setSlots([]); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
-      .then(result => { if (active) { setSlots(result.slots); setTime(current => result.slots.includes(current) ? current : ''); } })
-      .catch(failure => { if (active) { setError(failure.message); setSlotError(true); setTime(''); } })
+      .then(result => { if (active) { setSlots(result.slots); setTime(current => result.slots.includes(current) ? current : ''); if (time && !result.slots.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+      .catch(failure => { if (active) { setError(failure.message); setSlotError(true); setTime(''); openPanel('time'); } })
       .finally(() => { if (active) setSlotsLoading(false); });
     return () => { active = false; };
-  }, [step, branchId, barberId, serviceKey, date, slotRetry]);
+  }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry]);
 
   const requestCode = async () => {
     const errors = {};
@@ -169,7 +194,7 @@ export default function CustomerBooking() {
   };
   const confirmBooking = async event => {
     event.preventDefault();
-    if (busy) return;
+    if (busy || !appointmentReady || panel !== 'details') return;
     if (!challenge && !customer) { await requestCode(); return; }
     if (!customer && !verification && !/^\d{6}$/.test(code)) { setError('INVALID_CODE'); codeRef.current?.focus(); return; }
     setBusy(true); setError('');
@@ -181,15 +206,17 @@ export default function CustomerBooking() {
     } catch (failure) {
       setError(failure.message);
       if (failure.message === 'INVALID_CODE') codeRef.current?.focus();
-      if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); setPanel('time'); setStep(1); setSlotRetry(value => value + 1); }
+      if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
       if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); setChallenge(null); if (customer) await refresh(); }
     } finally { setBusy(false); }
   };
   const editDetails = () => { setChallenge(null); setVerification(''); setCode(''); setError(''); };
   const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError);
-  const canContinue = step === 0 ? Boolean(city && branch && !catalogError) : step === 1 ? appointmentReady : Boolean(!accountLoading && (customer || verification || !challenge || code.length === 6));
-  const nextLabel = step === 0 ? tr('three.nextAppointment') : step === 1 ? tr('three.nextConfirm') : tr(customer || verification ? 'confirm' : !challenge ? 'three.sendCode' : 'three.verifyConfirm');
-  const title = receipt ? tr('successTitle') : tr(`three.titles.${SCREENS[step]}`);
+  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading && (panel === 'time' || customer || verification || !challenge || code.length === 6);
+  const finalDetails = panel === 'details';
+  const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr(customer || verification ? 'confirm' : !challenge ? 'three.sendCode' : 'three.verifyConfirm');
+  const panelIndex = PANELS.indexOf(panel);
+  const title = receipt ? tr('successTitle') : tr('onePage.title');
   const downloadCalendar = () => {
     const url = URL.createObjectURL(new Blob([bookingCalendar(receipt)], { type: 'text/calendar;charset=utf-8' }));
     const link = document.createElement('a');
@@ -197,95 +224,85 @@ export default function CustomerBooking() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const renderSummary = (data = null) => <dl className="cb-review-list">
-    <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => go(0)} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>
-    <div><dt>{tr('steps.barber')}</dt><dd>{data ? (isArabic && data.barberNameAr || data.barberName) : name(barber)}{!data && <button type="button" onClick={() => editAppointment('barber')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.barber')}`}>{tr('edit')}</button>}</dd></div>
-    <div><dt>{tr('steps.services')}</dt><dd>{(data?.services || selectedServices).map(name).join(isArabic ? '، ' : ', ')}{!data && <button type="button" onClick={() => editAppointment('services')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.services')}`}>{tr('edit')}</button>}</dd></div>
-    <div><dt>{tr('steps.time')}</dt><dd>{dateLabel(data?.date || date)}<br />{timeLabel(data?.time || time)} · {tr('minutes', { count: data?.duration || duration })}{!data && <button type="button" onClick={() => editAppointment('time')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.time')}`}>{tr('edit')}</button>}</dd></div>
+    <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => editSection('shop')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>
+    <div><dt>{tr('steps.barber')}</dt><dd>{data ? (isArabic && data.barberNameAr || data.barberName) : name(barber)}{!data && <button type="button" onClick={() => editSection('barber')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.barber')}`}>{tr('edit')}</button>}</dd></div>
+    <div><dt>{tr('steps.services')}</dt><dd>{(data?.services || selectedServices).map(name).join(isArabic ? '، ' : ', ')}{!data && <button type="button" onClick={() => editSection('services')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.services')}`}>{tr('edit')}</button>}</dd></div>
+    <div><dt>{tr('steps.time')}</dt><dd>{dateLabel(data?.date || date)}<br />{timeLabel(data?.time || time)} · {tr('minutes', { count: data?.duration || duration })}{!data && <button type="button" onClick={() => editSection('time')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.time')}`}>{tr('edit')}</button>}</dd></div>
     <div className="cb-total"><dt>{tr('total')}</dt><dd>{money(data?.price ?? price)}</dd></div>
   </dl>;
+
+  const bookingError = error && <div className="cb-alert" role="alert"><span>{errorText(error)}</span>{(catalogError || slotError) && <button type="button" disabled={busy} onClick={() => { setError(''); if (catalogError) setReload(value => value + 1); else setSlotRetry(value => value + 1); }}>{tr('retry')}</button>}</div>;
 
   return <div className="customer-booking" dir={isArabic ? 'rtl' : 'ltr'}>
     <CustomerHeader busy={busy} />
     <div className="cb-layout">
-      <aside className="cb-sidebar" aria-label={tr('progress')}>
-        <ol>{SCREENS.map((key, index) => <li key={key} className={`${step === index && !receipt ? 'current' : ''} ${index < step || receipt ? 'complete' : ''}`} aria-current={step === index && !receipt ? 'step' : undefined}>
-          <span className="cb-step-dot">{index < step || receipt ? <Check size={14} aria-hidden="true" /> : null}</span>
-          <div><button type="button" disabled={index >= step || busy || Boolean(receipt)} onClick={() => go(index)}>{tr(`three.steps.${key}`)}</button><p>{index === 0 && branch ? name(branch) : index === 1 && time ? `${name(barber)} · ${timeLabel(time)}` : tr(`three.hints.${key}`)}</p></div>
-        </li>)}</ol>
-      </aside>
       <main className="cb-main" id="booking-content">
-        {!receipt && <div className="cb-mobile-progress">
-          <div>{step > 0 ? <button type="button" onClick={() => go(step - 1)} aria-label={tr('back')} disabled={busy}><ArrowLeft size={22} className="cb-directional" /></button> : <span />}
-            <span>{tr('stepOf', { current: step + 1, total: SCREENS.length })} · <strong>{tr(`three.steps.${SCREENS[step]}`)}</strong></span></div>
-          <ol aria-label={tr('progress')}>{SCREENS.map((key, index) => <li key={key} className={index <= step ? 'active' : ''} aria-current={step === index ? 'step' : undefined}><span className="sr-only">{tr(`three.steps.${key}`)}</span></li>)}</ol>
+        {!receipt && <div className="cb-progress" role="status">
+          <span>{tr('onePage.sectionOf', { current: panelIndex + 1, total: PANELS.length })}</span>
+          <div className="cb-progress-track" aria-hidden="true"><span style={{ width: `${(panelIndex + 1) / PANELS.length * 100}%` }} /></div>
         </div>}
-        {!receipt && step > 0 && <div className="cb-context"><MapPin size={18} aria-hidden="true" /><span>{name(branch)} · {cityName(city)}</span><button type="button" onClick={() => go(0)} disabled={busy}>{tr('change')}</button></div>}
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
-        <p className="cb-intro">{receipt ? tr('successIntro') : tr(`three.intros.${SCREENS[step]}`)}</p>
-        {error && <div className="cb-alert" role="alert"><span>{errorText(error)}</span>{(catalogError || slotError) && <button type="button" disabled={busy} onClick={() => { setError(''); if (catalogError) setReload(value => value + 1); else setSlotRetry(value => value + 1); }}>{tr('retry')}</button>}</div>}
+        <p className="cb-intro">{receipt ? tr('successIntro') : tr('onePage.intro')}</p>
+        {catalogError && bookingError}
         {catalogLoading ? <div className="cb-loading" role="status"><Loader2 size={22} className="cb-spinner" />{tr('loading')}</div> : receipt ? <div className="cb-success">
           <div className="cb-reference"><ShieldCheck size={20} aria-hidden="true" /><span>{tr('reference')} <strong dir="ltr">{receipt.reference}</strong></span></div>
           {renderSummary(receipt)}
           <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
           <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => window.location.reload()}>{tr('anotherBooking')}</button></div>
         </div> : <>
-          {step === 0 && <>
+          <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => openPanel('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
             <div className="cb-city-step"><label className="cb-field-label" htmlFor="booking-city">{tr('cityLabel')}</label><div className="cb-select-wrap"><MapPin size={20} aria-hidden="true" /><select id="booking-city" value={city} onChange={event => changeCity(event.target.value)}><option value="">{tr('cityPlaceholder')}</option>{cities.map(value => <option key={value} value={value}>{cityName(value)}</option>)}</select><ChevronDown size={18} aria-hidden="true" /></div>{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}{!city && <p className="cb-helper">{tr('cityHint')}</p>}</div>
-            {city && <div className="cb-branch-results">
+          </BookingSection>
+          <BookingSection feedback={panel === 'shop' && !catalogError ? bookingError : null} id="choose-shop" title={tr('titles.branch')} summary={name(branch)} open={panel === 'shop' && Boolean(city)} onEdit={() => openPanel('shop')} onDone={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} pendingHint={tr('guided.cityFirst')} disabled={busy}>
               <label className="cb-field-label" htmlFor="branch-search">{tr('searchLabel')}</label><div className="cb-search"><Search size={23} aria-hidden="true" /><input id="branch-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr('searchPlaceholder')} /></div><p className="cb-result-count" aria-live="polite">{tr('branchesCount', { count: branches.length })}</p>
-              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.branch')}</legend>{branches.map(item => <label key={item.id} className={`cb-option ${branchId === item.id ? 'selected' : ''}`}><input type="radio" name="branch" value={item.id} checked={branchId === item.id} onChange={() => selectBranch(item.id)} /><BookingImage src={item.logoUrl} name={name(item)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{(isArabic ? item.areaAr : item.area) || item.address || item.city}</span></span><span className="cb-radio" aria-hidden="true">{branchId === item.id && <Check size={17} />}</span></label>)}</fieldset>
+              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.branch')}</legend>{branches.map(item => <label key={item.id} className={`cb-option ${branchId === item.id ? 'selected' : ''}`}><input type="radio" name="branch" value={item.id} checked={branchId === item.id} onClick={() => { if (branchId === item.id) openPanel('barber'); }} onChange={() => selectBranch(item.id)} /><BookingImage src={item.logoUrl} name={name(item)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{(isArabic ? item.areaAr : item.area) || item.address || item.city}</span></span><span className="cb-radio" aria-hidden="true">{branchId === item.id && <Check size={17} />}</span></label>)}</fieldset>
               {branches.length === 0 && <div className="cb-empty"><Store size={28} aria-hidden="true" /><h2>{tr('noBranches')}</h2><p>{tr('noBranchesHint')}</p>{query && <button type="button" className="cb-text-button" onClick={() => setQuery('')}>{tr('clearSearch')}</button>}</div>}
-            </div>}
-          </>}
-          {step === 1 && <div className="cb-appointment">
-            <AppointmentSection id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber' || !barber} onEdit={() => openPanel('barber')} editLabel={tr('edit')}>
+          </BookingSection>
+          <BookingSection feedback={panel === 'barber' && !catalogError ? bookingError : null} id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber'} onEdit={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('services')} pendingHint={tr('onePage.shopFirst')} disabled={busy}>
               <fieldset className="cb-options"><legend className="sr-only">{tr('titles.barber')}</legend>{barbers.map(item => <label key={item.id} className={`cb-option ${barberId === item.id ? 'selected' : ''}`}><input type="radio" name="barber" checked={barberId === item.id} onClick={() => { if (barberId === item.id) openPanel('services'); }} onChange={() => selectBarber(item.id)} /><BookingImage src={item.avatarUrl} name={name(item)} person /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('servicesCount', { count: getBarberServices(catalog, branchId, item.id).length })}</span></span><span className="cb-radio" aria-hidden="true">{barberId === item.id && <Check size={17} />}</span></label>)}</fieldset>
-              {!barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{tr('noBarbers')}</h2><p>{tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => go(0)}>{tr('changeBranch')}</button></div>}
-            </AppointmentSection>
-            {barber && panel !== 'barber' && <>
-              <AppointmentSection id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' || !selectedServices.length} onEdit={() => openPanel('services')} editLabel={tr('edit')}>
-                <fieldset className="cb-options"><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
+              {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{tr('noBarbers')}</h2><p>{tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
+          </BookingSection>
+          <BookingSection feedback={panel === 'services' && !catalogError ? bookingError : null} id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' && Boolean(barber)} onEdit={() => openPanel('services')} editLabel={tr('edit')} pendingHint={tr('guided.barberFirst')} disabled={busy}>
+                <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
                 <p className="cb-helper"><Clock size={17} aria-hidden="true" />{tr('serviceHint')}</p>
-              </AppointmentSection>
-              {selectedServices.length > 0 && <AppointmentSection id="choose-time" title={tr('steps.time')} summary={time ? `${dateLabel(date)} · ${timeLabel(time)}` : ''} open={panel !== 'done' || !time} onEdit={() => openPanel('time')} editLabel={tr('edit')}>
-                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><input className="cb-input cb-date" id="booking-date" type="date" value={date} min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(), barber.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /><p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
-                {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('done'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
-                {!slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
-              </AppointmentSection>}
-            </>}
-          </div>}
-          {step === 2 && <>
-            <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
-            <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
-              <fieldset className="cb-details-fields" disabled={busy}>
-                {customer ? <>
-                  <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
-                  <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
-                </> : !challenge ? <>
-                  <h2 className="cb-section-title">{tr('yourDetails')}</h2>
-                  <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
-                  <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
-                  <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
-                </> : <>
-                  <div className="cb-verified-details"><div><strong>{details.name}</strong><br /><bdi>{details.countryCode} {details.phone}</bdi></div><button type="button" className="cb-text-button" onClick={editDetails}>{tr('change')}</button></div>
-                  {!verification && <>
-                    <h2 className="cb-section-title">{tr('verifyTitle')}</h2><div className="cb-test-code"><ShieldCheck size={20} aria-hidden="true" /><div><strong>{tr('testCode', { code: challenge.testCode })}</strong><p>{tr('noSms')}</p></div></div>
-                    <label className="cb-field-label" htmlFor="booking-code">{tr('verificationCode')}</label><input ref={codeRef} className="cb-input cb-code-input" id="booking-code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} required />
-                    <button className="cb-text-button" type="button" onClick={requestCode}>{tr('resendCode')}</button><p className="cb-helper">{tr('codeExpires')}</p>
-                  </>}
-                  {verification && <p className="cb-helper"><ShieldCheck size={18} aria-hidden="true" />{tr('three.numberVerified')}</p>}
-                </>}
-              </fieldset>
-            </form>
-            <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
-          </>}
+          </BookingSection>
+          <BookingSection feedback={panel === 'time' && !catalogError ? bookingError : null} id="choose-time" title={tr('steps.time')} summary={time ? `${dateLabel(date)} · ${timeLabel(time)}` : ''} open={panel === 'time'} onEdit={() => openPanel('time')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('details')} disabled={busy || !appointmentReady} pendingHint={tr('onePage.servicesFirst')}>
+                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><input className="cb-input cb-date" id="booking-date" type="date" value={date} min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /><p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
+                {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('details'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
+                {checkingAvailability && !slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
+          </BookingSection>
+          <BookingSection feedback={panel === 'details' && !catalogError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady} pendingHint={tr('guided.timeFirst')}>
+              {time && date && <>
+                <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
+                <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
+                  <fieldset className="cb-details-fields" disabled={busy}>
+                    {customer ? <>
+                      <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
+                      <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
+                    </> : !challenge ? <>
+                      <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
+                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
+                      <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
+                    </> : <>
+                      <div className="cb-verified-details"><div><strong>{details.name}</strong><br /><bdi>{details.countryCode} {details.phone}</bdi></div><button type="button" className="cb-text-button" onClick={editDetails}>{tr('change')}</button></div>
+                      {!verification && <>
+                        <h3 className="cb-section-title">{tr('verifyTitle')}</h3><div className="cb-test-code"><ShieldCheck size={20} aria-hidden="true" /><div><strong>{tr('testCode', { code: challenge.testCode })}</strong><p>{tr('noSms')}</p></div></div>
+                        <label className="cb-field-label" htmlFor="booking-code">{tr('verificationCode')}</label><input ref={codeRef} className="cb-input cb-code-input" id="booking-code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} required />
+                        <button className="cb-text-button" type="button" onClick={requestCode}>{tr('resendCode')}</button><p className="cb-helper">{tr('codeExpires')}</p>
+                      </>}
+                      {verification && <p className="cb-helper"><ShieldCheck size={18} aria-hidden="true" />{tr('three.numberVerified')}</p>}
+                    </>}
+                  </fieldset>
+                </form>
+                <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
+              </>}
+          </BookingSection>
         </>}
         {!catalogLoading && !receipt && <footer className="cb-actions">
-          <div className="cb-action-context" aria-live="polite">{step === 0 ? branch ? tr('branchSelected', { name: name(branch) }) : cityName(city) : selectedServices.length ? totalLabel : name(branch)}</div>
+          <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
-            {step > 0 && <button type="button" className="cb-back" onClick={() => go(step - 1)} disabled={busy}><ArrowLeft size={18} className="cb-directional" />{tr('back')}</button>}
-            <button id="booking-next" type={step === 2 ? 'submit' : 'button'} form={step === 2 ? 'booking-confirm-form' : undefined} className="cb-primary" disabled={!canContinue || busy} onClick={step < 2 ? () => go(step + 1) : undefined}>{busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : nextLabel}{!busy && <ArrowRight size={20} className="cb-directional" />}</button>
+            <button id="booking-next" type={finalDetails ? 'submit' : 'button'} form={finalDetails ? 'booking-confirm-form' : undefined} className="cb-primary" disabled={!canContinue || busy || catalogError} onClick={!finalDetails ? () => openPanel(PANELS[panelIndex + 1]) : undefined}>{busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : nextLabel}{!busy && <ArrowRight size={20} className="cb-directional" />}</button>
           </div>
         </footer>}
       </main>

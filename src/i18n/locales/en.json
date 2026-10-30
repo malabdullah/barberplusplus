@@ -1490,23 +1490,23 @@
     "three": {
       "steps": {
         "location": "Find a shop",
-        "appointment": "Your appointment",
-        "confirm": "Confirm booking"
+        "appointment": "Barber & services",
+        "confirm": "Time & confirmation"
       },
       "hints": {
         "location": "Choose a city and shop.",
-        "appointment": "Barber, services and a time.",
-        "confirm": "Your details and phone verification."
+        "appointment": "Choose your barber and services.",
+        "confirm": "Choose a time, then add your details."
       },
       "titles": {
         "location": "Find your shop",
-        "appointment": "Your appointment",
-        "confirm": "Confirm your booking"
+        "appointment": "Choose your barber & services",
+        "confirm": "Complete your booking"
       },
       "intros": {
-        "location": "Choose your city, then find a shop nearby.",
-        "appointment": "Choose your barber, services and a time that suits you.",
-        "confirm": "Check your appointment and add your details."
+        "location": "Choose your city, then your shop.",
+        "appointment": "Start with your barber, then choose their services.",
+        "confirm": "Choose your date and time, then confirm your details."
       },
       "nextAppointment": "Choose your appointment",
       "nextConfirm": "Continue to confirmation",
@@ -1514,6 +1514,21 @@
       "verifyConfirm": "Verify & confirm booking",
       "numberVerified": "Mobile number verified.",
       "bookingSummary": "Booking summary"
+    },
+    "guided": {
+      "done": "Done",
+      "nextTime": "Continue to date & time",
+      "details": "Your details & confirmation",
+      "cityFirst": "Choose a city to see its shops.",
+      "barberFirst": "Choose a barber to see their services.",
+      "timeFirst": "Choose a date and time to continue."
+    },
+    "onePage": {
+      "title": "Book your appointment",
+      "intro": "Choose your city to get started. We’ll guide you through the rest.",
+      "sectionOf": "Section {{current}} of {{total}}",
+      "shopFirst": "Choose a shop to see its barbers.",
+      "servicesFirst": "Choose your services, then continue to see available times."
     }
   },
   "customerAuth": {
