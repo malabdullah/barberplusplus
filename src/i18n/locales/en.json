@@ -1514,6 +1514,21 @@
       "verifyConfirm": "Verify & confirm booking",
       "numberVerified": "Mobile number verified.",
       "bookingSummary": "Booking summary"
+    },
+    "guided": {
+      "done": "Done",
+      "nextTime": "Continue to date & time",
+      "details": "Your details & confirmation",
+      "cityFirst": "Choose a city to see its shops.",
+      "barberFirst": "Choose a barber to see their services.",
+      "timeFirst": "Choose a date and time to continue."
+    },
+    "onePage": {
+      "title": "Book your appointment",
+      "intro": "Choose your city to get started. We’ll guide you through the rest.",
+      "sectionOf": "Section {{current}} of {{total}}",
+      "shopFirst": "Choose a shop to see its barbers.",
+      "servicesFirst": "Choose your services, then continue to see available times."
     }
   }
 }

@@ -2,13 +2,23 @@
 
 The customer booking journey is available at `/book` in local Test:
 
-1. **Find a shop:** select a city, then search and select a shop by its logo on
-   the same screen.
-2. **Your appointment:** select a barber first, then services assigned to that
-   barber and an available date/time. Completed sections collapse with Edit
-   controls. Prices and duration update in the mobile action bar.
-3. **Confirm booking:** review the selection, enter name/mobile/optional notes,
-   request the displayed Test verification code, then verify and confirm inline.
+1. **City:** selecting a city collapses it and opens shop search.
+2. **Shop:** selecting a logo row collapses the shop section and opens barbers.
+3. **Barber:** selecting a barber opens their assigned services.
+4. **Services:** choose one or more services, then Continue to date/time.
+5. **Date & time:** choose a date and available time to open customer details.
+6. **Your details & confirmation:** enter name/mobile/optional notes, request
+   the displayed Test code, then verify and confirm inline.
+
+All six sections stay on one page with one active task expanded. Completed
+sections show summaries and Edit controls; unchanged choices can be kept with
+Done. Section changes move focus and scroll to the active section, respecting
+reduced motion. Errors appear in the active section. Prices, duration and the
+current action remain in the mobile footer.
+
+Booking selections and the active section can resume from this browser tab's
+short-lived draft; personal details and verification codes are not stored there.
+Availability is rechecked before confirming a restored appointment.
 
 After confirmation, show the reference and calendar download. Payment is at the
 shop. Changing the city or barber clears dependent selections. A taken time
@@ -46,9 +56,16 @@ settings, and the database compatibility check also loads booking fixtures.
 
 ## Validation
 
-`npm run check` passes: lint, Functions checks and 53 tests, 27 application tests,
+The one-page booking-only revision passes 15 booking UI tests, including section
+transitions, multi-service selection, dependency resets, draft restoration,
+unchanged-selection editing, details retention, inline errors, verification,
+slot conflicts, retry recovery and Arabic RTL. No customer-account code, routes,
+translations, migrations or backend changes are included in this revision.
+
+
+`npm run check` passes: lint, Functions checks and 53 tests, 35 application tests,
 41 operational tests, migration/domain checks and build. Production dependency
-audit reports no vulnerabilities. The booking-only migration/seed replay passes
+audit reports no vulnerabilities. Earlier booking-only migration/seed replay passed
 140 database assertions on the pinned PostgreSQL image in a disposable container
 without published ports or production data. The bootstrap reads schema only from
 the owned local Test backend; Test-only account triggers are excluded as
