@@ -1,3 +1,7 @@
+> Current policy: one nightly encrypted Backblaze backup and isolated restore
+> verification at 03:15 Kuwait time. See docs/backup-restore.md. The continuous
+> timers and R2 schedules below are retired and must not be re-enabled.
+
 # Encrypted production recovery
 
 This is production infrastructure for the existing backend VPS. It never runs in
