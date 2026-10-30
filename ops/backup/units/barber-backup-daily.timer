@@ -1,0 +1,10 @@
+[Unit]
+Description=Barber one daily B2 backup after the free-account counter reset
+
+[Timer]
+OnCalendar=*-*-* 00:15:00 UTC
+Persistent=true
+Unit=barber-backup-daily.service
+
+[Install]
+WantedBy=timers.target

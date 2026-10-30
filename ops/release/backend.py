@@ -92,7 +92,7 @@ class Backend:
         adoption = private_json(self.c['adoptionFile'])
         if adoption.get('status') != 'PASS' or adoption.get('rehearsal') != 'PASS': raise ValueError('Unaccepted production migration baseline')
         evidence = private_json(self.c['backupEvidenceFile'])
-        verify_backup_readiness(evidence)
+        verify_backup_readiness(evidence, release_commit=m.get('commit'), system_id=self.c.get('backupSystemId'))
         lock = json.loads((target / 'ops/release/runtime-lock.json').read_text())
         for name, expected in lock['containers'].items():
             actual = json.loads(self.command(['docker', 'inspect', name]))[0]

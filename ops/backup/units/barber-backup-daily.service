@@ -1,0 +1,15 @@
+[Unit]
+Description=Barber daily encrypted B2 backup and isolated recovery verification
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/barber-backup/current/daily.py
+ExecStopPost=/usr/bin/python3 /usr/local/lib/barber-backup/current/daily.py cleanup
+TimeoutStartSec=5400
+TimeoutStopSec=60
+Nice=10
