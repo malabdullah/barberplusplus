@@ -639,3 +639,8 @@
     min-width: 800px;
   }
 }
+
+.password-reset-form { display: grid; gap: 12px; max-width: 580px; padding: var(--space-lg); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-secondary); }
+.password-reset-form p { color: var(--text-secondary); }
+.password-reset-form .password-reset-error { color: var(--status-error); }
+.password-reset-pagination { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

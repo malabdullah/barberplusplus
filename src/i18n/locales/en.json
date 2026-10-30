@@ -75,17 +75,13 @@
       "dashboard": "Dashboard",
       "bookings": "Bookings",
       "customers": "Customers",
-      "conversations": "Conversations",
       "settings": "Settings"
     },
     "dashboard": {
       "title": "Agent Dashboard",
-      "subtitle": "WhatsApp customer support overview",
+      "subtitle": "Customer support overview",
       "bookingsCreatedToday": "Bookings Created Today",
-      "activeConversations": "Active Conversations",
-      "customersHelped": "Customers Helped",
-      "recentConversations": "Recent Conversations",
-      "noRecentConversations": "No recent conversations"
+      "customersHelped": "Customers Helped"
     },
     "bookings": {
       "title": "Manage Bookings",
@@ -147,26 +143,6 @@
       },
       "cancelBookingTitle": "Cancel Booking?",
       "cancelBookingMessage": "Are you sure you want to cancel the booking on {{date}} at {{time}}?"
-    },
-    "conversations": {
-      "title": "WhatsApp Conversations",
-      "subtitle": "View and manage customer conversations",
-      "selectConversation": "Select a Conversation",
-      "selectConversationDesc": "Choose a conversation to view messages",
-      "createBooking": "Create Booking",
-      "sendMessage": "Send",
-      "typeMessage": "Type a message...",
-      "sending": "Sending...",
-      "messageSent": "Message sent",
-      "sendFailed": "Failed to send message",
-      "agentTakeover": "Agent Takeover",
-      "releaseToAI": "Release to AI",
-      "releaseToAIDesc": "Return this conversation to the AI bot",
-      "takeover": "Take Over",
-      "takeoverDesc": "Take control of this conversation",
-      "sentByAgent": "Agent",
-      "composerHint": "Press Ctrl+Enter to send",
-      "conversationReleased": "Conversation released to AI"
     }
   },
   "nav": {
@@ -597,7 +573,7 @@
       "at": "at",
       "manager": "Manager",
       "barber": "Barber",
-      "whatsapp": "WhatsApp",
+      "agent": "Agent",
       "admin": "Admin",
       "system": "System"
     },
@@ -922,6 +898,7 @@
     "verifyIdentity": "Verify Your Identity"
   },
   "admin": {
+    "passwordReset": {"title":"Reset a user password","description":"Set a temporary password for a non-admin account.","account":"User account","select":"Select an account","previous":"Previous","next":"Next","page":"Page {{page}}","password":"New password","confirm":"Confirm password","guidance":"Share the password securely. The user can change it from Settings after signing in; the change is not forced automatically.","rules":"Use at least 12 characters, including uppercase, lowercase, a number and a symbol.","invalid":"Select an account and enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","loadError":"Could not load user accounts.","failed":"The reset could not be confirmed. Do not retry; contact the system administrator to check its status.","success":"Password changed. Share it privately with the user.","submit":"Reset password","auditWarning":"Password changed, but its completion audit could not be recorded. Contact the system administrator.","ownInvalid":"Enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","ownFailed":"The password could not be changed. Please try again.","ownSuccess":"Your password has been changed."},
     "searchPlatform": "Search platform...",
     "comingSoon": "Coming Soon",
     "comingSoonDesc": "This feature is currently under development and will be available soon.",
@@ -932,8 +909,7 @@
       "users": "Users",
       "analytics": "Analytics",
       "configuration": "Configuration",
-      "audit": "Audit & Logs",
-      "whatsapp": "WhatsApp"
+      "audit": "Audit & Logs"
     },
     "metrics": {
       "totalManagers": "Total Managers",
@@ -1151,100 +1127,6 @@
         "older": "Older"
       }
     },
-    "whatsapp": {
-      "title": "WhatsApp",
-      "subtitle": "Manage WhatsApp conversations, messages, and logs",
-      "conversations": "Conversations",
-      "conversationsDesc": "View customer conversation threads",
-      "conversationsSubtitle": "Browse all WhatsApp conversations",
-      "messages": "Messages",
-      "messagesDesc": "View and manage individual messages",
-      "messagesSubtitle": "Browse and delete WhatsApp messages",
-      "logs": "Logs",
-      "logsDesc": "System logs and error tracking",
-      "logsSubtitle": "Debug logs and error messages",
-      "totalConversations": "Total Conversations",
-      "totalMessages": "Total Messages",
-      "messagesToday": "Messages Today",
-      "errorsLast7d": "Errors (7d)",
-      "inbound": "Inbound",
-      "outbound": "Outbound",
-      "unknownCustomer": "Unknown Customer",
-      "conversationThread": "Conversation Thread",
-      "conversationContext": "Conversation Context",
-      "noMessages": "No messages in this conversation",
-      "noConversations": "No conversations found",
-      "noConversationsDesc": "WhatsApp conversations will appear here",
-      "noMessagesFound": "No messages found",
-      "noMessagesDesc": "WhatsApp messages will appear here",
-      "noLogsFound": "No logs found",
-      "noLogsDesc": "WhatsApp logs will appear here",
-      "searchConversations": "Search by phone or name...",
-      "searchMessages": "Search messages...",
-      "loadingConversations": "Loading conversations...",
-      "loadingMessages": "Loading messages...",
-      "loadingLogs": "Loading logs...",
-      "filterState": "State",
-      "allStates": "All States",
-      "filterDirection": "Direction",
-      "allDirections": "All Directions",
-      "filterStatus": "Status",
-      "allStatuses": "All Statuses",
-      "filterEventType": "Event Type",
-      "allEventTypes": "All Event Types",
-      "moreFilters": "More Filters",
-      "allLevels": "All Levels",
-      "deleteMessage": "Delete Message",
-      "deleteMessageTitle": "Delete Message",
-      "deleteMessageConfirm": "Are you sure you want to delete this message? This action cannot be undone.",
-      "filterPhone": "Phone Number",
-      "selectAll": "Select All",
-      "selectedCount": "{{count}} selected",
-      "deleteSelected": "Delete Selected",
-      "deleteSelectedTitle": "Delete Selected Messages",
-      "deleteSelectedConfirm": "Are you sure you want to delete {{count}} message(s)? This action cannot be undone.",
-      "messageId": "WhatsApp Message ID",
-      "messageType": "Message Type",
-      "phone": "Phone",
-      "customer": "Customer",
-      "conversationId": "Conversation ID",
-      "fullContent": "Full Content",
-      "noContent": "No content",
-      "eventType": "Event Type",
-      "toolName": "Tool",
-      "executionTime": "Execution Time",
-      "fullMessage": "Full Message",
-      "noMessage": "No message",
-      "errorDetails": "Error Details",
-      "errorCode": "Error Code",
-      "stackTrace": "Stack Trace",
-      "toolInput": "Tool Input",
-      "toolOutput": "Tool Output",
-      "contextSnapshot": "Context Snapshot",
-      "direction": {
-        "inbound": "Inbound",
-        "outbound": "Outbound"
-      },
-      "status": {
-        "sent": "Sent",
-        "delivered": "Delivered",
-        "read": "Read",
-        "failed": "Failed"
-      },
-      "states": {
-        "greeting": "Greeting",
-        "booking_flow": "Booking Flow",
-        "completed": "Completed",
-        "cancelled": "Cancelled",
-        "awaiting_response": "Awaiting Response"
-      },
-      "logLevel": {
-        "debug": "Debug",
-        "info": "Info",
-        "warn": "Warning",
-        "error": "Error"
-      }
-    },
     "globalSettings": {
       "title": "Global Settings",
       "subtitle": "Configure platform-wide defaults and rules",
@@ -1375,26 +1257,17 @@
       "benefits": "Benefits"
     },
     "hero": {
-      "badge": "WhatsApp Booking Integration",
+      "badge": "Barbershop Management",
       "titleStart": "Run Your Barbershop",
       "titleAccent": "Smarter",
-      "subtitle": "Let customers book appointments through WhatsApp. Manage branches, barbers, and bookings from one elegant dashboard designed for the modern barbershop.",
+      "subtitle": "Manage branches, barbers, and appointments from one dashboard designed for your barbershop.",
       "cta": "Start Free",
       "secondaryCta": "Sign In",
-      "mockupAlt": "WhatsApp booking conversation demo",
+      "preview": {"alt": "Booking dashboard illustration", "eyebrow": "Your barbershop", "title": "Your day at a glance", "appointments": "Appointments", "manage": "Review and manage bookings", "team": "Your team", "branches": "Manage barbers and branches"},
       "stats": {
         "barbershops": "Barbershops",
         "bookings": "Monthly Bookings",
         "rating": "Average Rating"
-      },
-      "whatsapp": {
-        "online": "Online",
-        "msg1": "Hi, I'd like to book a haircut for tomorrow",
-        "msg2": "Welcome! Please choose your barber:",
-        "msg3": "Great choice! Here are available times:",
-        "msg4": "Tomorrow at 10:00 AM with Mohammed. See you then!",
-        "confirmed": "Booking Confirmed",
-        "inputPlaceholder": "Type a message..."
       }
     },
     "features": {
@@ -1429,28 +1302,24 @@
     "howItWorks": {
       "eyebrow": "How It Works",
       "title": "Booking Made Simple",
-      "subtitle": "Three easy steps for your customers to book their next appointment",
+      "subtitle": "Three steps to manage appointments at your barbershop",
       "step1": {
-        "title": "Customer Messages",
-        "description": "Your customer sends a WhatsApp message to your booking number"
+        "title": "Add a Booking",
+        "description": "Record the customer and service details in your dashboard"
       },
       "step2": {
         "title": "Select & Schedule",
-        "description": "They choose their preferred barber and pick an available time slot"
+        "description": "Choose a barber and an available time slot"
       },
       "step3": {
-        "title": "Instant Confirmation",
-        "description": "Booking is confirmed instantly. Both you and your customer get notified"
+        "title": "Manage Appointments",
+        "description": "Review and manage appointments from your dashboard"
       }
     },
     "benefits": {
       "eyebrow": "Benefits",
       "title": "Why Choose Barber++?",
       "subtitle": "Built with modern barbershops in mind, designed to save you time and delight your customers",
-      "whatsapp": {
-        "title": "WhatsApp Booking",
-        "description": "Customers book via WhatsApp - no app downloads needed"
-      },
       "multilingual": {
         "title": "English & Arabic",
         "description": "Full RTL support for Arabic-speaking customers"

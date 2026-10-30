@@ -1,11 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, UserCheck, CalendarCheck } from 'lucide-react';
+import { Calendar, UserCheck, CalendarCheck } from 'lucide-react';
 
 const steps = [
   {
     number: '01',
-    icon: MessageCircle,
+    icon: Calendar,
     titleKey: 'landing.howItWorks.step1.title',
     descKey: 'landing.howItWorks.step1.description'
   },

@@ -3,7 +3,7 @@ import { escapeLikeWildcards, logErrorDev } from '../utils/security';
 import { getToday } from '../utils/dateHelpers';
 
 /**
- * Agent Service - Operations for WhatsApp customer support agents
+ * Agent Service - Operations for customer support agents
  * Agents can create/edit bookings for any branch and view customer data
  */
 
@@ -192,17 +192,7 @@ export const agentService = {
 
       if (bookingsError) throw bookingsError;
 
-      // Get active conversations (conversations with messages in last 24 hours)
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-      const { count: activeConversations, error: convError } = await supabase
-        .from('whatsapp_conversations')
-        .select('id', { count: 'exact', head: true })
-        .gte('last_message_at', oneDayAgo.toISOString());
-
-      if (convError) throw convError;
-
+      // The legacy database value also identifies staff-agent bookings; preserve historical attribution.
       // Get unique customers helped by this agent (distinct customer_id from their bookings)
       const { data: customersHelped, error: customersError } = await supabase
         .from('bookings')
@@ -217,14 +207,12 @@ export const agentService = {
 
       return {
         bookingsCreatedToday: todayBookings?.length || 0,
-        activeConversations: activeConversations || 0,
         customersHelped: uniqueCustomers.size,
       };
     } catch (error) {
       logErrorDev('Error fetching agent metrics:', error);
       return {
         bookingsCreatedToday: 0,
-        activeConversations: 0,
         customersHelped: 0,
       };
     }
@@ -767,302 +755,6 @@ export const agentService = {
     }
   },
 
-  // ===========================
-  // WHATSAPP CONVERSATIONS
-  // ===========================
-
-  /**
-   * Get conversations list (paginated)
-   * @param {object} options - { page, limit, search }
-   */
-  getConversations: async ({ page = 1, limit = 20, search = null } = {}) => {
-    try {
-      let query = supabase
-        .from('whatsapp_conversations')
-        .select('*', { count: 'exact' })
-        .order('last_message_at', { ascending: false, nullsFirst: false });
-
-      // Search filter
-      if (search) {
-        const escapedSearch = escapeLikeWildcards(search);
-        query = query.or(`phone_number.ilike.%${escapedSearch}%,customer_name.ilike.%${escapedSearch}%`);
-      }
-
-      // Pagination
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-      query = query.range(from, to);
-
-      const { data, count, error } = await query;
-
-      if (error) throw error;
-
-      return {
-        conversations: (data || []).map(conv => ({
-          id: conv.id,
-          phoneNumber: conv.phone_number,
-          phoneCountryCode: conv.phone_country_code,
-          customerName: conv.customer_name,
-          currentState: conv.current_state,
-          language: conv.language,
-          lastMessageAt: conv.last_message_at,
-          createdAt: conv.created_at,
-        })),
-        total: count || 0,
-        page,
-        limit,
-      };
-    } catch (error) {
-      logErrorDev('Error fetching conversations:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get recent conversations (for dashboard)
-   * @param {number} limit - Number of recent conversations
-   */
-  getRecentConversations: async (limit = 5) => {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('id, phone_number, customer_name, last_message_at')
-        .order('last_message_at', { ascending: false, nullsFirst: false })
-        .limit(limit);
-
-      if (error) throw error;
-
-      return (data || []).map(conv => ({
-        id: conv.id,
-        phoneNumber: conv.phone_number,
-        customerName: conv.customer_name,
-        lastMessageAt: conv.last_message_at,
-      }));
-    } catch (error) {
-      logErrorDev('Error fetching recent conversations:', error);
-      return [];
-    }
-  },
-
-  /**
-   * Get messages for a conversation
-   * @param {string} conversationId
-   */
-  getConversationMessages: async (conversationId) => {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      return (data || []).map(msg => ({
-        id: msg.id,
-        conversationId: msg.conversation_id,
-        direction: msg.direction,
-        messageType: msg.message_type,
-        content: msg.content,
-        status: msg.status,
-        metadata: msg.metadata,
-        createdAt: msg.created_at,
-      }));
-    } catch (error) {
-      logErrorDev('Error fetching conversation messages:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get full conversation details including current_state
-   * @param {string} conversationId
-   */
-  getConversationDetails: async (conversationId) => {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .single();
-
-      if (error) throw error;
-
-      return {
-        id: data.id,
-        phoneNumber: data.phone_number,
-        phoneCountryCode: data.phone_country_code,
-        customerName: data.customer_name,
-        currentState: data.current_state,
-        language: data.language,
-        context: data.context,
-        lastMessageAt: data.last_message_at,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      };
-    } catch (error) {
-      logErrorDev('Error fetching conversation details:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Send a WhatsApp message to a customer (via Edge Function)
-   * @param {string} conversationId - The conversation ID
-   * @param {string} phoneNumber - Customer phone number
-   * @param {string} phoneCountryCode - Country code (e.g., '965')
-   * @param {string} content - Message content
-   * @param {string} agentUserId - The agent's user ID
-   */
-  sendMessage: async (conversationId, phoneNumber, phoneCountryCode, content, agentUserId) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
-        body: {
-          conversationId,
-          phoneNumber,
-          phoneCountryCode,
-          content,
-          agentUserId,
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to send message');
-      }
-
-      return data;
-    } catch (error) {
-      logErrorDev('Error sending WhatsApp message:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Release conversation back to AI bot
-   * @param {string} conversationId
-   */
-  releaseConversation: async (conversationId) => {
-    try {
-      const { error } = await supabase
-        .from('whatsapp_conversations')
-        .update({
-          current_state: 'greeting',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', conversationId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      logErrorDev('Error releasing conversation:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Take over a conversation (set state to agent_takeover without sending message)
-   * @param {string} conversationId
-   */
-  takeoverConversation: async (conversationId) => {
-    try {
-      const { error } = await supabase
-        .from('whatsapp_conversations')
-        .update({
-          current_state: 'agent_takeover',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', conversationId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      logErrorDev('Error taking over conversation:', error);
-      throw error;
-    }
-  },
-
-  // ===========================
-  // REALTIME SUBSCRIPTIONS
-  // ===========================
-
-  /**
-   * Subscribe to new messages for a specific conversation
-   * @param {string} conversationId
-   * @param {function} onNewMessage - Callback when new message arrives
-   * @returns {object} Supabase channel (for cleanup)
-   */
-  subscribeToMessages: (conversationId, onNewMessage) => {
-    const messageToFrontend = (msg) => ({
-      id: msg.id,
-      conversationId: msg.conversation_id,
-      direction: msg.direction,
-      messageType: msg.message_type,
-      content: msg.content,
-      status: msg.status,
-      metadata: msg.metadata,
-      createdAt: msg.created_at,
-    });
-
-    const channel = supabase
-      .channel(`whatsapp-messages-${conversationId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'whatsapp_messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      }, (payload) => {
-        onNewMessage(messageToFrontend(payload.new));
-      })
-      .subscribe();
-
-    return channel;
-  },
-
-  /**
-   * Subscribe to conversation state changes
-   * @param {string} conversationId
-   * @param {function} onUpdate - Callback when conversation is updated
-   * @returns {object} Supabase channel (for cleanup)
-   */
-  subscribeToConversation: (conversationId, onUpdate) => {
-    const conversationToFrontend = (conv) => ({
-      id: conv.id,
-      phoneNumber: conv.phone_number,
-      phoneCountryCode: conv.phone_country_code,
-      customerName: conv.customer_name,
-      currentState: conv.current_state,
-      language: conv.language,
-      context: conv.context,
-      lastMessageAt: conv.last_message_at,
-      createdAt: conv.created_at,
-      updatedAt: conv.updated_at,
-    });
-
-    const channel = supabase
-      .channel(`whatsapp-conversation-${conversationId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'whatsapp_conversations',
-        filter: `id=eq.${conversationId}`,
-      }, (payload) => {
-        onUpdate(conversationToFrontend(payload.new));
-      })
-      .subscribe();
-
-    return channel;
-  },
-
-  /**
-   * Unsubscribe from a realtime channel
-   * @param {object} channel - Supabase channel to unsubscribe from
-   */
-  unsubscribe: (channel) => {
-    if (channel) {
-      supabase.removeChannel(channel);
-    }
-  },
 };
 
 export default agentService;

@@ -86,3 +86,27 @@ retry. For an interrupted Functions update, inspect the recorded prior code and
 runtime state. Keep production secrets and the separately managed gateway out of
 the release source archive. Do not upgrade Supabase/Dokploy as part of an app
 release.
+
+
+### Administrative password-reset guard
+
+The admin password-reset feature requires a separately reviewed release of
+`20261029114557_guard_admin_password_resets.sql` before deploying its Edge
+Function and frontend. Rehearse the migration against the production baseline
+and pinned database version, confirm current backups and restore evidence, and
+verify the trigger and function permissions. Never reset the production database
+to apply it. The guard can temporarily block role changes for accounts involved
+in a reset.
+
+If the reset reports an uncertain result, do not retry blindly or automatically
+expire the guard: the Auth request may still complete. An operator must first
+verify that the original request and Auth operation have finished, investigate
+the requested/completed audit records without exposing passwords, and coordinate
+a fresh credential with the affected user. Only after the operation is known to
+have stopped may an authorized operator remove the specific stale guard through
+a separately reviewed, targeted maintenance action. Do not delete unrelated
+guards or audit records.
+
+Run `node scripts/test-admin-reset-concurrency.cjs` from a running local Test
+checkout to exercise both competing role-change orderings. The script checks the
+local API address and creates and removes only disposable local accounts.

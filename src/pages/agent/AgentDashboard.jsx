@@ -4,10 +4,8 @@ import { Link } from 'react-router-dom';
 import {
   Calendar,
   Users,
-  MessageCircle,
   ArrowRight,
   Plus,
-  Phone,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { agentService } from '../../services/agent.service';
@@ -18,21 +16,14 @@ export default function AgentDashboard() {
   const { user } = useApp();
   const [metrics, setMetrics] = useState({
     bookingsCreatedToday: 0,
-    activeConversations: 0,
     customersHelped: 0,
   });
-  const [recentConversations, setRecentConversations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [metricsData, convData] = await Promise.all([
-          agentService.getAgentMetrics(user?.id),
-          agentService.getRecentConversations(5),
-        ]);
-        setMetrics(metricsData);
-        setRecentConversations(convData);
+        setMetrics(await agentService.getAgentMetrics(user?.id));
       } catch (error) {
         console.error('Error loading agent dashboard:', error);
       } finally {
@@ -63,12 +54,6 @@ export default function AgentDashboard() {
       path: '/agent/customers',
       color: 'green',
     },
-    {
-      icon: MessageCircle,
-      label: t('agent.nav.conversations'),
-      path: '/agent/conversations',
-      color: 'amber',
-    },
   ];
 
   return (
@@ -92,18 +77,6 @@ export default function AgentDashboard() {
               {loading ? '...' : metrics.bookingsCreatedToday}
             </span>
             <span className="agent-metric-label">{t('agent.dashboard.bookingsCreatedToday')}</span>
-          </div>
-        </div>
-
-        <div className="agent-metric-card">
-          <div className="agent-metric-icon green">
-            <MessageCircle size={24} />
-          </div>
-          <div className="agent-metric-content">
-            <span className="agent-metric-value">
-              {loading ? '...' : metrics.activeConversations}
-            </span>
-            <span className="agent-metric-label">{t('agent.dashboard.activeConversations')}</span>
           </div>
         </div>
 
@@ -143,40 +116,6 @@ export default function AgentDashboard() {
         </div>
       </div>
 
-      {/* Recent Conversations */}
-      <div className="agent-section">
-        <div className="agent-section-header">
-          <h2 className="agent-section-title">{t('agent.dashboard.recentConversations')}</h2>
-          <Link to="/agent/conversations" className="agent-section-link">
-            {t('common.viewAll')} <ArrowRight size={14} />
-          </Link>
-        </div>
-        {recentConversations.length > 0 ? (
-          <div className="agent-conversations-list">
-            {recentConversations.map((conv) => (
-              <div key={conv.id} className="agent-conversation-item">
-                <div className="agent-conversation-avatar">
-                  <Phone size={16} />
-                </div>
-                <div className="agent-conversation-info">
-                  <span className="agent-conversation-phone">{conv.phoneNumber}</span>
-                  <span className="agent-conversation-name">
-                    {conv.customerName || t('admin.whatsapp.unknownCustomer')}
-                  </span>
-                </div>
-                <Link to="/agent/bookings" className="btn btn-sm btn-secondary">
-                  {t('dashboard.newBooking')}
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="agent-empty-state">
-            <MessageCircle size={48} />
-            <p>{t('agent.dashboard.noRecentConversations')}</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -7,7 +7,6 @@ import {
   BarChart3,
   Settings2,
   Shield,
-  MessageCircle,
   Settings,
   Scissors,
   X,
@@ -23,7 +22,6 @@ const navItems = [
   { path: '/admin/analytics', icon: BarChart3, labelKey: 'admin.nav.analytics' },
   { path: '/admin/configuration', icon: Settings2, labelKey: 'admin.nav.configuration' },
   { path: '/admin/audit', icon: Shield, labelKey: 'admin.nav.audit' },
-  { path: '/admin/whatsapp', icon: MessageCircle, labelKey: 'admin.nav.whatsapp' },
   { path: '/admin/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

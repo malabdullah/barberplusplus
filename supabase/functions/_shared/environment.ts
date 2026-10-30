@@ -33,20 +33,6 @@ export function getTrustedRole(user: { app_metadata?: Record<string, unknown> })
   return typeof role === 'string' ? role.toLowerCase() : null;
 }
 
-export function assertOutboundRecipientAllowed(recipient: string): void {
-  if (getAppEnvironment() === 'production') return;
-
-  const allowlist = getRequiredEnv('OUTBOUND_RECIPIENT_ALLOWLIST')
-    .split(',')
-    .map((value) => value.replace(/\D/g, ''))
-    .filter(Boolean);
-  const normalizedRecipient = recipient.replace(/\D/g, '');
-
-  if (!allowlist.includes(normalizedRecipient)) {
-    throw new Error('Outbound recipient is not allowed in this environment');
-  }
-}
-
 export async function hasValidSharedSecret(req: Request, headerName = 'x-cron-secret'): Promise<boolean> {
   const expected = Deno.env.get('CRON_SHARED_SECRET');
   const supplied = req.headers.get(headerName);
@@ -66,15 +52,4 @@ export async function hasValidSharedSecret(req: Request, headerName = 'x-cron-se
     difference |= expectedBytes[index] ^ suppliedBytes[index];
   }
   return difference === 0;
-}
-
-export function assertEncryptedWhatsAppFlowRequest(body: Record<string, unknown>): void {
-  const hasEncryptedPayload =
-    typeof body.encrypted_flow_data === 'string' && body.encrypted_flow_data.length > 0 &&
-    typeof body.encrypted_aes_key === 'string' && body.encrypted_aes_key.length > 0 &&
-    typeof body.initial_vector === 'string' && body.initial_vector.length > 0;
-
-  if (!hasEncryptedPayload && getAppEnvironment() !== 'development') {
-    throw new Error('Unencrypted WhatsApp Flow requests are disabled outside development');
-  }
 }

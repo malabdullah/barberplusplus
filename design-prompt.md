@@ -1,3 +1,5 @@
+> Historical document: WhatsApp integration descriptions below are obsolete. The customer mobile app is future work; see `docs/ai-integration.md` for the current direction.
+
 Project Name
 
 Barber++ — Manager Dashboard (Design Phase)
