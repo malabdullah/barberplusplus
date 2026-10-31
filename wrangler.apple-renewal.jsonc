@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "barber-test-apple-renewal",
+  "account_id": "09c18affdb74c9a3721f79f6566df48a",
+  "main": "ops/cloud-test/apple-renewal.js",
+  "compatibility_date": "2026-10-31",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "SUPABASE_PROJECT_REF": "qvkucvcjmojjbphlzlks",
+    "APPLE_CLIENT_ID": "com.barberplusplus.authentication.test.web",
+    "APPLE_KEY_ID": "SPT3287JRA"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "RENEWAL_STATE",
+      "id": "65e26447f48e440287207ee60bec242d"
+    }
+  ]
+}

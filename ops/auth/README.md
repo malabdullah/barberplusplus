@@ -78,3 +78,35 @@ key and Services ID.
 References: [Apple token generation](https://developer.apple.com/documentation/signinwithapplerestapi/generate-and-validate-tokens),
 [Supabase Apple OAuth rotation](https://supabase.com/docs/guides/auth/social-sign-in/auth-apple),
 [Compose config hash](https://docs.docker.com/reference/cli/docker/compose/config/).
+
+## Hosted Test equivalent
+
+Managed Test does not use the production VPS/Compose renewal service. Its separate
+scheduled Worker is `barber-test-apple-renewal`, configured by
+`wrangler.apple-renewal.jsonc` and `ops/cloud-test/apple-renewal.js`. It uses only
+Test's existing Apple key `SPT3287JRA` and Services ID
+`com.barberplusplus.authentication.test.web`.
+
+Install a dedicated Supabase scoped PAT with **Auth Config read-write only** on
+project `qvkucvcjmojjbphlzlks`. Store it as Worker secret
+`SUPABASE_AUTH_CONFIG_TOKEN`, and the Test PKCS#8 key as `APPLE_SIGNING_KEY`.
+Never use the CLI's legacy account-wide PAT or a production key. Approval is
+required before creating this persistent service access. Keep both secrets out
+of the website Worker, frontend assets, logs and Git.
+
+Bind a private KV namespace as `RENEWAL_STATE`; never attach that namespace to the
+website Worker. Its state contains a private signed JWT and an interrupted-update
+journal. There is no HTTP trigger, workers.dev route or preview URL. The hourly
+cron checks the credential and renews a 180-day ES256 JWT 30 days before expiry;
+failed runs retry at the next hourly check. Initialization creates a fresh Test
+credential. Subsequent checks verify its signature, registration and opaque Auth
+configuration fingerprint. An interrupted PATCH reuses the exact journaled JWT.
+
+The only Management API write is PATCH of `external_apple_secret` on the fixed
+Test project. All remaining Auth settings are compared before/after; the job does
+not read or write customer/database records. External credential changes stop the
+job until its private state is deliberately reconciled. Inspect Cloudflare's
+scheduled-event errors and private KV `checkedAt`, `renewedAt` and credential
+expiry for operational verification. Do not publish KV values. Disable the cron
+to pause renewal; this retains the valid credential and all Test data. Deleting
+its scoped PAT revokes only this job's managed Test access.
