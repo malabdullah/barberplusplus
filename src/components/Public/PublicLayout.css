@@ -71,3 +71,7 @@
 
 .public-site .hero-btn-primary { color: #151A20; }
 .public-site :is(.hero-title-accent, .hero-badge, .hero-stat-value) { color: var(--booking-link); }
+@media (max-width: 1024px) {
+  .public-site .hero-content { order: 0; }
+  .public-site .hero-visual { order: 1; }
+}
