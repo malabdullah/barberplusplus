@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "designSystemVersion": "1.2",
+  "updated": "2026-10-31",
+  "approval": {
+    "status": "owner-approved-direction",
+    "date": "2026-10-31",
+    "canonicalReference": "approved-b-plus-logo-system-2026-10-31/approved-stacked-light.png",
+    "selection": "Option 2 from b-plus-logo-variations-2026-10-31",
+    "geometry": "Two aligned stacked B halves, a narrow horizontal waist gap and two equal vertically aligned plus-shaped negative apertures.",
+    "preserve": [
+      "Straight left spine",
+      "Two rounded right bowls",
+      "Plus aperture proportions",
+      "Horizontal split",
+      "Barber++ spelling and left-to-right orientation"
+    ]
+  },
+  "assetStatus": {
+    "available": "Production SVG masters with outlined Outfit wordmark, transparent PNG lockups, light/dark and monochrome treatments, favicons and app icons",
+    "pending": [],
+    "presentationBoardsAreRuntimeAssets": false
+  },
+  "colors": {
+    "amber": "#D4A853",
+    "charcoal": "#151A20",
+    "white": "#FFFFFF",
+    "inverseSurface": "#22292F"
+  },
+  "treatments": {
+    "full-color-light": {
+      "upperHalf": "#D4A853",
+      "lowerHalf": "#151A20",
+      "wordmarkText": "#151A20",
+      "wordmarkPluses": "#D4A853",
+      "apertures": "background",
+      "waistGap": "background",
+      "surfaces": [
+        "#FFFFFF",
+        "#F7F8FA"
+      ]
+    },
+    "full-color-dark": {
+      "upperHalf": "#D4A853",
+      "lowerHalf": "#FFFFFF",
+      "wordmarkText": "#FFFFFF",
+      "wordmarkPluses": "#D4A853",
+      "apertures": "background",
+      "waistGap": "background",
+      "surfaces": [
+        "#151A20",
+        "#22292F"
+      ]
+    },
+    "monochrome-dark-ink": {
+      "upperHalf": "#151A20",
+      "lowerHalf": "#151A20",
+      "wordmarkText": "#151A20",
+      "wordmarkPluses": "#151A20",
+      "apertures": "background",
+      "waistGap": "background",
+      "surfaces": [
+        "#FFFFFF",
+        "#F7F8FA"
+      ]
+    },
+    "monochrome-reversed": {
+      "upperHalf": "#FFFFFF",
+      "lowerHalf": "#FFFFFF",
+      "wordmarkText": "#FFFFFF",
+      "wordmarkPluses": "#FFFFFF",
+      "apertures": "background",
+      "waistGap": "background",
+      "surfaces": [
+        "#151A20",
+        "#22292F"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "id": "horizontal",
+      "composition": "Symbol left, wordmark right",
+      "use": [
+        "Desktop header",
+        "Expanded sidebar",
+        "Website navigation"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/01-logo-variations.png",
+      "referenceRegion": "Horizontal row",
+      "standaloneExport": [
+        "production-logo/barber-horizontal-light.svg",
+        "production-logo/barber-horizontal-light.png",
+        "production-logo/barber-horizontal-dark.svg",
+        "production-logo/barber-horizontal-dark.png"
+      ]
+    },
+    {
+      "id": "stacked",
+      "composition": "Symbol above centered wordmark",
+      "use": [
+        "Welcome and sign-in compositions",
+        "Brand introductions",
+        "Spacious marketing placements"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/01-logo-variations.png",
+      "referenceRegion": "Stacked row",
+      "standaloneExport": [
+        "production-logo/barber-stacked-light.svg",
+        "production-logo/barber-stacked-light.png",
+        "production-logo/barber-stacked-dark.svg",
+        "production-logo/barber-stacked-dark.png"
+      ]
+    },
+    {
+      "id": "symbol",
+      "composition": "B monogram only",
+      "use": [
+        "Compact navigation",
+        "Established brand contexts"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/01-logo-variations.png",
+      "referenceRegion": "Symbol row",
+      "standaloneExport": [
+        "production-logo/barber-symbol-light.svg",
+        "production-logo/barber-symbol-light.png",
+        "production-logo/barber-symbol-dark.svg",
+        "production-logo/barber-symbol-dark.png"
+      ]
+    },
+    {
+      "id": "wordmark",
+      "composition": "Barber++ lettering only",
+      "use": [
+        "Secondary signatures",
+        "Text-led brand placements"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/01-logo-variations.png",
+      "referenceRegion": "Wordmark row",
+      "standaloneExport": [
+        "production-logo/barber-wordmark-light.svg",
+        "production-logo/barber-wordmark-light.png",
+        "production-logo/barber-wordmark-dark.svg",
+        "production-logo/barber-wordmark-dark.png"
+      ]
+    },
+    {
+      "id": "monochrome",
+      "composition": "Symbol and wordmark in one ink",
+      "use": [
+        "Single-color print",
+        "Reversed use"
+      ],
+      "treatments": [
+        "monochrome-dark-ink",
+        "monochrome-reversed"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/01-logo-variations.png",
+      "referenceRegion": "Monochrome row",
+      "standaloneExport": [
+        "production-logo/barber-horizontal-mono-dark.svg",
+        "production-logo/barber-horizontal-mono-dark.png",
+        "production-logo/barber-horizontal-mono-white.svg",
+        "production-logo/barber-horizontal-mono-white.png"
+      ]
+    },
+    {
+      "id": "app-icon",
+      "composition": "Symbol on a padded square light/dark field",
+      "use": [
+        "App-icon presentation",
+        "Future platform-specific exports"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png",
+      "referenceRegion": "App icons",
+      "standaloneExport": [
+        "production-logo/barber-app-icon-light.svg",
+        "production-logo/barber-app-icon-light.png",
+        "production-logo/barber-app-icon-dark.svg",
+        "production-logo/barber-app-icon-dark.png"
+      ]
+    },
+    {
+      "id": "favicon",
+      "composition": "Symbol only at browser-tab scale",
+      "use": [
+        "Browser tab",
+        "Bookmark icon"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png",
+      "referenceRegion": "Favicon and compact navigation",
+      "standaloneExport": [
+        "production-logo/favicon.svg",
+        "production-logo/favicon-16.png",
+        "production-logo/favicon-32.png",
+        "production-logo/favicon-48.png"
+      ]
+    },
+    {
+      "id": "compact-header",
+      "composition": "Horizontal lockup adapted to header space",
+      "use": [
+        "Mobile booking-page header",
+        "Compact navigation"
+      ],
+      "treatments": [
+        "full-color-light",
+        "full-color-dark"
+      ],
+      "presentation": "approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png",
+      "referenceRegion": "Compact header lockup",
+      "standaloneExport": [
+        "production-logo/barber-horizontal-light.svg",
+        "production-logo/barber-horizontal-light.png",
+        "production-logo/barber-horizontal-dark.svg",
+        "production-logo/barber-horizontal-dark.png"
+      ]
+    }
+  ],
+  "proposedSizing": {
+    "status": "Production assets integrated; hosted responsive validation accompanies the implementation",
+    "clearSpace": "At least one symbol plus-arm thickness around a complete lockup or symbol; half the capital-letter height for wordmark-only use",
+    "desktop": {
+      "lockupWidthCssPx": [
+        180,
+        200
+      ],
+      "symbolHeightCssPx": [
+        32,
+        40
+      ],
+      "headerHeightCssPx": 80
+    },
+    "mobile": {
+      "lockupWidthCssPx": [
+        140,
+        165
+      ],
+      "symbolHeightCssPx": [
+        28,
+        32
+      ],
+      "headerHeightCssPx": 64
+    },
+    "smallUiSymbolStartingSizeCssPx": 24,
+    "minimumInteractiveTargetCssPx": 44,
+    "faviconExportSizesPx": [
+      16,
+      32,
+      48
+    ],
+    "nativeFaviconChecksPending": false
+  },
+  "previews": {
+    "desktop": {
+      "file": "approved-b-plus-logo-system-2026-10-31/02-desktop-light-dark.png",
+      "context": "Owner/manager bookings workspace",
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "status": "Illustrative logo-placement preview"
+    },
+    "mobile": {
+      "file": "approved-b-plus-logo-system-2026-10-31/03-mobile-light-dark.png",
+      "context": "Customer booking page",
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "status": "Illustrative logo-placement preview"
+    }
+  },
+  "archive": "approved-b-plus-logo-system-2026-10-31/Barber++-logo-presentation-pack.zip",
+  "provenance": "approved-b-plus-logo-system-2026-10-31/generation-prompts.json",
+  "canvaUploadReferences": "approved-b-plus-logo-system-2026-10-31/canva-uploads.json",
+  "localeRules": {
+    "mirrorLogo": false,
+    "wordmarkDirection": "ltr",
+    "arabicWordmarkApproved": false,
+    "accessibleName": "Barber++"
+  },
+  "productionAssets": "production-logo/README.md"
+}
