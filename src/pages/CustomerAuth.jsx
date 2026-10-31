@@ -58,5 +58,6 @@ export default function CustomerAuth({ mode }) {
     {mode === 'sign-in' && <><Link className="cb-text-button" to="/customer/forgot-password" state={{ returnTo }}>{tr('forgotPassword')}</Link><p>{tr('noAccount')} <Link to="/customer/sign-up" state={{ returnTo }}>{tr('createAccount')}</Link></p></>}
     {signup && <p>{tr('hasAccount')} <Link to="/customer/sign-in" state={{ returnTo }}>{tr('signIn')}</Link></p>}
     <Link className="cb-text-button" to="/book">{tr('continueGuest')}</Link>
+    <p className="ca-privacy-link"><Link to="/privacy">{t('customerPrivacy.title')}</Link></p>
   </main></div>;
 }

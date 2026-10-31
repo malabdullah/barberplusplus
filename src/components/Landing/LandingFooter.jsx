@@ -78,9 +78,9 @@ export default function LandingFooter() {
           <div className="footer-column">
             <h4>{t('landing.footer.legal')}</h4>
             <nav className="footer-links" aria-label="Legal links">
-              <a href="#privacy" className="footer-link">
+              <Link to="/privacy" className="footer-link">
                 {t('landing.footer.privacy')}
-              </a>
+              </Link>
               <a href="#terms" className="footer-link">
                 {t('landing.footer.terms')}
               </a>
