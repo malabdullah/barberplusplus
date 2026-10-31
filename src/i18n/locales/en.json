@@ -1627,5 +1627,38 @@
         "reset-password": "Choose a new password."
       }
     }
+  },
+  "customerPrivacy": {
+    "title": "Privacy policy",
+    "updated": "Updated 31 October 2026",
+    "intro": "This page explains how information is used in Barber++ customer accounts and bookings.",
+    "back": "Back to booking",
+    "sections": [
+      {
+        "title": "Account and booking information",
+        "text": "An email account uses your name, email address and password. A mobile number is required to confirm a booking and is saved in your profile for later bookings. Booking records include your chosen shop, barber, services, appointment time, contact details and any notes you enter. You can also book as a guest using your name and mobile number."
+      },
+      {
+        "title": "Why information is used",
+        "text": "Information is used to sign you in, confirm your email, recover your account, manage your profile, arrange appointments and display your booking history. Your chosen shop and its authorized staff can access the booking and contact information needed to manage your appointment."
+      },
+      {
+        "title": "Google and Apple sign-in",
+        "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password."
+      },
+      {
+        "title": "Service providers",
+        "text": "Hosting, database, network and email services process information needed to operate and protect the website. Account confirmation, recovery and email-change messages are delivered through Resend. Google and Apple process sign-in under their own privacy policies when you choose those options."
+      },
+      {
+        "title": "Browser storage and records",
+        "text": "The website stores sign-in sessions and preferences in your browser. Technical logs support security and troubleshooting. Signing out removes your local customer session; it does not delete your account or past appointments. Account and booking records remain stored until they are removed through service administration."
+      },
+      {
+        "title": "Your information and contact",
+        "text": "You can edit your name and mobile number in your profile. Changing your login email requires confirmation. For questions or requests about access, correction or removal of account and booking information, contact Barber++ at the address below."
+      }
+    ],
+    "contact": "Contact Barber++"
   }
 }

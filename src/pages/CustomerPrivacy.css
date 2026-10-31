@@ -1,0 +1,6 @@
+.cp-main { max-width: 780px; line-height: 1.75; overflow-wrap: anywhere; }
+.cp-main h1 { margin-block-start: 24px; }
+.cp-main h2 { font-size: 20px; line-height: 1.4; margin-block: 28px 8px; }
+.cp-main p { margin-block: 0 16px; }
+.cp-main .cp-updated { color: var(--booking-muted); font-size: 14px; }
+.ca-privacy-link { font-size: 14px; margin-block-start: 28px; }

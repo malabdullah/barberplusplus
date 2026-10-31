@@ -60,6 +60,7 @@ const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth')
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
+const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -136,6 +137,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
+      <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
       <Route
         path="/"

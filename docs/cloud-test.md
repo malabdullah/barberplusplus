@@ -71,8 +71,8 @@ numbers. Guest and account bookings write only to the hosted test database.
 ## Email and external integrations
 
 The Supabase Send Email hook captures Auth messages in a private test mailbox.
-The custom customer-auth flow captures its confirmation and recovery links in
-the same mailbox. Open **Test email inbox** from the banner to follow links.
+Customer confirmation and recovery use the same Auth mail adapter as production,
+with the hook capturing those messages in the private mailbox. Open **Test email inbox** from the banner to follow links.
 Messages expire from inbox listings after 24 hours. No actual email is delivered.
 WhatsApp and paid AI integrations are not configured. Google and Apple sign-in
 are enabled using the existing dedicated Test registrations. Google uses project
@@ -141,6 +141,7 @@ Validation commands:
 npm run check
 npm run test:cloud-gateway
 npm run test:cloud-backend
+npm run test:cloud-customer
 npm run test:e2e:cloud
 ```
 
@@ -156,3 +157,10 @@ week of low database activity and must then be restored from its dashboard.
 Hosting remains subject to each provider's plan and usage limits; no paid upgrade
 or new subscription was requested. This managed backend does not provide exact
 version parity with the self-hosted production stack.
+
+The private hook's Auth email quota is 1,000 captured messages/hour; nothing is
+sent externally. App request limits remain enabled. Set `rate_limit_email_sent`
+through the Management API: the pinned CLI's `config push` does not synchronize
+this field. For config pushes, run the CLI from `.cloud-test` with global
+`--workdir` before the subcommand and inspect its diff before approving; the
+repository's local settings must never replace the hosted origins or hook.
