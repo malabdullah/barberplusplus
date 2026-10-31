@@ -146,6 +146,27 @@ async function ready() {
   }
   throw Error('Local Auth did not become healthy');
 }
+async function ensureFunctionsRuntime() {
+  const name = `supabase_edge_runtime_${lock.project}`;
+  const runtime = owned(name);
+  if (runtime.Config.Labels?.['com.supabase.cli.workdir'] !== root) throw Error('Functions runtime checkout mismatch');
+  // A previously interrupted `functions serve` can leave this container stopped
+  // even when `supabase start` reports the rest of the stack already running.
+  if (runtime.HostConfig.RestartPolicy?.Name !== 'unless-stopped') docker('update', '--restart', 'unless-stopped', name);
+  if (!runtime.State.Running) docker('start', name);
+  for (let attempt = 0; attempt < 15; attempt++) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${lock.apiPort}/functions/v1/customer-auth`, {
+        method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'profile' }), signal: AbortSignal.timeout(2000),
+      });
+      if (response.status === 401 && (await response.json()).error === 'AUTH_REQUIRED') return;
+      await response.body?.cancel();
+    } catch { /* The existing runtime may still be loading its functions. */ }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw Error('Local customer Functions did not become healthy');
+}
 function baseline() {
   return JSON.parse(sql("SELECT json_build_object('users',(SELECT count(*) FROM auth.users),'bookings',(SELECT count(*) FROM public.bookings),'cron_jobs_active',(SELECT count(*) FROM cron.job WHERE active));"));
 }
@@ -164,6 +185,7 @@ async function startBackend() {
   await configureCustomerAuth();
   await loopbackOnly();
   await ready();
+  await ensureFunctionsRuntime();
   configure();
 }
 async function freeAppPort() {
@@ -209,8 +231,9 @@ export async function main(action) {
       }
     }
     supabase('stop', '--project-id', lock.project); console.log('Local Test stopped; data volumes retained');
-  } else if (action === 'configure-auth') { await configureCustomerAuth(); await ready(); console.log('Local Test Auth settings applied; data preserved');
+  } else if (action === 'configure-auth') { await configureCustomerAuth(); await ready(); await ensureFunctionsRuntime(); console.log('Local Test Auth settings applied; data preserved');
+  } else if (action === 'ensure-functions') { await ensureFunctionsRuntime();
   } else if (action === 'status') { console.log(JSON.stringify(baseline())); }
-  else throw Error('Expected setup, start, stop, reset, configure-auth, or status');
+  else throw Error('Expected setup, start, stop, reset, configure-auth, ensure-functions, or status');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv[2]).catch(error => { console.error(error.message); process.exitCode = 1; });

@@ -1,11 +1,11 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn(), setSession: vi.fn(), signOut: vi.fn() }));
 vi.mock('../lib/runtimeConfig', () => ({ isTest: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'test-public-key' } }));
-vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth } }));
+vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth }, CUSTOMER_AUTH_STORAGE_KEY: 'barber-customer-auth' }));
 import { customerAuthService } from './customerAuth.service';
 const request = vi.fn();
 beforeEach(() => {
-  vi.resetAllMocks(); sessionStorage.clear(); vi.stubGlobal('fetch', request);
+  vi.resetAllMocks(); sessionStorage.clear(); localStorage.clear(); vi.stubGlobal('fetch', request);
   auth.getSession.mockResolvedValue({ data: { session: { access_token: 'customer-token' } } });
   auth.signInWithOAuth.mockResolvedValue({ error: null });
   auth.exchangeCodeForSession.mockResolvedValue({ error: null });
@@ -45,4 +45,20 @@ it('rejects expired links and staff sessions', async () => {
   auth.verifyOtp.mockResolvedValue({ data: { user: { app_metadata: { role: 'manager' }, email_confirmed_at: 'confirmed' } } });
   await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback?type=signup&token_hash=staff')).rejects.toThrow('INVALID_CODE');
   expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+});
+it.each(['logout', 'resetPassword'])('clears only customer credentials after %s has revoked the Auth session', async action => {
+  localStorage.setItem('barber-customer-auth', 'revoked-customer-session');
+  localStorage.setItem('barber-customer-auth-code-verifier', 'customer-verifier');
+  localStorage.setItem('staff-session', 'keep-staff-session');
+  auth.signOut.mockResolvedValue({ error: { name: 'AuthSessionMissingError', status: 400 } });
+  await customerAuthService[action]({ password: 'ResetPass1!' });
+  expect(localStorage.getItem('barber-customer-auth')).toBeNull();
+  expect(localStorage.getItem('barber-customer-auth-code-verifier')).toBeNull();
+  expect(localStorage.getItem('staff-session')).toBe('keep-staff-session');
+});
+it('does not hide unrelated Auth sign-out failures', async () => {
+  localStorage.setItem('barber-customer-auth', 'customer-session');
+  auth.signOut.mockResolvedValue({ error: { name: 'AuthRetryableFetchError', status: 500 } });
+  await expect(customerAuthService.logout()).rejects.toThrow('UNAVAILABLE');
+  expect(localStorage.getItem('barber-customer-auth')).toBe('customer-session');
 });
