@@ -8,7 +8,7 @@ The selected Bright Minimal homepage establishes the direction: a white canvas, 
 
 The Bright Minimal direction and the two-tone B-with-++ logo are selected. The logo direction was approved on 31 October 2026. Detailed component specifications remain proposed. Customers create appointments through a booking page; WhatsApp is no longer part of the product.
 
-This document covers the light interface system and the logo's light, dark, compact and single-color treatments. The desktop and mobile dark previews demonstrate logo placement; a complete dark interface component specification remains outside this document. The linked assets are design references and presentation boards.
+This document covers the light interface system and the logo's light, dark, compact and single-color treatments. The desktop and mobile dark previews demonstrate logo placement; a complete dark interface component specification remains outside this document. The linked assets include design references, presentation boards and the production logo export package.
 
 The visual sheets communicate appearance. This document is authoritative for exact values, state behavior, and accessibility details where generated images differ. Mockup appointments, names, metrics, and shops are illustrative. The new logo section supersedes earlier wordmark-only treatments in the original foundations and component sheets.
 
@@ -59,7 +59,7 @@ Use 16 px text inside form fields. Essential instructions and errors use at leas
 
 Keep paragraph width near 60–70 characters and hero copy within 720 px. Allow content to reflow and grow when text is enlarged.
 
-Sources: [Outfit specimen](https://fonts.google.com/specimen/Outfit), [Noto Sans Arabic specimen](https://notofonts.github.io/noto-docs/specimen/NotoSansArabic/). Font binaries and their license notices should be packaged and verified during implementation; no fonts are bundled in this proposal.
+Sources: [Outfit specimen](https://fonts.google.com/specimen/Outfit), [Noto Sans Arabic specimen](https://notofonts.github.io/noto-docs/specimen/NotoSansArabic/). The production logo uses outlined Outfit Bold artwork with its bundled OFL notice. Interface fonts continue to use the existing application loading strategy; their broader packaging remains separate from this logo rollout.
 
 ## 3. Approved logo system
 

@@ -50,6 +50,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await expect(page.locator('aside.sidebar')).toHaveAttribute('role','dialog');
     await expect(brand.locator('.brand-logo-light')).toBeVisible();
     expect(await brand.evaluate(el=>getComputedStyle(el).direction)).toBe('ltr');
+    await expect.poll(async()=>{
+      const box=await brand.boundingBox();
+      return box && box.x>=0 && box.x+box.width<=390;
+    }).toBe(true);
     await page.screenshot({path:screenshot(`brand-${role}-mobile-light-arabic`)});
     await page.keyboard.press('Escape');
     await page.locator('.preferences-selector').first().locator('button').first().click();
@@ -58,6 +62,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.locator('.preferences-option').filter({hasText:'Dark'}).click();
     await page.locator('.topbar-menu-btn').click();
     await expect(brand.locator('.brand-logo-dark')).toBeVisible();
+    await expect.poll(async()=>{
+      const box=await brand.boundingBox();
+      return box && box.x>=0 && box.x+box.width<=390;
+    }).toBe(true);
     await page.screenshot({path:screenshot(`brand-${role}-mobile-dark`)});
     await page.keyboard.press('Escape');
   });
