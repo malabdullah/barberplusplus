@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
-import CustomerHeader from '../components/Customer/CustomerHeader';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import CustomerSocialButtons from '../components/Customer/CustomerSocialButtons';
 import { validatePassword } from '../utils/validation';
 import './CustomerBooking.css';
@@ -18,6 +18,7 @@ export default function CustomerAuth({ mode }) {
   const returnTo = location.state?.returnTo === '/book' ? '/book' : '/customer/account';
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  usePublicNavigationBusy(busy);
   const [showPassword, setShowPassword] = useState(false); const [sent, setSent] = useState(false);
   const signup = mode === 'sign-up'; const recovery = mode === 'forgot-password'; const reset = mode === 'reset-password';
   const [resetDone, setResetDone] = useState(false);
@@ -44,7 +45,7 @@ export default function CustomerAuth({ mode }) {
   const passwordField = (key, label) => <><label className="cb-field-label" htmlFor={key}>{label}</label><div className="ca-password"><input className="cb-input" id={key} type={showPassword ? 'text' : 'password'} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} value={form[key]} onChange={event => update(key, event.target.value)} maxLength={72} required /><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={tr(showPassword ? 'hidePassword' : 'showPassword')}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div></>;
   const errors = ['INVALID_DETAILS','WEAK_PASSWORD','PASSWORD_MISMATCH','INVALID_LOGIN','ACCOUNT_UNAVAILABLE','RATE_LIMITED','AUTH_REQUIRED','SIGN_IN_REQUIRED'];
   if (!loading && customer && !reset && !recovery) return <Navigate to={returnTo} replace />;
-  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><CustomerHeader busy={busy} /><main className="ca-main">
+  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><main className="ca-main">
     <Link className="cb-text-button" to="/book">{tr('backToBooking')}</Link>
     <h1>{tr(`titles.${mode}`)}</h1>{mode !== 'sign-in' && <p className="cb-intro">{tr(`email.intros.${mode}`)}</p>}
     {(mode === 'sign-in' || signup && !sent) && <CustomerSocialButtons returnTo={returnTo} disabled={busy || loading} />}

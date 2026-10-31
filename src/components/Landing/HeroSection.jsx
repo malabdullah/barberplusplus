@@ -14,25 +14,25 @@ export default function HeroSection() {
         <div className="hero-content">
           <div className="hero-badge">
             <span className="hero-badge-dot" aria-hidden="true" />
-            <span>{t('landing.hero.badge')}</span>
+            <span>{t('publicNav.hero.badge')}</span>
           </div>
 
           <h1 id="hero-title" className="hero-title">
-            {t('landing.hero.titleStart')}{' '}
-            <span className="hero-title-accent">{t('landing.hero.titleAccent')}</span>
+            {t('publicNav.hero.titleStart')}{' '}
+            <span className="hero-title-accent">{t('publicNav.hero.titleAccent')}</span>
           </h1>
 
           <p className="hero-subtitle">
-            {t('landing.hero.subtitle')}
+            {t('publicNav.hero.subtitle')}
           </p>
 
           <div className="hero-cta">
-            <Link to="/signup" className="hero-btn-primary">
-              {t('landing.hero.cta')}
+            <Link to="/book" className="hero-btn-primary">
+              {t('publicNav.book')}
               <ArrowRight size={18} strokeWidth={2} />
             </Link>
-            <Link to="/login" className="hero-btn-secondary">
-              {t('landing.hero.secondaryCta')}
+            <Link to="/#for-shops" className="hero-btn-secondary">
+              {t('publicNav.hero.shopCta')}
             </Link>
           </div>
 

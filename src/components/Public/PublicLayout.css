@@ -1,0 +1,71 @@
+.public-site { min-height: calc(100dvh - var(--environment-banner-height, 0px)); display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); --public-header-height: 80px; --border-color: var(--accent-border); --booking-surface: var(--bg-primary); --booking-subtle: var(--bg-secondary); --booking-text: var(--text-primary); color-scheme: dark; }
+.public-content { flex: 1; min-width: 0; }
+.public-content:focus { outline: none; }
+.public-skip { position: fixed; top: -100px; inset-inline-start: 16px; z-index: 10000; background: var(--accent-primary); color: #151A20; padding: 12px 20px; border-radius: 8px; }
+.public-skip:focus { top: calc(var(--environment-banner-height, 0px) + 8px); }
+.public-header { position: sticky; top: var(--environment-banner-height, 0px); z-index: 100; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); }
+.public-header-inner { min-height: var(--public-header-height); max-width: 1280px; padding: 12px 32px; margin-inline: auto; display: flex; align-items: center; gap: 32px; }
+.public-brand { display: inline-flex; flex-shrink: 0; align-items: center; min-height: 44px; }
+.public-desktop-nav { display: flex; align-items: center; gap: 24px; margin-inline: auto; }
+.public-header a, .public-footer a { text-decoration: none; }
+.public-desktop-nav a, .public-account-button { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.public-desktop-nav a { color: var(--text-secondary); min-height: 44px; display: flex; align-items: center; }
+.public-desktop-nav a:hover, .public-desktop-nav a[aria-current], .public-footer a:hover { color: var(--booking-link); }
+.public-header-actions { display: flex; align-items: center; gap: 8px; }
+.public-header .topbar-icon-btn { width: 44px; height: 44px; }
+.public-header .topbar-dropdown { z-index: 110; }
+.public-account { position: relative; }
+.public-account-button, .public-mobile-toggle { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 16px; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; }
+.public-account-links { position: absolute; inset-inline-end: 0; top: calc(100% + 10px); width: max-content; min-width: 230px; max-width: calc(100vw - 32px); padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); box-shadow: 0 8px 24px #0002; }
+.public-account-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; color: var(--text-primary); border-radius: 6px; }
+.public-account-links a:hover { background: var(--bg-tertiary); }
+.public-mobile-toggle { display: none; width: 44px; padding: 10px; }
+.public-mobile-links { display: none; }
+.public-header :where(a, button):focus-visible, .public-footer a:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
+.public-header [aria-disabled='true'], .public-footer [aria-disabled='true'], .public-header button:disabled { opacity: .6; cursor: wait; }
+.public-footer { padding: 48px 32px 24px; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+.public-footer-inner { max-width: 1216px; margin-inline: auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; }
+.public-footer-brand p { color: var(--text-secondary); font-size: 15px; max-width: 280px; margin-top: 16px; }
+.public-footer nav { display: flex; align-items: flex-start; flex-direction: column; }
+.public-footer h2 { font: 600 15px/1.5 var(--font-body); margin: 0 0 12px; }
+.public-footer nav a { color: var(--text-secondary); font-size: 14px; min-height: 44px; display: flex; align-items: center; }
+.public-copyright { max-width: 1216px; margin: 32px auto 0; padding-top: 24px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary); }
+.public-site :is(#for-shops, #features, #how-it-works, #benefits, #appointments) { scroll-margin-top: calc(var(--public-header-height) + var(--environment-banner-height, 0px) + 24px); }
+.public-site .landing-page { min-height: auto; }
+.public-site .hero-section { padding-top: 64px; }
+.public-site .login-page { min-height: calc(100dvh - var(--public-header-height) - var(--environment-banner-height, 0px)); }
+.public-site .auth-preferences { display: none; }
+.public-site .customer-booking { min-height: calc(100dvh - var(--public-header-height) - var(--environment-banner-height, 0px)); color-scheme: inherit; --cb-header-height: var(--public-header-height); }
+.public-site .cb-primary, .public-site .selected .cb-radio { color: #151A20; }
+.public-site .cb-primary:disabled { color: var(--booking-muted); background: var(--booking-subtle); border-color: var(--booking-divider); }
+.public-site .customer-booking :is(.cb-input, .cb-phone-input, .cb-secondary, .cb-search, .cb-select-wrap) { background: var(--booking-surface); }
+@media (max-width: 1050px) {
+  .public-site { --public-header-height: 72px; }
+  .public-header-inner { padding: 10px 24px; gap: 16px; }
+  .public-header-actions { margin-inline-start: auto; }
+  .public-desktop-nav, .public-account { display: none; }
+  .public-mobile-toggle { display: flex; }
+  .public-mobile-links { display: flex; flex-direction: column; padding: 0 24px 16px; max-height: calc(100dvh - var(--public-header-height) - var(--environment-banner-height, 0px)); overflow-y: auto; }
+  .public-mobile-links a { min-height: 48px; padding: 12px 8px; color: var(--text-primary); border-radius: 6px; }
+  .public-mobile-links a:hover, .public-mobile-links a[aria-current] { background: var(--bg-secondary); color: var(--booking-link); }
+  .public-menu-divider { height: 1px; background: var(--border-color); margin-block: 8px; }
+  .public-footer-inner { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+@media (max-width: 600px) {
+  .public-site { --public-header-height: 68px; }
+  .public-header-inner { padding: 10px 16px; gap: 8px; }
+  .public-header-actions { gap: 2px; }
+  .public-header .brand-logo--compact { width: 128px; }
+  .public-mobile-links { padding-inline: 16px; }
+  .public-site .hero-section { padding-top: 40px; }
+  .public-footer { padding: 32px 22px 24px; }
+  .public-footer-inner { gap: 24px; }
+  .public-footer-brand { grid-column: 1 / -1; }
+  .public-footer h2 { font-size: 14px; }
+}
+
+[data-theme="light"] .public-site { color-scheme: light; }
+
+@media (max-width: 767px) {
+  .public-site:has(.customer-booking:not(.ca-page)) .public-footer { padding-bottom: calc(170px + env(safe-area-inset-bottom)); }
+}

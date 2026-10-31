@@ -20,7 +20,7 @@ for (const width of [1440, 390]) {
           const bannerBox = await page.locator('.environment-banner').boundingBox();
           expect(logoBox.y).toBeGreaterThanOrEqual(bannerBox.y + bannerBox.height);
           expect(await logo.evaluate(el => getComputedStyle(el).direction)).toBe('ltr');
-          const treatment = name === 'booking' || name === 'customer' ? 'light' : theme;
+          const treatment = theme;
           await expect(logo.locator(`.brand-logo-${treatment}`)).toBeVisible();
           await expect(logo.locator(`.brand-logo-${treatment === 'light' ? 'dark' : 'light'}`)).toBeHidden();
           await expect.poll(() => logo.locator(`.brand-logo-${treatment}`).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);

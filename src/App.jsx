@@ -5,6 +5,7 @@ import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
 import AdminLayout from './components/Layout/AdminLayout';
 import Landing from './pages/Landing';
+import PublicLayout from './components/Public/PublicLayout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -132,6 +133,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route element={<PublicLayout />}>
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
       {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
@@ -168,6 +170,8 @@ function AppRoutes() {
         path="/mfa-setup"
         element={<MFASetup />}
       />
+
+      </Route>
 
       <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
 

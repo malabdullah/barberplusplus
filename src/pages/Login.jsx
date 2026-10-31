@@ -4,10 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import LanguageSelector from '../components/UI/LanguageSelector';
-import ThemeSelector from '../components/UI/ThemeSelector';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -21,6 +20,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  usePublicNavigationBusy(isLoading);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -75,11 +75,6 @@ export default function Login() {
 
       {/* Login Container */}
       <div className="login-container animate-scale-in">
-        {/* Preferences Selectors */}
-        <div className="auth-preferences">
-          <LanguageSelector />
-          <ThemeSelector />
-        </div>
 
         {/* Logo */}
         <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>
@@ -95,7 +90,7 @@ export default function Login() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>{t('auth.welcomeBack')}</h1>
+          <h1>{t('publicNav.teamSignIn')}</h1>
           <p>{t('auth.signInMessage')}</p>
         </div>
 
@@ -178,7 +173,8 @@ export default function Login() {
 
         {/* Footer */}
         <div className="login-footer">
-          <p>{t('auth.noAccount')} <Link to="/signup">{t('auth.signUp')}</Link></p>
+          <p>{t('auth.noAccount')} <Link to="/signup">{t('publicNav.registerShop')}</Link></p>
+          <p><Link to="/customer/sign-in">{t('publicNav.customerSignIn')}</Link></p>
         </div>
       </div>
 

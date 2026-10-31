@@ -742,3 +742,15 @@ a:active {
   --booking-divider: #E3E7ED;
   --booking-control: #7C8795;
 }
+
+/* Customer pages share the public site's selected theme. */
+[data-theme='dark'] {
+  --booking-surface: #0D0B09;
+  --booking-subtle: #1F1C18;
+  --booking-text: #F5F0E8;
+  --booking-muted: #B8AEA0;
+  --booking-selection: #292115;
+  --booking-link: #D4A853;
+  --booking-divider: #39332B;
+  --booking-control: #857869;
+}

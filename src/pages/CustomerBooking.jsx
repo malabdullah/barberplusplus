@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Calendar, Check, CheckCircle2, ChevronDown, Clock, Download, Loader2, MapPin, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
-import CustomerHeader from '../components/Customer/CustomerHeader';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
 import { readBookingDraft, saveBookingDraft } from '../utils/customerBookingDraft';
 import './CustomerAuth.css';
@@ -70,6 +70,7 @@ export default function CustomerBooking() {
   const [verification, setVerification] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [busy, setBusy] = useState(false);
+  usePublicNavigationBusy(busy);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const headingRef = useRef(null);
@@ -226,7 +227,7 @@ export default function CustomerBooking() {
   const bookingError = error && <div className="cb-alert" role="alert"><span>{errorText(error)}</span>{(catalogError || slotError) && <button type="button" disabled={busy} onClick={() => { setError(''); if (catalogError) setReload(value => value + 1); else setSlotRetry(value => value + 1); }}>{tr('retry')}</button>}</div>;
 
   return <div className="customer-booking" dir={isArabic ? 'rtl' : 'ltr'}>
-    <CustomerHeader busy={busy} />
+
     <div className="cb-layout">
       <main className="cb-main" id="booking-content">
         {!receipt && <div className="cb-progress" role="status">

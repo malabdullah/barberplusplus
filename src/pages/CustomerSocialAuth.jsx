@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
-import CustomerHeader from '../components/Customer/CustomerHeader';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import './CustomerBooking.css';
@@ -13,6 +13,7 @@ export default function CustomerSocialAuth() {
   const { refresh } = useCustomerAuth(); const location = useLocation(); const navigate = useNavigate();
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState('');
+  usePublicNavigationBusy(busy);
   const callbackRef = useRef(null); const returnTo = location.state?.returnTo === '/book' ? '/book' : '/customer/account';
   useEffect(() => { document.title = `${tr('social.completeTitle')} | Barber++`; }, [t]);
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function CustomerSocialAuth() {
     catch { setError('SOCIAL_SIGN_IN_FAILED'); }
     finally { setBusy(false); }
   };
-  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><CustomerHeader busy={busy} /><main className="ca-main">
+  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><main className="ca-main">
     <h1>{tr('social.completeTitle')}</h1><p className="cb-intro">{tr('email.socialIntro')}</p>
     {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
     {loading ? <p role="status"><Loader2 className="cb-spinner" />{tr('loading')}</p> : ready && <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>

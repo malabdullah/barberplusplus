@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import CustomerHeader from '../components/Customer/CustomerHeader';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import './CustomerBooking.css';
@@ -29,7 +28,7 @@ export default function CustomerEmailCallback() {
     };
     run(); return () => { active = false; };
   }, []);
-  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><CustomerHeader /><main className="ca-main">
+  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><main className="ca-main">
     <h1>{t('customerAuth.email.callbackTitle')}</h1>
     {error ? <><p className="cb-alert" role="alert">{t('customerAuth.email.invalidLink')}</p><Link to="/customer/sign-in">{t('customerAuth.signIn')}</Link></> : <p role="status">{t('customerAuth.loading')}</p>}
   </main></div>;

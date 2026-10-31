@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
+  Globe,
   Bell,
   Search,
   Building2,
@@ -18,6 +19,7 @@ import { notificationPreferencesService } from '../../services';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
+import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
 
 /**
  * Unified TopBar component for both manager and barber roles
@@ -148,6 +150,8 @@ const TopBar = memo(function TopBar({
           <Menu size={20} strokeWidth={1.5} />
         </button>
 
+        <Link to="/" className="topbar-icon-btn" aria-label={t('publicNav.website')} title={t('publicNav.website')}><Globe size={20} strokeWidth={1.5} /></Link>
+        {customerFeaturesEnabled && <Link to="/book" className="topbar-website-book">{t('publicNav.book')}</Link>}
         {/* Search */}
         <div className="topbar-search">
           <Search size={18} strokeWidth={1.5} />

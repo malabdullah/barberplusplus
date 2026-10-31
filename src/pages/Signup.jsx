@@ -5,10 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
-import LanguageSelector from '../components/UI/LanguageSelector';
-import ThemeSelector from '../components/UI/ThemeSelector';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './Signup.css';
 
 export default function Signup() {
@@ -28,6 +27,7 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  usePublicNavigationBusy(isLoading);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -124,11 +124,6 @@ export default function Signup() {
 
       {/* Signup Container */}
       <div className="login-container signup-container animate-scale-in">
-        {/* Preferences Selectors */}
-        <div className="auth-preferences">
-          <LanguageSelector />
-          <ThemeSelector />
-        </div>
 
         {/* Logo */}
         <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>
