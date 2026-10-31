@@ -2,14 +2,19 @@
 
 ## Cloud Test
 
-The owner requested an additional free hosted test environment on 2026-10-31.
+The owner made this the default testing environment on 2026-10-31. Deploy each
+application, database and Functions change here and verify it before reporting
+the change ready. Local builds, lint and unit tests remain appropriate.
 It runs independently of the Mac at
 https://barber-test.alabdullah-cs.workers.dev with a separate managed Supabase
 project, `qvkucvcjmojjbphlzlks` (`barber-test`, Mumbai). See
 [Cloud Test](cloud-test.md) for access, isolation and validation details.
 This deployment is separate from the production release workflow below.
 
-## Local Test
+## Local Test (only on explicit owner request)
+
+Do not start or use the localhost website or local Docker Test runtime unless
+the owner explicitly asks. The instructions below are retained for that case.
 
 Use Node 24.20.0 and Docker Desktop. Work on `dev` or a feature branch based on
 it. Run `npm run local:setup`, then `npm run local:start`; review the app at
@@ -52,5 +57,5 @@ digests, migration hashes and attestations, then applies compatible backend
 changes before requesting the frontend deployment through the local Dokploy API.
 The controller stays disabled until the first cutover is accepted.
 
-There is no permanent staging environment and no cloud preview dependency.
+Production delivery remains separate from hosted Test deployment.
 Platform upgrades and incompatible migrations require a separate planned release.

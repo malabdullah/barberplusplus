@@ -1,6 +1,9 @@
 # Cloud Test
 
-The owner authorized this additional hosted test environment on 2026-10-31.
+The owner made this the default testing environment on 2026-10-31. Every app,
+database and Functions change must be deployed and verified here before it is
+reported ready. Use the localhost website or local Docker Test runtime only
+when explicitly requested. Local builds, lint and unit checks can still run.
 It does not depend on a Mac, Docker Desktop, a tunnel, or a self-hosted runner.
 
 | Resource | Value |
@@ -12,6 +15,14 @@ It does not depend on a Mac, Docker Desktop, a tunnel, or a self-hosted runner.
 | Region | Mumbai / `ap-south-1` |
 | Supabase dashboard | https://supabase.com/dashboard/project/qvkucvcjmojjbphlzlks |
 | Source branch | `codex/cloudflare-supabase-test`, based on `dev` at `a9acf92` |
+
+The initial hosted app is the development/Test snapshot at `a9acf92`, with the
+cloud changes recorded in `7c7420e`. Its initial runtime release label is
+`a9acf92-cloud-test`; it was not copied from the production website. The initial
+database was rebuilt from development migrations and synthetic fixtures.
+Verified on 2026-10-31: managed Supabase PostgreSQL 17.11 (image
+`17.11.0.011`) and Auth/GoTrue `v2.197.0`. Supabase services have independent
+versions and managed service versions may change.
 
 ## Access and test data
 
