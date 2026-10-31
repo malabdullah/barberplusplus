@@ -2,7 +2,7 @@
 
 The approved B-with-++ identity is deployed on
 https://barber-test.alabdullah-cs.workers.dev.
-Application release: `8baf320a7a3e3d7ffe7f2d709e7bec4233ba956f`.
+Application release: `1509195b06b3b2e764e27ad001927f1c5c85786b`.
 
 Production SVG masters, outlined wordmarks, transparent PNG lockups, monochrome
 treatments, browser icons and app icons are in
@@ -14,7 +14,8 @@ preview, staff authentication, all four role sidebars and customer headers.
 It retains LTR artwork in Arabic and switches with the application theme.
 Customer booking/auth/account headers explicitly use the light treatment on
 their independently light surface. The Test banner no longer covers the
-marketing header or its mobile menu.
+marketing header or its mobile menu. Mobile staff navigation stacks above the
+top bar so the logo and close button are unobstructed.
 
 Validation:
 
@@ -25,7 +26,7 @@ Validation:
   English/Arabic, light/dark, every staff role, guest booking, customer email
   confirmation and the private inbox.
 - Additional staff screenshots wait until each sidebar is fully inside the
-  viewport, checking the visible logo rather than an in-progress transition.
+  viewport, then confirm the logo center is unobstructed with `elementFromPoint`.
 - Transparent pixels were verified at both apertures and the waist in all four
   symbol treatments. Favicons were inspected at their native resolutions.
 - Live runtime identifies only Supabase Test project `qvkucvcjmojjbphlzlks`.
