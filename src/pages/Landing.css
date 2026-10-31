@@ -178,7 +178,7 @@
 
 .landing-header {
   position: fixed;
-  top: 0;
+  top: var(--environment-banner-height, 0px);
   left: 0;
   right: 0;
   z-index: 100;
@@ -340,7 +340,7 @@
 /* Mobile Menu Overlay */
 .landing-mobile-menu {
   position: fixed;
-  top: 72px;
+  top: calc(72px + var(--environment-banner-height, 0px));
   left: 0;
   right: 0;
   bottom: 0;

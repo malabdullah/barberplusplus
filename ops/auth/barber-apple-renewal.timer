@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Apple credential expiry check with missed-run catch-up
+
+[Timer]
+OnCalendar=*-*-* 01:05:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+Unit=barber-apple-renewal.service
+
+[Install]
+WantedBy=timers.target

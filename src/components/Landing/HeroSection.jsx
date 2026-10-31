@@ -1,3 +1,4 @@
+import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ export default function HeroSection() {
         <div className="hero-visual" role="img" aria-label={t('landing.hero.preview.alt')}>
           <div className="mockup-glow" aria-hidden="true" />
           <div className="booking-preview">
-            <div className="booking-preview-header"><Scissors size={22} /> <strong>Barber++</strong></div>
+            <div className="booking-preview-header"><BrandLogo size="compact" /></div>
             <div className="booking-preview-body">
               <span className="booking-preview-eyebrow">{t('landing.hero.preview.eyebrow')}</span>
               <h2>{t('landing.hero.preview.title')}</h2>

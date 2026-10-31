@@ -27,10 +27,12 @@ for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['ag
         await page.setViewportSize({ width, height: 844 });
         const visibleControls = page.locator('.topbar button:visible');
         for (const button of await visibleControls.all()) {
-          expect(await button.evaluate(element => {
+          // The mobile drawer animates above the top bar after a resize or close.
+          // Keep the hit test, but allow that transition to finish before asserting.
+          await expect.poll(() => button.evaluate(element => {
             const box = element.getBoundingClientRect(); const banner = document.querySelector('.environment-banner').getBoundingClientRect();
             return box.top >= banner.bottom - 1 && element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
-          })).toBe(true);
+          }), { message: `${role} top-bar control is unobscured at ${width}px (${language})` }).toBe(true);
         }
         if (width <= 1024) {
           await page.getByRole('button', { name: language === 'en' ? 'Navigation' : 'التنقل', exact: true }).click();

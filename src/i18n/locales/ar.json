@@ -1,6 +1,7 @@
 {
   "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية", "testInbox": "بريد الاختبار" },
   "common": {
+    "brandHome": "الصفحة الرئيسية لـ Barber++",
     "navigation": "التنقل",
     "save": "حفظ",
     "cancel": "إلغاء",

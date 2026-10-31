@@ -1,0 +1,39 @@
+.brand-logo {
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 5px;
+  width: 190px;
+  max-width: 100%;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+  line-height: 1;
+}
+
+.brand-logo-artwork { display: block; }
+.brand-logo-artwork img { display: block; width: 100%; height: auto; }
+.brand-logo .brand-logo-light { display: none; }
+.brand-logo .brand-logo-dark { display: block; }
+[data-theme='light'] .brand-logo--auto .brand-logo-light,
+.brand-logo--light .brand-logo-light { display: block; }
+[data-theme='light'] .brand-logo--auto .brand-logo-dark,
+.brand-logo--light .brand-logo-dark { display: none; }
+.brand-logo--auth { width: 220px; }
+.brand-logo--footer { width: 170px; }
+.brand-logo--compact { width: 165px; }
+.brand-logo-tagline {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+.landing-logo, .footer-brand-logo, .cb-wordmark { min-height: 44px; }
+.cb-wordmark { display: inline-flex; align-items: center; flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .landing-logo .brand-logo { width: 155px; }
+  .landing-logo .brand-logo-tagline { display: none; }
+  .brand-logo--compact { width: 145px; }
+}

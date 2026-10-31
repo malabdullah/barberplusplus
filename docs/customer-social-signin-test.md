@@ -1,9 +1,33 @@
-# Customer Google and Apple sign-in in local Test
+# Customer Google and Apple sign-in in Test
 
-This integration runs only in the owned `barber-local-test` checkout. Provider
-credentials are private local state and are never included in Git. The customer
-forms show provider buttons as unavailable unless the local Auth service enables
-them. No production Auth configuration or application deployment is involved.
+## Hosted Test (default)
+
+Use https://barber-test.alabdullah-cs.workers.dev/customer/sign-in. Google and
+Apple are enabled in the separate managed Supabase Test project
+`qvkucvcjmojjbphlzlks`. The existing dedicated Test registrations were extended
+with `https://qvkucvcjmojjbphlzlks.supabase.co/auth/v1/callback`; the application
+finishes PKCE exchange at its hosted `/customer/auth-callback` route. The Mac and
+the historical local callback tunnel are not involved in this hosted flow.
+
+Real Google login/profile creation/sign-out and Apple login/private relay email,
+missing-name completion and session persistence after reload passed on
+2026-10-31. The owner subsequently tested and accepted the customer journey.
+Provider secrets stay in ignored `.cloud-test/customer-oauth.json` and are
+applied only to the hosted Test project's Auth configuration. Its separate
+`barber-test-apple-renewal` Worker owns Apple credential rotation, checks hourly
+and renews 30 days before expiry using the existing dedicated Test signing key.
+See the [renewal runbook](../ops/auth/README.md#hosted-test-equivalent). Production
+provider registrations and configuration are unchanged.
+
+See [Cloud Test](cloud-test.md) for configuration-push safeguards and verification.
+
+## Historical local Test setup (explicit request only)
+
+The instructions below describe the owned `barber-local-test` installation.
+Do not start it unless the owner explicitly requests localhost testing.
+Its provider credentials are private local state and are never included in Git.
+The customer forms show provider buttons as unavailable unless Auth enables them.
+No production Auth configuration or application deployment is involved.
 
 On 2026-10-31, separate Google and Apple Test registrations and a callback-only
 Cloudflare Tunnel were activated with the owner's approval. Google uses project
