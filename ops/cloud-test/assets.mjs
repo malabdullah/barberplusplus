@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const {hash} = require('blake3-wasm');
 const stateDirectory = '.cloud-test';
@@ -8,7 +9,7 @@ const operation = process.argv[2] || 'manifest';
 const config = JSON.parse(await fs.readFile('wrangler.cloud-test.jsonc', 'utf8'));
 if (operation === 'manifest') {
   const runtime = {environment:'cloud-test',appUrl:config.vars.APP_URL,supabaseUrl:config.vars.SUPABASE_URL,
-    cloudTestProjectRef:new URL(config.vars.SUPABASE_URL).hostname.split('.')[0],supabasePublishableKey:config.vars.SUPABASE_PUBLISHABLE_KEY,release:process.env.APP_RELEASE || 'cloud-test'};
+    cloudTestProjectRef:new URL(config.vars.SUPABASE_URL).hostname.split('.')[0],supabasePublishableKey:config.vars.SUPABASE_PUBLISHABLE_KEY,release:process.env.APP_RELEASE || execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()};
   await fs.writeFile('dist/runtime-config.js', `window.__BARBER_CONFIG__ = Object.freeze(${JSON.stringify(runtime)});\n`);
   const manifest = {};
   for (const file of await fs.readdir('dist', {recursive:true})) {
