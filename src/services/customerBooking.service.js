@@ -22,7 +22,9 @@ export const customerBookingService = {
     const result = await request('catalog');
     return {
       branches: result.branches.map(branch => ({
-        id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar), city: branch.city,
+        id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar),
+        city: branch.city?.trim() || branch.areas?.name_en || '',
+        cityAr: branch.city?.trim() ? '' : branch.areas?.name_ar || '',
         address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url,
         area: branch.areas?.name_en || '', areaAr: branch.areas?.name_ar || '',
       })),

@@ -47,7 +47,9 @@ export default function CustomerBooking() {
   const tr = (key, values) => t(`customerBooking.${key}`, values);
   const isArabic = i18n.language.startsWith('ar');
   const name = item => shopWording(isArabic && item?.nameAr ? item.nameAr : item?.name || '');
-  const cityName = value => t(`customerBooking.cities.${value}`, { defaultValue: value });
+  const cityName = value => t(`customerBooking.cities.${value}`, {
+    defaultValue: (isArabic && catalog.branches.find(item => item.city === value)?.cityAr) || value,
+  });
   const [catalog, setCatalog] = useState(EMPTY_CATALOG);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
