@@ -1,7 +1,8 @@
+import BrandLogo from '../UI/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Scissors, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
@@ -32,14 +33,8 @@ export default function LandingHeader() {
     <header className={`landing-header ${isScrolled ? 'scrolled' : ''}`}>
       <div className="landing-header-inner">
         {/* Logo */}
-        <Link to="/" className="landing-logo" aria-label="Barber++ Home">
-          <div className="landing-logo-icon">
-            <Scissors size={24} strokeWidth={1.5} />
-          </div>
-          <div className="landing-logo-text">
-            <span className="landing-logo-name">Barber++</span>
-            <span className="landing-logo-tagline">{t('landing.header.tagline')}</span>
-          </div>
+        <Link to="/" className="landing-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('landing.header.tagline')} />
         </Link>
 
         {/* Navigation */}

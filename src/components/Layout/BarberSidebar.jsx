@@ -1,3 +1,4 @@
+import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +8,6 @@ import {
   Clock,
   User,
   Settings,
-  Scissors,
   X,
   Loader2,
 } from 'lucide-react';
@@ -46,15 +46,9 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <button className="sidebar-close-btn" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} strokeWidth={2} />
           </button>
-          <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
-            <div className="sidebar-logo-icon">
-              <Scissors size={24} strokeWidth={1.5} />
-            </div>
-            <div className="sidebar-logo-text">
-              <span className="sidebar-logo-name">Barber++</span>
-              <span className="sidebar-logo-tagline">Barber</span>
-            </div>
-          </Link>
+          <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('common.barber')} />
+        </Link>
           <div className="sidebar-divider">
             <div className="sidebar-divider-line"></div>
             <div className="sidebar-divider-diamond"></div>
@@ -78,15 +72,9 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <button className="sidebar-close-btn" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} strokeWidth={2} />
           </button>
-          <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
-            <div className="sidebar-logo-icon">
-              <Scissors size={24} strokeWidth={1.5} />
-            </div>
-            <div className="sidebar-logo-text">
-              <span className="sidebar-logo-name">Barber++</span>
-              <span className="sidebar-logo-tagline">Barber</span>
-            </div>
-          </Link>
+          <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('common.barber')} />
+        </Link>
           <div className="sidebar-divider">
             <div className="sidebar-divider-line"></div>
             <div className="sidebar-divider-diamond"></div>
@@ -113,15 +101,9 @@ export default function BarberSidebar({ isOpen, onClose }) {
           <X size={20} strokeWidth={2} />
         </button>
       {/* Logo */}
-      <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
-        <div className="sidebar-logo-icon">
-          <Scissors size={24} strokeWidth={1.5} />
-        </div>
-        <div className="sidebar-logo-text">
-          <span className="sidebar-logo-name">Barber++</span>
-          <span className="sidebar-logo-tagline">Barber</span>
-        </div>
-      </Link>
+      <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('common.barber')} />
+        </Link>
 
       {/* Decorative line */}
       <div className="sidebar-divider">

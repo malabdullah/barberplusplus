@@ -1,3 +1,4 @@
+import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,6 @@ import {
   Settings2,
   Shield,
   Settings,
-  Scissors,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -52,14 +52,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
         </button>
 
         {/* Logo */}
-        <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
-          <div className="sidebar-logo-icon admin-logo-icon">
-            <Scissors size={24} strokeWidth={1.5} />
-          </div>
-          <div className="sidebar-logo-text">
-            <span className="sidebar-logo-name">Barber++</span>
-            <span className="sidebar-logo-tagline admin-tagline">{t('common.admin')}</span>
-          </div>
+        <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('common.admin')} />
         </Link>
 
         {/* Decorative line */}
