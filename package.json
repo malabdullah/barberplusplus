@@ -34,7 +34,8 @@
     "check:schema": "sh scripts/check-schema-drift.sh",
     "check": "npm run lint && npm run lint:functions && npm run check:functions && npm run test:functions && npm run test && npm run test:operations && npm run check:migrations && npm run check:domains && npm run build",
     "test:local-backend": "node scripts/probe-local-backend.mjs",
-    "test:local-lifecycle": "node scripts/verify-local-lifecycle.mjs"
+    "test:local-lifecycle": "node scripts/verify-local-lifecycle.mjs",
+    "test:cloud-customer": "node ops/cloud-test/customer-probe.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",

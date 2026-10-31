@@ -58,6 +58,10 @@ is not part of frontend/Functions rollback.
   passed. Concurrent overlapping read-committed writers were rejected; stale
   repeatable-read writers failed serialization. The final public behavioral
   schema matches `supabase/schema.expected.sql`.
+- The hosted customer API probe passed confirmation/used-link rejection,
+  trusted customer role, phone-optional profiles, invalid-phone rejection,
+  account booking/idempotency, shared-phone history isolation, password recovery
+  and session revocation, preserved phone/booking, and confirmed email changes.
 - Production has genuine encrypted B2 backup/restore evidence captured on
   2026-10-31. Recheck freshness at activation; do not reuse an old commit-bound
   backup exception.
