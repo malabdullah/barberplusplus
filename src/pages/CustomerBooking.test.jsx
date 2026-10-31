@@ -294,3 +294,11 @@ it('resumes shop selection when returning with only a city chosen', async () => 
   expect(screen.getByLabelText('City')).not.toBeVisible();
   expect(expandedSections()).toHaveLength(1);
 });
+
+it('shows a legacy saved location in Arabic when it has no built-in city translation', async () => {
+  cleanup();
+  customerBookingService.getCatalog.mockResolvedValue({ ...catalog, branches: [{ ...catalog.branches[0], city: 'Hawalli', cityAr: 'حولي' }] });
+  await i18n.changeLanguage('ar');
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  expect(await screen.findByRole('option', { name: 'حولي' })).toBeInTheDocument();
+});
