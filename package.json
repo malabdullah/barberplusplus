@@ -29,7 +29,7 @@
     "local:stop": "node scripts/local-test.mjs stop",
     "local:reset": "node scripts/local-test.mjs reset",
     "local:status": "node scripts/local-test.mjs status",
-    "test:operations": "node --test scripts/*.node-test.mjs ops/release/*.test.mjs ops/backup/*.test.mjs",
+    "test:operations": "node --test scripts/*.node-test.mjs ops/release/*.test.mjs ops/backup/*.test.mjs ops/auth/*.test.mjs",
     "test:production-image": "node scripts/test-production-image.mjs",
     "check:schema": "sh scripts/check-schema-drift.sh",
     "check": "npm run lint && npm run lint:functions && npm run check:functions && npm run test:functions && npm run test && npm run test:operations && npm run check:migrations && npm run check:domains && npm run build",
