@@ -54,6 +54,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
       const box=await brand.boundingBox();
       return box && box.x>=0 && box.x+box.width<=390;
     }).toBe(true);
+    await expect.poll(()=>brand.evaluate(el=>{
+      const box=el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2));
+    })).toBe(true);
     await page.screenshot({path:screenshot(`brand-${role}-mobile-light-arabic`)});
     await page.keyboard.press('Escape');
     await page.locator('.preferences-selector').first().locator('button').first().click();
@@ -66,6 +70,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
       const box=await brand.boundingBox();
       return box && box.x>=0 && box.x+box.width<=390;
     }).toBe(true);
+    await expect.poll(()=>brand.evaluate(el=>{
+      const box=el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2));
+    })).toBe(true);
     await page.screenshot({path:screenshot(`brand-${role}-mobile-dark`)});
     await page.keyboard.press('Escape');
   });

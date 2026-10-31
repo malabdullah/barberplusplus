@@ -240,7 +240,7 @@
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    z-index: 199;
+    z-index: 1000;
     animation: fadeIn var(--transition-fast) ease-out;
   }
 
@@ -251,7 +251,7 @@
     overscroll-behavior: contain;
     transform: translateX(-100%);
     transition: transform var(--transition-base);
-    z-index: 200;
+    z-index: 1001;
   }
 
   .sidebar.open {
