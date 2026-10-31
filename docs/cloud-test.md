@@ -24,6 +24,34 @@ Verified on 2026-10-31: managed Supabase PostgreSQL 17.11 (image
 `17.11.0.011`) and Auth/GoTrue `v2.197.0`. Supabase services have independent
 versions and managed service versions may change.
 
+On 2026-10-31 the owner requested synchronization with GitHub `dev` and a
+production-structure baseline. The checkout reconciles hosted Test support with
+the newer committed customer features and booking concurrency fixes. Each build
+now records its exact Git commit in `runtime-config.js`; that commit must match
+the deployed source and GitHub `dev` when reporting synchronization complete.
+
+The hosted database was rebuilt transactionally from a fresh, sanitized
+production schema-only export, then overlaid with the eight development
+migrations after `20261029114557` and the two Cloud Test configuration migrations.
+All 29 existing Test application/private tables retained their exact records;
+Auth test accounts and Storage objects were preserved. No production rows, Auth
+accounts, Storage objects or secret values were imported. The same rebuild was
+first rolled back after passing all 11 database authorization suites. Hosted
+browser, backend ownership and Realtime checks passed after the committed import.
+
+The production reference archive is stored outside Git at
+`/Users/malabdullah/Documents/Codex/Barber++-Supabase-Production-Structure-20261031/`.
+It includes schema/role definitions without passwords, policies, triggers,
+Functions source, extension/publication/bucket definitions, cron definitions,
+Vault secret names only, and sanitized configuration/image references for all
+11 services. Its manifest records checksums for each exported file.
+
+Managed platform roles, Auth/Storage system schemas and service binaries remain
+under Supabase's control. VPS administrator default privileges are retained in
+the archive but not applied to managed service roles. Production SMTP, credentials
+and callbacks are replaced by the existing Test inbox, secrets and URLs. The
+copied cleanup cron schedule is present but disabled in Test.
+
 ## Access and test data
 
 The website first asks for its test access username (`tester`) and a generated
