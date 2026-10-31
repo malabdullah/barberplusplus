@@ -35,7 +35,7 @@ Required fidelity surfaces, all awaiting rendered comparison:
   Arabic glyph fallback.
 - Spacing and layout rhythm: mobile section summaries/search/logo rows and sticky
   action; desktop single-column layout and form width; short screens and keyboard visibility.
-- Colors and tokens: white/charcoal/amber design tokens, focus and selection
+- Colors: white, charcoal and amber; focus and selection
   contrast, and the Test-only banner.
 - Image quality: three generated raster branch logos are installed and inspected
   individually; rendered sizing, sharpness and fallback state remain unverified.
