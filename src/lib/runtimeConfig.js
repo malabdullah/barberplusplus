@@ -15,3 +15,6 @@ export const appConfig = validateRuntimeConfig(
 );
 
 export const isTest = appConfig.environment === 'test' || appConfig.environment === 'development';
+
+// Customer routes have their own isolated Auth client in Test and production.
+export const customerFeaturesEnabled = isTest || appConfig.environment === 'production';

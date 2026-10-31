@@ -21,6 +21,17 @@ Deno.test('customer accounts are restricted to local Test and approved origins',
  assert((await make()(req({action:'profile'},'https://untrusted.example'))).status===403);
  assert((await make()(req({action:'profile',padding:'x'.repeat(9000)}))).status===413);
 });
+Deno.test('production customer email access uses the approved HTTPS origin and never exposes Test code endpoints',async()=>{
+ const options={environment:'production',productionEnabled:true,appUrl:'https://shop.example.test',publicUrl:'https://auth.example.test'};
+ const handler=make(options);
+ assert((await handler(req({action:'profile'},'https://shop.example.test'))).status===401);
+ assert((await handler(req({action:'profile'},'https://other.example.test'))).status===403);
+ for(const action of ['signup-code','recovery-code','signup','reset-password','login','social-code','social-complete']) {
+  const response=await handler(req({action,...details},'https://shop.example.test'));
+  assert(response.status===404);
+  assert(!(await response.text()).includes('testCode'));
+ }
+});
 Deno.test('signup accepts omitted email, binds verified details and never stores passwords in a challenge',async()=>{
  const f=fixture();const challenge=await(await f.handler(req({action:'signup-code',...details,email:'ignored@example.test',password,role:'admin'}))).json();
  assert(f.saved.purpose==='signup');assert((f.saved.payload as Record<string,unknown>).email==='');assert(!JSON.stringify(f.saved).includes(password));

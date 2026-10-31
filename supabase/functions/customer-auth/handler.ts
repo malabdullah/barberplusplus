@@ -1,7 +1,9 @@
+import { customerRuntime } from '../_shared/customer-runtime.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Dependencies = {
   environment: string; appUrl: string; publicUrl: string; secret: string;
+  productionEnabled?: boolean;
   rpc: (action: string, data: Data) => Promise<unknown>;
   createUser: (data: Data) => Promise<string>;
   deleteUser: (id: string) => Promise<void>;
@@ -16,7 +18,6 @@ type Dependencies = {
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const local = (s: string) => { try { const u = new URL(s); return ['http:','https:'].includes(u.protocol) && ['localhost','127.0.0.1','[::1]'].includes(u.hostname) && !u.username && !u.password; } catch { return false; } };
 const strong = (s: unknown): s is string => typeof s === 'string' && s.length >= 8 && new TextEncoder().encode(s).length <= 72 && /[a-z]/.test(s) && /[A-Z]/.test(s) && /\d/.test(s) && /[^\w\s]/.test(s);
 const contact = (body: Data) => {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -24,12 +25,13 @@ const contact = (body: Data) => {
   return name.length >= 2 && name.length <= 120 && email.length <= 254 && (!email || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) ? {name,email} : null;
 };
 export function createCustomerAuthHandler(deps: Dependencies) {
-  const enabled = ['test','development'].includes(deps.environment) && local(deps.appUrl) && local(deps.publicUrl) && deps.secret.length >= 32;
+  const runtime = customerRuntime(deps);
+  const enabled = runtime.enabled;
   const key = enabled ? crypto.subtle.importKey('raw', new TextEncoder().encode(`customer-auth-test-v1:${deps.secret}`), {name:'HMAC',hash:'SHA-256'},false,['sign']) : null;
   const hash = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',await key!,new TextEncoder().encode(value))), x=>x.toString(16).padStart(2,'0')).join('');
   return async (req: Request) => {
     const origin = req.headers.get('origin');
-    const allowed = enabled && (!origin || local(origin) && new URL(origin).port === new URL(deps.appUrl).port);
+    const allowed = runtime.allowsOrigin(origin);
     const headers = {'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Origin':allowed && origin ? origin : deps.appUrl,'Access-Control-Allow-Headers':'authorization, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
     const reply = (status: number, data: unknown) => new Response(JSON.stringify(data),{status,headers});
     if (!enabled) return reply(404,{error:'NOT_AVAILABLE'});
@@ -112,6 +114,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         }
         return reply(200,{profile:await deps.rpc('update-profile',{...identity,...details,...phoneDetails})});
       }
+      if (!runtime.localTest) return reply(404,{error:'NOT_AVAILABLE'});
       if(['signup-code','recovery-code','social-code','login'].includes(action)) {
         const countryCode=String(body.countryCode || '');const phone=typeof body.phone==='string' ? body.phone.replace(/[\s()-]/g,'') : '';
         if(!patterns[countryCode]?.test(phone))return reply(400,{error:'INVALID_PHONE'});

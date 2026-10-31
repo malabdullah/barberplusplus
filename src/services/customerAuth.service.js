@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { appConfig, isTest } from '../lib/runtimeConfig';
+import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
 import { customerSupabase, CUSTOMER_AUTH_STORAGE_KEY } from '../lib/customerSupabase';
 export async function customerToken() {
   if (!customerSupabase) return '';
@@ -8,7 +8,7 @@ export async function customerToken() {
   return data.session?.access_token || '';
 }
 async function request(action, data = {}, authenticated = false) {
-  if (!isTest) throw new Error('NOT_AVAILABLE');
+  if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
   const token = authenticated ? await customerToken() : '';
   if (authenticated && !token) throw new Error('AUTH_REQUIRED');
   const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
@@ -40,14 +40,14 @@ const destination = value => value === '/book' ? '/book' : '/customer/account';
 
 export const customerAuthService = {
   async socialProviders() {
-    if (!isTest) return { google: false, apple: false };
+    if (!customerFeaturesEnabled) return { google: false, apple: false };
     const response = await fetch(`${appConfig.supabaseUrl}/auth/v1/settings`, { headers: { apikey: appConfig.supabasePublishableKey }, signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error('UNAVAILABLE');
     const settings = await response.json();
     return { google: settings.external?.google === true, apple: settings.external?.apple === true };
   },
   async startSocial(provider, returnTo) {
-    if (!isTest || !['google', 'apple'].includes(provider)) throw new Error('PROVIDER_UNAVAILABLE');
+    if (!customerFeaturesEnabled || !['google', 'apple'].includes(provider)) throw new Error('PROVIDER_UNAVAILABLE');
     const enabled = await this.socialProviders();
     if (!enabled[provider]) throw new Error('PROVIDER_UNAVAILABLE');
     sessionStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
@@ -83,12 +83,14 @@ export const customerAuthService = {
   async ensureEmailProfile(name = '') { return (await request('email-ensure', { name }, true)).profile; },
   async finishEmail(url) {
     const callback = new URL(url);
-    const type = callback.searchParams.get('type');
+    let type = callback.searchParams.get('type');
     const token = callback.searchParams.get('token_hash');
     const code = callback.searchParams.get('code');
     const fragment = new URLSearchParams(callback.hash.slice(1));
     let result;
-    if (fragment.has('access_token') && fragment.has('refresh_token') && fragment.get('type') === 'email_change') {
+    if (fragment.has('access_token') && fragment.has('refresh_token') && ['signup', 'magiclink', 'recovery', 'email_change'].includes(fragment.get('type'))) {
+      if (type && type !== fragment.get('type')) throw new Error('INVALID_CODE');
+      type = fragment.get('type');
       window.history.replaceState(null, '', callback.pathname + callback.search);
       result = await customerSupabase.auth.setSession({ access_token: fragment.get('access_token'), refresh_token: fragment.get('refresh_token') });
     } else if (token && ['signup', 'magiclink', 'recovery', 'email_change'].includes(type)) result = await customerSupabase.auth.verifyOtp({ type, token_hash: token });

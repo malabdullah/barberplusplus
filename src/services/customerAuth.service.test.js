@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn(), setSession: vi.fn(), signOut: vi.fn() }));
-vi.mock('../lib/runtimeConfig', () => ({ isTest: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'test-public-key' } }));
+vi.mock('../lib/runtimeConfig', () => ({ isTest: true, customerFeaturesEnabled: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'test-public-key' } }));
 vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth }, CUSTOMER_AUTH_STORAGE_KEY: 'barber-customer-auth' }));
 import { customerAuthService } from './customerAuth.service';
 const request = vi.fn();
@@ -38,6 +38,17 @@ it('accepts an email change callback only after verifying the customer session',
   auth.setSession.mockResolvedValue({ data: { user: { app_metadata: { role: 'customer' }, email_confirmed_at: 'confirmed' } } });
   expect(await customerAuthService.finishEmail('http://localhost/customer/email-callback#access_token=customer-token&refresh_token=refresh-token&type=email_change')).toEqual({ recovery: false, returnTo: '/customer/account' });
   expect(auth.setSession).toHaveBeenCalledWith({ access_token: 'customer-token', refresh_token: 'refresh-token' });
+});
+it.each(['signup', 'magiclink', 'recovery'])('handles SMTP %s confirmation on a different browser without a PKCE verifier', async type => {
+  auth.setSession.mockResolvedValue({ data: { user: { app_metadata: { role: 'customer' }, email_confirmed_at: 'confirmed' } } });
+  window.history.replaceState({}, '', `/customer/email-callback?next=book#access_token=customer-token&refresh_token=refresh-token&type=${type}`);
+  expect(await customerAuthService.finishEmail(window.location.href)).toEqual({ recovery: type === 'recovery', returnTo: '/book' });
+  expect(window.location.hash).toBe('');
+  expect(auth.setSession).toHaveBeenCalledWith({ access_token: 'customer-token', refresh_token: 'refresh-token' });
+});
+it('rejects conflicting email callback types', async () => {
+  await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback?type=signup#access_token=token&refresh_token=refresh&type=recovery')).rejects.toThrow('INVALID_CODE');
+  expect(auth.setSession).not.toHaveBeenCalled();
 });
 it('rejects expired links and staff sessions', async () => {
   auth.verifyOtp.mockResolvedValue({ error: new Error('expired'), data: {} });

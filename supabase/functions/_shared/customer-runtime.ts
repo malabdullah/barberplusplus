@@ -1,0 +1,30 @@
+type Configuration = { environment: string; appUrl: string; publicUrl: string; productionEnabled?: boolean; secret: string };
+
+function origin(value: string): URL | null {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash ? url : null;
+  } catch { return null; }
+}
+const loopback = (url: URL) => ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+
+// Production activation is an explicit server setting. Local Test never accepts
+// a remote backend, and production never accepts a loopback origin or Test code.
+export function customerRuntime(config: Configuration) {
+  const app = origin(config.appUrl);
+  const api = origin(config.publicUrl);
+  const localTest = ['development', 'test'].includes(config.environment) && !!app && !!api && loopback(app) && loopback(api);
+  const production = config.environment === 'production' && config.productionEnabled === true && !!app && !!api && app.protocol === 'https:' && api.protocol === 'https:' && !loopback(app) && !loopback(api);
+  const enabled = (localTest || production) && config.secret.length >= 32;
+  return {
+    enabled,
+    localTest: enabled && localTest,
+    allowsOrigin(value: string | null) {
+      if (!enabled) return false;
+      if (!value) return true;
+      const candidate = origin(value);
+      if (!candidate) return false;
+      return localTest ? loopback(candidate) && candidate.port === app!.port : candidate.origin === app!.origin;
+    },
+  };
+}

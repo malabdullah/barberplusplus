@@ -1,6 +1,8 @@
+import { customerRuntime } from '../_shared/customer-runtime.ts';
 type Body = Record<string, unknown>;
 type Dependencies = {
   environment: string;
+  productionEnabled?: boolean;
   appUrl: string;
   publicUrl: string;
   secret: string;
@@ -12,14 +14,12 @@ type Proof = { purpose: string; id: string; name: string; phone: string; country
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
-const local = (value: string) => {
-  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && !url.username && !url.password; } catch { return false; }
-};
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 const decode = (value: string) => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
 
 export function createCustomerBookingHandler(deps: Dependencies) {
-  const enabled = ['development', 'test'].includes(deps.environment) && local(deps.appUrl) && local(deps.publicUrl) && deps.secret.length >= 32;
+  const runtime = customerRuntime(deps);
+  const enabled = runtime.enabled;
   const key = enabled ? crypto.subtle.importKey('raw', encoder.encode(`customer-booking-test-v1:${deps.secret}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']) : null;
   const sign = async (proof: Proof) => {
     const payload = encode(encoder.encode(JSON.stringify(proof)));
@@ -37,8 +37,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
   };
   return async (req: Request): Promise<Response> => {
     const origin = req.headers.get('origin');
-    // Accept only the two aliases for this local Test frontend, with the same port.
-    const originAllowed = enabled && (!origin || (local(origin) && new URL(origin).port === new URL(deps.appUrl).port));
+    const originAllowed = runtime.allowsOrigin(origin);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
     if (!enabled) return reply(404, { error: 'NOT_AVAILABLE' });
@@ -75,6 +74,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, { verification: await sign({ purpose: 'verified', id: crypto.randomUUID(), name, phone, country_code: countryCode, expires: Date.now()+10*60_000 }) });
       }
       if (body.action === 'request-code') {
+        if (!runtime.localTest) return reply(404, { error: 'NOT_AVAILABLE' });
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
         const countryCode = typeof body.countryCode === 'string' ? body.countryCode : '';
@@ -85,6 +85,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, { challenge: await sign(proof), testCode: code, expiresIn: 300 });
       }
       if (body.action === 'verify-code') {
+        if (!runtime.localTest) return reply(404, { error: 'NOT_AVAILABLE' });
         const proof = await verify(body.challenge, 'challenge');
         if (!proof || body.code !== proof.code) return reply(400, { error: 'INVALID_CODE' });
         delete proof.code;

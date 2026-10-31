@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 const createClient = vi.hoisted(() => vi.fn(() => ({})));
 vi.mock('@supabase/supabase-js', () => ({ createClient }));
-vi.mock('./runtimeConfig', () => ({ isTest: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'public-test-key' } }));
+vi.mock('./runtimeConfig', () => ({ isTest: true, customerFeaturesEnabled: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'public-test-key' } }));
 afterEach(() => { window.history.replaceState({}, '', '/'); createClient.mockClear(); vi.resetModules(); });
 it('isolates customer PKCE and prevents the staff client handling customer OAuth URL errors', async () => {
   window.history.replaceState({}, '', '/customer/auth-callback?error_description=cancelled');
