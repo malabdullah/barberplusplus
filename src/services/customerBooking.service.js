@@ -1,10 +1,10 @@
 import { shopWording } from '../utils/customerTerminology';
 import { customerToken } from './customerAuth.service';
-import { appConfig, isTest } from '../lib/runtimeConfig';
+import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
 import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
-  if (!isTest) throw new Error('NOT_AVAILABLE');
+  if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
   const token = action === 'account-proof' || action === 'book' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',

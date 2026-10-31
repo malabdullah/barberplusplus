@@ -60,6 +60,11 @@ jobs:
         run: node scripts/probe-local-backend.mjs
       - name: Verify synthetic invitations and local email
         run: node scripts/probe-local-invitations.mjs
+      - name: Verify customer email, social profiles and booking ownership
+        run: |
+          node scripts/probe-customer-email.mjs
+          node scripts/probe-customer-social.mjs
+          node scripts/probe-customer-smtp.mjs
       - name: Verify persistence and explicit synthetic reset
         run: node scripts/verify-local-lifecycle.mjs
       - if: always()

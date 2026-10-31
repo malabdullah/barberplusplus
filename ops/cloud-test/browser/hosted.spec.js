@@ -70,9 +70,15 @@ test('customer email signup confirms through the private test inbox',async ({pag
   const inbox = await request.get('/test-inbox?format=json');
   expect(inbox.ok()).toBe(true);
   const messages = await inbox.json();
-  const message = messages.find(mail=>mail.recipient===email && mail.link);
+  const message = messages.find(mail=>mail.recipient===email && (mail.link || mail.payload?.email_data?.email_action_type==='signup'));
   expect(message).toBeTruthy();
-  await page.goto(message.link);
+  const confirmation = message.link || (()=>{
+    const data=message.payload.email_data;
+    const url=new URL(`https://${state.projectRef}.supabase.co/auth/v1/verify`);
+    url.searchParams.set('token',data.token_hash);url.searchParams.set('type',data.email_action_type);
+    url.searchParams.set('redirect_to',data.redirect_to);return url.href;
+  })();
+  await page.goto(confirmation);
   await expect(page).toHaveURL(/\/customer\/account$/);
   await expect(page.locator('body')).toContainText('Cloud Test Customer');
   await page.screenshot({path:screenshot('customer-account'),fullPage:true});

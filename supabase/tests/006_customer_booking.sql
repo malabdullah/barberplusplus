@@ -6,7 +6,7 @@ select ok(not has_function_privilege('anon','public.customer_booking(text,jsonb)
 select ok(not has_function_privilege('authenticated','public.customer_booking(text,jsonb)','EXECUTE'),'staff cannot call server gateway directly');
 select ok(has_function_privilege('service_role','public.customer_booking(text,jsonb)','EXECUTE'),'server can call gateway');
 select ok(not (select prosecdef from pg_proc where oid='public.customer_booking(text,jsonb)'::regprocedure),'gateway does not elevate database privileges');
-select ok(exists(select 1 from pg_constraint where conrelid='public.bookings'::regclass and conname='bookings_no_overlapping_appointments' and contype='x'),'database prevents simultaneous overlapping appointments');
+select ok(exists(select 1 from pg_trigger where tgrelid='public.bookings'::regclass and tgname='guard_bookings_against_new_overlaps' and tgenabled='O'),'database guards simultaneous overlapping appointments without changing legacy records');
 -- Isolate working hours from the fixture weekday. All mutations roll back.
 update public.branches set working_hours=(select jsonb_object_agg(day,jsonb_build_object('open','09:00','close','21:00','closed',false)) from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day) where id='10000000-0000-4000-8000-000000000012';
 update public.barbers set vacations='[]',time_offs='[]' where id='30000000-0000-4000-8000-000000000121';

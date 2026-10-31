@@ -1,10 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { customerAuthService } from '../services/customerAuth.service';
-import { isTest } from '../lib/runtimeConfig';
+import { customerFeaturesEnabled } from '../lib/runtimeConfig';
 const CustomerAuthContext = createContext(null);
 export function CustomerAuthProvider({ children }) {
   const [customer, setCustomer] = useState(null);
-  const [loading, setLoading] = useState(isTest);
+  const [loading, setLoading] = useState(customerFeaturesEnabled);
   const generation = useRef(0);
   const refresh = useCallback(async () => {
     const current = ++generation.current;
@@ -13,7 +13,7 @@ export function CustomerAuthProvider({ children }) {
     finally { if (current === generation.current) setLoading(false); }
   }, []);
   useEffect(() => {
-    if (!isTest) return undefined;
+    if (!customerFeaturesEnabled) return undefined;
     let timer;
     refresh();
     const subscription = customerAuthService.subscribe(event => {

@@ -15,6 +15,15 @@ Deno.test('customer booking rejects foreign origins, invalid requests, and overs
   assert((await handler(request({ action: 'book', ...selection, serviceIds: ['bad'] }))).status === 400);
   assert((await handler(request({ action: 'catalog', padding: 'a'.repeat(9000) }))).status === 413);
 });
+Deno.test('activated production supports guest details proof without exposing the Test phone-code simulator', async () => {
+  const handler = make({ environment: 'production', productionEnabled: true, appUrl: 'https://shop.example.test', publicUrl: 'https://auth.example.test' });
+  const proof = await handler(request({ action: 'guest-proof', name: 'Customer', phone: '50000099', countryCode: '+965' }, 'https://shop.example.test'));
+  assert(proof.status === 200);
+  const body = await proof.json();
+  assert(typeof body.verification === 'string' && !('testCode' in body));
+  for (const action of ['request-code', 'verify-code']) assert((await handler(request({ action }, 'https://shop.example.test'))).status === 404);
+  assert((await handler(request({ action: 'catalog' }, 'http://localhost:5173'))).status === 403);
+});
 Deno.test('verification binds the booking to the verified name and phone, never client prices', async () => {
   let received: Record<string, unknown> = {};
   const handler = make({ booking: async (_action: string, data: Record<string, unknown>) => { received = data; return { id: data.id }; } });
