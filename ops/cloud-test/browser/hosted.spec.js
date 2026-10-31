@@ -9,13 +9,24 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.goto('/login');
     await page.getByLabel('Email',{exact:true}).fill(`${role}@barber.test`);
     await page.getByLabel('Password',{exact:true}).fill(state.staffPassword);
+    const settingsLoaded = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings?') && response.status() === 200);
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(home+'(?:/|$)'));
+    await settingsLoaded;
+    await page.locator('.preferences-selector').first().locator('button').first().click();
+    await page.getByRole('button',{name:'English',exact:true}).click();
+    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
+    await page.locator('.preferences-option').filter({hasText:'Dark'}).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
     await expect(page.locator('.environment-banner')).toContainText(/TEST/);
     const brand = page.locator('.sidebar-logo .brand-logo');
     await expect(brand).toBeVisible();
     await expect(brand.locator('.brand-logo-dark')).toBeVisible();
     await page.screenshot({path:screenshot(`brand-${role}-desktop-dark`)});
+    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
+    await page.locator('.preferences-option').filter({hasText:'Light'}).click();
+    await expect(brand.locator('.brand-logo-light')).toBeVisible();
+    await page.screenshot({path:screenshot(`brand-${role}-desktop-light`)});
     if (role === 'manager') {
       await page.goto('/dashboard/branches');
       await expect(page.locator('.branch-card-name',{hasText:'Synthetic Branch'})).toBeVisible();
@@ -45,6 +56,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.getByRole('button',{name:'English',exact:true}).click();
     await page.locator('.preferences-selector').nth(1).locator('button').first().click();
     await page.locator('.preferences-option').filter({hasText:'Dark'}).click();
+    await page.locator('.topbar-menu-btn').click();
+    await expect(brand.locator('.brand-logo-dark')).toBeVisible();
+    await page.screenshot({path:screenshot(`brand-${role}-mobile-dark`)});
+    await page.keyboard.press('Escape');
   });
 }
 
