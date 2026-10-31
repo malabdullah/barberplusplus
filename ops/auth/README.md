@@ -87,8 +87,13 @@ scheduled Worker is `barber-test-apple-renewal`, configured by
 Test's existing Apple key `SPT3287JRA` and Services ID
 `com.barberplusplus.authentication.test.web`.
 
-Install a dedicated Supabase scoped PAT with **Auth Config read-write only** on
-project `qvkucvcjmojjbphlzlks`. Store it as Worker secret
+Install a dedicated Supabase scoped PAT with **Auth Config read-write** and
+**Project Settings read-write** on project `qvkucvcjmojjbphlzlks`. The Management
+API requires both capabilities for PATCH of Auth configuration; Auth Config alone
+is denied with missing `project_admin_write`. Project Settings also permits
+restart, pause, restore and deletion of this Test project, so this broader scope
+requires explicit owner approval. Do not grant Database, API Key Secrets or any
+production/other-project access. Store the token as Worker secret
 `SUPABASE_AUTH_CONFIG_TOKEN`, and the Test PKCS#8 key as `APPLE_SIGNING_KEY`.
 Never use the CLI's legacy account-wide PAT or a production key. Approval is
 required before creating this persistent service access. Keep both secrets out
