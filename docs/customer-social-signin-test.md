@@ -1,8 +1,8 @@
 # Customer Google and Apple sign-in in local Test
 
 This integration is prepared only in the owned `barber-local-test` checkout.
-No provider credentials, live Auth changes, deployment, public tunnel or dev push
-are included. Both providers are currently disabled. The customer forms show the
+No provider credentials, live Auth changes, deployment or public tunnel are
+included. The integration is approved for dev validation. Both providers are currently disabled. The customer forms show the
 provider buttons as unavailable until the local Auth service enables them.
 
 ## Customer journey

@@ -1,6 +1,6 @@
 # Customer accounts in local Test
 
-These changes run only in the owned `barber-local-test` environment. They are not deployed or pushed to dev. Existing phone accounts and bookings are preserved; use a fresh email address for testing.
+These changes are approved for dev and run only in the owned `barber-local-test` environment. They are not deployed to the live website. Existing phone accounts and bookings are preserved; use a fresh email address for testing.
 
 ## Journey
 

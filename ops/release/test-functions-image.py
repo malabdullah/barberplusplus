@@ -39,7 +39,8 @@ Deno.serve(async (request) => {
         ['APP_ENV','development'], ['APP_URL','http://localhost:5173'],
         ['SUPABASE_URL','http://127.0.0.1:1'],
         ['SUPABASE_ANON_KEY','synthetic-unusable-key'],
-        ['SUPABASE_SERVICE_ROLE_KEY','synthetic-unusable-key'],
+        ['SUPABASE_SERVICE_ROLE_KEY','synthetic-unusable-service-role-key-over-thirty-two-characters'],
+        ['CUSTOMER_BOOKING_TEST_API_URL','http://127.0.0.1:1'],
         ['CRON_SHARED_SECRET','synthetic-not-supplied']
       ]
     });

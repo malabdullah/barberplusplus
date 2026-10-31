@@ -158,6 +158,7 @@ it('asks a signed-in customer without a phone to save it before booking', async 
   customerState.customer = { id: 'customer', name: 'Account Customer', email: 'test@example.test', phone: null };
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
   fireEvent.change(await screen.findByLabelText('Mobile number'), { target: { value: '50000099' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm booking' })).toBeEnabled());
   click('Confirm booking'); await screen.findByText('TESTREF');
   expect(customerState.updateProfile).toHaveBeenCalledWith(expect.objectContaining({ phone: '50000099', countryCode: '+965' }));
   expect(customerBookingService.accountProof).toHaveBeenCalledTimes(1);
