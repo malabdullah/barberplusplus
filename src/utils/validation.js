@@ -39,18 +39,19 @@ export const validatePhoneNumber = (phone, countryCode) => {
 
 /**
  * Validate password strength
- * SECURITY: Uses OWASP recommendations (12+ chars, common password blacklist)
+ * Defaults to 12 characters for staff; customers explicitly request 8.
+ * Rejects common passwords and checks the existing character requirements.
  * @param {string} password - The password to validate
  * @returns {{ valid: boolean, error?: string, message?: string }}
  */
-export const validatePassword = (password) => {
+export const validatePassword = (password, { minLength = 12 } = {}) => {
   if (!password) {
     return { valid: false, error: 'Password is required', message: 'Password is required' };
   }
 
-  // SECURITY: Increased to 12 characters per OWASP guidelines
-  if (password.length < 12) {
-    return { valid: false, error: 'Password must be at least 12 characters', message: 'Password must be at least 12 characters' };
+  // Customer accounts use 8; staff keep the existing 12-character minimum.
+  if (password.length < minLength) {
+    return { valid: false, error: `Password must be at least ${minLength} characters`, message: `Password must be at least ${minLength} characters` };
   }
 
   // SECURITY: Check against common passwords

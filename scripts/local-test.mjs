@@ -7,6 +7,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { prepareLocalServicePins } from './prepare-local-service-pins.mjs';
 import { localDockerProbe } from './local-docker-probe.mjs';
+import { customerOAuthEnv } from './customer-oauth-config.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lock = JSON.parse(readFileSync(resolve(root, 'ops/local-test/runtime.json')));
@@ -48,6 +49,9 @@ function privateWrite(path, contents) { writeFileSync(path, contents, { mode: 0o
 function functionSecrets() {
   const path = resolve(root, 'supabase/functions/.env.local');
   if (!existsSync(path)) privateWrite(path, `APP_ENV=development\nAPP_URL=http://localhost:5173\nSUPABASE_PUBLIC_URL=http://127.0.0.1:${lock.apiPort}\nCRON_SHARED_SECRET=${randomBytes(32).toString('hex')}\n`);
+  if (!/^CUSTOMER_BOOKING_TEST_API_URL=/m.test(readFileSync(path, 'utf8'))) {
+    privateWrite(path, readFileSync(path, 'utf8').trimEnd() + `\nCUSTOMER_BOOKING_TEST_API_URL=http://127.0.0.1:${lock.apiPort}\n`);
+  }
   const secret = readFileSync(path, 'utf8').match(/^CRON_SHARED_SECRET=([A-Za-z0-9_-]{32,128})$/m)?.[1];
   if (!secret) throw Error('A private local cron secret is required');
   env.BARBER_LOCAL_CRON_SECRET = secret;
@@ -105,6 +109,33 @@ async function loopbackOnly() {
     if (Object.values(c.HostConfig.PortBindings || {}).flat().some(b => !['127.0.0.1', '::1'].includes(b.HostIp))) throw Error('Non-loopback Docker publish refused');
   }
 }
+async function configureCustomerAuth() {
+  const configText = readFileSync(resolve(root, 'supabase/config.toml'), 'utf8');
+  const sms = configText.match(/^\[auth\.sms\]\s*\n([\s\S]*?)(?=^\[|(?![\s\S]))/m)?.[1];
+  if (!sms || !/^enable_signup\s*=\s*true\s*$/m.test(sms)) return;
+  // The CLI disables the entire phone provider when no paid SMS provider is
+  // configured. Test uses its own displayed codes, but needs phone/password
+  // login. Preserve the owned image, network and database while applying local settings.
+  const name = `supabase_auth_${lock.project}`;
+  const c = owned(name);
+  const oauthPath = resolve(state, 'customer-oauth.json');
+  if (existsSync(oauthPath) && realpathSync(oauthPath) !== oauthPath) throw Error('Symlink OAuth configuration refused');
+  let oauth;
+  try { oauth = existsSync(oauthPath) ? JSON.parse(readFileSync(oauthPath, 'utf8')) : undefined; }
+  catch { throw Error('Invalid local customer OAuth configuration'); }
+  if (existsSync(oauthPath)) chmodSync(oauthPath, 0o600);
+  const redirects = new Set((c.Config.Env.find(value => value.startsWith('GOTRUE_URI_ALLOW_LIST='))?.slice('GOTRUE_URI_ALLOW_LIST='.length) || '').split(',').filter(Boolean));
+  redirects.add('http://localhost:5173/customer/auth-callback');
+  redirects.add('http://127.0.0.1:5173/customer/auth-callback');
+  const settings = { GOTRUE_EXTERNAL_PHONE_ENABLED: 'true', GOTRUE_URI_ALLOW_LIST: [...redirects].join(','), ...customerOAuthEnv(oauth) };
+  if (Object.entries(settings).every(([key, value]) => c.Config.Env.includes(`${key}=${value}`))) return;
+  const authEnv = [...c.Config.Env.filter(value => !Object.keys(settings).some(key => value.startsWith(`${key}=`))), ...Object.entries(settings).map(([key, value]) => `${key}=${value}`)];
+  const config = { ...c.Config, Image: c.Image, Hostname: '', Env: authEnv, HostConfig: c.HostConfig, NetworkingConfig: { EndpointsConfig: Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n, v]) => [n, { Aliases: (v.Aliases || []).filter(a => !c.Id.startsWith(a)) }])) } };
+  await engine('POST', `/containers/${c.Id}/stop?t=15`);
+  await engine('DELETE', `/containers/${c.Id}`);
+  const created = await engine('POST', `/containers/create?name=${encodeURIComponent(name)}`, config);
+  await engine('POST', `/containers/${created.Id}/start`);
+}
 async function ready() {
   for (let i = 0; i < 90; i++) {
     try {
@@ -114,6 +145,27 @@ async function ready() {
     await new Promise(r => setTimeout(r, 1000));
   }
   throw Error('Local Auth did not become healthy');
+}
+async function ensureFunctionsRuntime() {
+  const name = `supabase_edge_runtime_${lock.project}`;
+  const runtime = owned(name);
+  if (runtime.Config.Labels?.['com.supabase.cli.workdir'] !== root) throw Error('Functions runtime checkout mismatch');
+  // A previously interrupted `functions serve` can leave this container stopped
+  // even when `supabase start` reports the rest of the stack already running.
+  if (runtime.HostConfig.RestartPolicy?.Name !== 'unless-stopped') docker('update', '--restart', 'unless-stopped', name);
+  if (!runtime.State.Running) docker('start', name);
+  for (let attempt = 0; attempt < 15; attempt++) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${lock.apiPort}/functions/v1/customer-auth`, {
+        method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'profile' }), signal: AbortSignal.timeout(2000),
+      });
+      if (response.status === 401 && (await response.json()).error === 'AUTH_REQUIRED') return;
+      await response.body?.cancel();
+    } catch { /* The existing runtime may still be loading its functions. */ }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw Error('Local customer Functions did not become healthy');
 }
 function baseline() {
   return JSON.parse(sql("SELECT json_build_object('users',(SELECT count(*) FROM auth.users),'bookings',(SELECT count(*) FROM public.bookings),'cron_jobs_active',(SELECT count(*) FROM cron.job WHERE active));"));
@@ -130,8 +182,10 @@ async function startBackend() {
   prepareLocalServicePins(root);
   supabase('start', '--exclude', 'logflare,vector');
   disableCron();
+  await configureCustomerAuth();
   await loopbackOnly();
   await ready();
+  await ensureFunctionsRuntime();
   configure();
 }
 async function freeAppPort() {
@@ -177,7 +231,9 @@ export async function main(action) {
       }
     }
     supabase('stop', '--project-id', lock.project); console.log('Local Test stopped; data volumes retained');
+  } else if (action === 'configure-auth') { await configureCustomerAuth(); await ready(); await ensureFunctionsRuntime(); console.log('Local Test Auth settings applied; data preserved');
+  } else if (action === 'ensure-functions') { await ensureFunctionsRuntime();
   } else if (action === 'status') { console.log(JSON.stringify(baseline())); }
-  else throw Error('Expected setup, start, stop, reset, or status');
+  else throw Error('Expected setup, start, stop, reset, configure-auth, ensure-functions, or status');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv[2]).catch(error => { console.error(error.message); process.exitCode = 1; });

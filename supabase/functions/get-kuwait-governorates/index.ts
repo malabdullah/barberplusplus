@@ -1,3 +1,4 @@
+import { withCloudTestGateway } from '../_shared/test-boundary.ts';
 import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.89.0";
 import { getAppUrl } from "../_shared/environment.ts";
@@ -260,7 +261,7 @@ async function getFromDatabase(lang: string, includeAreas: boolean, governorateI
   });
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCloudTestGateway(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -366,4 +367,4 @@ Deno.serve(async (req: Request) => {
       }
     );
   }
-});
+}));

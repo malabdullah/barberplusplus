@@ -1,3 +1,4 @@
+import { withCloudTestGateway } from '../_shared/test-boundary.ts';
 import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { getAppUrl, getTrustedRole } from "../_shared/environment.ts";
@@ -11,7 +12,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCloudTestGateway(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -213,4 +214,4 @@ Deno.serve(async (req: Request) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

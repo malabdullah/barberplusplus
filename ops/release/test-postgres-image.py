@@ -52,11 +52,14 @@ def main():
         toc = '\n'.join(line for line in toc.splitlines() if not (
             ' TRIGGER auth users assign_default_manager_role ' in line or
             ' TRIGGER auth users block_guarded_role_changes ' in line or
+            ' TRIGGER auth users block_customer_recovery_role_changes ' in line or
             ' POLICY storage objects Barber avatars ' in line)) + '\n'
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')
         for p in sorted((root/'supabase/migrations').glob('*.sql')): sql(p.read_text())
-        sql((root/'supabase/seed.sql').read_text())
+        for seed_name in ['seed.sql', 'seed-customer-booking.sql']:
+            seed_path = root / 'supabase' / seed_name
+            if seed_path.exists(): sql(seed_path.read_text())
         total = 0
         for p in sorted((root/'supabase/tests').glob('*.sql')):
             output = sql(p.read_text())

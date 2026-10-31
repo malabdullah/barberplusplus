@@ -39,7 +39,8 @@ Deno.serve(async (request) => {
         ['APP_ENV','development'], ['APP_URL','http://localhost:5173'],
         ['SUPABASE_URL','http://127.0.0.1:1'],
         ['SUPABASE_ANON_KEY','synthetic-unusable-key'],
-        ['SUPABASE_SERVICE_ROLE_KEY','synthetic-unusable-key'],
+        ['SUPABASE_SERVICE_ROLE_KEY','synthetic-unusable-service-role-key-over-thirty-two-characters'],
+        ['CUSTOMER_BOOKING_TEST_API_URL','http://127.0.0.1:1'],
         ['CRON_SHARED_SECRET','synthetic-not-supplied']
       ]
     });
@@ -71,7 +72,9 @@ Deno.serve(async (request) => {
                     try:
                         request = urllib.request.Request(base + function, method='OPTIONS', headers={'Origin':'http://localhost:5173'})
                         with urllib.request.urlopen(request, timeout=75) as response: result = json.load(response)
-                        if result['status'] not in [200, 204, 401, 405]: raise ValueError('Unexpected synthetic handler response')
+                        # The private inbox must stay unavailable outside hosted Test.
+                        expected = [404] if function == 'cloud-test-inbox' else [200, 204, 401, 405]
+                        if result['status'] not in expected: raise ValueError('Unexpected synthetic handler response')
                         results.append(result); last = None; break
                     except urllib.error.HTTPError as error:
                         # This disposable runtime contains synthetic settings

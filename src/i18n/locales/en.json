@@ -1,5 +1,5 @@
 {
-  "environment": { "testBanner": "TEST — synthetic data" },
+  "environment": { "testBanner": "TEST — synthetic data", "testInbox": "Test email inbox" },
   "common": {
     "navigation": "Navigation",
     "save": "Save",
@@ -1361,5 +1361,304 @@
       "terms": "Terms of Service",
       "copyright": "Barber++. All rights reserved."
     }
+  },
+  "customerBooking": {
+    "pageTitle": "Book an appointment | Barber++",
+    "header": "Book an appointment",
+    "progress": "Booking progress",
+    "stepOf": "Step {{current}} of {{total}}",
+    "steps": {
+      "city": "City",
+      "branch": "Shop",
+      "barber": "Barber",
+      "services": "Services",
+      "time": "Date & time",
+      "details": "Details & confirmation"
+    },
+    "stepHints": {
+      "city": "Choose your city.",
+      "branch": "Choose a shop in your city.",
+      "barber": "Pick your barber at this shop.",
+      "services": "Choose from this barber's services.",
+      "time": "Select a date and time that works for you.",
+      "details": "Add your details and confirm your booking."
+    },
+    "titles": {
+      "city": "Choose your city",
+      "branch": "Choose your shop",
+      "barber": "Choose your barber",
+      "services": "What are you booking?",
+      "time": "Find your time",
+      "details": "Your details"
+    },
+    "intros": {
+      "city": "Your next visit starts here.",
+      "branch": "Find a shop in {{city}}.",
+      "barber": "Choose who you'd like to see.",
+      "services": "Choose your services. Prices and duration are shown below.",
+      "time": "Pick an available appointment that fits your day.",
+      "details": "A few details, and you're almost there."
+    },
+    "continue": {
+      "branch": "Find shops",
+      "barber": "Continue to barber",
+      "services": "Continue to services",
+      "time": "Choose a time",
+      "details": "Continue to your details"
+    },
+    "cityLabel": "City",
+    "cityPlaceholder": "Select your city",
+    "cityHint": "Choose a city to browse and search its shops.",
+    "noCities": "No cities are available for booking yet.",
+    "searchLabel": "Search shops",
+    "searchPlaceholder": "Shop name or area",
+    "branchesCount_one": "{{count}} shop",
+    "branchesCount_other": "{{count}} shops",
+    "noBranches": "No shops found",
+    "noBranchesHint": "Try another shop name or area, or change your city.",
+    "clearSearch": "Clear search",
+    "servicesCount_one": "{{count}} service available",
+    "servicesCount_other": "{{count}} services available",
+    "noBarbers": "No barbers available",
+    "noBarbersHint": "This shop has no barbers with bookable services yet.",
+    "changeBranch": "Choose another shop",
+    "withBarber": "With {{name}}",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "serviceHint": "Your total updates as you choose services.",
+    "dateLabel": "Select a date",
+    "timeLabel": "Available times",
+    "kuwaitTime": "All appointment times are in Kuwait time (UTC+3).",
+    "loadingTimes": "Checking availability…",
+    "noTimes": "No times available on this date",
+    "noTimesHint": "Choose another date or go back to choose another barber.",
+    "nameLabel": "Your name",
+    "phoneLabel": "Mobile number",
+    "countryCode": "Country calling code",
+    "phoneHint": "We'll verify this number before confirming your booking.",
+    "notesLabel": "Appointment notes (optional)",
+    "noAccount": "No account or password needed.",
+    "nameError": "Enter your name using 2–120 characters.",
+    "phoneError": "Enter a valid mobile number for the selected country.",
+    "sendCode": "Continue to verification",
+    "verifyTitle": "Verify your number",
+    "verifyIntro": "Enter the six-digit code to continue.",
+    "changePhone": "Change number",
+    "testCode": "Test code: {{code}}",
+    "noSms": "Local Test only. No SMS is sent. Use this code to test the booking.",
+    "verificationCode": "Verification code",
+    "verifyContinue": "Verify and review",
+    "resendCode": "Get a new test code",
+    "codeExpires": "The code expires after 5 minutes.",
+    "reviewTitle": "Review your booking",
+    "reviewIntro": "Check the details before confirming.",
+    "yourDetails": "Your details",
+    "total": "Total",
+    "payAtShop": "Pay at the shop",
+    "paymentHint": "No online payment is required for this booking.",
+    "confirmationHint": "Your appointment is confirmed only after availability is checked again.",
+    "confirm": "Confirm booking",
+    "successTitle": "You're booked!",
+    "successIntro": "Your appointment is confirmed.",
+    "reference": "Booking reference",
+    "addCalendar": "Add to calendar",
+    "directions": "Get directions",
+    "anotherBooking": "Make another booking",
+    "edit": "Edit",
+    "change": "Change",
+    "back": "Back",
+    "retry": "Try again",
+    "loading": "Loading booking options…",
+    "working": "Please wait…",
+    "branchSelected": "{{name}} selected",
+    "barberNext": "Choose your barber next.",
+    "entry": "Book an appointment",
+    "errors": {
+      "UNAVAILABLE": "We couldn't load or save this booking. Please try again.",
+      "INVALID_DETAILS": "Check your name and mobile number.",
+      "INVALID_CODE": "The code is incorrect or has expired. Try again or get a new code.",
+      "VERIFICATION_REQUIRED": "Your verification has expired. Please verify your number again.",
+      "SLOT_UNAVAILABLE": "That time is no longer available. Your details are saved; please choose another time.",
+      "INVALID_DATE": "Choose a date within this barber's booking window.",
+      "INVALID_SELECTION": "Your selection is no longer available. Please check your shop, barber and services.",
+      "BOOKING_UNAVAILABLE": "We couldn't complete this booking. Please contact the shop."
+    },
+    "cities": {
+      "Kuwait City": "Kuwait City",
+      "Salmiya": "Salmiya"
+    },
+    "three": {
+      "steps": {
+        "location": "Find a shop",
+        "appointment": "Barber & services",
+        "confirm": "Time & confirmation"
+      },
+      "hints": {
+        "location": "Choose a city and shop.",
+        "appointment": "Choose your barber and services.",
+        "confirm": "Choose a time, then add your details."
+      },
+      "titles": {
+        "location": "Find your shop",
+        "appointment": "Choose your barber & services",
+        "confirm": "Complete your booking"
+      },
+      "intros": {
+        "location": "Choose your city, then your shop.",
+        "appointment": "Start with your barber, then choose their services.",
+        "confirm": "Choose your date and time, then confirm your details."
+      },
+      "nextAppointment": "Choose your appointment",
+      "nextConfirm": "Continue to confirmation",
+      "sendCode": "Get verification code",
+      "verifyConfirm": "Verify & confirm booking",
+      "numberVerified": "Mobile number verified.",
+      "bookingSummary": "Booking summary"
+    },
+    "guided": {
+      "done": "Done",
+      "nextTime": "Continue to date & time",
+      "details": "Your details & confirmation",
+      "cityFirst": "Choose a city to see its shops.",
+      "barberFirst": "Choose a barber to see their services.",
+      "timeFirst": "Choose a date and time to continue."
+    },
+    "onePage": {
+      "title": "Book your appointment",
+      "intro": "Choose your city to get started. We’ll guide you through the rest.",
+      "sectionOf": "Section {{current}} of {{total}}",
+      "shopFirst": "Choose a shop to see its barbers.",
+      "servicesFirst": "Choose your services, then continue to see available times."
+    }
+  },
+  "customerAuth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "createAccount": "Create account",
+    "name": "Your name",
+    "phone": "Mobile number",
+    "countryCode": "Country calling code",
+    "emailOptional": "Email (optional)",
+    "emailHint": "Your mobile number is used to sign in and recover your account.",
+    "password": "Password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordRules": "Use 8 or more characters with uppercase, lowercase, a number and a symbol.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "changePassword": "Change password",
+    "sendRecovery": "Get recovery code",
+    "verifyCreate": "Verify & create account",
+    "editDetails": "Edit details",
+    "backToBooking": "Back to booking",
+    "continueGuest": "Continue as a guest",
+    "noAccount": "New here?",
+    "hasAccount": "Already have an account?",
+    "myAccount": "My account",
+    "myAppointments": "My appointments",
+    "bookNow": "Book an appointment",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "notProvided": "Not provided",
+    "profileSaved": "Your details have been saved.",
+    "resetSuccess": "Your password has been reset. Sign in with your new password.",
+    "expiredRecovery": "Request a new recovery code to reset your password.",
+    "noAppointments": "Your appointments will appear here.",
+    "bookingsError": "Could not load your appointments.",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "signedInBooking": "Booking as {{name}}",
+    "accountDetails": "Your account details will be used for this booking.",
+    "manageAccount": "Manage account",
+    "titles": {
+      "sign-in": "Welcome back",
+      "sign-up": "Create your account",
+      "forgot-password": "Forgot your password?",
+      "reset-password": "Reset your password"
+    },
+    "intros": {
+      "sign-in": "Sign in with your mobile number and password.",
+      "sign-up": "Create an account with your name, mobile number and password.",
+      "forgot-password": "Enter your mobile number to get a recovery code.",
+      "reset-password": "Enter your recovery code and choose a new password."
+    },
+    "errors": {
+      "INVALID_PHONE": "Enter a valid mobile number for the selected country.",
+      "INVALID_DETAILS": "Check your details and try again.",
+      "WEAK_PASSWORD": "Use 8 or more characters with uppercase, lowercase, a number and a symbol (maximum 72 bytes).",
+      "PASSWORD_MISMATCH": "The passwords do not match.",
+      "INVALID_CODE": "The code is incorrect, expired or already used. Request a new code if needed.",
+      "INVALID_LOGIN": "The email address or password is incorrect.",
+      "ACCOUNT_UNAVAILABLE": "Could not complete this request. Try signing in or requesting a new recovery code.",
+      "RATE_LIMITED": "Too many attempts. Please wait 15 minutes and try again.",
+      "AUTH_REQUIRED": "Your session has expired. Please sign in again.",
+      "SIGN_IN_REQUIRED": "Your account was created. Please sign in to continue.",
+      "UNAVAILABLE": "We could not complete this request. Please try again.",
+      "SOCIAL_SIGN_IN_FAILED": "Could not complete social sign-in. Please sign in again."
+    },
+    "requestNewCode": "Get a new recovery code",
+    "social": {
+      "google": "Continue with Google",
+      "apple": "Continue with Apple",
+      "unavailable": "Google and Apple sign-in aren’t available yet. Please use your email.",
+      "orPhone": "or use your mobile number",
+      "completeTitle": "Complete your account",
+      "completeIntro": "Confirm your name and verify your mobile number to continue.",
+      "verifyPhone": "Verify mobile number",
+      "verifyContinue": "Verify & continue"
+    },
+    "email": {
+      "label": "Email address",
+      "orEmail": "or use your email",
+      "callbackTitle": "Confirming your email",
+      "invalidLink": "This link is invalid or has expired. Please request a new link.",
+      "signupSent": "Check your email for a confirmation link.",
+      "recoverySent": "If an account exists, a password reset link has been sent.",
+      "resend": "Resend confirmation link",
+      "sendRecovery": "Send reset link",
+      "socialIntro": "Enter your name to finish creating your account.",
+      "continue": "Continue",
+      "changeSent": "Check your email to confirm your new address.",
+      "intros": {
+        "sign-up": "Create your account with your name, email and password.",
+        "forgot-password": "Enter your email address to get a reset link.",
+        "reset-password": "Choose a new password."
+      }
+    }
+  },
+  "customerPrivacy": {
+    "title": "Privacy policy",
+    "updated": "Updated 31 October 2026",
+    "intro": "This page explains how information is used in Barber++ customer accounts and bookings.",
+    "back": "Back to booking",
+    "sections": [
+      {
+        "title": "Account and booking information",
+        "text": "An email account uses your name, email address and password. A mobile number is required to confirm a booking and is saved in your profile for later bookings. Booking records include your chosen shop, barber, services, appointment time, contact details and any notes you enter. You can also book as a guest using your name and mobile number."
+      },
+      {
+        "title": "Why information is used",
+        "text": "Information is used to sign you in, confirm your email, recover your account, manage your profile, arrange appointments and display your booking history. Your chosen shop and its authorized staff can access the booking and contact information needed to manage your appointment."
+      },
+      {
+        "title": "Google and Apple sign-in",
+        "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password."
+      },
+      {
+        "title": "Service providers",
+        "text": "Hosting, database, network and email services process information needed to operate and protect the website. Account confirmation, recovery and email-change messages are delivered through Resend. Google and Apple process sign-in under their own privacy policies when you choose those options."
+      },
+      {
+        "title": "Browser storage and records",
+        "text": "The website stores sign-in sessions and preferences in your browser. Technical logs support security and troubleshooting. Signing out removes your local customer session; it does not delete your account or past appointments. Account and booking records remain stored until they are removed through service administration."
+      },
+      {
+        "title": "Your information and contact",
+        "text": "You can edit your name and mobile number in your profile. Changing your login email requires confirmation. For questions or requests about access, correction or removal of account and booking information, contact Barber++ at the address below."
+      }
+    ],
+    "contact": "Contact Barber++"
   }
 }

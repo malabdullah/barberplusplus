@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "barber-test",
+  "account_id": "09c18affdb74c9a3721f79f6566df48a",
+  "main": "ops/cloud-test/worker.js",
+  "compatibility_date": "2026-10-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {"enabled": true, "head_sampling_rate": 0.1},
+  "vars": {
+    "APP_URL": "https://barber-test.alabdullah-cs.workers.dev",
+    "SUPABASE_URL": "https://qvkucvcjmojjbphlzlks.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_GDEppCSzoe_OsQCAEE2Tyw_RSED0fEF"
+  }
+}

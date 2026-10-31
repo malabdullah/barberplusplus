@@ -729,3 +729,16 @@ a:active {
     max-width: 100%;
   }
 }
+
+/* Customer booking: approved Bright Minimal palette, scoped to its page. */
+.customer-booking {
+  --booking-surface: #FFFFFF;
+  --booking-subtle: #F7F8FA;
+  --booking-text: #151A20;
+  --booking-muted: #596473;
+  --booking-amber: #D4A853;
+  --booking-selection: #FBF5E8;
+  --booking-link: #805B18;
+  --booking-divider: #E3E7ED;
+  --booking-control: #7C8795;
+}

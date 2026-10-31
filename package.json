@@ -9,6 +9,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:cloud-test": "npm run build && node ops/cloud-test/assets.mjs manifest",
+    "test:cloud-gateway": "node --test ops/cloud-test/worker.test.mjs",
+    "test:cloud-backend": "node ops/cloud-test/probe.mjs",
+    "test:e2e:cloud": "playwright test --config playwright.cloud-test.config.js",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
     "lint:functions": "deno lint supabase/functions",
@@ -30,7 +34,8 @@
     "check:schema": "sh scripts/check-schema-drift.sh",
     "check": "npm run lint && npm run lint:functions && npm run check:functions && npm run test:functions && npm run test && npm run test:operations && npm run check:migrations && npm run check:domains && npm run build",
     "test:local-backend": "node scripts/probe-local-backend.mjs",
-    "test:local-lifecycle": "node scripts/verify-local-lifecycle.mjs"
+    "test:local-lifecycle": "node scripts/verify-local-lifecycle.mjs",
+    "test:cloud-customer": "node ops/cloud-test/customer-probe.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
@@ -58,6 +63,7 @@
     "jsdom": "26.1.0",
     "supabase": "2.116.0",
     "vite": "^7.3.0",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "wrangler": "4.156.0"
   }
 }

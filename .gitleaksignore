@@ -26,3 +26,7 @@ b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:
 # Removed from current source; requests now generate fresh random challenges.
 # Exact historical commit/path/rule/line only; current source remains scanned.
 80c035d5eecce8dbe88dd95dcd034b624880c657:scripts/rehearse-test-synthetic.mjs:generic-api-key:128
+
+# Historical design QA prose listed white/charcoal/amber colors, not a credential.
+# Exact commit/path/line only; current wording avoids the false positive.
+5bd460b9fd7a26456b0b915c4583fbe8f03552dc:design-qa.md:generic-api-key:36

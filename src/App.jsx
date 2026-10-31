@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
@@ -52,6 +52,15 @@ import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import EnvironmentBanner from './components/EnvironmentBanner';
+import { customerFeaturesEnabled } from './lib/runtimeConfig';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
+
+const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
+const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
+const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
+const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
+const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
+const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
 function ProtectedRoute({ children, allowedRole }) {
   const { isAuthenticated, userRole, loading } = useApp();
@@ -123,6 +132,12 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
+      {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
+      {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
+      {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
+      {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
+      <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
       <Route
         path="/"
@@ -252,7 +267,7 @@ export default function App() {
     <>
       <EnvironmentBanner />
       <AppProvider>
-        <AppRoutes />
+        <CustomerAuthProvider><AppRoutes /></CustomerAuthProvider>
       </AppProvider>
     </>
   );
