@@ -12,6 +12,10 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(home+'(?:/|$)'));
     await expect(page.locator('.environment-banner')).toContainText(/TEST/);
+    const brand = page.locator('.sidebar-logo .brand-logo');
+    await expect(brand).toBeVisible();
+    await expect(brand.locator('.brand-logo-dark')).toBeVisible();
+    await page.screenshot({path:screenshot(`brand-${role}-desktop-dark`)});
     if (role === 'manager') {
       await page.goto('/dashboard/branches');
       await expect(page.locator('.branch-card-name',{hasText:'Synthetic Branch'})).toBeVisible();
@@ -33,6 +37,9 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.screenshot({path:screenshot(`${role}-mobile-arabic`)});
     await page.locator('.topbar-menu-btn').click();
     await expect(page.locator('aside.sidebar')).toHaveAttribute('role','dialog');
+    await expect(brand.locator('.brand-logo-light')).toBeVisible();
+    expect(await brand.evaluate(el=>getComputedStyle(el).direction)).toBe('ltr');
+    await page.screenshot({path:screenshot(`brand-${role}-mobile-light-arabic`)});
     await page.keyboard.press('Escape');
     await page.locator('.preferences-selector').first().locator('button').first().click();
     await page.getByRole('button',{name:'English',exact:true}).click();

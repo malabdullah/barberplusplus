@@ -1,3 +1,4 @@
+import BrandLogo from '../components/UI/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -193,11 +194,9 @@ export default function AcceptInvite() {
           <div className="login-bg-pattern" />
         </div>
         <div className="login-container animate-scale-in">
-          <Link to="/" className="login-logo" aria-label="Barber++ Home">
-            <div className="login-logo-icon">
-              <Scissors size={28} strokeWidth={1.5} />
-            </div>
-          </Link>
+          <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative size="auth" tagline={t('nav.dashboard')} />
+        </Link>
           <div className="login-welcome">
             <p>{t('common.loading')}</p>
           </div>
@@ -269,14 +268,8 @@ export default function AcceptInvite() {
       {/* Container */}
       <div className="login-container animate-scale-in">
         {/* Logo */}
-        <Link to="/" className="login-logo" aria-label="Barber++ Home">
-          <div className="login-logo-icon">
-            <Scissors size={28} strokeWidth={1.5} />
-          </div>
-          <div className="login-logo-text">
-            <span className="login-logo-name">Barber++</span>
-            <span className="login-logo-tagline">Dashboard</span>
-          </div>
+        <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative size="auth" tagline={t('nav.dashboard')} />
         </Link>
 
         {/* Decorative Line */}

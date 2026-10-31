@@ -1,6 +1,7 @@
 {
   "environment": { "testBanner": "TEST — synthetic data", "testInbox": "Test email inbox" },
   "common": {
+    "brandHome": "Barber++ home",
     "navigation": "Navigation",
     "save": "Save",
     "cancel": "Cancel",

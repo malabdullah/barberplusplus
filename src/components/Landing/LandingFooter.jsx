@@ -1,7 +1,7 @@
+import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Scissors } from 'lucide-react';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 
@@ -22,11 +22,8 @@ export default function LandingFooter() {
         <div className="footer-main">
           {/* Brand */}
           <div className="footer-brand">
-            <Link to="/" className="footer-brand-logo" aria-label="Barber++ Home">
-              <div className="footer-logo-icon" aria-hidden="true">
-                <Scissors size={20} strokeWidth={1.5} />
-              </div>
-              <span className="footer-logo-name">Barber++</span>
+            <Link to="/" className="footer-brand-logo" aria-label={t('common.brandHome')}>
+              <BrandLogo decorative size="footer" />
             </Link>
             <p className="footer-tagline">
               {t('landing.footer.tagline')}

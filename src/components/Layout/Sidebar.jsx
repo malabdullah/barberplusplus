@@ -1,3 +1,4 @@
+import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -51,15 +52,9 @@ export default function Sidebar({ isOpen, onClose }) {
         </button>
 
         {/* Logo */}
-        <Link to="/" className="sidebar-logo" aria-label="Barber++ Home">
-        <div className="sidebar-logo-icon">
-          <Scissors size={24} strokeWidth={1.5} />
-        </div>
-        <div className="sidebar-logo-text">
-          <span className="sidebar-logo-name">Barber++</span>
-          <span className="sidebar-logo-tagline">Manager</span>
-        </div>
-      </Link>
+        <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
+          <BrandLogo decorative tagline={t('common.manager')} />
+        </Link>
 
       {/* Decorative line */}
       <div className="sidebar-divider">
