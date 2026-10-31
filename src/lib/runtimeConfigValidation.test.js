@@ -8,6 +8,12 @@ const localAnonKey = [
 ].join('.');
 
 describe('validateRuntimeConfig', () => {
+  it('requires Cloud Test to explicitly select its own HTTPS backend', () => {
+    const config = { environment: 'cloud-test', appUrl: 'https://test.example.com', cloudTestProjectRef: 'abcdefghijklmnopqrst', supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co', supabasePublishableKey: 'sb_publishable_example' };
+    expect(validateRuntimeConfig(config).environment).toBe('cloud-test');
+    expect(() => validateRuntimeConfig({...config, supabaseUrl: 'https://another.supabase.co'})).toThrow(/selected Supabase project/);
+    expect(() => validateRuntimeConfig({...config, appUrl: 'http://test.example.com'})).toThrow(/HTTPS/);
+  });
   it('accepts loopback HTTP for development', () => {
     expect(validateRuntimeConfig({
       environment: 'development',

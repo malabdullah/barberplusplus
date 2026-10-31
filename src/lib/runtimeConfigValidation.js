@@ -1,4 +1,4 @@
-const ENVIRONMENTS = new Set(['development', 'test', 'production']);
+const ENVIRONMENTS = new Set(['development', 'test', 'cloud-test', 'production']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 const normalizeOrigin = (value, label, environment) => {
@@ -59,11 +59,17 @@ const validatePublishableKey = (value) => {
 export const validateRuntimeConfig = (rawConfig) => {
   const environment = rawConfig?.environment?.trim();
   if (!ENVIRONMENTS.has(environment)) {
-    throw new Error('APP_ENV must be development, test, or production.');
+    throw new Error('APP_ENV must be development, test, cloud-test, or production.');
+  }
+
+  if (environment === 'cloud-test' && (!/^[a-z]{20}$/.test(rawConfig.cloudTestProjectRef || '')
+    || rawConfig.supabaseUrl !== `https://${rawConfig.cloudTestProjectRef}.supabase.co`)) {
+    throw new Error('Cloud Test must use its explicitly selected Supabase project.');
   }
 
   return Object.freeze({
     environment,
+    cloudTestProjectRef: environment === 'cloud-test' ? rawConfig.cloudTestProjectRef : undefined,
     appUrl: normalizeOrigin(rawConfig.appUrl, 'Application URL', environment),
     supabaseUrl: normalizeOrigin(rawConfig.supabaseUrl, 'Supabase URL', environment),
     supabasePublishableKey: validatePublishableKey(rawConfig.supabasePublishableKey),

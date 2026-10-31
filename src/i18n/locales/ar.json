@@ -1,5 +1,5 @@
 {
-  "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية" },
+  "environment": { "testBanner": "بيئة اختبار — بيانات تجريبية", "testInbox": "بريد الاختبار" },
   "common": {
     "navigation": "التنقل",
     "save": "حفظ",

@@ -1,5 +1,24 @@
 # Repository Guidelines
 
+## Default development and testing target
+
+Owner instruction updated 2026-10-31: deploy every application, database, or
+Edge Function change to the hosted Test environment and verify it there before
+reporting the change ready. Test is
+https://barber-test.alabdullah-cs.workers.dev, backed only by Supabase project
+`qvkucvcjmojjbphlzlks` (`barber-test`). Localhost is no longer the default: do
+not start or use the local website or Docker Test runtime unless the owner
+explicitly asks for it. Local builds, lint and unit checks remain appropriate.
+
+Preserve the hosted `cloud-test` configuration, access gate, private test inbox,
+synthetic data and separation from production. Never substitute production
+credentials/data or promote to production as part of a Test deployment.
+Documentation-only changes need no rebuild of an unchanged application. This
+instruction overrides older local-Test defaults in documentation and skills.
+The maintained cloud setup is in `docs/cloud-test.md` on
+`codex/cloudflare-supabase-test`; reconcile its deployment support before
+deploying from another branch.
+
 ## Project Structure & Module Organization
 
 Barber++ is a React 18/Vite application backed by Supabase. Application code lives in `src/`: route-level screens are in `pages/` (including role-specific `admin/`, `agent/`, and `barber/` folders), reusable UI is in `components/`, and Supabase queries belong in `services/`. Shared state, hooks, helpers, constants, translations, and global styles live in their matching directories. Keep database migrations in `supabase/migrations/` and Deno Edge Functions in `supabase/functions/`. Static assets and hosting headers belong in `public/`.

@@ -4,6 +4,7 @@ type Identity = { user_id: string; session_id: string };
 type Dependencies = {
   environment: string; appUrl: string; publicUrl: string; secret: string;
   productionEnabled?: boolean;
+  cloudTestProjectRef?: string; cloudAccessKey?: string;
   rpc: (action: string, data: Data) => Promise<unknown>;
   createUser: (data: Data) => Promise<string>;
   deleteUser: (id: string) => Promise<void>;
@@ -31,7 +32,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
   const hash = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',await key!,new TextEncoder().encode(value))), x=>x.toString(16).padStart(2,'0')).join('');
   return async (req: Request) => {
     const origin = req.headers.get('origin');
-    const allowed = runtime.allowsOrigin(origin);
+    const allowed = await runtime.allows(req);
     const headers = {'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Origin':allowed && origin ? origin : deps.appUrl,'Access-Control-Allow-Headers':'authorization, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
     const reply = (status: number, data: unknown) => new Response(JSON.stringify(data),{status,headers});
     if (!enabled) return reply(404,{error:'NOT_AVAILABLE'});

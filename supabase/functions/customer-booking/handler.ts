@@ -3,6 +3,8 @@ type Body = Record<string, unknown>;
 type Dependencies = {
   environment: string;
   productionEnabled?: boolean;
+  cloudTestProjectRef?: string;
+  cloudAccessKey?: string;
   appUrl: string;
   publicUrl: string;
   secret: string;
@@ -37,7 +39,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
   };
   return async (req: Request): Promise<Response> => {
     const origin = req.headers.get('origin');
-    const originAllowed = runtime.allowsOrigin(origin);
+    const originAllowed = await runtime.allows(req);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
     if (!enabled) return reply(404, { error: 'NOT_AVAILABLE' });

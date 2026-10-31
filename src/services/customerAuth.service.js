@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
+import { functionFetch } from '../lib/functionFetch';
 import { customerSupabase, CUSTOMER_AUTH_STORAGE_KEY } from '../lib/customerSupabase';
 export async function customerToken() {
   if (!customerSupabase) return '';
@@ -11,7 +12,7 @@ async function request(action, data = {}, authenticated = false) {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
   const token = authenticated ? await customerToken() : '';
   if (authenticated && !token) throw new Error('AUTH_REQUIRED');
-  const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
+  const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
     method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
   });

@@ -8,6 +8,8 @@ const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: {
 Deno.serve(createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
   productionEnabled: Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED') === 'true',
+  cloudTestProjectRef: Deno.env.get('CLOUD_TEST_PROJECT_REF'),
+  cloudAccessKey: Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   appUrl: Deno.env.get('APP_URL') || '',
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,

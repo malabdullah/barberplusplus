@@ -13,6 +13,7 @@ const deliverEmail=createCustomerEmailDelivery(emailClient.auth,appUrl);
 Deno.serve(createCustomerAuthHandler({
   environment,appUrl,publicUrl:Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
+  cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
     const result=await admin.rpc('customer_account_api',{p_action:action,p_data:data});
     if(result.error)throw Error(result.error.message);

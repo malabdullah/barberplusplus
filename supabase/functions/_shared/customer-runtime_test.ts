@@ -17,3 +17,10 @@ Deno.test('local customer access keeps the loopback-only backend and matching fr
   assert(!runtime.allowsOrigin('http://localhost:4173'));
   assert(!customerRuntime({ ...config, publicUrl: production.publicUrl }).enabled);
 });
+Deno.test('hosted customer Test still requires its project-bound private gateway', async () => {
+  const runtime = customerRuntime({ ...production, environment: 'cloud-test', appUrl: 'https://barber-test.example.test', publicUrl: 'https://abcdefghijklmnopqrst.supabase.co', cloudTestProjectRef: 'abcdefghijklmnopqrst', cloudAccessKey: 'a-private-test-gateway-secret-of-at-least-thirty-two-characters' });
+  assert(runtime.enabled && !runtime.localTest);
+  assert(!await runtime.allows(new Request('https://abcdefghijklmnopqrst.supabase.co/functions/v1/customer-auth')));
+  assert(await runtime.allows(new Request('https://abcdefghijklmnopqrst.supabase.co/functions/v1/customer-auth', { headers: { Origin: 'https://barber-test.example.test', 'x-cloud-test-key': 'a-private-test-gateway-secret-of-at-least-thirty-two-characters' } })));
+  assert(!runtime.allowsOrigin('https://barber-test.example.test'));
+});

@@ -1,4 +1,5 @@
-type Configuration = { environment: string; appUrl: string; publicUrl: string; productionEnabled?: boolean; secret: string };
+import { createTestBoundary } from './test-boundary.ts';
+type Configuration = { environment: string; appUrl: string; publicUrl: string; productionEnabled?: boolean; secret: string; cloudTestProjectRef?: string; cloudAccessKey?: string };
 
 function origin(value: string): URL | null {
   try {
@@ -15,12 +16,17 @@ export function customerRuntime(config: Configuration) {
   const api = origin(config.publicUrl);
   const localTest = ['development', 'test'].includes(config.environment) && !!app && !!api && loopback(app) && loopback(api);
   const production = config.environment === 'production' && config.productionEnabled === true && !!app && !!api && app.protocol === 'https:' && api.protocol === 'https:' && !loopback(app) && !loopback(api);
-  const enabled = (localTest || production) && config.secret.length >= 32;
+  const cloud = createTestBoundary(config);
+  const cloudTest = config.environment === 'cloud-test' && cloud.enabled;
+  const enabled = (localTest || production || cloudTest) && config.secret.length >= 32;
   return {
     enabled,
     localTest: enabled && localTest,
+    async allows(req: Request) {
+      return cloudTest ? enabled && await cloud.allows(req) : this.allowsOrigin(req.headers.get('origin'));
+    },
     allowsOrigin(value: string | null) {
-      if (!enabled) return false;
+      if (!enabled || cloudTest) return false;
       if (!value) return true;
       const candidate = origin(value);
       if (!candidate) return false;
