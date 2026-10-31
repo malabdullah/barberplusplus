@@ -1,3 +1,4 @@
+import { withCloudTestGateway } from '../_shared/test-boundary.ts';
 import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
 import { getAppUrl } from '../_shared/environment.ts';
@@ -6,7 +7,7 @@ import { createAdminPasswordResetHandler } from './handler.ts';
 const url = Deno.env.get('SUPABASE_URL') ?? '';
 const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {auth:{persistSession:false,autoRefreshToken:false}});
-Deno.serve(createAdminPasswordResetHandler({
+Deno.serve(withCloudTestGateway(createAdminPasswordResetHandler({
   appUrl: getAppUrl(),
   authenticate: async authorization => {
     const client = createClient(url, anon, {global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}});
@@ -27,4 +28,4 @@ Deno.serve(createAdminPasswordResetHandler({
     const {data,error} = await admin.rpc('finish_admin_password_reset', {p_guard:guardId,p_actor:adminId,p_target:targetId});
     return !error && data === true;
   },
-}));
+})));

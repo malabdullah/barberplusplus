@@ -1,5 +1,5 @@
 {
-  "environment": { "testBanner": "TEST — synthetic data" },
+  "environment": { "testBanner": "TEST — synthetic data", "testInbox": "Test email inbox" },
   "common": {
     "navigation": "Navigation",
     "save": "Save",

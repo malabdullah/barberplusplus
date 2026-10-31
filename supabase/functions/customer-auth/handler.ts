@@ -1,7 +1,9 @@
+import { createTestBoundary } from '../_shared/test-boundary.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Dependencies = {
   environment: string; appUrl: string; publicUrl: string; secret: string;
+  cloudTestProjectRef?: string; cloudAccessKey?: string;
   rpc: (action: string, data: Data) => Promise<unknown>;
   createUser: (data: Data) => Promise<string>;
   deleteUser: (id: string) => Promise<void>;
@@ -24,12 +26,13 @@ const contact = (body: Data) => {
   return name.length >= 2 && name.length <= 120 && email.length <= 254 && (!email || /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) ? {name,email} : null;
 };
 export function createCustomerAuthHandler(deps: Dependencies) {
-  const enabled = ['test','development'].includes(deps.environment) && local(deps.appUrl) && local(deps.publicUrl) && deps.secret.length >= 32;
+  const boundary = createTestBoundary(deps);
+  const enabled = boundary.enabled && deps.secret.length >= 32;
   const key = enabled ? crypto.subtle.importKey('raw', new TextEncoder().encode(`customer-auth-test-v1:${deps.secret}`), {name:'HMAC',hash:'SHA-256'},false,['sign']) : null;
   const hash = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',await key!,new TextEncoder().encode(value))), x=>x.toString(16).padStart(2,'0')).join('');
   return async (req: Request) => {
     const origin = req.headers.get('origin');
-    const allowed = enabled && (!origin || local(origin) && new URL(origin).port === new URL(deps.appUrl).port);
+    const allowed = enabled && await boundary.allows(req);
     const headers = {'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin','Access-Control-Allow-Origin':allowed && origin ? origin : deps.appUrl,'Access-Control-Allow-Headers':'authorization, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
     const reply = (status: number, data: unknown) => new Response(JSON.stringify(data),{status,headers});
     if (!enabled) return reply(404,{error:'NOT_AVAILABLE'});

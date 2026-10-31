@@ -8,10 +8,11 @@ const localConfig = {
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
   supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   release: import.meta.env.VITE_APP_RELEASE || 'local',
+  cloudTestProjectRef: import.meta.env.VITE_CLOUD_TEST_PROJECT_REF,
 };
 
 export const appConfig = validateRuntimeConfig(
   injectedConfig?.environment ? injectedConfig : localConfig
 );
 
-export const isTest = appConfig.environment === 'test' || appConfig.environment === 'development';
+export const isTest = ['test', 'development', 'cloud-test'].includes(appConfig.environment);

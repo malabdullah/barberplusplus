@@ -1,11 +1,12 @@
 import { shopWording } from '../utils/customerTerminology';
 import { customerToken } from './customerAuth.service';
 import { appConfig, isTest } from '../lib/runtimeConfig';
+import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!isTest) throw new Error('NOT_AVAILABLE');
   const token = action === 'account-proof' || action === 'book' ? await customerToken() : '';
-  const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
+  const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ action, ...body }),

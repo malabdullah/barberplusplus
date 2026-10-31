@@ -1,4 +1,13 @@
-# Two environments
+# Barber++ environments
+
+## Cloud Test
+
+The owner requested an additional free hosted test environment on 2026-10-31.
+It runs independently of the Mac at
+https://barber-test.alabdullah-cs.workers.dev with a separate managed Supabase
+project, `qvkucvcjmojjbphlzlks` (`barber-test`, Mumbai). See
+[Cloud Test](cloud-test.md) for access, isolation and validation details.
+This deployment is separate from the production release workflow below.
 
 ## Local Test
 

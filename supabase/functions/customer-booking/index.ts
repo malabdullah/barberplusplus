@@ -7,6 +7,8 @@ const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: { persistSession: false, autoRefreshToken: false } });
 Deno.serve(createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
+  cloudTestProjectRef: Deno.env.get('CLOUD_TEST_PROJECT_REF'),
+  cloudAccessKey: Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   appUrl: Deno.env.get('APP_URL') || '',
   publicUrl: Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,

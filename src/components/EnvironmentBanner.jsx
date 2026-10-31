@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isTest } from '../lib/runtimeConfig';
+import { appConfig, isTest } from '../lib/runtimeConfig';
 
 export default function EnvironmentBanner() {
   const { t } = useTranslation();
@@ -45,6 +45,7 @@ export default function EnvironmentBanner() {
   return (
     <div className="environment-banner" role="status" ref={bannerRef}>
       {t('environment.testBanner')}
+      {appConfig?.environment === 'cloud-test' && <a href="/test-inbox" target="_blank" rel="noreferrer" style={{color:'inherit',marginInlineStart:'1rem'}}>{t('environment.testInbox')}</a>}
     </div>
   );
 }

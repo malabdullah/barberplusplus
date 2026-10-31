@@ -7,6 +7,7 @@ const url=Deno.env.get('SUPABASE_URL') || '';
 const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
 Deno.serve(createCustomerAuthHandler({
   environment:Deno.env.get('APP_ENV') || '',appUrl:Deno.env.get('APP_URL') || '',publicUrl:Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+  cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
     const result=await admin.rpc('customer_account_api',{p_action:action,p_data:data});
     if(result.error)throw Error(result.error.message);

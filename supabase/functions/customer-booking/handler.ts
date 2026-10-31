@@ -1,9 +1,12 @@
+import { createTestBoundary } from '../_shared/test-boundary.ts';
 type Body = Record<string, unknown>;
 type Dependencies = {
   environment: string;
   appUrl: string;
   publicUrl: string;
   secret: string;
+  cloudTestProjectRef?: string;
+  cloudAccessKey?: string;
   catalog: () => Promise<unknown>;
   customer?: (token: string) => Promise<{id: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
@@ -19,7 +22,8 @@ const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replac
 const decode = (value: string) => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
 
 export function createCustomerBookingHandler(deps: Dependencies) {
-  const enabled = ['development', 'test'].includes(deps.environment) && local(deps.appUrl) && local(deps.publicUrl) && deps.secret.length >= 32;
+  const boundary = createTestBoundary(deps);
+  const enabled = boundary.enabled && deps.secret.length >= 32;
   const key = enabled ? crypto.subtle.importKey('raw', encoder.encode(`customer-booking-test-v1:${deps.secret}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']) : null;
   const sign = async (proof: Proof) => {
     const payload = encode(encoder.encode(JSON.stringify(proof)));
@@ -38,7 +42,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
   return async (req: Request): Promise<Response> => {
     const origin = req.headers.get('origin');
     // Accept only the two aliases for this local Test frontend, with the same port.
-    const originAllowed = enabled && (!origin || (local(origin) && new URL(origin).port === new URL(deps.appUrl).port));
+    const originAllowed = enabled && await boundary.allows(req);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
     if (!enabled) return reply(404, { error: 'NOT_AVAILABLE' });
