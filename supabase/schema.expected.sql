@@ -1360,8 +1360,6 @@ ALTER TABLE ONLY "public"."booking_reminders"
 
 
 
-ALTER TABLE ONLY "public"."bookings"
-    ADD CONSTRAINT "bookings_no_overlapping_appointments" EXCLUDE USING "gist" ("barber_id" WITH =, "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text") WITH &&) WHERE (("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"])));
 
 
 
@@ -1467,6 +1465,10 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
 
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
 
 
 
@@ -1738,11 +1740,13 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
-CREATE OR REPLACE TRIGGER "prevent_booking_conflicts_insert" BEFORE INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."check_booking_conflict"();
 
 
 
-CREATE OR REPLACE TRIGGER "prevent_booking_conflicts_update" BEFORE UPDATE OF "time", "date", "duration", "barber_id" ON "public"."bookings" FOR EACH ROW WHEN ((("old"."time" IS DISTINCT FROM "new"."time") OR ("old"."date" IS DISTINCT FROM "new"."date") OR ("old"."duration" IS DISTINCT FROM "new"."duration") OR ("old"."barber_id" IS DISTINCT FROM "new"."barber_id"))) EXECUTE FUNCTION "public"."check_booking_conflict"();
+
+
+
+CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR UPDATE OF "barber_id", "date", "time", "duration", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_schedule"();
 
 
 
