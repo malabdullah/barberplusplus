@@ -86,8 +86,10 @@ missing-name completion, private relay email and session persistence after a
 refresh passed. The owner tested and accepted the hosted customer journey on
 2026-10-31. Provider credentials remain private in ignored
 `.cloud-test/customer-oauth.json`; never reuse production credentials. The
-current Apple client-secret JWT expires on 2027-03-30 and must be renewed before
-that date. See [customer social sign-in](customer-social-signin-test.md).
+Apple renewal implementation uses a separate scheduled Worker and the dedicated
+Test key. Its installation, scoped access and verification are described in
+[the Auth operations runbook](../ops/auth/README.md#hosted-test-equivalent).
+See also [customer social sign-in](customer-social-signin-test.md).
 
 ## Isolation and access controls
 
@@ -131,7 +133,9 @@ Do not use an affirmative push as a preview: agent mode can apply changes withou
 a prompt. Supply `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` and
 `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET` privately from the Test OAuth file, and
 verify the hosted site/callback URLs, email confirmation, disabled phone signup
-and provider settings after any push. Edge Functions deploy with independent gateway,
+and provider settings after any push. The renewal Worker owns the live Apple
+secret: first refresh the private OAuth file from its private KV current JWT;
+never push an older cached JWT over a renewed credential. Edge Functions deploy with independent gateway,
 user, or cron authentication in their bodies. Gateway JWT verification is disabled
 for this hosted test deployment to support the project's signing-key format.
 

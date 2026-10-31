@@ -13,9 +13,11 @@ Real Google login/profile creation/sign-out and Apple login/private relay email,
 missing-name completion and session persistence after reload passed on
 2026-10-31. The owner subsequently tested and accepted the customer journey.
 Provider secrets stay in ignored `.cloud-test/customer-oauth.json` and are
-applied only to the hosted Test project's Auth configuration. The Apple secret
-expires on 2027-03-30; renew it before expiry with the existing dedicated Test
-signing key. Production provider registrations and configuration are unchanged.
+applied only to the hosted Test project's Auth configuration. Its separate
+`barber-test-apple-renewal` Worker owns Apple credential rotation, checks hourly
+and renews 30 days before expiry using the existing dedicated Test signing key.
+See the [renewal runbook](../ops/auth/README.md#hosted-test-equivalent). Production
+provider registrations and configuration are unchanged.
 
 See [Cloud Test](cloud-test.md) for configuration-push safeguards and verification.
 
