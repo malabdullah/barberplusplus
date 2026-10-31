@@ -72,7 +72,11 @@ Deno.serve(async (request) => {
                     try:
                         request = urllib.request.Request(base + function, method='OPTIONS', headers={'Origin':'http://localhost:5173'})
                         with urllib.request.urlopen(request, timeout=75) as response: result = json.load(response)
-                        if result['status'] not in [200, 204, 401, 405]: raise ValueError('Unexpected synthetic handler response')
+                        # The test mailbox must compile but stay unavailable
+                        # outside cloud-test. Require that exact closed state;
+                        # do not accept 404 for ordinary application workers.
+                        expected = [404] if function == 'cloud-test-inbox' else [200, 204, 401, 405]
+                        if result['status'] not in expected: raise ValueError('Unexpected synthetic handler response: ' + str(result['status']))
                         results.append(result); last = None; break
                     except urllib.error.HTTPError as error:
                         # This disposable runtime contains synthetic settings

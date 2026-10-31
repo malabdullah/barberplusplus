@@ -30,3 +30,9 @@ b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:
 # Historical design QA prose listed white/charcoal/amber colors, not a credential.
 # Exact commit/path/line only; current wording avoids the false positive.
 5bd460b9fd7a26456b0b915c4583fbe8f03552dc:design-qa.md:generic-api-key:36
+
+# Verified Supabase publishable browser key for the isolated Test project.
+# This intentionally public key is neither a secret nor a service-role key.
+# Exact introduction fingerprints only; no rule or path-wide exclusion.
+7c7420e132eec55647b4f5acd55bd75c195834e7:wrangler.cloud-test.jsonc:generic-api-key:20
+7c7420e132eec55647b4f5acd55bd75c195834e7:ops/cloud-test/worker-configuration.d.ts:generic-api-key:7
