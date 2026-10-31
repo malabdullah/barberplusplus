@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import path from 'node:path';
 
 for (const width of [1440, 390]) {
