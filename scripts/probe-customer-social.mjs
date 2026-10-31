@@ -44,7 +44,9 @@ async function complete(user) {
 }
 try {
   const google = await identity('google');
-  assert.equal((await call('social-status', {}, google.token)).data.profile, null);
+  const initialStatus = await call('social-status', {}, google.token);
+  assert.equal(initialStatus.status, 200, JSON.stringify(initialStatus.data));
+  assert.equal(initialStatus.data.profile, null);
   const first = await complete(google);
   assert.equal(first.id, google.id); assert.equal(first.name, 'Social Probe Customer');
   assert.equal((await call('social-status', {}, google.token)).data.profile.id, first.id);

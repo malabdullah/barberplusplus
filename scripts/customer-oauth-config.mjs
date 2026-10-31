@@ -13,6 +13,7 @@ export function customerOAuthEnv(config = { environment: 'test' }) {
     values[`${prefix}_ENABLED`] = 'true';
     values[`${prefix}_CLIENT_ID`] = settings.clientId;
     values[`${prefix}_SECRET`] = settings.secret;
+    if (provider === 'google') values[`${prefix}_REDIRECT_URI`] = 'http://127.0.0.1:55321/auth/v1/callback';
     if (provider === 'apple' || settings.redirectUri) {
       let callback;
       try { callback = new URL(settings.redirectUri); } catch { invalid(); }

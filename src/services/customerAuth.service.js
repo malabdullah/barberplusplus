@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { appConfig, isTest } from '../lib/runtimeConfig';
-import { customerSupabase } from '../lib/customerSupabase';
+import { customerSupabase, CUSTOMER_AUTH_STORAGE_KEY } from '../lib/customerSupabase';
 export async function customerToken() {
   if (!customerSupabase) return '';
   const { data, error } = await customerSupabase.auth.getSession();
@@ -23,6 +23,16 @@ async function acceptSession(result) {
   const { error } = await customerSupabase.auth.setSession(result.session);
   if (error) throw new Error('SIGN_IN_REQUIRED');
   return result.profile;
+}
+async function clearCustomerSession() {
+  const { error } = await customerSupabase.auth.signOut({ scope: 'local' });
+  if (!error) return;
+  if (error.name !== 'AuthSessionMissingError') throw new Error('UNAVAILABLE');
+  // The gateway has already revoked this session. Auth JS treats the resulting
+  // session_not_found response as an error before clearing its persisted token.
+  // Clear only the isolated customer keys; staff sessions remain untouched.
+  localStorage.removeItem(CUSTOMER_AUTH_STORAGE_KEY);
+  localStorage.removeItem(`${CUSTOMER_AUTH_STORAGE_KEY}-code-verifier`);
 }
 const OAUTH_RETURN_KEY = 'barber-customer-oauth-return';
 let callbackExchange;
@@ -69,7 +79,7 @@ export const customerAuthService = {
   requestSignup: ({ name, email, password, returnTo }) => request('email-signup', { name, email, password, returnTo }),
   resendConfirmation: ({ email, returnTo }) => request('email-resend', { email, returnTo }),
   requestRecovery: ({ email, returnTo }) => request('email-recovery', { email, returnTo }),
-  async resetPassword({ password }) { await request('email-reset', { password }, true); await customerSupabase.auth.signOut({ scope: 'local' }); },
+  async resetPassword({ password }) { await request('email-reset', { password }, true); await clearCustomerSession(); },
   async ensureEmailProfile(name = '') { return (await request('email-ensure', { name }, true)).profile; },
   async finishEmail(url) {
     const callback = new URL(url);
@@ -109,8 +119,7 @@ export const customerAuthService = {
   async bookings() { return (await request('bookings', {}, true)).bookings; },
   async logout() {
     try { await request('logout', {}, true); } catch (error) { if (error.message !== 'AUTH_REQUIRED') throw error; }
-    const { error } = await customerSupabase.auth.signOut({ scope: 'local' });
-    if (error) throw new Error('UNAVAILABLE');
+    await clearCustomerSession();
   },
   subscribe(callback) { return customerSupabase?.auth.onAuthStateChange(callback).data.subscription; },
 };

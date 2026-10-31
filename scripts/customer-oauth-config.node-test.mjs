@@ -6,6 +6,7 @@ test('providers default to disabled and are isolated from ambient credentials', 
 });
 test('enables a configured Test Google client and requires HTTPS for Apple callbacks', () => {
   assert.equal(customerOAuthEnv({ environment: 'test', google: { clientId: 'test-client', secret: 'test-secret' } }).GOTRUE_EXTERNAL_GOOGLE_ENABLED, 'true');
+  assert.equal(customerOAuthEnv({ environment: 'test', google: { clientId: 'test-client', secret: 'test-secret' } }).GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI, 'http://127.0.0.1:55321/auth/v1/callback');
   assert.equal(customerOAuthEnv({ environment: 'test', apple: { clientId: 'test-service', secret: 'test-jwt', redirectUri: 'https://test-auth.example/auth/v1/callback' } }).GOTRUE_EXTERNAL_APPLE_REDIRECT_URI, 'https://test-auth.example/auth/v1/callback');
   for (const redirectUri of ['http://localhost/auth/v1/callback', 'https://test.example/other', 'https://user:secret@test.example/auth/v1/callback']) assert.throws(() => customerOAuthEnv({ environment: 'test', apple: { clientId: 'test', secret: 'secret', redirectUri } }));
 });
