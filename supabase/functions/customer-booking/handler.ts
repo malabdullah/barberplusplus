@@ -63,9 +63,17 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
         const account = token && deps.customer ? await deps.customer(token) : null;
         if (!account) return reply(401, {error:'VERIFICATION_REQUIRED'});
+        if (!account.phone || !patterns[account.countryCode]?.test(account.phone)) return reply(400, {error:'INVALID_DETAILS'});
         return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
       }
       if (body.action === 'catalog') return reply(200, await deps.catalog());
+      if (body.action === 'guest-proof') {
+        const name = typeof body.name === 'string' ? body.name.trim() : '';
+        const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
+        const countryCode = typeof body.countryCode === 'string' ? body.countryCode : '';
+        if (name.length < 2 || name.length > 120 || !patterns[countryCode]?.test(phone)) return reply(400, { error: 'INVALID_DETAILS' });
+        return reply(200, { verification: await sign({ purpose: 'verified', id: crypto.randomUUID(), name, phone, country_code: countryCode, expires: Date.now()+10*60_000 }) });
+      }
       if (body.action === 'request-code') {
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
@@ -97,7 +105,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         }
         if (typeof body.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)
           || (body.notes !== undefined && (typeof body.notes !== 'string' || body.notes.length > 500))) return reply(400, { error: 'INVALID_REQUEST' });
-        Object.assign(data, { id: proof.id, name: proof.name, phone: proof.phone, country_code: proof.country_code, time: body.time, notes: body.notes || '' });
+        Object.assign(data, { id: proof.id, name: proof.name, phone: proof.phone, country_code: proof.country_code, time: body.time, notes: body.notes || '', ...(proof.user_id ? { account_user_id: proof.user_id, session_id: proof.session_id } : {}) });
       }
       let result;
       try { result = await deps.booking(String(body.action), data); }

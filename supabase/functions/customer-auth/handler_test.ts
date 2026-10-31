@@ -3,7 +3,7 @@ const assert=(v:unknown,m='Assertion failed')=>{if(!v)throw Error(m);};
 const make=(overrides={})=>createCustomerAuthHandler({environment:'test',appUrl:'http://localhost:5173',publicUrl:'http://127.0.0.1:55321',secret:'test-signing-secret-with-more-than-thirty-two-characters',rpc:async()=>null,createUser:async()=> 'account',deleteUser:async()=>{},signIn:async()=>({session:{access_token:'token'},identity:{user_id:'account',session_id:'session'}}),identity:async()=>null,resetPassword:async()=>{},...overrides});
 const req=(body:unknown,origin='http://localhost:5173',token='')=>new Request('http://127.0.0.1:55321/functions/v1/customer-auth',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
 const details={name:'Customer Name',countryCode:'+965',phone:'5000-0099'};
-const password='CustomerPassword123!';
+const password='Short12!';
 function fixture(overrides={}){
  let saved:Record<string,unknown>={};let used=false;const events:string[]=[];let created:Record<string,unknown>={};
  const handler=make({rpc:async(action:string,data:Record<string,unknown>)=>{
@@ -22,8 +22,8 @@ Deno.test('customer accounts are restricted to local Test and approved origins',
  assert((await make()(req({action:'profile',padding:'x'.repeat(9000)}))).status===413);
 });
 Deno.test('signup accepts omitted email, binds verified details and never stores passwords in a challenge',async()=>{
- const f=fixture();const challenge=await(await f.handler(req({action:'signup-code',...details,password,role:'admin'}))).json();
- assert(f.saved.purpose==='signup');assert(!JSON.stringify(f.saved).includes(password));
+ const f=fixture();const challenge=await(await f.handler(req({action:'signup-code',...details,email:'ignored@example.test',password,role:'admin'}))).json();
+ assert(f.saved.purpose==='signup');assert((f.saved.payload as Record<string,unknown>).email==='');assert(!JSON.stringify(f.saved).includes(password));
  const result=await f.handler(req({action:'signup',challenge:challenge.challenge,code:challenge.testCode,password,name:'Forged',role:'admin'}));
  assert(result.status===200);assert(f.created.name==='Customer Name' && f.created.phone==='50000099');assert(!('role'in f.created));
  assert((await f.handler(req({action:'signup',challenge:challenge.challenge,code:challenge.testCode,password}))).status===400);
@@ -54,9 +54,9 @@ Deno.test('rate limits and invalid credentials fail without exposing accounts',a
 Deno.test('profile ownership comes from verified identity, never request parameters',async()=>{
  const calls:Record<string,unknown>[]=[];
  const handler=make({identity:async()=>({user_id:'verified-customer',session_id:'verified-session'}),rpc:async(_action:string,data:Record<string,unknown>)=>{calls.push(data);return{};}});
- assert((await handler(req({action:'update-profile',name:'Updated Name',email:'',user_id:'victim',phone:'99999999'},undefined,'token'))).status===200);
+ assert((await handler(req({action:'update-profile',name:'Updated Name',email:'',user_id:'victim',phone:'50000099',countryCode:'+965'},undefined,'token'))).status===200);
  assert(calls.every(data=>data.user_id==='verified-customer'&&data.session_id==='verified-session'));
- assert(!('phone'in calls[1]));
+ assert(calls[1].phone==='50000099' && calls[1].country_code==='+965');
  assert((await make()(req({action:'profile',user_id:'victim'}))).status===401);
 });
 Deno.test('failed linking removes only the newly created auth identity',async()=>{
@@ -68,4 +68,27 @@ Deno.test('failed linking removes only the newly created auth identity',async()=
  },deleteUser:async(id:string)=>{deleted.push(id);}});
  assert((await f.handler(req({action:'signup',challenge:crypto.randomUUID(),code:'123456',password}))).status===503);
  assert(deleted.length===1&&deleted[0]==='account');
+});
+
+Deno.test('social status requires provider identity and phone linking is disabled',async()=>{
+ assert((await make()(req({action:'social-status'}))).status===401);
+ for(const action of ['social-code','social-complete'])assert((await make()(req({action,...details}))).status===404);
+});
+Deno.test('email signup uses a trusted gateway, validates details, and does not expose account existence',async()=>{
+ const calls:unknown[][]=[];const f=fixture({emailSignup:async(...args:unknown[])=>{calls.push(args);}});
+ assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:' Test@Example.test ',password,role:'admin',returnTo:'/book'}))).status===200);
+ assert(JSON.stringify(calls[0])===JSON.stringify(['Customer Name','test@example.test',password,'book']));
+ assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:'bad<@example.test',password}))).status===400);
+ assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:'test@example.test',password:'Abc12!x'}))).status===400);
+});
+Deno.test('email login and recovery enforce rate limits and authenticated identity',async()=>{
+ const f=fixture({emailSignIn:async()=>null,emailLink:async()=>{},identity:async()=>null});
+ assert((await f.handler(req({action:'email-login',email:'test@example.test',password}))).status===401);
+ assert((await f.handler(req({action:'email-recovery',email:'test@example.test'}))).status===200);
+ assert((await f.handler(req({action:'email-reset',password}))).status===401);
+ const limited=make({rpc:async()=>false,emailLink:async()=>{throw Error('must not run');}});
+ assert((await limited(req({action:'email-recovery',email:'test@example.test'}))).status===429);
+});
+Deno.test('customer passwords shorter than eight characters are rejected for signup and recovery',async()=>{
+ for(const action of ['signup','reset-password'])assert((await make()(req({action,challenge:crypto.randomUUID(),code:'123456',password:'Abc12!x'}))).status===400);
 });

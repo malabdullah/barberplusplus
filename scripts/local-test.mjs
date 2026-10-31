@@ -7,6 +7,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { prepareLocalServicePins } from './prepare-local-service-pins.mjs';
 import { localDockerProbe } from './local-docker-probe.mjs';
+import { customerOAuthEnv } from './customer-oauth-config.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const lock = JSON.parse(readFileSync(resolve(root, 'ops/local-test/runtime.json')));
@@ -108,18 +109,28 @@ async function loopbackOnly() {
     if (Object.values(c.HostConfig.PortBindings || {}).flat().some(b => !['127.0.0.1', '::1'].includes(b.HostIp))) throw Error('Non-loopback Docker publish refused');
   }
 }
-async function configurePhonePassword() {
+async function configureCustomerAuth() {
   const configText = readFileSync(resolve(root, 'supabase/config.toml'), 'utf8');
   const sms = configText.match(/^\[auth\.sms\]\s*\n([\s\S]*?)(?=^\[|(?![\s\S]))/m)?.[1];
   if (!sms || !/^enable_signup\s*=\s*true\s*$/m.test(sms)) return;
   // The CLI disables the entire phone provider when no paid SMS provider is
   // configured. Test uses its own displayed codes, but needs phone/password
-  // login. Change only this flag on the owned, exact-image Auth container.
+  // login. Preserve the owned image, network and database while applying local settings.
   const name = `supabase_auth_${lock.project}`;
   const c = owned(name);
-  const flag = 'GOTRUE_EXTERNAL_PHONE_ENABLED=true';
-  if (c.Config.Env.includes(flag)) return;
-  const config = { ...c.Config, Image: c.Image, Hostname: '', Env: [...c.Config.Env.filter(value => !value.startsWith('GOTRUE_EXTERNAL_PHONE_ENABLED=')), flag], HostConfig: c.HostConfig, NetworkingConfig: { EndpointsConfig: Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n, v]) => [n, { Aliases: (v.Aliases || []).filter(a => !c.Id.startsWith(a)) }])) } };
+  const oauthPath = resolve(state, 'customer-oauth.json');
+  if (existsSync(oauthPath) && realpathSync(oauthPath) !== oauthPath) throw Error('Symlink OAuth configuration refused');
+  let oauth;
+  try { oauth = existsSync(oauthPath) ? JSON.parse(readFileSync(oauthPath, 'utf8')) : undefined; }
+  catch { throw Error('Invalid local customer OAuth configuration'); }
+  if (existsSync(oauthPath)) chmodSync(oauthPath, 0o600);
+  const redirects = new Set((c.Config.Env.find(value => value.startsWith('GOTRUE_URI_ALLOW_LIST='))?.slice('GOTRUE_URI_ALLOW_LIST='.length) || '').split(',').filter(Boolean));
+  redirects.add('http://localhost:5173/customer/auth-callback');
+  redirects.add('http://127.0.0.1:5173/customer/auth-callback');
+  const settings = { GOTRUE_EXTERNAL_PHONE_ENABLED: 'true', GOTRUE_URI_ALLOW_LIST: [...redirects].join(','), ...customerOAuthEnv(oauth) };
+  if (Object.entries(settings).every(([key, value]) => c.Config.Env.includes(`${key}=${value}`))) return;
+  const authEnv = [...c.Config.Env.filter(value => !Object.keys(settings).some(key => value.startsWith(`${key}=`))), ...Object.entries(settings).map(([key, value]) => `${key}=${value}`)];
+  const config = { ...c.Config, Image: c.Image, Hostname: '', Env: authEnv, HostConfig: c.HostConfig, NetworkingConfig: { EndpointsConfig: Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n, v]) => [n, { Aliases: (v.Aliases || []).filter(a => !c.Id.startsWith(a)) }])) } };
   await engine('POST', `/containers/${c.Id}/stop?t=15`);
   await engine('DELETE', `/containers/${c.Id}`);
   const created = await engine('POST', `/containers/create?name=${encodeURIComponent(name)}`, config);
@@ -150,7 +161,7 @@ async function startBackend() {
   prepareLocalServicePins(root);
   supabase('start', '--exclude', 'logflare,vector');
   disableCron();
-  await configurePhonePassword();
+  await configureCustomerAuth();
   await loopbackOnly();
   await ready();
   configure();
@@ -198,7 +209,8 @@ export async function main(action) {
       }
     }
     supabase('stop', '--project-id', lock.project); console.log('Local Test stopped; data volumes retained');
+  } else if (action === 'configure-auth') { await configureCustomerAuth(); await ready(); console.log('Local Test Auth settings applied; data preserved');
   } else if (action === 'status') { console.log(JSON.stringify(baseline())); }
-  else throw Error('Expected setup, start, stop, reset, or status');
+  else throw Error('Expected setup, start, stop, reset, configure-auth, or status');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv[2]).catch(error => { console.error(error.message); process.exitCode = 1; });

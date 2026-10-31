@@ -72,7 +72,7 @@ Deno.test('persistent rollback is bounded and unrelated errors never replay a bo
 Deno.test('account booking uses live customer identity and rejects proofs after session revocation', async () => {
   let active = true; let writes = 0;
   const handler = make({ customer: async (token: string) => active && token === 'customer-token' ? {id:'customer',session_id:'session',name:'Account Name',phone:'50000099',countryCode:'+965'} : null,
-    booking: async (_action: string, data: Record<string,unknown>) => {writes++;assert(data.name==='Account Name' && data.phone==='50000099');return {id:data.id};} });
+    booking: async (_action: string, data: Record<string,unknown>) => {writes++;assert(data.name==='Account Name' && data.phone==='50000099');assert(data.account_user_id==='customer' && data.session_id==='session');return {id:data.id};} });
   const authorized = (body: unknown) => { const original=request(body); const headers=new Headers(original.headers);headers.set('authorization','Bearer customer-token');return new Request(original,{headers}); };
   assert((await handler(request({action:'account-proof'}))).status===401);
   const proof=await(await handler(authorized({action:'account-proof'}))).json();
@@ -80,4 +80,15 @@ Deno.test('account booking uses live customer identity and rejects proofs after 
   active=false;
   assert((await handler(authorized({action:'book',...selection,verification:proof.verification}))).status===401);
   assert(writes===1);
+});
+
+Deno.test('guest proof requires valid contact details and binds them without a code', async () => {
+  let received: Record<string,unknown> = {};
+  const handler=make({booking:async (_action:string,data:Record<string,unknown>)=>{received=data;return {id:data.id};}});
+  assert((await handler(request({action:'guest-proof',name:'X',countryCode:'+965',phone:'50000099'}))).status===400);
+  assert((await handler(request({action:'guest-proof',name:'Guest Name',countryCode:'+965',phone:'123'}))).status===400);
+  const proof=await (await handler(request({action:'guest-proof',name:'Guest Name',countryCode:'+965',phone:'50000099'}))).json();
+  assert(typeof proof.verification==='string' && !('testCode' in proof));
+  assert((await handler(request({action:'book',...selection,verification:proof.verification,name:'Forged',phone:'99999999'}))).status===200);
+  assert(received.name==='Guest Name' && received.phone==='50000099');
 });

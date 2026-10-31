@@ -24,3 +24,16 @@
 .ca-empty { color: var(--booking-muted); margin-block: 24px; }
 @media (max-width: 767px) { .cb-account-link { max-width: 94px; } .ca-main { padding: 20px 22px 40px; } .ca-main h1 { font-size: 28px; } }
 @media (max-width: 374px) { .cb-header { gap: 10px; } .cb-account-link { max-width: 68px; } .cb-language { padding-inline-start: 8px; } }
+
+.ca-social { margin-block: 24px; }
+.ca-social-buttons { display: grid; gap: 12px; }
+.ca-social-buttons button { width: 100%; }
+.ca-social-buttons button:disabled { opacity: 1; cursor: default; }
+.ca-social-buttons .ca-social-google { background: #fff; color: #1f1f1f; border-color: #747775; }
+.ca-social-buttons .ca-social-apple { background: #000; color: #fff; border-color: #000; }
+.ca-social-logo { width: 20px; height: 20px; flex: 0 0 20px; display: inline-block; }
+.ca-social-logo-google { background: url('/customer-signin/google-light.png') center / 40px 40px no-repeat; }
+.ca-social-buttons button:disabled { cursor: not-allowed; }
+
+.ca-social-divider { display: flex; align-items: center; gap: 12px; color: var(--booking-muted); font-size: 14px; margin: 24px 0; }
+.ca-social-divider::before, .ca-social-divider::after { content: ''; flex: 1; height: 1px; background: var(--booking-divider); }

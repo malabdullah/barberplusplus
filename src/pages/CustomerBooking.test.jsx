@@ -10,10 +10,10 @@ import CustomerBooking from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
 
-const customerState = vi.hoisted(() => ({ customer: null }));
-vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn() }) }));
+const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
+vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), book: vi.fn() } }));
+vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), book: vi.fn() } }));
 const catalog = {
   branches: [{ id: 'branch', name: 'Seafront shop', city: 'Kuwait City', address: 'Waterfront' }, { id: 'other', name: 'Salmiya shop', city: 'Salmiya' }],
   barbers: [{ id: 'omar', branchId: 'branch', name: 'Omar', serviceIds: ['hair', 'wash'], maxBookingDays: 30 }, { id: 'ali', branchId: 'branch', name: 'Ali', serviceIds: ['beard'], maxBookingDays: 30 }],
@@ -25,10 +25,12 @@ beforeEach(async () => {
   vi.resetAllMocks();
   sessionStorage.clear();
   customerState.customer = null;
+  customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   customerBookingService.getCatalog.mockResolvedValue(catalog);
   customerBookingService.accountProof.mockResolvedValue({ verification: 'account-proof' });
   customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00', '10:30'] });
+  customerBookingService.guestProof.mockResolvedValue({ verification: 'verified' });
   customerBookingService.requestCode.mockResolvedValue({ challenge: 'challenge', testCode: '123456' });
   customerBookingService.verifyCode.mockResolvedValue({ verification: 'verified' });
   customerBookingService.book.mockResolvedValue(receipt);
@@ -61,10 +63,7 @@ async function chooseAppointment() {
 async function requestVerification() {
   fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Test Customer' } });
   fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '5000-0099' } });
-  click('Get verification code');
-  await screen.findByLabelText('Verification code');
 }
-const enterCode = () => fireEvent.change(screen.getByLabelText('Verification code'), { target: { value: '123456' } });
 
 describe('one-page guest booking', () => {
   it('guides city through confirmation on one page and verifies and confirms inline', async () => {
@@ -76,9 +75,9 @@ describe('one-page guest booking', () => {
     await requestVerification();
     expect(heading()).toHaveTextContent('Book your appointment');
     expect(customerBookingService.book).not.toHaveBeenCalled();
-    enterCode(); click('Verify & confirm booking');
+    click('Confirm booking');
     await screen.findByText('TESTREF');
-    expect(customerBookingService.verifyCode).toHaveBeenCalledTimes(1);
+    expect(customerBookingService.guestProof).toHaveBeenCalledTimes(1);
     expect(customerBookingService.book).toHaveBeenCalledWith(expect.objectContaining({ branchId: 'branch', barberId: 'omar', serviceIds: ['hair'], verification: 'verified', time: '10:00' }));
   });
   it('resets the branch and appointment when changing city, and supports search and empty results', async () => {
@@ -102,39 +101,33 @@ describe('one-page guest booking', () => {
     expect(screen.getByLabelText('Select a date')).not.toBeVisible();
     expect(screen.getByRole('button', { name: 'Continue to date & time' })).toBeDisabled();
   });
-  it('validates details and refuses an invalid code before creating a booking', async () => {
-    await chooseAppointment(); click('Get verification code');
+  it('validates guest details before requesting a booking proof', async () => {
+    await chooseAppointment(); click('Confirm booking');
     expect(screen.getByText(en.customerBooking.nameError)).toBeInTheDocument();
-    expect(customerBookingService.requestCode).not.toHaveBeenCalled();
-    await requestVerification();
-    customerBookingService.verifyCode.mockRejectedValue(new Error('INVALID_CODE'));
-    enterCode(); click('Verify & confirm booking');
-    expect(await screen.findByRole('alert')).toHaveTextContent(en.customerBooking.errors.INVALID_CODE);
-    expect(section('Your details & confirmation')).toContainElement(screen.getByRole('alert'));
+    expect(customerBookingService.guestProof).not.toHaveBeenCalled();
     expect(customerBookingService.book).not.toHaveBeenCalled();
-    expect(heading()).toHaveTextContent('Book your appointment');
   });
   it('retains the verified identity for an idempotent retry after an uncertain network failure', async () => {
-    await chooseAppointment(); await requestVerification(); enterCode();
+    await chooseAppointment(); await requestVerification();
     customerBookingService.book.mockRejectedValueOnce(new Error('UNAVAILABLE'));
-    click('Verify & confirm booking');
+    click('Confirm booking');
     await screen.findByRole('alert');
     click('Confirm booking'); await screen.findByText('TESTREF');
-    expect(customerBookingService.verifyCode).toHaveBeenCalledTimes(1);
+    expect(customerBookingService.guestProof).toHaveBeenCalledTimes(1);
     expect(customerBookingService.book.mock.calls[0][0]).toEqual(customerBookingService.book.mock.calls[1][0]);
   });
   it('returns a slot conflict to the time section with details and verification preserved', async () => {
-    await chooseAppointment(); await requestVerification(); enterCode();
+    await chooseAppointment(); await requestVerification();
     customerBookingService.book.mockRejectedValueOnce(new Error('SLOT_UNAVAILABLE'));
-    click('Verify & confirm booking');
+    click('Confirm booking');
     expect(await screen.findByRole('alert')).toHaveTextContent(en.customerBooking.errors.SLOT_UNAVAILABLE);
     expect(section('Date & time')).toContainElement(screen.getByRole('alert'));
     expect(heading()).toHaveTextContent('Book your appointment');
     expect(screen.getByRole('button', { name: 'Continue to your details' })).toBeDisabled();
     fireEvent.click(await screen.findByRole('radio', { name: /10:30/ }));
-    expect(screen.getByText('Test Customer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Your name')).toHaveValue('Test Customer');
     click('Confirm booking'); await screen.findByText('TESTREF');
-    expect(customerBookingService.verifyCode).toHaveBeenCalledTimes(1);
+    expect(customerBookingService.guestProof).toHaveBeenCalledTimes(1);
     expect(customerBookingService.book.mock.calls[1][0].time).toBe('10:30');
   });
   it('renders Arabic copy and RTL direction with the same six-section order', async () => {
@@ -158,6 +151,16 @@ it('restores the appointment after account sign-in and confirms without another 
   expect(customerBookingService.requestCode).not.toHaveBeenCalled();
   expect(customerBookingService.verifyCode).not.toHaveBeenCalled();
   expect(customerBookingService.book).toHaveBeenCalledWith(expect.objectContaining({ verification: 'account-proof', barberId: 'omar', serviceIds: ['hair'] }));
+});
+
+it('asks a signed-in customer without a phone to save it before booking', async () => {
+  await chooseAppointment(); cleanup();
+  customerState.customer = { id: 'customer', name: 'Account Customer', email: 'test@example.test', phone: null };
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  fireEvent.change(await screen.findByLabelText('Mobile number'), { target: { value: '50000099' } });
+  click('Confirm booking'); await screen.findByText('TESTREF');
+  expect(customerState.updateProfile).toHaveBeenCalledWith(expect.objectContaining({ phone: '50000099', countryCode: '+965' }));
+  expect(customerBookingService.accountProof).toHaveBeenCalledTimes(1);
 });
 
 const section = name => screen.getByRole('region', { name, exact: true });

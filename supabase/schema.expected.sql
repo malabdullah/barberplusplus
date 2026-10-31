@@ -485,6 +485,9 @@ begin
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
       v_duration, v_price, 'confirmed', nullif(trim(p_data ->> 'notes'), ''), 'system') returning * into v_booking;
   end if;
+  if p_action = 'book' and nullif(p_data->>'account_user_id','') is not null then
+    perform private.record_customer_booking_owner(v_booking.id, (p_data->>'account_user_id')::uuid, (p_data->>'session_id')::uuid);
+  end if;
   return (
     select jsonb_build_object('id', b.id, 'reference', upper(left(replace(b.id::text, '-', ''), 10)),
       'date', b.date, 'time', to_char(b.date + b.time, 'HH24:MI'), 'duration', b.duration, 'price', b.price,

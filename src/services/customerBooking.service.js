@@ -37,6 +37,7 @@ export const customerBookingService = {
   },
   accountProof: () => request('account-proof'),
   getSlots: data => request('slots', data),
+  guestProof: data => request('guest-proof', data),
   requestCode: data => request('request-code', data),
   verifyCode: data => request('verify-code', data),
   async book(data) {

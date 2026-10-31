@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(7);
+select ok((select relrowsecurity from pg_class where oid='private.customer_booking_owners'::regclass),'booking ownership has RLS');
+select ok(not has_table_privilege('anon','private.customer_booking_owners','SELECT'),'anonymous users cannot read ownership');
+select ok(not has_table_privilege('authenticated','private.customer_booking_owners','SELECT'),'authenticated users cannot read ownership directly');
+select ok(not has_table_privilege('service_role','private.customer_booking_owners','INSERT'),'ownership writes must use a restricted gateway');
+select ok(not has_function_privilege('anon','private.record_customer_booking_owner(uuid,uuid,uuid)','EXECUTE'),'anonymous cannot record ownership');
+select ok(not has_function_privilege('authenticated','private.record_customer_booking_owner(uuid,uuid,uuid)','EXECUTE'),'users cannot record ownership directly');
+select throws_ok($$select private.record_customer_booking_owner('88888888-0000-4000-8000-000000000401','88888888-0000-4000-8000-000000000101','88888888-0000-4000-8000-000000000301')$$,'P0001','AUTH_REQUIRED','ownership requires a live customer session');
+select * from finish();
+rollback;

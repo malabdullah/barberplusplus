@@ -39,11 +39,9 @@ const ids = [];
 try {
   const proofs = [];
   for (const phone of phones) {
-    const challenge = await request('request-code', { name: 'Customer Booking Probe', countryCode: '+965', phone });
-    assert.equal(challenge.status, 200);
-    assert.equal((await request('verify-code', { challenge: challenge.data.challenge, code: 'invalid' })).status, 400);
-    const proof = await request('verify-code', { challenge: challenge.data.challenge, code: challenge.data.testCode });
+    const proof = await request('guest-proof', { name: 'Customer Booking Probe', countryCode: '+965', phone });
     assert.equal(proof.status, 200);
+    assert.equal('testCode' in proof.data, false);
     proofs.push(proof.data.verification);
   }
   const bookings = await Promise.all(proofs.map(verification => request('book', { ...selection, time: slots.data.slots[0], verification, price: 0, duration: 5 })));
@@ -64,7 +62,7 @@ try {
   assert.ok(!after.data.slots.includes(slots.data.slots[0]), 'confirmed slot removed');
   const other = sql(`begin; set local role authenticated; select set_config('request.jwt.claims','{\"sub\":\"00000000-0000-4000-8000-000000000002\",\"app_metadata\":{\"role\":\"manager\"}}',true); select count(*) from public.bookings where branch_id='10000000-0000-4000-8000-000000000002'; rollback;`);
   assert.ok(other.includes('\n0\n'), 'cross-tenant bookings remain private');
-  console.log('CUSTOMER_BOOKING_PASS: catalogue privacy, assigned services, slots, verification, concurrent conflict, server prices, idempotency, manager visibility and tenant denial');
+  console.log('CUSTOMER_BOOKING_PASS: catalogue privacy, assigned services, slots, direct guest confirmation, concurrent conflict, server prices, idempotency, manager visibility and tenant denial');
 } finally {
   for (const id of ids) {
     assert.match(id, /^[0-9a-f-]{36}$/);

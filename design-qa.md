@@ -112,3 +112,14 @@ Dev promotion (30 October 2026): guest-only one-page booking pushed to dev at
 version passes all maintained checks and 15 booking tests; main is unchanged.
 Browser visual acceptance is still pending; promotion does not imply a new
 rendered comparison or a production release.
+
+
+Customer email accounts (31 October 2026): name/email/password signup, confirmation
+and recovery links through the local mail catcher, isolated customer sessions,
+optional profile phone, and phone required at booking are implemented. Browser QA
+confirmed signup and email confirmation, sign-in, missing-phone validation, saved
+GCC contact details, booking confirmation/history, recovery form, and persistence
+after the user reset the password and signed in again. Mobile English rendering
+was inspected. Desktop/Arabic visual acceptance and real provider consent remain
+pending. Google/Apple buttons remain disabled until Test credentials are configured.
+Approved for dev by the user; this does not authorize a production release.

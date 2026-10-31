@@ -12,7 +12,7 @@ const phone='5'+String(Math.floor(Math.random()*10000000)).padStart(7,'0');
 const phone2='9'+String(Math.floor(Math.random()*10000000)).padStart(7,'0');
 assert.equal(sql(`select count(*) from public.customers where phone in ('${phone}','${phone2}')`),'0');
 assert.equal(sql(`select count(*) from auth.users where ltrim(phone,'+') in ('965${phone}','965${phone2}')`),'0');
-const password='LocalCustomer123!';const nextPassword='NewCustomer456!';
+const password='Short12!';const nextPassword='Newpass1!';
 const users=[];const bookings=[];
 async function call(action,data={},token='',fn='customer-auth') {
  const response=await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/${fn}`,{method:'POST',headers:{apikey:env.VITE_SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',Origin:'http://localhost:5173',...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({action,...data}),signal:AbortSignal.timeout(20000)});
@@ -33,7 +33,9 @@ try {
  const one=await signup(phone);
  assert.equal(one.profile.email,null,'email is optional');
  const two=await signup(phone2,'optional@customer.test');
- assert.equal(two.profile.email,'optional@customer.test');
+ assert.equal(two.profile.email,null,'signup does not accept contact email');
+ const laterEmail=await call('update-profile',{name:'Customer Auth Probe',email:'optional@customer.test'},two.session.access_token);
+ assert.equal(laterEmail.status,200);assert.equal(laterEmail.data.profile.email,'optional@customer.test','email is added in profile later');
  const token=one.session.access_token;
  assert.equal((await call('profile',{},token)).data.profile.phone,phone);
  assert.equal((await call('profile')).status,401);
@@ -53,6 +55,7 @@ try {
  const booking=await call('book',{...selection,time:slots.data.slots[0],verification:proof.data.verification,name:'Forged',phone:phone2},token,'customer-booking');
  if(booking.data.id)bookings.push(booking.data.id);
  assert.equal(booking.status,200,JSON.stringify(booking.data));
+ assert.equal(sql(`select count(*) from private.customer_booking_owners where booking_id='${booking.data.id}' and account_user_id='${one.profile.id}'`),'1','account booking ownership is recorded');
  const mine=await call('bookings',{},token);assert.equal(mine.status,200);assert.ok(mine.data.bookings.some(b=>b.id===booking.data.id));
  assert.equal((await call('bookings',{user_id:one.profile.id},two.session.access_token)).data.bookings.length,0);
  assert.equal((await call('login',{countryCode:'+965',phone,password:'WrongPassword123!'})).status,401);
@@ -70,7 +73,7 @@ try {
  assert.equal((await call('profile',{},two.session.access_token)).status,200,'logout does not affect another customer');
  const refresh=await fetch(`${env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:env.VITE_SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:one.session.refresh_token})});
  assert.ok(!refresh.ok,'old refresh session revoked');
- console.log('CUSTOMER_AUTH_PASS: optional email signup, phone verification/login, code replay denial, profile ownership, role isolation, authenticated booking, private history, phone recovery, old-session revocation and new-password login');
+ console.log('CUSTOMER_AUTH_PASS: signup without email, profile email editing, eight-character passwords, phone verification/login, code replay denial, profile ownership, role isolation, authenticated booking, private history, phone recovery, old-session revocation and new-password login');
 } finally {
  for(const id of bookings){assert.match(id,/^[0-9a-f-]{36}$/);sql(`delete from public.bookings where id='${id}';`);}
  sql(`delete from auth.users where ltrim(phone,'+') in ('965${phone}','965${phone2}') and raw_app_meta_data->>'role'='customer' and raw_user_meta_data->>'name'='Customer Auth Probe';`);

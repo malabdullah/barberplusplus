@@ -41,7 +41,7 @@ function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, d
 
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
-  const { customer, refresh, loading: accountLoading } = useCustomerAuth();
+  const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
   const [draft] = useState(readBookingDraft);
   const restoredDraft = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
@@ -65,8 +65,6 @@ export default function CustomerBooking() {
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
   const [details, setDetails] = useState({ name: '', countryCode: '+965', phone: '', notes: '' });
-  const [challenge, setChallenge] = useState(null);
-  const [code, setCode] = useState('');
   const [verification, setVerification] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +72,6 @@ export default function CustomerBooking() {
   const [fieldErrors, setFieldErrors] = useState({});
   const headingRef = useRef(null);
   const formRef = useRef(null);
-  const codeRef = useRef(null);
   const appointmentFocusRef = useRef('');
   const cities = useMemo(() => [...new Set(catalog.branches.map(branch => branch.city).filter(Boolean))].sort(), [catalog]);
   const branch = catalog.branches.find(item => item.id === branchId);
@@ -116,7 +113,7 @@ export default function CustomerBooking() {
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
   useEffect(() => {
-    if (customer) { setDetails(current => ({ ...current, name: customer.name, countryCode: customer.countryCode, phone: customer.phone })); setChallenge(null); setVerification(''); }
+    if (customer) { setDetails(current => ({ ...current, name: customer.name, countryCode: customer.countryCode || '+965', phone: customer.phone || '' })); setVerification(''); }
   }, [customer?.id, customer?.name, customer?.phone]);
   useEffect(() => {
     if (catalogLoading || catalogError || restoredDraft.current) return;
@@ -164,7 +161,6 @@ export default function CustomerBooking() {
       appointmentFocusRef.current = '';
     }
   }, [panel, catalogLoading]);
-  useEffect(() => { if (challenge && !verification) codeRef.current?.focus(); }, [challenge, verification]);
   const serviceKey = serviceIds.join(',');
   const checkingAvailability = (panel === 'time' || panel === 'details') && Boolean(branch && barber && selectedServices.length);
   useEffect(() => {
@@ -178,43 +174,37 @@ export default function CustomerBooking() {
     return () => { active = false; };
   }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry]);
 
-  const requestCode = async () => {
+  const validGuestDetails = () => {
     const errors = {};
     if (details.name.trim().length < 2 || details.name.trim().length > 120) errors.name = tr('nameError');
     if (!validatePhoneNumber(details.phone.replace(/[\s()-]/g, ''), details.countryCode).valid) errors.phone = tr('phoneError');
     setFieldErrors(errors);
-    if (Object.keys(errors).length) {
-      setTimeout(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus(), 0);
-      return;
-    }
-    setBusy(true); setError('');
-    try { setChallenge(await customerBookingService.requestCode(details)); setCode(''); setVerification(''); }
-    catch (failure) { setError(failure.message); }
-    finally { setBusy(false); }
+    if (Object.keys(errors).length) setTimeout(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus(), 0);
+    return !Object.keys(errors).length;
   };
   const confirmBooking = async event => {
     event.preventDefault();
     if (busy || !appointmentReady || panel !== 'details') return;
-    if (!challenge && !customer) { await requestCode(); return; }
-    if (!customer && !verification && !/^\d{6}$/.test(code)) { setError('INVALID_CODE'); codeRef.current?.focus(); return; }
+    if (!validGuestDetails()) return;
     setBusy(true); setError('');
     try {
-      // Preserve the same verified booking ID across uncertain network retries.
-      const proof = verification || (customer ? await customerBookingService.accountProof() : await customerBookingService.verifyCode({ challenge: challenge.challenge, code })).verification;
+      if (customer && !customer.phone) {
+        await updateProfile({ name: customer.name, email: customer.email, countryCode: details.countryCode, phone: details.phone });
+      }
+      // Preserve the same signed booking ID across uncertain network retries.
+      const proof = verification || (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
       setVerification(proof);
       setReceipt(await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes }));
     } catch (failure) {
       setError(failure.message);
-      if (failure.message === 'INVALID_CODE') codeRef.current?.focus();
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
-      if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); setChallenge(null); if (customer) await refresh(); }
+      if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); if (customer) await refresh(); }
     } finally { setBusy(false); }
   };
-  const editDetails = () => { setChallenge(null); setVerification(''); setCode(''); setError(''); };
   const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError);
-  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading && (panel === 'time' || customer || verification || !challenge || code.length === 6);
+  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading;
   const finalDetails = panel === 'details';
-  const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr(customer || verification ? 'confirm' : !challenge ? 'three.sendCode' : 'three.verifyConfirm');
+  const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr('confirm');
   const panelIndex = PANELS.indexOf(panel);
   const title = receipt ? tr('successTitle') : tr('onePage.title');
   const downloadCalendar = () => {
@@ -279,19 +269,12 @@ export default function CustomerBooking() {
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
                       <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
+                      {!customer.phone && <><label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}</>}
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
-                    </> : !challenge ? <>
-                      <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
-                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
-                      <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
                     </> : <>
-                      <div className="cb-verified-details"><div><strong>{details.name}</strong><br /><bdi>{details.countryCode} {details.phone}</bdi></div><button type="button" className="cb-text-button" onClick={editDetails}>{tr('change')}</button></div>
-                      {!verification && <>
-                        <h3 className="cb-section-title">{tr('verifyTitle')}</h3><div className="cb-test-code"><ShieldCheck size={20} aria-hidden="true" /><div><strong>{tr('testCode', { code: challenge.testCode })}</strong><p>{tr('noSms')}</p></div></div>
-                        <label className="cb-field-label" htmlFor="booking-code">{tr('verificationCode')}</label><input ref={codeRef} className="cb-input cb-code-input" id="booking-code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} required />
-                        <button className="cb-text-button" type="button" onClick={requestCode}>{tr('resendCode')}</button><p className="cb-helper">{tr('codeExpires')}</p>
-                      </>}
-                      {verification && <p className="cb-helper"><ShieldCheck size={18} aria-hidden="true" />{tr('three.numberVerified')}</p>}
+                      <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
+                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
+                      <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
                     </>}
                   </fieldset>
                 </form>
