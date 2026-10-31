@@ -133,7 +133,9 @@ Do not use an affirmative push as a preview: agent mode can apply changes withou
 a prompt. Supply `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` and
 `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET` privately from the Test OAuth file, and
 verify the hosted site/callback URLs, email confirmation, disabled phone signup
-and provider settings after any push. Edge Functions deploy with independent gateway,
+and provider settings after any push. The renewal Worker owns the live Apple
+secret: first refresh the private OAuth file from its private KV current JWT;
+never push an older cached JWT over a renewed credential. Edge Functions deploy with independent gateway,
 user, or cron authentication in their bodies. Gateway JWT verification is disabled
 for this hosted test deployment to support the project's signing-key format.
 
