@@ -38,7 +38,6 @@
 .public-site .customer-booking { min-height: calc(100dvh - var(--public-header-height) - var(--environment-banner-height, 0px)); color-scheme: inherit; --cb-header-height: var(--public-header-height); }
 .public-site .cb-primary, .public-site .selected .cb-radio { color: #151A20; }
 .public-site .cb-primary:disabled { color: var(--booking-muted); background: var(--booking-subtle); border-color: var(--booking-divider); }
-.public-site .customer-booking :is(.cb-input, .cb-phone-input, .cb-secondary, .cb-search, .cb-select-wrap) { background: var(--booking-surface); }
 @media (max-width: 1050px) {
   .public-site { --public-header-height: 72px; }
   .public-header-inner { padding: 10px 24px; gap: 16px; }
@@ -69,3 +68,6 @@
 @media (max-width: 767px) {
   .public-site:has(.customer-booking:not(.ca-page)) .public-footer { padding-bottom: calc(170px + env(safe-area-inset-bottom)); }
 }
+
+.public-site .hero-btn-primary { color: #151A20; }
+.public-site :is(.hero-title-accent, .hero-badge, .hero-stat-value) { color: var(--booking-link); }

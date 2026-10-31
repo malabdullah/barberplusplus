@@ -730,8 +730,8 @@ a:active {
   }
 }
 
-/* Customer booking: approved Bright Minimal palette, scoped to its page. */
-.customer-booking {
+/* Shared booking tokens; the public shell follows the selected theme. */
+:root {
   --booking-surface: #FFFFFF;
   --booking-subtle: #F7F8FA;
   --booking-text: #151A20;

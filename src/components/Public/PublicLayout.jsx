@@ -10,6 +10,10 @@ export default function PublicLayout() {
   const [busy, setBusy] = useState(false);
   const location = useLocation();
   const { t } = useTranslation();
+  useEffect(() => {
+    const titleKeys = { '/': 'publicNav.pageTitle', '/login': 'publicNav.teamSignIn', '/signup': 'publicNav.registerShop', '/forgot-password': 'auth.forgotPassword', '/reset-password': 'auth.resetPassword' };
+    if (titleKeys[location.pathname]) document.title = `${t(titleKeys[location.pathname])} | Barber++`;
+  }, [location.pathname, t]);
 
   useEffect(() => {
     if (!location.hash) {
