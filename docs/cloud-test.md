@@ -75,7 +75,19 @@ The custom customer-auth flow captures its confirmation and recovery links in
 the same mailbox. Open **Test email inbox** from the banner to follow links.
 Messages expire from inbox listings after 24 hours. No actual email is delivered.
 WhatsApp and paid AI integrations are not configured. Google and Apple sign-in
-remain disabled until provider-specific accounts and credentials are supplied.
+are enabled using the existing dedicated Test registrations. Google uses project
+`barber-plus-plus-auth-test`; Apple uses Services ID
+`com.barberplusplus.authentication.test.web`. Both register the provider callback
+`https://qvkucvcjmojjbphlzlks.supabase.co/auth/v1/callback`. The customer's final
+browser callback is `/customer/auth-callback` on the hosted Test website.
+
+Real Google login, profile creation and sign-out passed. Real Apple login,
+missing-name completion, private relay email and session persistence after a
+refresh passed. The owner tested and accepted the hosted customer journey on
+2026-10-31. Provider credentials remain private in ignored
+`.cloud-test/customer-oauth.json`; never reuse production credentials. The
+current Apple client-secret JWT expires on 2027-03-30 and must be renewed before
+that date. See [customer social sign-in](customer-social-signin-test.md).
 
 ## Isolation and access controls
 
@@ -112,8 +124,14 @@ wrangler.cloud-test.jsonc` after authenticating the CLI and setting its secrets.
 The hosted Supabase project is deliberately not linked to the local Test profile.
 For remote commands always specify `--project-ref qvkucvcjmojjbphlzlks`. Auth
 configuration is stored in ignored `.cloud-test/supabase/config.toml`. Run config
-push from that directory with its absolute `--workdir`, so the local Test config
-cannot be selected accidentally. Edge Functions deploy with independent gateway,
+push with the process working directory set to `.cloud-test`, and place its
+absolute `--workdir` option before `config push`. With the installed CLI, a
+trailing `--workdir` selected the repository's local configuration instead.
+Do not use an affirmative push as a preview: agent mode can apply changes without
+a prompt. Supply `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` and
+`SUPABASE_AUTH_EXTERNAL_APPLE_SECRET` privately from the Test OAuth file, and
+verify the hosted site/callback URLs, email confirmation, disabled phone signup
+and provider settings after any push. Edge Functions deploy with independent gateway,
 user, or cron authentication in their bodies. Gateway JWT verification is disabled
 for this hosted test deployment to support the project's signing-key format.
 
