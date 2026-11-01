@@ -130,7 +130,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -140,7 +140,16 @@ body {
   color: var(--text-primary);
   background: var(--bg-primary);
   min-height: 100vh;
-  overflow-x: hidden;
+  /* Clip horizontal spill without creating a second scroll container. A body
+     with overflow-x: hidden captures sticky headers while the viewport scrolls,
+     letting the Test banner disappear and leaving its reserved header gap. */
+  overflow-x: clip;
+}
+
+#root {
+  /* Keep the fixed Test indicator in the page's layout at its measured height.
+     Production has no indicator and therefore reserves no space. */
+  padding-top: var(--environment-banner-height, 0px);
 }
 
 /* Subtle noise texture overlay */
@@ -180,8 +189,10 @@ img {
 }
 
 .environment-banner {
-  position: sticky;
+  /* Stay attached to the viewport even while a drawer locks body scrolling. */
+  position: fixed;
   top: 0;
+  inset-inline: 0;
   z-index: 10000;
   padding: 0.4rem 1rem;
   background: #8a4b08;

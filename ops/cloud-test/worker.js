@@ -1,4 +1,13 @@
 const encoder = new TextEncoder();
+// iOS installs icons outside Safari's authenticated cookie context. Only these
+// public branding files may bypass the Test gate; application assets never do.
+const installAssets = new Map([
+  ['/apple-touch-icon.png', 'image/png'],
+  ['/apple-touch-icon-v2.png', 'image/png'],
+  ['/icon-192.png', 'image/png'],
+  ['/icon-512.png', 'image/png'],
+  ['/site.webmanifest', 'application/manifest+json'],
+]);
 const functions = new Set(['customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox']);
 
 async function digest(value) {
@@ -16,6 +25,23 @@ export default {
     if (!env.TEST_ACCESS_PASSWORD || !env.CLOUD_TEST_ACCESS_KEY) return new Response('Test setup is incomplete.', {status:503});
     const url = new URL(request.url);
     if (url.origin !== env.APP_URL) return new Response('Unknown test origin.', {status:404});
+    if (['GET', 'HEAD'].includes(request.method) && installAssets.has(url.pathname)) {
+      const asset = await env.ASSETS.fetch(new Request(request.url, {method:request.method}));
+      const type = asset.headers.get('content-type')?.split(';')[0];
+      const expected = installAssets.get(url.pathname);
+      // SPA fallback HTML must never escape through a missing icon/manifest.
+      const validType = expected === 'image/png' ? type === expected
+        : ['application/manifest+json', 'application/json', 'application/octet-stream'].includes(type);
+      if (!asset.ok || !validType) return new Response('Branding asset unavailable.', {status:404});
+      const result = new Response(request.method === 'HEAD' ? null : asset.body, asset);
+      result.headers.delete('Set-Cookie');
+      result.headers.set('Content-Type', expected);
+      result.headers.set('Cache-Control', 'no-store');
+      result.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      result.headers.set('X-Content-Type-Options', 'nosniff');
+      result.headers.set('Referrer-Policy', 'no-referrer');
+      return result;
+    }
     const cookie = Array.from(await digest(`barber-test-session:${env.TEST_ACCESS_PASSWORD}`), x => x.toString(16).padStart(2, '0')).join('');
     const suppliedCookie = request.headers.get('cookie')?.match(/(?:^|;\s*)barber_test_access=([^;]*)/)?.[1] || '';
     const basic = `Basic ${btoa(`tester:${env.TEST_ACCESS_PASSWORD}`)}`;

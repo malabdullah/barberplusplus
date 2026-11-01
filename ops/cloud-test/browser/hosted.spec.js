@@ -11,7 +11,7 @@ const screenshot = name => path.resolve('.cloud-test',`${name}.png`);
 for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent','/agent'],['barber','/barber']]) {
   test(`${role}: hosted login, workspace, mobile Arabic and theme`, async ({page}) => {
     await page.goto('/login');
-    await page.getByLabel('Email',{exact:true}).fill(`${role}@barber.test`);
+    await page.getByLabel('Email address',{exact:true}).fill(`${role}@barber.test`);
     await page.getByLabel('Password',{exact:true}).fill(state.staffPassword);
     const settingsLoaded = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings?') && response.status() === 200);
     await page.locator('button[type="submit"]').click();
@@ -123,6 +123,8 @@ test('customer email signup confirms through the private test inbox',async ({pag
     url.searchParams.set('redirect_to',data.redirect_to);return url.href;
   })();
   await page.goto(confirmation);
+  await expect(page.locator('#customer-auth-title')).toHaveText('Email verified');
+  await page.locator('.ca-main').getByRole('link', { name: 'My account', exact: true }).click();
   await expect(page).toHaveURL(/\/customer\/account$/);
   await expect(page.locator('body')).toContainText('Cloud Test Customer');
   await page.screenshot({path:screenshot('customer-account'),fullPage:true});

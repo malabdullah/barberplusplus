@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
-  Globe,
+  Home,
   Bell,
   Search,
   Building2,
@@ -150,7 +150,7 @@ const TopBar = memo(function TopBar({
           <Menu size={20} strokeWidth={1.5} />
         </button>
 
-        <Link to="/" className="topbar-icon-btn" aria-label={t('publicNav.website')} title={t('publicNav.website')}><Globe size={20} strokeWidth={1.5} /></Link>
+        <Link to="/" className="topbar-icon-btn" aria-label={t('publicNav.website')} title={t('publicNav.website')}><Home size={20} strokeWidth={1.5} /></Link>
         {customerFeaturesEnabled && <Link to="/book" className="topbar-website-book">{t('publicNav.book')}</Link>}
         {/* Search */}
         <div className="topbar-search">

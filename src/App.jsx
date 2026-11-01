@@ -56,6 +56,8 @@ import EnvironmentBanner from './components/EnvironmentBanner';
 import { customerFeaturesEnabled } from './lib/runtimeConfig';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
+const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerification'));
+const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
 const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
 const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
@@ -137,6 +139,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
       {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
+      {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
       <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
@@ -146,6 +149,7 @@ function AppRoutes() {
         element={<Landing />}
       />
 
+      <Route path="/team/auth-callback" element={<Suspense fallback={null}><TeamAuthCallback /></Suspense>} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />}

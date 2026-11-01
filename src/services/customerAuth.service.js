@@ -80,6 +80,15 @@ export const customerAuthService = {
   requestSignup: ({ name, email, password, returnTo }) => request('email-signup', { name, email, password, returnTo }),
   resendConfirmation: ({ email, returnTo }) => request('email-resend', { email, returnTo }),
   requestRecovery: ({ email, returnTo }) => request('email-recovery', { email, returnTo }),
+  async verifyEmailCode({ email, code, purpose }) {
+    if (!['signup', 'recovery'].includes(purpose) || !/^\d{6,10}$/.test(code)) throw new Error('INVALID_CODE');
+    const result = await customerSupabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code, type: purpose === 'recovery' ? 'recovery' : 'email' });
+    if (result.error) throw new Error(result.error.status === 429 ? 'RATE_LIMITED' : result.error.status >= 500 ? 'UNAVAILABLE' : 'INVALID_CODE');
+    if (result.data.user?.app_metadata?.role !== 'customer' || !result.data.user?.email_confirmed_at || !result.data.session) {
+      await customerSupabase.auth.signOut({ scope: 'local' });
+      throw new Error('INVALID_CODE');
+    }
+  },
   async resetPassword({ password }) { await request('email-reset', { password }, true); await clearCustomerSession(); },
   async ensureEmailProfile(name = '') { return (await request('email-ensure', { name }, true)).profile; },
   async finishEmail(url) {
@@ -88,11 +97,13 @@ export const customerAuthService = {
     const token = callback.searchParams.get('token_hash');
     const code = callback.searchParams.get('code');
     const fragment = new URLSearchParams(callback.hash.slice(1));
+    // Remove one-time credentials and provider error details before rendering links.
+    window.history.replaceState(null, '', callback.pathname);
+    if (callback.searchParams.has('error') || fragment.has('error')) throw new Error('INVALID_CODE');
     let result;
     if (fragment.has('access_token') && fragment.has('refresh_token') && ['signup', 'magiclink', 'recovery', 'email_change'].includes(fragment.get('type'))) {
       if (type && type !== fragment.get('type')) throw new Error('INVALID_CODE');
       type = fragment.get('type');
-      window.history.replaceState(null, '', callback.pathname + callback.search);
       result = await customerSupabase.auth.setSession({ access_token: fragment.get('access_token'), refresh_token: fragment.get('refresh_token') });
     } else if (token && ['signup', 'magiclink', 'recovery', 'email_change'].includes(type)) result = await customerSupabase.auth.verifyOtp({ type, token_hash: token });
     else if (code) result = await customerSupabase.auth.exchangeCodeForSession(code);

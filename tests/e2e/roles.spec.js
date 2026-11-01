@@ -5,7 +5,7 @@ const password = 'LocalOnly123!';
 async function login(page, email, expectedPath) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(new RegExp(`${expectedPath.replace('/', '\\/')}(?:\\/|$)`));
 }

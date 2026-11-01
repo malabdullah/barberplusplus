@@ -7,14 +7,15 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 import CustomerAuth from './CustomerAuth';
+import CustomerEmailVerification from './CustomerEmailVerification';
 import { customerAuthService } from '../services/customerAuth.service';
-const auth = vi.hoisted(() => ({ login: vi.fn(), signup: vi.fn(), resetPassword: vi.fn() }));
+const auth = vi.hoisted(() => ({ login: vi.fn(), signup: vi.fn(), resetPassword: vi.fn(), refresh: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: null, loading: false, ...auth }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { requestSignup: vi.fn(), requestRecovery: vi.fn(), resendConfirmation: vi.fn(), socialProviders: vi.fn(), startSocial: vi.fn() } }));
+vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { requestSignup: vi.fn(), requestRecovery: vi.fn(), resendConfirmation: vi.fn(), verifyEmailCode: vi.fn(), ensureEmailProfile: vi.fn(), socialProviders: vi.fn(), startSocial: vi.fn() } }));
 let i18n;
 beforeEach(async () => {
-  vi.resetAllMocks();
+  vi.resetAllMocks(); sessionStorage.clear();
   customerAuthService.socialProviders.mockResolvedValue({ google: false, apple: false });
   customerAuthService.requestSignup.mockResolvedValue({ challenge: 'signup', testCode: '123456' });
   customerAuthService.requestRecovery.mockResolvedValue({ challenge: 'recovery', testCode: '654321' });
@@ -24,7 +25,7 @@ beforeEach(async () => {
 afterEach(cleanup);
 const fill = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const click = label => fireEvent.click(screen.getByRole('button', { name: label, exact: true }));
-const mount = (mode, state) => render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[{ pathname: `/customer/${mode}`, state }]}><Routes>{['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(view => <Route key={view} path={`/customer/${view}`} element={<CustomerAuth key={view} mode={view} />} />)}<Route path="/customer/account" element={<h1>Account destination</h1>} /><Route path="/book" element={<h1>Booking destination</h1>} /></Routes></MemoryRouter></I18nextProvider>);
+const mount = (mode, state) => render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[{ pathname: `/customer/${mode}`, state }]}><Routes>{['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(view => <Route key={view} path={`/customer/${view}`} element={<CustomerAuth key={view} mode={view} />} />)}<Route path="/customer/verify-email" element={<CustomerEmailVerification />} /><Route path="/customer/account" element={<h1>Account destination</h1>} /><Route path="/book" element={<h1>Booking destination</h1>} /></Routes></MemoryRouter></I18nextProvider>);
 describe('customer authentication screens', () => {
   it('registers by email without asking for a phone and offers to resend confirmation', async () => {
     mount('sign-up', { returnTo: '/book' });
@@ -33,7 +34,8 @@ describe('customer authentication screens', () => {
     fill('Password', 'Short12!'); fill('Confirm password', 'Short12!'); click('Create account');
     await screen.findByRole('status');
     expect(customerAuthService.requestSignup).toHaveBeenCalledWith(expect.objectContaining({ name: 'Test Customer', email: 'test@example.test', password: 'Short12!', returnTo: '/book' }));
-    click(en.customerAuth.email.resend); await waitFor(() => expect(customerAuthService.resendConfirmation).toHaveBeenCalled());
+    expect(screen.getByLabelText(en.customerAuth.email.codeLabel)).toHaveAttribute('autocomplete', 'one-time-code');
+    expect(screen.getByRole('button', { name: /Resend in/ })).toBeDisabled();
   });
   it('signs in by email and renders a friendly credential error', async () => {
     mount('sign-in'); fill(en.customerAuth.email.label, 'test@example.test'); fill('Password', 'incorrect');
@@ -76,4 +78,9 @@ it('does not launch unconfigured providers', async () => {
   expect(await screen.findByText(en.customerAuth.social.unavailable)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Continue with Apple' })).toBeDisabled();
+});
+
+it('returns password recovery to customer sign in', () => {
+  mount('forgot-password');
+  expect(screen.getByRole('link', { name: en.customerAuth.backToSignIn })).toHaveAttribute('href', '/customer/sign-in');
 });

@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   FileText,
 } from 'lucide-react';
+import ManagerSocialAccounts from '../components/Customer/ManagerSocialAccounts';
 import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
@@ -324,6 +325,8 @@ export default function Settings() {
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
         </SettingsSection>
+
+        {userRole === 'manager' && <SettingsSection icon={User} title={t('teamAuth.connectTitle')} description={t('teamAuth.connectDescription')}><ManagerSocialAccounts /></SettingsSection>}
 
         {/* Help Section */}
         <SettingsSection

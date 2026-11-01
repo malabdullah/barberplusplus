@@ -1,193 +1,39 @@
-import BrandLogo from '../components/UI/BrandLogo';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
-import './Login.css';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
+import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
+import CustomerSocialButtons from '../components/Customer/CustomerSocialButtons';
+import { teamAuthService, staffDestination } from '../services/teamAuth.service';
 
 export default function Login() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { login } = useApp();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation(); const navigate = useNavigate(); const { login } = useApp();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false); const [error, setError] = useState(''); const [isLoading, setIsLoading] = useState(false);
   usePublicNavigationBusy(isLoading);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError('');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.email || !formData.password) {
-      setError(t('validation.emailPasswordRequired'));
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
+  const update = event => { setFormData(current => ({ ...current, [event.target.name]: event.target.value })); setError(''); };
+  const submit = async event => {
+    event.preventDefault(); if (isLoading) return;
+    if (!formData.email.trim() || !formData.password) { setError(t('validation.emailPasswordRequired')); return; }
+    setIsLoading(true); setError('');
     try {
-      const role = await login(formData.email, formData.password);
-
-      if (role) {
-        // Redirect based on role
-        if (role === 'barber') {
-          navigate('/barber');
-        } else if (role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        // Login returned null - this shouldn't happen if error was thrown
-        setError(t('auth.invalidCredentials'));
-        setIsLoading(false);
-      }
-    } catch (error) {
-      logErrorSafely(error, 'Login.handleSubmit');
-      // Use errorMessages utility to get user-friendly message
-      const errorMessage = getErrorMessage(error, t('auth.invalidCredentials'));
-      setError(errorMessage);
-      setIsLoading(false);
-    }
+      const role = await login(formData.email.trim(), formData.password);
+      if (role) navigate(staffDestination(role), { replace: true });
+      else { setError(t('auth.invalidCredentials')); setIsLoading(false); }
+    } catch (failure) { logErrorSafely(failure, 'Login.handleSubmit'); setError(getErrorMessage(failure, t('auth.invalidCredentials'))); setIsLoading(false); }
   };
-
-  return (
-    <div className="login-page">
-      {/* Background Pattern */}
-      <div className="login-bg">
-        <div className="login-bg-gradient" />
-        <div className="login-bg-pattern" />
-      </div>
-
-      {/* Login Container */}
-      <div className="login-container animate-scale-in">
-
-        {/* Logo */}
-        <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>
-          <BrandLogo decorative size="auth" tagline={t('nav.dashboard')} />
-        </Link>
-
-        {/* Decorative Line */}
-        <div className="login-divider">
-          <div className="login-divider-line"></div>
-          <div className="login-divider-diamond"></div>
-          <div className="login-divider-line"></div>
-        </div>
-
-        {/* Welcome Text */}
-        <div className="login-welcome">
-          <h1>{t('publicNav.teamSignIn')}</h1>
-          <p>{t('auth.signInMessage')}</p>
-        </div>
-
-        {/* Login Form */}
-        <form className="login-form" onSubmit={handleSubmit}>
-          {error && (
-            <div className="login-error animate-fade-in">
-              {error}
-            </div>
-          )}
-
-          <div className="login-field">
-            <label htmlFor="email">{t('common.email')}</label>
-            <div className="login-input-wrapper">
-              <Mail size={18} strokeWidth={1.5} />
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder={t('auth.emailPlaceholder')}
-                autoComplete="email"
-              />
-            </div>
-          </div>
-
-          <div className="login-field">
-            <label htmlFor="password">{t('auth.password')}</label>
-            <div className="login-input-wrapper">
-              <Lock size={18} strokeWidth={1.5} />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff size={18} strokeWidth={1.5} />
-                ) : (
-                  <Eye size={18} strokeWidth={1.5} />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="login-options">
-            <label className="login-remember">
-              <input type="checkbox" />
-              <span>{t('auth.rememberMe')}</span>
-            </label>
-            <Link to="/forgot-password" className="login-forgot">
-              {t('auth.forgotPassword')}
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            className="login-submit"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="login-loading">{t('auth.signingIn')}</span>
-            ) : (
-              <>
-                {t('auth.signIn')}
-                <ArrowRight size={18} strokeWidth={2} />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Footer */}
-        <div className="login-footer">
-          <p>{t('auth.noAccount')} <Link to="/signup">{t('publicNav.registerShop')}</Link></p>
-          <p><Link to="/customer/sign-in">{t('publicNav.customerSignIn')}</Link></p>
-        </div>
-      </div>
-
-      {/* Floating Elements */}
-      <div className="login-float login-float-1">
-        <Scissors size={32} strokeWidth={1} />
-      </div>
-      <div className="login-float login-float-2">
-        <Scissors size={24} strokeWidth={1} />
-      </div>
-      <div className="login-float login-float-3">
-        <Scissors size={20} strokeWidth={1} />
-      </div>
-    </div>
-  );
+  return <CustomerAuthLayout accountType="team" title={t('publicNav.teamSignIn')} intro={t('teamAuth.intro')}>
+    <CustomerSocialButtons authService={teamAuthService} disabled={isLoading} hint={t('teamAuth.socialHint')} />
+    {error && <p className="cb-alert" role="alert">{error}</p>}
+    <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={isLoading}>
+      <div className="ca-field"><label className="cb-field-label" htmlFor="email">{t('customerAuth.email.label')}</label><input className="cb-input" id="email" name="email" type="email" dir="ltr" autoComplete="email" value={formData.email} onChange={update} required /></div>
+      <div className="ca-field"><label className="cb-field-label" htmlFor="password">{t('auth.password')}</label><div className="ca-password"><input className="cb-input" id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={formData.password} onChange={update} required /><button type="button" aria-label={t(`customerAuth.${showPassword ? 'hidePassword' : 'showPassword'}`)} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div></div>
+      <Link to="/forgot-password" className="cb-text-button ca-forgot">{t('auth.forgotPassword')}</Link>
+      <button type="submit" className="cb-primary ca-submit" disabled={isLoading}>{isLoading && <Loader2 className="cb-spinner" size={18} aria-hidden="true" />}{t('auth.signIn')}</button>
+    </fieldset></form>
+    <p className="ca-switch">{t('auth.noAccount')} <Link to="/signup">{t('publicNav.registerShop')}</Link></p>
+  </CustomerAuthLayout>;
 }

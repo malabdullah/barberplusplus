@@ -1536,6 +1536,23 @@
       "servicesFirst": "Choose your services, then continue to see available times."
     }
   },
+  "teamAuth": {
+    "eyebrow": "Shop team account",
+    "backHome": "Back to home",
+    "intro": "Sign in to manage your shop and your working day.",
+    "socialHint": "Google and Apple are for existing shop managers. Team members can sign in with email.",
+    "callbackTitle": "Signing you in",
+    "backLogin": "Back to team sign in",
+    "failed": "We couldn’t complete sign-in. Try again, or use your email and password.",
+    "managerRequired": "This Google or Apple account is not connected to an existing shop manager. Sign in with your manager email and password, then connect it in Settings.",
+    "connectTitle": "Google & Apple sign-in",
+    "connectDescription": "Connect a sign-in method to your existing manager account.",
+    "connectIntro": "Continue with Google or Apple below to connect it. You’ll keep the same shops and access. An identity already used by another account cannot be connected here.",
+    "connected": "Connected: {{providers}}",
+    "connectionTitle": "Google or Apple isn’t connected yet",
+    "connectionFailed": "The connection expired or was not completed. Return to manager Settings and choose Google or Apple again to connect it to your existing manager account.",
+    "backSettings": "Back to manager Settings"
+  },
   "customerAuth": {
     "signIn": "Sign in",
     "signOut": "Sign out",
@@ -1619,18 +1636,49 @@
       "orEmail": "or use your email",
       "callbackTitle": "Confirming your email",
       "invalidLink": "This link is invalid or has expired. Please request a new link.",
-      "signupSent": "Check your email for a confirmation link.",
-      "recoverySent": "If an account exists, a password reset link has been sent.",
-      "resend": "Resend confirmation link",
+      "signupSent": "We sent a confirmation link and code to:",
+      "recoverySent": "If an account exists, we sent a reset link and code to:",
+      "resend": "Resend code",
       "sendRecovery": "Send reset link",
       "socialIntro": "Enter your name to finish creating your account.",
       "continue": "Continue",
       "changeSent": "Check your email to confirm your new address.",
       "intros": {
-        "sign-up": "Create your account with your name, email and password.",
-        "forgot-password": "Enter your email address to get a reset link.",
-        "reset-password": "Choose a new password."
-      }
+        "sign-in": "Sign in to manage your appointments.",
+        "sign-up": "Your next appointment starts here. Create your customer account.",
+        "forgot-password": "Enter your email to get a reset link or a verification code.",
+        "reset-password": "Choose a new password for your account."
+      },
+      "verifyTitle": "Verify your email",
+      "recoveryTitle": "Check your email",
+      "verifyIntro": "Enter the code from your email to continue.",
+      "codeLabel": "Verification code",
+      "codeHint": "You can paste the code or use your keyboard’s suggested code.",
+      "verifyCode": "Verify & continue",
+      "resendCode": "Resend code",
+      "resendIn": "Resend in {{seconds}}s",
+      "resent": "If your account is eligible, a new email has been sent. Use the newest code or link.",
+      "changeAddress": "Change email address",
+      "linkAlternative": "You can also open the link in your email. Check your spam folder if you don’t see it.",
+      "verifiedTitle": "Email verified",
+      "verifiedIntro": "Your account is ready. Book an appointment or manage your bookings.",
+      "verifiedStatus": "Your email address has been confirmed.",
+      "passwordUpdatedTitle": "Password updated",
+      "invalidLinkTitle": "This link has expired",
+      "requestNewLink": "Get a new reset link",
+      "requestConfirmation": "Verify email or request a new code"
+    },
+    "backToSignIn": "Back to sign in",
+    "customerAccount": "Customer account",
+    "account": {
+      "intro": "Your details and appointments, all in one place.",
+      "profileTitle": "Profile details",
+      "emailHint": "A new email address must be confirmed before it replaces your current one.",
+      "optional": "(optional)",
+      "appointmentsIntro": "Review your bookings and appointment details.",
+      "noAppointmentsTitle": "Your next appointment starts here",
+      "findShop": "Find a shop",
+      "timezone": "All appointment times are in Kuwait time (UTC+3)."
     }
   },
   "customerPrivacy": {

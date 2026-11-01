@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
-import './CustomerBooking.css';
-import './CustomerAuth.css';
+import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
 
 export default function CustomerSocialAuth() {
-  const { t, i18n } = useTranslation(); const tr = key => t(`customerAuth.${key}`);
+  const { t } = useTranslation(); const tr = key => t(`customerAuth.${key}`);
   const { refresh } = useCustomerAuth(); const location = useLocation(); const navigate = useNavigate();
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState('');
@@ -44,13 +43,11 @@ export default function CustomerSocialAuth() {
     catch { setError('SOCIAL_SIGN_IN_FAILED'); }
     finally { setBusy(false); }
   };
-  return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}><main className="ca-main">
-    <h1>{tr('social.completeTitle')}</h1><p className="cb-intro">{tr('email.socialIntro')}</p>
+  return <CustomerAuthLayout title={tr('social.completeTitle')} intro={tr('email.socialIntro')} returnTo={returnTo}>
     {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
     {loading ? <p role="status"><Loader2 className="cb-spinner" />{tr('loading')}</p> : ready && <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>
       <label className="cb-field-label" htmlFor="social-name">{tr('name')}</label><input id="social-name" className="cb-input" autoComplete="name" value={name} maxLength={120} onChange={event => { setName(event.target.value); setError(''); }} required />
       <button className="cb-primary ca-submit" type="submit" disabled={busy}>{busy && <Loader2 className="cb-spinner" size={18} />}{tr('email.continue')}</button>
     </fieldset></form>}
-    <Link className="cb-text-button" to="/customer/sign-in">{tr('signIn')}</Link><Link className="cb-text-button" to="/book">{tr('continueGuest')}</Link>
-  </main></div>;
+  </CustomerAuthLayout>;
 }

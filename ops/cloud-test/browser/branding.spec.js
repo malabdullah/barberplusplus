@@ -58,7 +58,7 @@ for (const width of [1440, 390]) {
 }
 
 test('brand browser icons and additional authentication pages load', async ({ page, request }) => {
-  for (const asset of ['/favicon.svg', '/favicon-16.png', '/favicon-32.png', '/favicon-48.png', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/site.webmanifest']) {
+  for (const asset of ['/favicon.svg', '/favicon-16.png', '/favicon-32.png', '/favicon-48.png', '/apple-touch-icon.png', '/apple-touch-icon-v2.png', '/icon-192.png', '/icon-512.png', '/site.webmanifest']) {
     const response = await request.get(asset);
     expect(response.ok(), asset).toBe(true);
     expect(response.headers()['x-robots-tag']).toContain('noindex');
@@ -66,5 +66,33 @@ test('brand browser icons and additional authentication pages load', async ({ pa
   for (const route of ['/signup', '/forgot-password']) {
     await page.goto(route);
     await expect(page.locator('.login-logo .brand-logo')).toBeVisible();
+  }
+});
+
+
+test('iOS installation branding loads without a Test session while the app stays private', async ({ baseURL }) => {
+  expect(baseURL).toBe('https://barber-test.alabdullah-cs.workers.dev');
+  const manifest = await fetch(`${baseURL}/site.webmanifest?v=2`);
+  expect(manifest.status).toBe(200);
+  expect(manifest.headers.get('set-cookie')).toBeNull();
+  expect(manifest.headers.get('content-type')).toContain('application/manifest+json');
+  const metadata = await manifest.json();
+  expect(metadata.name).toBe('Barber++');
+  expect(metadata.start_url).toBe('/book');
+  for (const [path, size] of [['/apple-touch-icon-v2.png', 180], ['/apple-touch-icon.png', 180], ['/icon-192.png?v=2', 192], ['/icon-512.png?v=2', 512]]) {
+    const response = await fetch(baseURL + path);
+    expect(response.status, path).toBe(200);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(response.headers.get('content-type')).toContain('image/png');
+    const bytes = Buffer.from(await response.arrayBuffer());
+    expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(bytes.readUInt32BE(16)).toBe(size);
+    expect(bytes.readUInt32BE(20)).toBe(size);
+    expect(bytes[25], 'opaque RGB PNG without an alpha channel').toBe(2);
+  }
+  for (const path of ['/', '/book', '/runtime-config.js', '/assets/app.js', '/test-inbox?format=json', '/test-api/customer-booking']) {
+    const response = await fetch(baseURL + path);
+    expect(response.status, path).toBe(401);
+    expect(response.headers.get('set-cookie')).toBeNull();
   }
 });
