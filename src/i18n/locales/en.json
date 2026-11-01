@@ -1542,7 +1542,7 @@
     },
     "rebooking": {
       "title": "Book again",
-      "intro": "Choose your services and a new date and time. You can change the city, shop or barber above.",
+      "intro": "Choose your services and a new date and time. You can also change the city, shop or barber.",
       "shopUnavailable": "This shop is no longer available for online booking. Choose a city and a new shop to continue.",
       "barberUnavailable": "This barber is no longer available at the shop. Choose another barber or change your shop."
     },

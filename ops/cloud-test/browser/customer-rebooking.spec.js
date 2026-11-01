@@ -25,6 +25,7 @@ for (const language of ['en', 'ar']) for (const appearance of ['light', 'dark'])
     await expect(page.locator('html')).toHaveAttribute('data-theme', appearance);
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', await page.locator('body').evaluate(el => el.clientWidth));
     await page.screenshot({ path: `.cloud-test/rebook-${engine}-${language}-${appearance}-history.png`, fullPage: true });
+    await main.locator('.ca-appointments').screenshot({ path: `.cloud-test/rebook-${engine}-${language}-${appearance}-history-panel.png` });
     await main.locator('.ca-booking-row').last().getByRole('button', { name: language === 'en' ? 'Book again' : 'احجز مرة أخرى', exact: true }).click();
     await expect(page).toHaveURL(/\/book$/);
     await expect(page.locator('#choose-services')).toHaveClass(/is-open/);
@@ -48,6 +49,9 @@ for (const language of ['en', 'ar']) for (const appearance of ['light', 'dark'])
     await expect(page.locator('#choose-services input:checked')).toHaveCount(0);
     await page.locator('#choose-shop .cb-section-heading button').click();
     await expect(page.locator('#choose-shop')).toHaveClass(/is-open/);
+    await page.locator('input[name="branch"]:not(:checked)').first().check();
+    await expect(page.locator('#choose-barber')).toHaveClass(/is-open/);
+    await expect(page.locator('input[name="barber"]:checked')).toHaveCount(0);
     await page.locator('#choose-city .cb-section-heading button').click();
     await page.locator('#booking-city').click();
     const currentCity = await page.locator('[role="option"][aria-selected="true"]').getAttribute('data-city');
