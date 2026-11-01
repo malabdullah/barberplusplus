@@ -14,7 +14,7 @@ for (const [role, home] of roles) {
     const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:4173');
     expect(['localhost', '127.0.0.1', '::1']).toContain(base.hostname);
     await page.goto('/login');
-    await page.getByLabel('Email', { exact: true }).fill(`${role}@barber.test`);
+    await page.getByLabel('Email address', { exact: true }).fill(`${role}@barber.test`);
     await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));

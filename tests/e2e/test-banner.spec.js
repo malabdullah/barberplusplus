@@ -12,7 +12,7 @@ for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['ag
     await page.addInitScript(value => { window.__BARBER_CONFIG__ = Object.freeze(value); }, runtime);
     await page.goto('/login');
     await expect(page.getByRole('status')).toContainText('TEST — synthetic data');
-    await page.getByLabel('Email', { exact: true }).fill(`${role}@barber.test`);
+    await page.getByLabel('Email address', { exact: true }).fill(`${role}@barber.test`);
     await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));
