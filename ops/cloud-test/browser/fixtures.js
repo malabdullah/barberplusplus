@@ -16,3 +16,8 @@ export const test = base.extend({
   },
 });
 export { expect };
+
+export async function chooseBookingCity(page, city) {
+  await page.locator('#booking-city').click();
+  await page.locator(`[role="option"][data-city=${JSON.stringify(city)}]`).click();
+}

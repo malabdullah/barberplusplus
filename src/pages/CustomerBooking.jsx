@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Calendar, Check, CheckCircle2, ChevronDown, Clock, Download, Loader2, MapPin, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
+import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
@@ -10,6 +10,7 @@ import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { bookingCityGroups } from '../utils/bookingCityGroups';
+import CityPicker from '../components/Customer/CityPicker';
 import { validatePhoneNumber } from '../utils/validation';
 import { addBookingDays, bookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
 import './CustomerBooking.css';
@@ -248,7 +249,7 @@ export default function CustomerBooking() {
           <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => window.location.reload()}>{tr('anotherBooking')}</button></div>
         </div> : <>
           <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => openPanel('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
-            <div className="cb-city-step"><label className="cb-field-label" htmlFor="booking-city">{tr('cityLabel')}</label><div className="cb-select-wrap"><MapPin size={20} aria-hidden="true" /><select id="booking-city" value={city} onChange={event => changeCity(event.target.value)}><option value="">{tr('cityPlaceholder')}</option>{cityGroups.map(group => <optgroup key={group.key} label={governorateName(group)}>{group.cities.map(value => <option key={value} value={value}>{cityName(value)}</option>)}</optgroup>)}</select><ChevronDown size={18} aria-hidden="true" /></div>{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}</div>
+            <div className="cb-city-step"><CityPicker groups={cityGroups} value={city} onChange={changeCity} cityName={cityName} governorateName={governorateName} disabled={busy || !cities.length} />{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}</div>
           </BookingSection>
           <BookingSection feedback={panel === 'shop' && !catalogError ? bookingError : null} id="choose-shop" title={tr('titles.branch')} summary={name(branch)} open={panel === 'shop' && Boolean(city)} onEdit={() => openPanel('shop')} onDone={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
               <label className="cb-field-label" htmlFor="branch-search">{tr('searchLabel')}</label><div className="cb-search"><Search size={23} aria-hidden="true" /><input id="branch-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr('searchPlaceholder')} /></div><p className="cb-result-count" aria-live="polite">{tr('branchesCount', { count: branches.length })}</p>

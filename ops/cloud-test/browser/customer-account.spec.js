@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, chooseBookingCity } from './fixtures.js';
 import fs from 'node:fs';
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json', import.meta.url)));
 const engine = process.env.CLOUD_TEST_BROWSER || 'chromium';
@@ -45,7 +45,7 @@ test('real customer profile edit, cancel, booking details and account actions', 
   await page.reload(); await expect(main(page).locator('.ca-profile-details')).toContainText('Barber Test Customer');
   await expect(main(page).locator('.ca-profile-details')).toContainText(`+965 ${phone}`);
   await main(page).getByRole('link', { name: 'Book an appointment', exact: true }).click();
-  await page.locator('#booking-city').selectOption('Kuwait City');
+  await chooseBookingCity(page, 'Kuwait City');
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
   await page.locator('input[name="barber"]').first().check(); await page.locator('#choose-services input[type="checkbox"]').first().check();
   await page.locator('#booking-next').click();

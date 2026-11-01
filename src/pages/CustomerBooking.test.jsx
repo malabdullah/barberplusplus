@@ -42,9 +42,13 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const click = name => fireEvent.click(screen.getAllByRole('button', { name, exact: true }).find(button => !button.disabled));
 const heading = () => screen.getByRole('heading', { level: 1 });
-const changeCity = city => fireEvent.change(screen.getByLabelText('City'), { target: { value: city } });
+const changeCity = city => {
+  fireEvent.focus(screen.getByLabelText('City'));
+  fireEvent.click(screen.getByRole('option', { name: city, exact: true }));
+};
 
 it('places available cities inside translated governorate headings', async () => {
+  fireEvent.focus(screen.getByLabelText('City'));
   expect(screen.getByRole('group', { name: 'Al Asimah (Capital)' })).toContainElement(screen.getByRole('option', { name: 'Kuwait City' }));
   expect(screen.getByRole('group', { name: 'Hawalli' })).toContainElement(screen.getByRole('option', { name: 'Salmiya' }));
   await i18n.changeLanguage('ar');
@@ -308,5 +312,6 @@ it('shows a legacy saved location in Arabic when it has no built-in city transla
   customerBookingService.getCatalog.mockResolvedValue({ ...catalog, branches: [{ ...catalog.branches[0], city: 'Hawalli', cityAr: 'حولي' }] });
   await i18n.changeLanguage('ar');
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  fireEvent.focus(await screen.findByLabelText('المدينة'));
   expect(await screen.findByRole('option', { name: 'حولي' })).toBeInTheDocument();
 });

@@ -1412,6 +1412,9 @@
       "details": "المتابعة لإدخال بياناتك"
     },
     "cityLabel": "المدينة",
+    "citySearch": "ابحث عن مدينة",
+    "governorateLabel": "المحافظة",
+    "noCityMatches": "لا توجد مدن مطابقة. جرّب اسماً آخر.",
     "otherLocations": "مناطق أخرى",
     "governorates": {
       "Al Asimah (Capital)": "العاصمة",

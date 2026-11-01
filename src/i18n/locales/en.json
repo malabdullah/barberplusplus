@@ -1412,6 +1412,9 @@
       "details": "Continue to your details"
     },
     "cityLabel": "City",
+    "citySearch": "Search for a city",
+    "governorateLabel": "Governorate",
+    "noCityMatches": "No matching cities. Try another name.",
     "otherLocations": "Other locations",
     "governorates": {
       "Al Asimah (Capital)": "Al Asimah (Capital)",

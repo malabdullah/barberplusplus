@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, chooseBookingCity } from './fixtures.js';
 import fs from 'node:fs';
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json', import.meta.url)));
 
@@ -62,7 +62,7 @@ test('homepage to customer signup restores the booking and offers account naviga
   const email = `navigation-${Date.now()}@barber.test`;
   await page.goto('/');
   await page.locator('.hero-cta').getByRole('link', { name: 'Book appointment' }).click();
-  await page.locator('#booking-city').selectOption('Kuwait City');
+  await chooseBookingCity(page, 'Kuwait City');
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
   await page.locator('input[name="barber"]').first().check();
   await page.locator('#choose-services input[type="checkbox"]').first().check();
