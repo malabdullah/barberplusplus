@@ -83,3 +83,13 @@ it('offers retry after appointment loading fails', async () => {
   await screen.findByText(en.customerAuth.account.noAppointmentsTitle);
   expect(customerAuthService.bookings).toHaveBeenCalledTimes(2);
 });
+
+it('keeps the contact form and original profile when another account owns the new number', async () => {
+  auth.updateProfile.mockRejectedValue(new Error('PHONE_IN_USE'));
+  mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+  fireEvent.change(screen.getByLabelText(en.customerAuth.phone, { exact: false }), { target: { value: '50000099' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.PHONE_IN_USE);
+  expect(screen.getByLabelText(en.customerAuth.phone, { exact: false })).toHaveValue('50000099');
+  expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+});

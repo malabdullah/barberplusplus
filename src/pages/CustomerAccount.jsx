@@ -34,10 +34,12 @@ export default function CustomerAccount() {
   const [rebookingId, setRebookingId] = useState('');
   const [rebookErrorId, setRebookErrorId] = useState('');
   const accountRequest = useRef(0);
+  const errorRef = useRef(null);
   const arabic = i18n.language.startsWith('ar');
   const locale = arabic ? 'ar-KW' : 'en-KW';
   usePublicNavigationBusy(busy || Boolean(rebookingId));
   useEffect(() => { document.title = `${t('customerAuth.myAccount')} | Barber++`; }, [t]);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   useEffect(() => {
     accountRequest.current++;
     setBookings([]); setRebookingId(''); setRebookErrorId('');
@@ -58,7 +60,7 @@ export default function CustomerAccount() {
     try {
       const changedEmail = form.email.trim().toLowerCase() !== (customer.email || '').toLowerCase();
       await updateProfile(form); setEditing(false); setSaved(changedEmail ? 'email' : 'profile');
-    } catch { setError(tr('errors.UNAVAILABLE')); }
+    } catch (failure) { setError(tr(failure.message === 'PHONE_IN_USE' ? 'errors.PHONE_IN_USE' : 'errors.UNAVAILABLE')); }
     finally { setBusy(false); }
   };
   const signOut = async () => {
@@ -95,7 +97,7 @@ export default function CustomerAccount() {
       <div className="ca-account-layout">
         <section className="ca-profile-panel" aria-labelledby="profile-title">
           <header className="ca-section-heading"><h2 id="profile-title">{tr('account.profileTitle')}</h2>{!editing && <button type="button" className="cb-text-button" onClick={edit} disabled={busy}><Pencil size={16} aria-hidden="true" />{tr('editDetails')}</button>}</header>
-          {error && <p className="cb-alert" role="alert" id="profile-error">{error}</p>}
+          {error && <p className="cb-alert" role="alert" id="profile-error" ref={errorRef} tabIndex={-1}>{error}</p>}
           {saved && <p className="ca-profile-saved" role="status"><CheckCircle2 size={18} aria-hidden="true" />{tr(saved === 'email' ? 'email.changeSent' : 'profileSaved')}</p>}
           {editing ? <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>
             <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-name">{tr('name')}</label><input className="cb-input" id="account-name" autoComplete="name" value={form.name} maxLength={120} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} required /></div>

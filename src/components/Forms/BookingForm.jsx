@@ -10,6 +10,7 @@ import { useCustomerLookup } from '../../hooks/useCustomerLookup';
 import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import CustomerSummaryCard from './CustomerSummaryCard';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 /**
  * Shared BookingForm component for both manager and barber views
@@ -46,6 +47,8 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   });
 
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
   const [dateError, setDateError] = useState(null);
 
@@ -258,9 +261,11 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (validate()) {
+      setSubmitError(''); setSaving(true);
       const submitData = {
         ...formData,
         duration: totalDuration,
@@ -272,12 +277,15 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       if (!isManagerView && currentBarber) {
         submitData.barberId = currentBarber.id;
       }
-      onSubmit(submitData);
+      try { await onSubmit(submitData); }
+      catch (error) { setSubmitError(getErrorMessage(error, t('common.error'), t)); }
+      finally { setSaving(false); }
     }
   };
 
   return (
     <form className="form" onSubmit={handleSubmit}>
+      {submitError && <p className="error-banner" role="alert">{submitError}</p>}
       <div className="form-section">
         <h4 className="form-section-title">{t('bookings.customerInformation')}</h4>
 
@@ -488,10 +496,10 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       </div>
 
       <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
           {t('common.cancel')}
         </button>
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={saving}>
           {booking ? t('bookings.updateBooking') : t('bookings.createBooking')}
         </button>
       </div>

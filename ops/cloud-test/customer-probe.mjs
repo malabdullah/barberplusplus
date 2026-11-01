@@ -47,8 +47,8 @@ const booking=await call('book',details,first.token,'customer-booking');assert.e
 assert.equal((await call('book',details,first.token,'customer-booking')).data.id,booking.data.id,'booking retries are idempotent');
 assert.ok((await call('bookings',{},first.token)).data.bookings.some(b=>b.id===booking.data.id));
 const second=await signup(secondEmail);
-assert.equal((await call('update-profile',{name:'Hosted Release Customer',countryCode:'+965',phone},second.token)).status,200);
-assert.deepEqual((await call('bookings',{},second.token)).data.bookings,[],'shared phone does not reveal another account history');
+assert.equal((await call('update-profile',{name:'Hosted Release Customer',countryCode:'+965',phone},second.token)).status,409,'another account cannot reuse the contact number');
+assert.deepEqual((await call('bookings',{},second.token)).data.bookings,[],'duplicate phone attempt does not reveal another account history');
 assert.notEqual((await call('book',details,second.token,'customer-booking')).status,200,'another account cannot reuse a booking proof');
 assert.equal((await call('email-recovery',{email})).status,200);
 const recovery=await message(email,'recovery');
@@ -71,5 +71,5 @@ for(const hash of [change.token_hash,change.token_hash_new].filter(Boolean)) {
 }
 assert.equal((await first.client.auth.getUser()).data.user.email,changedEmail,'email changes after both confirmations');
 assert.equal((await call('email-login',{email:changedEmail,password:newPassword})).status,200);
-const report={checkedAt:new Date().toISOString(),emailConfirmation:true,trustedCustomerRole:true,phoneOptionalProfile:true,validPhoneRequiredForBooking:true,ownedBookingAndIdempotency:true,sharedPhoneHistoryIsolation:true,recoveryAndSessionRevocation:true,phoneAndBookingPreservedAfterReset:true,confirmedEmailChange:true,syntheticRecordsRetained:true};
+const report={checkedAt:new Date().toISOString(),emailConfirmation:true,trustedCustomerRole:true,phoneOptionalProfile:true,validPhoneRequiredForBooking:true,ownedBookingAndIdempotency:true,duplicatePhoneRejectedAndHistoryIsolated:true,recoveryAndSessionRevocation:true,phoneAndBookingPreservedAfterReset:true,confirmedEmailChange:true,syntheticRecordsRetained:true};
 await fs.writeFile('.cloud-test/customer-release-report.json',JSON.stringify(report,null,2),{mode:0o600});console.log(report);

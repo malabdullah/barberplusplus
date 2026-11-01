@@ -17,7 +17,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE'];
+const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'PHONE_IN_USE'];
 
 function BookingImage({ src, name, person = false }) {
   const [failed, setFailed] = useState(false);

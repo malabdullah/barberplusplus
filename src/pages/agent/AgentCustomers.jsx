@@ -174,8 +174,8 @@ export default function AgentCustomers() {
       setShowCustomerModal(false);
       setEditingCustomer(null);
     } catch (error) {
-      if (error.message === 'PHONE_EXISTS') {
-        alert(t('agent.customers.validation.phoneExists'));
+      if (error.message === 'PHONE_EXISTS' || /PHONE_IN_USE/.test(error.message)) {
+        alert(t('errors.phoneInUse'));
       } else {
         console.error('Error saving customer:', error);
         alert(t('common.error'));

@@ -53,6 +53,7 @@ def main():
             ' TRIGGER auth users assign_default_manager_role ' in line or
             ' TRIGGER auth users block_guarded_role_changes ' in line or
             ' TRIGGER auth users block_customer_recovery_role_changes ' in line or
+            ' TRIGGER auth users enforce_global_phone ' in line or
             ' POLICY storage objects Barber avatars ' in line)) + '\n'
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')

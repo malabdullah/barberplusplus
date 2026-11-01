@@ -938,6 +938,7 @@ export function AppProvider({ children }) {
           customerId = customer?.id;
           logger.debug('Customer linked to booking', { customerId, isNew: bookingData.isNewCustomer });
         } catch (customerError) {
+          if (/PHONE_IN_USE|INVALID_PHONE/.test(customerError.message)) throw customerError;
           // Log but don't block booking creation if customer creation fails
           logger.error('Error creating/finding customer', customerError);
         }

@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
 import BackLink from '../components/UI/BackLink';
 import { logErrorDev } from '../utils/security';
+import { getErrorMessage } from '../utils/errorMessages';
 import './AddBranch.css';
 
 export default function EditBarber() {
@@ -13,16 +14,19 @@ export default function EditBarber() {
   const navigate = useNavigate();
   const { branchBarbers, branchServices, updateBarber } = useApp();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const barber = branchBarbers.find((b) => b.id === barberId);
 
   const handleSubmit = async (data) => {
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
       await updateBarber(barberId, data);
       navigate('/dashboard/barbers');
     } catch (error) {
       logErrorDev('Error updating barber:', error);
+      setErrorMessage(getErrorMessage(error, t('common.error'), t));
       setIsSubmitting(false);
     }
   };
@@ -55,6 +59,7 @@ export default function EditBarber() {
       </div>
 
       <div className="edit-branch-form-container animate-fade-in-up stagger-1">
+        {errorMessage && <p className="error-banner" role="alert">{errorMessage}</p>}
         <BarberForm
           barber={barber}
           services={branchServices}

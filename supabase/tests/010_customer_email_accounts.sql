@@ -17,8 +17,9 @@ select is(public.customer_account_api('profile',current_setting('email.one')::js
 select is((select customer_id from private.customer_accounts where user_id='99999999-0000-4000-8000-000000000101'),null,'no business customer is claimed at signup');
 select is(public.customer_account_api('email-ensure',current_setting('email.two')::jsonb)->>'email','email-two@customer.test','another customer gets independent profile');
 select public.customer_account_api('update-profile',current_setting('email.one')::jsonb||'{"phone":"50009999","country_code":"+965","email":"forged@test.invalid"}');
-select public.customer_account_api('update-profile',current_setting('email.two')::jsonb||'{"phone":"50009999","country_code":"+965"}');
-select is((select count(*) from private.customer_accounts where phone='50009999'),2::bigint,'shared phone is allowed without account merging');
+select throws_ok($$select public.customer_account_api('update-profile',current_setting('email.two')::jsonb||'{"phone":"50009999","country_code":"+965"}')$$,'23505','PHONE_IN_USE','second customer cannot share the first phone');
+select public.customer_account_api('update-profile',current_setting('email.two')::jsonb||'{"phone":"50009998","country_code":"+965"}');
+select is((select count(*) from private.customer_accounts where phone='50009999'),1::bigint,'customer contact number remains unique');
 select is(public.customer_account_api('profile',current_setting('email.one')::jsonb)->>'email','email-one@customer.test','untrusted profile email cannot replace Auth identity');
 select throws_ok($$select public.customer_account_api('profile',current_setting('email.one')::jsonb||'{"session_id":"99999999-0000-4000-8000-000000000302"}')$$,'P0001','AUTH_REQUIRED','another session cannot access profile');
 select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb),'[]'::jsonb,'empty account has no inferred phone-based history');
@@ -28,7 +29,7 @@ select private.record_customer_booking_owner('99999999-0000-4000-8000-0000000004
 select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->>'branch_id','10000000-0000-4000-8000-000000000012','owned history returns exact shop ID for rebooking');
 select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->>'barber_id','30000000-0000-4000-8000-000000000121','owned history returns exact barber ID for rebooking');
 select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->'service_ids','["20000000-0000-4000-8000-000000000121"]'::jsonb,'owned history retains service IDs for the iOS client');
-select is(public.customer_account_api('bookings',current_setting('email.two')::jsonb),'[]'::jsonb,'another customer sharing the phone cannot read rebooking selections');
+select is(public.customer_account_api('bookings',current_setting('email.two')::jsonb),'[]'::jsonb,'another customer cannot read rebooking selections');
 select throws_ok($$select public.customer_account_api('bookings',current_setting('email.one')::jsonb||'{"session_id":"99999999-0000-4000-8000-000000000302"}')$$,'P0001','AUTH_REQUIRED','rebooking history requires the original customer session');
 select ok(not has_table_privilege('authenticated','private.customer_accounts','SELECT'),'customers cannot directly read private profiles');
 select * from finish();

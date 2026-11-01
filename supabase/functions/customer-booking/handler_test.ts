@@ -4,6 +4,12 @@ const make = (overrides = {}) => createCustomerBookingHandler({ environment: 'te
 const request = (body: unknown, origin = 'http://localhost:5173') => new Request('http://127.0.0.1:55321/functions/v1/customer-booking', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const selection = { branchId: '10000000-0000-4000-8000-000000000011', barberId: '30000000-0000-4000-8000-000000000111', serviceIds: ['20000000-0000-4000-8000-000000000111'], date: '2026-11-01', time: '10:00' };
 
+Deno.test('booking rejects a phone owned by staff or a shop with a stable contact error', async () => {
+  const handler=make({booking:async()=>{throw Error('23505 PHONE_IN_USE');}});
+  const response=await handler(request({action:'slots',...selection}));
+  assert(response.status===409);assert(JSON.stringify(await response.json())===JSON.stringify({error:'PHONE_IN_USE'}));
+});
+
 Deno.test('public statistics project only nonnegative counts and keep origin protection', async () => {
   const handler = make({ statistics: async () => ({shops:0,monthlyBookings:18,barbers:9,privateRows:['not public']}) });
   const response = await handler(request({action:'statistics'}));
