@@ -1412,6 +1412,15 @@
       "details": "Continue to your details"
     },
     "cityLabel": "City",
+    "otherLocations": "Other locations",
+    "governorates": {
+      "Al Asimah (Capital)": "Al Asimah (Capital)",
+      "Hawalli": "Hawalli",
+      "Farwaniya": "Farwaniya",
+      "Mubarak Al-Kabeer": "Mubarak Al-Kabeer",
+      "Ahmadi": "Ahmadi",
+      "Jahra": "Jahra"
+    },
     "cityPlaceholder": "Select your city",
     "cityHint": "Choose a city to browse and search its shops.",
     "noCities": "No cities are available for booking yet.",

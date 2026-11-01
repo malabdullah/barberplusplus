@@ -1412,6 +1412,15 @@
       "details": "المتابعة لإدخال بياناتك"
     },
     "cityLabel": "المدينة",
+    "otherLocations": "مناطق أخرى",
+    "governorates": {
+      "Al Asimah (Capital)": "العاصمة",
+      "Hawalli": "حولي",
+      "Farwaniya": "الفروانية",
+      "Mubarak Al-Kabeer": "مبارك الكبير",
+      "Ahmadi": "الأحمدي",
+      "Jahra": "الجهراء"
+    },
     "cityPlaceholder": "اختر مدينتك",
     "cityHint": "اختر مدينة لتصفح صالوناتها والبحث فيها.",
     "noCities": "لا توجد مدن متاحة للحجز حالياً.",

@@ -43,6 +43,14 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const click = name => fireEvent.click(screen.getAllByRole('button', { name, exact: true }).find(button => !button.disabled));
 const heading = () => screen.getByRole('heading', { level: 1 });
 const changeCity = city => fireEvent.change(screen.getByLabelText('City'), { target: { value: city } });
+
+it('places available cities inside translated governorate headings', async () => {
+  expect(screen.getByRole('group', { name: 'Al Asimah (Capital)' })).toContainElement(screen.getByRole('option', { name: 'Kuwait City' }));
+  expect(screen.getByRole('group', { name: 'Hawalli' })).toContainElement(screen.getByRole('option', { name: 'Salmiya' }));
+  await i18n.changeLanguage('ar');
+  await waitFor(() => expect(screen.getByRole('group', { name: 'العاصمة' })).toContainElement(screen.getByRole('option', { name: 'مدينة الكويت' })));
+  expect(screen.getByRole('group', { name: 'حولي' })).toContainElement(screen.getByRole('option', { name: 'السالمية' }));
+});
 async function chooseAppointment() {
   changeCity('Kuwait City');
   expect(screen.queryByText('Salmiya shop')).not.toBeInTheDocument();

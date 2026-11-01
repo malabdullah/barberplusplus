@@ -33,6 +33,9 @@ export const customerBookingService = {
         cityAr: branch.city?.trim() ? '' : branch.areas?.name_ar || '',
         address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url,
         area: branch.areas?.name_en || '', areaAr: branch.areas?.name_ar || '',
+        governorateId: (branch.governorates || branch.areas?.governorates)?.id ?? null,
+        governorateName: (branch.governorates || branch.areas?.governorates)?.name_en || '',
+        governorateNameAr: (branch.governorates || branch.areas?.governorates)?.name_ar || '',
       })),
       barbers: result.barbers.map(barber => ({
         id: barber.id, branchId: barber.branch_id, name: barber.name, nameAr: barber.name_ar,

@@ -30,6 +30,10 @@
 .cb-search, .cb-select-wrap { display: flex; align-items: center; min-height: 50px; border: 1px solid var(--booking-control); border-radius: 8px; gap: 12px; padding-inline: 14px; background: var(--booking-surface); }
 .cb-search input, .cb-select-wrap select { width: 100%; min-height: 48px; padding: 10px 0; color: var(--booking-text); background: transparent; border: 0; outline: none; min-width: 0; }
 .cb-select-wrap select { appearance: none; }
+.cb-select-wrap select:focus-visible { outline: none; }
+#booking-city, #booking-city option, #booking-city optgroup { background-color: var(--booking-surface); color: var(--booking-text); color-scheme: inherit; }
+#booking-city optgroup { font-weight: 600; font-style: normal; }
+#booking-city option { font-weight: 400; }
 .cb-search:focus-within, .cb-select-wrap:focus-within { outline: 2px solid var(--booking-link); outline-offset: 3px; }
 .cb-search svg, .cb-select-wrap svg { color: var(--booking-muted); flex-shrink: 0; }
 .customer-booking input::placeholder { color: var(--booking-muted); opacity: 1; }
