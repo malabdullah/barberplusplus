@@ -2,16 +2,18 @@ import { test, expect } from './fixtures.js';
 import fs from 'node:fs';
 const accountPath = new URL('../../../.cloud-test/rebook-test-account.json', import.meta.url);
 const engine = process.env.CLOUD_TEST_BROWSER || 'chromium';
-test.use({ browserName: engine, viewport: { width: 390, height: 844 } });
-test.skip(!fs.existsSync(accountPath), 'Requires the isolated synthetic rebooking account and its owned history fixtures.');
 const account = fs.existsSync(accountPath) ? JSON.parse(fs.readFileSync(accountPath)) : {};
+test.use({ browserName: engine, viewport: { width: 390, height: 844 }, ...(account.storageState ? { storageState: account.storageState } : {}) });
+test.skip(!fs.existsSync(accountPath), 'Requires the isolated synthetic rebooking account and its owned history fixtures.');
 
 for (const language of ['en', 'ar']) for (const appearance of ['light', 'dark']) {
   test(`past appointments rebook with editable selections: ${engine} ${language} ${appearance}`, async ({ page }) => {
-    await page.goto('/customer/sign-in');
-    await page.locator('#customer-auth-email').fill(account.email);
-    await page.locator('#password').fill(account.password);
-    await page.locator('.ca-main').getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.goto(account.storageState ? '/customer/account' : '/customer/sign-in');
+    if (!account.storageState) {
+      await page.locator('#customer-auth-email').fill(account.email);
+      await page.locator('#password').fill(account.password);
+      await page.locator('.ca-main').getByRole('button', { name: 'Sign in', exact: true }).click();
+    }
     await expect(page).toHaveURL(/\/customer\/account$/);
     await page.locator('.preferences-selector').first().locator('button').first().click();
     await page.getByRole('button', { name: language === 'en' ? 'English' : 'العربية', exact: true }).click();
@@ -37,7 +39,14 @@ for (const language of ['en', 'ar']) for (const appearance of ['light', 'dark'])
     await expect(page.locator('#choose-time input[name="time"]:checked')).toHaveCount(0);
     await expect(page.locator('#booking-next')).toBeDisabled();
     await page.screenshot({ path: `.cloud-test/rebook-${engine}-${language}-${appearance}-services.png`, fullPage: true });
-    await page.locator('#choose-services input[type="checkbox"]').first().check();
+    const service = page.locator('#choose-services label.cb-service').first();
+    await service.click();
+    await expect(service.locator('input')).toBeChecked();
+    await service.locator('input').focus();
+    await service.locator('input').press('Space');
+    await expect(service.locator('input')).not.toBeChecked();
+    await service.locator('input').press('Space');
+    await expect(service.locator('input')).toBeChecked();
     await page.locator('#booking-next').click();
     await expect(page.locator('#choose-time')).toHaveClass(/is-open/);
     await page.locator('#booking-date').fill(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10));
@@ -45,11 +54,11 @@ for (const language of ['en', 'ar']) for (const appearance of ['light', 'dark'])
     await page.locator('#choose-barber .cb-section-heading button').click();
     const selectedBarber = page.locator('input[name="barber"]:checked');
     await expect(selectedBarber).toHaveCount(1);
-    await page.locator('input[name="barber"]:not(:checked)').first().check();
+    await page.locator('#choose-barber label.cb-option').filter({ has: page.locator('input:not(:checked)') }).first().click();
     await expect(page.locator('#choose-services input:checked')).toHaveCount(0);
     await page.locator('#choose-shop .cb-section-heading button').click();
     await expect(page.locator('#choose-shop')).toHaveClass(/is-open/);
-    await page.locator('input[name="branch"]:not(:checked)').first().check();
+    await page.locator('#choose-shop label.cb-option').filter({ has: page.locator('input:not(:checked)') }).first().click();
     await expect(page.locator('#choose-barber')).toHaveClass(/is-open/);
     await expect(page.locator('input[name="barber"]:checked')).toHaveCount(0);
     await page.locator('#choose-city .cb-section-heading button').click();
