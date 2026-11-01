@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures.js';
 import fs from 'node:fs';
 import path from 'node:path';
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json',import.meta.url)));
@@ -76,6 +76,12 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     })).toBe(true);
     await page.screenshot({path:screenshot(`brand-${role}-mobile-dark`)});
     await page.keyboard.press('Escape');
+    await page.getByRole('link',{name:'Visit website',exact:true}).click();
+    await expect(page).toHaveURL(/workers\.dev\/$/);
+    await expect(page.locator('#hero-title')).toBeVisible();
+    await page.getByRole('button',{name:'Open menu',exact:true}).click();
+    await page.locator('#public-mobile-links').getByRole('link',{name:'Open workspace',exact:true}).click();
+    await expect(page).toHaveURL(new RegExp(home+'(?:/|$)'));
   });
 }
 

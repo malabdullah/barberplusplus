@@ -639,3 +639,7 @@ button.topbar-notification-item:hover {
   align-items: center;
   gap: var(--space-sm);
 }
+
+.topbar-website-book { color: var(--text-secondary); font-size: 14px; white-space: nowrap; text-decoration: none; min-height: 44px; display: flex; align-items: center; }
+.topbar-website-book:hover { color: var(--accent-primary); }
+@media (max-width: 1100px) { .topbar-website-book { display: none; } }

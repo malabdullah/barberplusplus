@@ -1,18 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import LandingHeader from '../components/Landing/LandingHeader';
 import HeroSection from '../components/Landing/HeroSection';
 import FeaturesSection from '../components/Landing/FeaturesSection';
 import HowItWorksSection from '../components/Landing/HowItWorksSection';
 import BenefitsSection from '../components/Landing/BenefitsSection';
 import CTASection from '../components/Landing/CTASection';
-import LandingFooter from '../components/Landing/LandingFooter';
 import { Scissors } from 'lucide-react';
 import './Landing.css';
 
 export default function Landing() {
-  const { isAuthenticated, userRole, loading } = useApp();
   const observerRef = useRef(null);
 
   // Scroll-based animations using Intersection Observer
@@ -38,31 +33,6 @@ export default function Landing() {
     };
   }, []);
 
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="landing-loading">
-        <div className="landing-loading-icon">
-          <Scissors size={32} strokeWidth={1.5} />
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect authenticated users to their dashboard
-  if (isAuthenticated) {
-    const routes = {
-      admin: '/admin',
-      manager: '/',
-      barber: '/barber'
-    };
-    // For manager, we need to go to actual dashboard, not back here
-    if (userRole === 'manager') {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <Navigate to={routes[userRole] || '/dashboard'} replace />;
-  }
-
   return (
     <div className="landing-page">
       {/* Background Elements */}
@@ -87,25 +57,17 @@ export default function Landing() {
         <Scissors size={36} strokeWidth={1} />
       </div>
 
-      {/* Skip to main content for accessibility */}
-      <a href="#main-content" className="skip-link">
-        Skip to main content
-      </a>
-
-      {/* Header */}
-      <LandingHeader />
-
       {/* Main Content */}
       <main id="main-content">
         <HeroSection />
+        <div id="for-shops">
         <FeaturesSection />
         <HowItWorksSection />
         <BenefitsSection />
         <CTASection />
+        </div>
       </main>
 
-      {/* Footer */}
-      <LandingFooter />
     </div>
   );
 }

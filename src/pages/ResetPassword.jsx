@@ -5,9 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { validatePassword } from '../utils/validation';
-import LanguageSelector from '../components/UI/LanguageSelector';
-import ThemeSelector from '../components/UI/ThemeSelector';
 import './Login.css';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 
 export default function ResetPassword() {
   const { t } = useTranslation();
@@ -18,6 +17,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  usePublicNavigationBusy(isLoading);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -118,10 +118,6 @@ export default function ResetPassword() {
           <div className="login-bg-pattern" />
         </div>
         <div className="login-container animate-scale-in">
-          <div className="auth-preferences">
-            <LanguageSelector />
-            <ThemeSelector />
-          </div>
           <div className="login-logo">
             <div className="login-logo-icon" style={{ background: 'var(--status-error)', color: 'white' }}>
               <AlertCircle size={28} strokeWidth={2} />
@@ -177,11 +173,6 @@ export default function ResetPassword() {
 
       {/* Container */}
       <div className="login-container animate-scale-in">
-        {/* Preferences Selectors */}
-        <div className="auth-preferences">
-          <LanguageSelector />
-          <ThemeSelector />
-        </div>
 
         {/* Logo */}
         <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>

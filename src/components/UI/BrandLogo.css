@@ -11,7 +11,7 @@
   line-height: 1;
 }
 
-.brand-logo-artwork { display: block; }
+.brand-logo-artwork, .brand-logo-artwork picture { display: block; }
 .brand-logo-artwork img { display: block; width: 100%; height: auto; }
 .brand-logo .brand-logo-light { display: none; }
 .brand-logo .brand-logo-dark { display: block; }

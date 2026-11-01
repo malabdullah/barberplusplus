@@ -7,7 +7,7 @@ import { customerAuthService } from '../services/customerAuth.service';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { validatePhoneNumber } from '../utils/validation';
 import { shopWording } from '../utils/customerTerminology';
-import CustomerHeader from '../components/Customer/CustomerHeader';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './CustomerBooking.css';
 import './CustomerAuth.css';
 export default function CustomerAccount() {
@@ -22,6 +22,7 @@ export default function CustomerAccount() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', countryCode: '+965', phone: '' });
   const [busy, setBusy] = useState(false);
+  usePublicNavigationBusy(busy);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const arabic = i18n.language.startsWith('ar');
@@ -41,7 +42,7 @@ export default function CustomerAccount() {
   };
   const signOut = async () => { setBusy(true); setError(''); try { await logout(); navigate('/book', { replace: true }); } catch { setError(tr('errors.UNAVAILABLE')); } finally { setBusy(false); } };
   if (!loading && !customer) return <Navigate to="/customer/sign-in" state={{ returnTo: '/customer/account' }} replace />;
-  return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><CustomerHeader busy={busy} /><main className="ca-main ca-account">
+  return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account">
     {loading ? <p role="status"><Loader2 className="cb-spinner" />{tr('loading')}</p> : <>
       <div className="ca-account-heading"><h1>{tr('myAccount')}</h1><Link className="cb-primary" to="/book">{tr('bookNow')}</Link></div>
       {error && <p className="cb-alert" role="alert">{error}</p>}{saved && <p role="status">{tr(saved === 'email' ? 'email.changeSent' : 'profileSaved')}</p>}
@@ -49,7 +50,7 @@ export default function CustomerAccount() {
         <dl><div><dt>{tr('name')}</dt><dd>{customer.name}</dd></div><div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div><div><dt>{tr('email.label')}</dt><dd>{customer.email || tr('notProvided')}</dd></div></dl>
         <div className="ca-account-actions"><button type="button" className="cb-text-button" onClick={() => { setForm({ name: customer.name, email: customer.email || '', countryCode: customer.countryCode || '+965', phone: customer.phone || '' }); setEditing(true); setSaved(false); }}>{tr('editDetails')}</button><Link className="cb-text-button" to="/customer/forgot-password">{tr('changePassword')}</Link><button type="button" className="cb-text-button" disabled={busy} onClick={signOut}>{tr('signOut')}</button></div>
       </>}
-      <h2>{tr('myAppointments')}</h2>
+      <h2 id="appointments">{tr('myAppointments')}</h2>
       {listLoading ? <p role="status">{tr('loading')}</p> : listError ? <div className="cb-alert" role="alert">{tr('bookingsError')}<button type="button" onClick={() => setRetry(value => value + 1)}>{tr('retry')}</button></div> : !bookings.length ? <p className="ca-empty">{tr('noAppointments')}</p> : bookings.map(booking => <article className="ca-booking-row" key={booking.id}>
         <h3>{shopWording(arabic && booking.shop_name_ar || booking.shop_name)}</h3><p>{arabic && booking.barber_name_ar || booking.barber_name} · {(booking.services || []).map(item => arabic && item.name_ar || item.name).join(arabic ? '، ' : ', ')}</p>
         <p>{new Intl.DateTimeFormat(arabic ? 'ar-KW' : 'en-KW', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuwait' }).format(new Date(`${booking.date}T${booking.time}:00+03:00`))}</p><p>{new Intl.NumberFormat(arabic ? 'ar-KW' : 'en-KW', { style: 'currency', currency: 'KWD' }).format(booking.price)}</p><span className="ca-status">{t(`bookings.status.${booking.status === 'no_show' ? 'noShow' : booking.status}`)}</span>

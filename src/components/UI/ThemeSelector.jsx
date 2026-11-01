@@ -9,7 +9,7 @@ const THEMES = [
   { value: 'system', labelKey: 'settings.themeSystem', Icon: Monitor },
 ];
 
-export default function ThemeSelector({ onDropdownToggle }) {
+export default function ThemeSelector({ onDropdownToggle, disabled = false }) {
   const { t } = useTranslation();
   const { theme, setTheme } = useApp();
   const [isOpen, setIsOpen] = useState(false);
@@ -25,8 +25,10 @@ export default function ThemeSelector({ onDropdownToggle }) {
         setIsOpen(false);
       }
     }
+    const closeOnEscape = event => { if (event.key === 'Escape') { setIsOpen(false); if (ref.current?.contains(document.activeElement)) ref.current.querySelector('button')?.focus(); } };
+    document.addEventListener('keydown', closeOnEscape);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('keydown', closeOnEscape); };
   }, []);
 
   const handleToggle = () => {
@@ -60,6 +62,10 @@ export default function ThemeSelector({ onDropdownToggle }) {
     <div className="preferences-selector" ref={ref}>
       <button
         className="topbar-icon-btn"
+        type="button"
+        disabled={disabled}
+        aria-expanded={isOpen}
+        onKeyDown={event => { if (event.key === 'Escape') setIsOpen(false); }}
         onClick={handleToggle}
         aria-label={t('preferences.selectTheme')}
         title={t('preferences.selectTheme')}
@@ -67,7 +73,7 @@ export default function ThemeSelector({ onDropdownToggle }) {
         <CurrentIcon size={20} strokeWidth={1.5} />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="topbar-dropdown preferences-dropdown animate-scale-in">
           <div className="topbar-dropdown-header">
             <span>{t('settings.theme')}</span>

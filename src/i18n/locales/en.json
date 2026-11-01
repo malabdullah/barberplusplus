@@ -1661,5 +1661,37 @@
       }
     ],
     "contact": "Contact Barber++"
+  },
+  "publicNav": {
+    "shops": "Shops",
+    "customers": "Customers",
+    "pageTitle": "Book your next cut. Manage your shop.",
+    "home": "Home",
+    "book": "Book appointment",
+    "forShops": "For shops",
+    "forCustomers": "For customers",
+    "signIn": "Sign in",
+    "customerSignIn": "Customer sign in",
+    "teamSignIn": "Team sign in",
+    "registerShop": "Register your shop",
+    "myAccount": "My account",
+    "myAppointments": "My appointments",
+    "workspace": "Open workspace",
+    "navigation": "Main navigation",
+    "accounts": "Account options",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skip": "Skip to content",
+    "saving": "Saving. Navigation will be available when this finishes.",
+    "help": "Help",
+    "footerMessage": "Your next appointment. Your shop’s everyday work. One place.",
+    "website": "Visit website",
+    "hero": {
+      "badge": "For customers and shop teams",
+      "titleStart": "Your next great cut.",
+      "titleAccent": "Your shop, connected.",
+      "subtitle": "Book your next appointment, or bring your shop’s bookings, barbers and daily work together with Barber++.",
+      "shopCta": "I run a shop"
+    }
   }
 }

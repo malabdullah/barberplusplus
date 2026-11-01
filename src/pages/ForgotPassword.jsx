@@ -4,10 +4,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, ArrowRight, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import { authService } from '../services';
-import LanguageSelector from '../components/UI/LanguageSelector';
-import ThemeSelector from '../components/UI/ThemeSelector';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
+import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './ForgotPassword.css';
 
 export default function ForgotPassword() {
@@ -15,6 +14,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  usePublicNavigationBusy(isLoading);
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState(null); // 'success' | 'error' | null
@@ -98,11 +98,6 @@ export default function ForgotPassword() {
 
       {/* Forgot Password Container */}
       <div className="login-container animate-scale-in">
-        {/* Preferences Selectors */}
-        <div className="auth-preferences">
-          <LanguageSelector />
-          <ThemeSelector />
-        </div>
 
         {/* Logo */}
         <Link to="/" className="login-logo" aria-label={t('common.brandHome')}>

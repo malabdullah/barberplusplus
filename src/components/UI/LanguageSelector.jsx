@@ -8,7 +8,7 @@ const LANGUAGES = [
   { code: 'ar', label: 'العربية' },
 ];
 
-export default function LanguageSelector({ onDropdownToggle }) {
+export default function LanguageSelector({ onDropdownToggle, disabled = false }) {
   const { t } = useTranslation();
   const { language, setLanguage } = useApp();
   const [isOpen, setIsOpen] = useState(false);
@@ -21,8 +21,10 @@ export default function LanguageSelector({ onDropdownToggle }) {
         setIsOpen(false);
       }
     }
+    const closeOnEscape = event => { if (event.key === 'Escape') { setIsOpen(false); if (ref.current?.contains(document.activeElement)) ref.current.querySelector('button')?.focus(); } };
+    document.addEventListener('keydown', closeOnEscape);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('keydown', closeOnEscape); };
   }, []);
 
   const handleToggle = () => {
@@ -56,6 +58,10 @@ export default function LanguageSelector({ onDropdownToggle }) {
     <div className="preferences-selector" ref={ref}>
       <button
         className="topbar-icon-btn"
+        type="button"
+        disabled={disabled}
+        aria-expanded={isOpen}
+        onKeyDown={event => { if (event.key === 'Escape') setIsOpen(false); }}
         onClick={handleToggle}
         aria-label={t('preferences.selectLanguage')}
         title={t('preferences.selectLanguage')}
@@ -63,7 +69,7 @@ export default function LanguageSelector({ onDropdownToggle }) {
         <Globe size={20} strokeWidth={1.5} />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="topbar-dropdown preferences-dropdown animate-scale-in">
           <div className="topbar-dropdown-header">
             <span>{t('settings.language')}</span>

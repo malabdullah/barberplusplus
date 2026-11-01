@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import CustomerHeader from '../components/Customer/CustomerHeader';
 import './CustomerBooking.css';
 import './CustomerAuth.css';
 import './CustomerPrivacy.css';
@@ -11,7 +10,7 @@ export default function CustomerPrivacy() {
   const sections = t('customerPrivacy.sections', { returnObjects: true });
   useEffect(() => { document.title = `${t('customerPrivacy.title')} | Barber++`; }, [t, i18n.language]);
   return <div className="customer-booking ca-page" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
-    <CustomerHeader />
+
     <main className="ca-main cp-main">
       <Link className="cb-text-button" to="/book">{t('customerPrivacy.back')}</Link>
       <h1>{t('customerPrivacy.title')}</h1>

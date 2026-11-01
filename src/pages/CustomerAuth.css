@@ -4,7 +4,7 @@
 .ca-main h1 { font-size: 32px; line-height: 1.3; margin: 8px 0 12px; }
 .ca-main .cb-intro { font-size: 16px; }
 .ca-main a { color: var(--booking-link); }
-.ca-main .cb-primary { color: var(--booking-text); }
+.ca-main .cb-primary { color: #151A20; }
 .ca-main .cb-field-label { margin-top: 20px; }
 .ca-password { position: relative; }
 .ca-password input { padding-inline-end: 54px; }

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import path from 'node:path';
 
 for (const width of [1440, 390]) {
@@ -20,13 +20,36 @@ for (const width of [1440, 390]) {
           const bannerBox = await page.locator('.environment-banner').boundingBox();
           expect(logoBox.y).toBeGreaterThanOrEqual(bannerBox.y + bannerBox.height);
           expect(await logo.evaluate(el => getComputedStyle(el).direction)).toBe('ltr');
-          const treatment = name === 'booking' || name === 'customer' ? 'light' : theme;
+          const treatment = theme;
+          const artwork = logo.locator(`.brand-logo-${treatment}`);
+          await expect.poll(() => artwork.evaluate(img => img.currentSrc)).toContain(width <= 600 ? `/brand/barber-symbol-${theme}.svg` : `/brand/barber-horizontal-${theme}.svg`);
+          if (width <= 600) {
+            const symbol = await artwork.boundingBox();
+            expect(symbol.width).toBeLessThanOrEqual(44);
+            expect(symbol.height / symbol.width).toBeCloseTo(304 / 260, 1);
+          }
           await expect(logo.locator(`.brand-logo-${treatment}`)).toBeVisible();
           await expect(logo.locator(`.brand-logo-${treatment === 'light' ? 'dark' : 'light'}`)).toBeHidden();
           await expect.poll(() => logo.locator(`.brand-logo-${treatment}`).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+          if (name === 'landing' && width === 390) {
+            await expect.poll(() => page.locator('.hero-cta .hero-btn-primary').evaluate(el => {
+              const box = el.getBoundingClientRect();
+              return box.top >= document.querySelector('.public-header').getBoundingClientRect().bottom && box.bottom <= innerHeight;
+            }), { message: 'Booking is immediately reachable in the mobile homepage viewport' }).toBe(true);
+          }
           if (name === 'booking') await expect(page.locator('#booking-city')).toBeVisible();
-          if (name === 'customer') await expect(page.locator('#customer-auth-email')).toBeVisible();
+          if (name === 'booking' || name === 'customer') {
+            expect(await page.locator('.customer-booking').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(await page.locator('.public-site').evaluate(el => getComputedStyle(el).backgroundColor));
+          }
+          if (name === 'customer') {
+            await expect(page.locator('#customer-auth-email')).toBeVisible();
+            await expect(page.locator('.ca-social-apple')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+            await expect(page.locator('.ca-social-apple')).toHaveCSS('color', 'rgb(255, 255, 255)');
+            await expect(page.locator('.ca-social-google')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+            await expect(page.locator('.ca-social-google')).toBeEnabled();
+            await expect(page.locator('.ca-social-apple')).toBeEnabled();
+          }
           await page.screenshot({ path: path.resolve('.cloud-test', `brand-${name}-${width}-${theme}-${language}.png`) });
         }
       });
