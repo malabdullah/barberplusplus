@@ -50,7 +50,7 @@ export const teamAuthService = {
     try { pending = JSON.parse(sessionStorage.getItem(pendingKey)); } catch { /* Reject incomplete transactions. */ }
     window.history.replaceState(null, '', callback.pathname);
     try {
-      if (callback.searchParams.has('error') || !callback.searchParams.get('code') || !providers.includes(pending?.provider) || !Number.isFinite(pending?.startedAt) || Date.now() - pending.startedAt > 15 * 60000 || pending.startedAt > Date.now()) throw new Error('SOCIAL_FAILED');
+      if (callback.searchParams.has('error') || !callback.searchParams.get('code') || !providers.includes(pending?.provider) || !Number.isFinite(pending?.startedAt) || Date.now() - pending.startedAt > 5 * 60000 || pending.startedAt > Date.now()) throw new Error('SOCIAL_FAILED');
       const result = await teamOAuthSupabase.auth.exchangeCodeForSession(callback.searchParams.get('code'));
       if (result.error || !result.data.session) throw new Error('SOCIAL_FAILED');
       const { data, error } = await teamOAuthSupabase.auth.getUser();
@@ -66,6 +66,9 @@ export const teamAuthService = {
       const accepted = await supabase.auth.setSession(result.data.session);
       if (accepted.error) throw new Error('SOCIAL_FAILED');
       return pending.linking ? '/dashboard/settings?connected=1' : '/dashboard';
+    } catch (failure) {
+      failure.linking = pending?.linking === true;
+      throw failure;
     } finally { await clearTemporarySession(); }
   },
 };

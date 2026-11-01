@@ -1548,7 +1548,10 @@
     "connectTitle": "Google & Apple sign-in",
     "connectDescription": "Connect a sign-in method to your existing manager account.",
     "connectIntro": "Continue with Google or Apple below to connect it. You’ll keep the same shops and access. An identity already used by another account cannot be connected here.",
-    "connected": "Connected: {{providers}}"
+    "connected": "Connected: {{providers}}",
+    "connectionTitle": "Google or Apple isn’t connected yet",
+    "connectionFailed": "The connection expired or was not completed. Return to manager Settings and choose Google or Apple again to connect it to your existing manager account.",
+    "backSettings": "Back to manager Settings"
   },
   "customerAuth": {
     "signIn": "Sign in",

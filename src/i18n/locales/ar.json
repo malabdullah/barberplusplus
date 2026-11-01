@@ -1560,7 +1560,10 @@
     "connectTitle": "تسجيل الدخول عبر Google وApple",
     "connectDescription": "اربط طريقة دخول بحساب المدير الحالي.",
     "connectIntro": "تابع باستخدام Google أو Apple أدناه لربط الحساب. ستحتفظ بصالوناتك وصلاحياتك نفسها. لا يمكن ربط هوية مستخدمة في حساب آخر هنا.",
-    "connected": "الحسابات المرتبطة: {{providers}}"
+    "connected": "الحسابات المرتبطة: {{providers}}",
+    "connectionTitle": "لم يتم ربط Google أو Apple بعد",
+    "connectionFailed": "انتهت صلاحية عملية الربط أو لم تكتمل. عُد إلى إعدادات المدير واختر Google أو Apple مجددًا لربطه بحساب المدير الحالي.",
+    "backSettings": "العودة إلى إعدادات المدير"
   },
   "customerAuth": {
     "signIn": "تسجيل الدخول",

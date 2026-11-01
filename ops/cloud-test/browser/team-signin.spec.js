@@ -48,3 +48,12 @@ test('manager settings expose provider connections without affecting another sho
   await expect(page.locator('.ca-manager-social')).toContainText('same shops and access');
   await page.screenshot({ path: `.cloud-test/manager-provider-connections-${engine}.png`, fullPage: true });
 });
+
+test('an expired manager connection returns to Settings instead of ordinary sign-in', async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('barber-team-oauth-pending', JSON.stringify({ provider: 'google', linking: true, managerId: '00000000-0000-4000-8000-000000000002', startedAt: Date.now() - 6 * 60000 })));
+  await page.goto('/team/auth-callback?error=access_denied&error_code=bad_oauth_state');
+  await expect(page.locator('.ca-main [role="alert"]')).toContainText('connection expired or was not completed');
+  await expect(page.locator('.ca-main').getByRole('link', { name: 'Back to manager Settings', exact: true })).toHaveAttribute('href', '/dashboard/settings');
+  await expect(page.locator('.ca-main').getByRole('link', { name: 'Back to team sign in', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: '.cloud-test/manager-link-expired.png' });
+});
