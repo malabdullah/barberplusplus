@@ -76,7 +76,13 @@
 .cb-empty h2 { font: 600 20px/1.4 var(--font-body); color: var(--booking-text); margin: 0 0 8px; }
 .cb-section-title { font-family: inherit; font-size: 20px; color: var(--booking-text); margin: 28px 0 16px; }
 .cb-input { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--booking-control); border-radius: 8px; background: var(--booking-surface); color: var(--booking-text); resize: vertical; }
-.cb-date { max-width: 400px; }
+/* iOS adds date-control padding outside width: 100% (WebKit bug 301648).
+   Keep decoration on the wrapper so the native input can shrink without padding. */
+.cb-date-field { display: flex; align-items: center; width: 100%; max-width: 400px; min-width: 0; min-height: 50px; padding: 12px 14px; border: 1px solid var(--booking-control); border-radius: 8px; background: var(--booking-surface); }
+.cb-date-field:focus-within { outline: 2px solid var(--booking-link); outline-offset: 3px; }
+.cb-date { width: 100%; max-width: 100%; min-width: 0; min-height: 24px; padding: 0; border: 0; border-radius: 0; background: transparent; appearance: none; -webkit-appearance: none; text-align: start; resize: none; }
+.cb-date:focus-visible { outline: none; }
+.cb-date::-webkit-date-and-time-value { min-width: 0; text-align: inherit; }
 .cb-time-options { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .cb-time-options label { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; min-height: 48px; border: 1px solid var(--booking-control); border-radius: 8px; padding: 10px 8px; cursor: pointer; }
 .cb-time-options label.selected { background: var(--booking-selection); border-color: var(--booking-link); }
@@ -173,7 +179,7 @@
   .cb-appointment-section .cb-option { min-height: 88px; }
 }
 .cb-appointment-section [hidden] { display: none !important; }
-.cb-section-pending { margin: 0; color: var(--booking-muted); font-size: 14px; }
+.cb-appointment-section.is-pending .cb-section-heading { margin-bottom: 0; }
 .cb-appointment-section.is-pending .cb-section-heading h2 { color: var(--booking-muted); }
 .cb-section-heading h2:focus { outline: none; }
 .cb-progress { color: var(--booking-muted); font-size: 14px; margin-bottom: 24px; }
