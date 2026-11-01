@@ -1652,7 +1652,17 @@
       "requestConfirmation": "Verify email or request a new code"
     },
     "backToSignIn": "Back to sign in",
-    "customerAccount": "Customer account"
+    "customerAccount": "Customer account",
+    "account": {
+      "intro": "Your details and appointments, all in one place.",
+      "profileTitle": "Profile details",
+      "emailHint": "A new email address must be confirmed before it replaces your current one.",
+      "optional": "(optional)",
+      "appointmentsIntro": "Review your bookings and appointment details.",
+      "noAppointmentsTitle": "Your next appointment starts here",
+      "findShop": "Find a shop",
+      "timezone": "All appointment times are in Kuwait time (UTC+3)."
+    }
   },
   "customerPrivacy": {
     "title": "Privacy policy",

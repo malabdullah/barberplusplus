@@ -1664,7 +1664,17 @@
       "requestConfirmation": "التحقّق من البريد أو طلب رمز جديد"
     },
     "backToSignIn": "العودة إلى تسجيل الدخول",
-    "customerAccount": "حساب العميل"
+    "customerAccount": "حساب العميل",
+    "account": {
+      "intro": "بياناتك ومواعيدك، في مكان واحد.",
+      "profileTitle": "بيانات الملف الشخصي",
+      "emailHint": "يجب تأكيد البريد الإلكتروني الجديد قبل استبدال بريدك الحالي.",
+      "optional": "(اختياري)",
+      "appointmentsIntro": "راجع حجوزاتك وتفاصيل مواعيدك.",
+      "noAppointmentsTitle": "موعدك القادم يبدأ هنا",
+      "findShop": "ابحث عن صالون",
+      "timezone": "جميع المواعيد بتوقيت الكويت (UTC+3)."
+    }
   },
   "customerPrivacy": {
     "title": "سياسة الخصوصية",
