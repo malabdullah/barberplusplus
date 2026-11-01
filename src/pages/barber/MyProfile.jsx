@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { GCC_COUNTRIES } from '../../constants/countries';
+import { getErrorMessage } from '../../utils/errorMessages';
 import './MyProfile.css';
 
 export default function MyProfile() {
@@ -32,6 +33,7 @@ export default function MyProfile() {
   const [errors, setErrors] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [saveError, setSaveError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -109,6 +111,7 @@ export default function MyProfile() {
     e.preventDefault();
     if (validate() && !isSubmitting) {
       setIsSubmitting(true);
+      setSaveError('');
       try {
         await updateBarber(currentBarber.id, formData);
         setHasChanges(false);
@@ -116,6 +119,7 @@ export default function MyProfile() {
         setTimeout(() => setSaveStatus(null), 3000);
       } catch (error) {
         console.error('Error updating profile:', error);
+        setSaveError(getErrorMessage(error, t('common.error'), t));
       } finally {
         setIsSubmitting(false);
       }
@@ -156,6 +160,7 @@ export default function MyProfile() {
         </div>
       )}
 
+      {saveError && <p className="error-banner" role="alert">{saveError}</p>}
       <form className="profile-form" onSubmit={handleSubmit}>
         {/* Profile Picture & Info Card */}
         <div className="profile-card animate-fade-in-up stagger-1">

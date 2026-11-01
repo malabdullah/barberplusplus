@@ -72,6 +72,7 @@ export default function AgentEditBooking() {
       navigate('/agent/bookings');
     } catch (error) {
       console.error('Error updating booking:', error);
+      throw error;
     } finally {
       setSubmitting(false);
     }

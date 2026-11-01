@@ -41,7 +41,7 @@
 .cb-option.selected { background: var(--booking-selection); border-color: var(--booking-amber); border-radius: 8px; }
 .cb-option:hover:not(.selected) { background: var(--booking-subtle); }
 .cb-option:focus-within, .cb-time-options label:focus-within { outline: 2px solid var(--booking-link); outline-offset: 3px; z-index: 1; }
-.cb-option input, .cb-time-options input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.cb-option input, .cb-time-options input { position: absolute; inset-inline-start: 12px; inset-block-start: 50%; transform: translateY(-50%); margin: 0; opacity: 0; width: 1px; height: 1px; }
 .cb-image { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 72px; height: 72px; border-radius: 8px; background: var(--booking-surface); color: var(--booking-muted); overflow: hidden; border: 1px solid var(--booking-divider); }
 .cb-image img { display: block; height: 100%; width: 100%; object-fit: contain; padding: 3px; }
 .cb-avatar { border-radius: 50%; }

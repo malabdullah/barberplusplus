@@ -797,6 +797,8 @@
     "systemAlert": "System Alert"
   },
   "errors": {
+    "phoneInUse": "This phone number is already in use. Use a different number.",
+    "phoneRegistrationConflict": "Could not create the account. Check your details and use an unregistered phone number.",
     "somethingWrong": "Something went wrong",
     "tryAgain": "Please try again",
     "notFound": "Page not found",
@@ -1491,6 +1493,7 @@
     "barberNext": "Choose your barber next.",
     "entry": "Book an appointment",
     "errors": {
+      "PHONE_IN_USE": "This phone number is already in use. Use a different number.",
       "UNAVAILABLE": "We couldn't load or save this booking. Please try again.",
       "INVALID_DETAILS": "Check your name and mobile number.",
       "INVALID_CODE": "The code is incorrect or has expired. Try again or get a new code.",
@@ -1539,6 +1542,12 @@
       "cityFirst": "Choose a city to see its shops.",
       "barberFirst": "Choose a barber to see their services.",
       "timeFirst": "Choose a date and time to continue."
+    },
+    "rebooking": {
+      "title": "Book again",
+      "intro": "Choose your services and a new date and time. You can also change the city, shop or barber.",
+      "shopUnavailable": "This shop is no longer available for online booking. Choose a city and a new shop to continue.",
+      "barberUnavailable": "This barber is no longer available at the shop. Choose another barber or change your shop."
     },
     "onePage": {
       "title": "Book your appointment",
@@ -1619,6 +1628,7 @@
       "reset-password": "Enter your recovery code and choose a new password."
     },
     "errors": {
+      "PHONE_IN_USE": "This phone number is already in use. Use a different number.",
       "INVALID_PHONE": "Enter a valid mobile number for the selected country.",
       "INVALID_DETAILS": "Check your details and try again.",
       "WEAK_PASSWORD": "Use 8 or more characters with uppercase, lowercase, a number and a symbol (maximum 72 bytes).",
@@ -1683,6 +1693,12 @@
     "backToSignIn": "Back to sign in",
     "customerAccount": "Customer account",
     "account": {
+      "upcoming": "Upcoming",
+      "pastAppointments": "Past appointments",
+      "noPastTitle": "No past appointments yet",
+      "noPastDescription": "Your previous appointments will appear here.",
+      "bookAgain": "Book again",
+      "rebookError": "We couldn’t load the current shops and barbers. Try booking again.",
       "intro": "Your details and appointments, all in one place.",
       "profileTitle": "Profile details",
       "emailHint": "A new email address must be confirmed before it replaces your current one.",

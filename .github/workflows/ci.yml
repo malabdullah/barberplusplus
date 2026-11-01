@@ -42,6 +42,21 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e
       - run: npm run test:e2e:qa
+      - name: Report bounded synthetic setup diagnostics
+        if: failure()
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const path='.local-test/last-error.log';
+          const log=fs.existsSync(path)?fs.readFileSync(path,'utf8'):'';
+          const unique=items=>[...new Set(items)].slice(-15);
+          console.log(JSON.stringify({
+            sqlStates:unique([...log.matchAll(/SQLSTATE ([A-Z0-9]{5})/g)].map(m=>m[1])),
+            migrations:unique([...log.matchAll(/Applying migration ([0-9]{14}_[a-z0-9_]+\.sql)/g)].map(m=>m[1])),
+            phoneErrors:unique([...log.matchAll(/\b(?:PHONE_IN_USE|INVALID_PHONE|INVALID_BARBER_ACCOUNT)\b/g)].map(m=>m[0])),
+            objects:unique([...log.matchAll(/(?:column|relation|schema|table|constraint|function) "([a-z_][a-z0-9_]{0,80})"/g)].map(m=>m[1]))
+          }));
+          JS
       - if: always()
         run: npm run local:stop
   database:
@@ -67,6 +82,21 @@ jobs:
           node scripts/probe-customer-smtp.mjs
       - name: Verify persistence and explicit synthetic reset
         run: node scripts/verify-local-lifecycle.mjs
+      - name: Report bounded synthetic setup diagnostics
+        if: failure()
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const path='.local-test/last-error.log';
+          const log=fs.existsSync(path)?fs.readFileSync(path,'utf8'):'';
+          const unique=items=>[...new Set(items)].slice(-15);
+          console.log(JSON.stringify({
+            sqlStates:unique([...log.matchAll(/SQLSTATE ([A-Z0-9]{5})/g)].map(m=>m[1])),
+            migrations:unique([...log.matchAll(/Applying migration ([0-9]{14}_[a-z0-9_]+\.sql)/g)].map(m=>m[1])),
+            phoneErrors:unique([...log.matchAll(/\b(?:PHONE_IN_USE|INVALID_PHONE|INVALID_BARBER_ACCOUNT)\b/g)].map(m=>m[0])),
+            objects:unique([...log.matchAll(/(?:column|relation|schema|table|constraint|function) "([a-z_][a-z0-9_]{0,80})"/g)].map(m=>m[1]))
+          }));
+          JS
       - if: always()
         run: npm run local:stop
   dependency-review:
