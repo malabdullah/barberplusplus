@@ -32,7 +32,7 @@ fail closed rather than choosing an owner or changing real customer phone data.
 Do not combine a production data cleanup with an automatic release. Main and
 production remain unchanged while Test is reviewed.
 
-Validation on hosted Test includes 35 phone-policy pgTAP assertions, 17 email
+Validation on hosted Test includes 37 phone-policy pgTAP assertions, 17 email
 account/ownership regression assertions and API checks through ordinary synthetic
 customer, admin, manager and barber sessions. Concurrent authorized customer and
 barber inserts result in one successful claim and one PHONE_IN_USE rejection.
@@ -46,3 +46,8 @@ transaction. Its pre-release source now also contains explicit BEGIN/COMMIT so
 CLI replay retains the same atomic lock/backfill/trigger installation. This
 transaction wrapper changes no stored database definitions; the existing Test
 migration ledger is preserved.
+
+Eight hosted Chromium/WebKit checks passed across English/Arabic and light/dark
+themes at a mobile viewport. Duplicate profile saves return HTTP 409, keep edited
+values, focus the localized error and do not cause horizontal overflow. The
+invitation regression retains an existing barber phone while linking its login.

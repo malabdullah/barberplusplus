@@ -55,5 +55,8 @@ select lives_ok($$insert into public.customers(name,country_code,phone) values('
 update public.branches set phone='59998006' where id='aa990000-0000-4000-8000-000000000301';
 select lives_ok($$update auth.users set raw_user_meta_data=raw_user_meta_data||'{"phone":"+96559998004"}' where id='aa990000-0000-4000-8000-000000000102'$$,'a fully released number can be claimed elsewhere');
 select throws_ok($$insert into public.barbers(branch_id,name,country_code,phone) values('aa990000-0000-4000-8000-000000000301','Unlinked duplicate','+965','59998006')$$,'23505','PHONE_IN_USE','unlinked barber also cannot reuse shop contact');
+insert into auth.users(id,email,raw_app_meta_data) values('aa990000-0000-4000-8000-000000000106','phone-invited@customer.test','{"role":"barber"}');
+select lives_ok($$update public.barbers set user_id='aa990000-0000-4000-8000-000000000106' where id='aa990000-0000-4000-8000-000000000501'$$,'invitation links an existing unassigned barber without losing its phone claim');
+select is((select owner_key from private.phone_numbers where phone='+96559998003'),'user:aa990000-0000-4000-8000-000000000106','linked invitation transfers the number to the trusted barber identity');
 select * from finish();
 rollback;

@@ -18,7 +18,7 @@ const email = `invite-${id}@barber.test`;
 let invitedUser, invitedClient;
 const headers = { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${login.data.session.access_token}`, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' };
 try {
-  const created = await manager.from('barbers').insert({ id, branch_id: '10000000-0000-4000-8000-000000000001', name: 'Synthetic Invitation Probe', email, invite_status: 'pending' });
+  const created = await manager.from('barbers').insert({ id, branch_id: '10000000-0000-4000-8000-000000000001', name: 'Synthetic Invitation Probe', email, country_code: '+965', phone: '59998591', invite_status: 'pending' });
   assert.ifError(created.error);
   const payload = { barberId: id, email, name: 'Synthetic Invitation Probe', branchId: '10000000-0000-4000-8000-000000000001' };
   const denied = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/invite-barber`, { method: 'POST', headers, body: JSON.stringify({ ...payload, branchId: '10000000-0000-4000-8000-000000000002' }) });
@@ -27,6 +27,10 @@ try {
   assert.equal(response.status, 200, 'owned invitation executes');
   const result = await response.json(); invitedUser = result.userId;
   assert.match(invitedUser, /^[a-f0-9-]{36}$/);
+  const linked = await manager.from('barbers').select('user_id,phone').eq('id', id).single();
+  assert.ifError(linked.error);
+  assert.equal(linked.data.user_id, invitedUser);
+  assert.equal(linked.data.phone, '59998591', 'invitation preserves the existing barber phone claim');
   let message;
   for (let i = 0; i < 30; i++) {
     const inbox = await (await fetch('http://127.0.0.1:55324/api/v1/messages')).json();
