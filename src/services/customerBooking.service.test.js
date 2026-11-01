@@ -35,3 +35,13 @@ it('makes legacy shops searchable by their saved area when city is absent, witho
   expect(records[0].city).toBeNull();
   expect(records[1].city).toBe('  ');
 });
+
+it('preserves governorate labels and falls back to the saved area relation', async () => {
+  const governorate = { id: 2, name_en: 'Hawalli', name_ar: 'حولي' };
+  functionFetch.mockResolvedValue({ ok: true, json: async () => ({ branches: [
+    { id: 'direct', city: 'New district', governorates: governorate },
+    { id: 'area', city: null, areas: { name_en: 'New district', name_ar: 'منطقة جديدة', governorates: governorate } },
+  ], barbers: [], services: [] }) });
+  const { branches } = await customerBookingService.getCatalog();
+  for (const branch of branches) expect(branch).toMatchObject({ city: 'New district', governorateId: 2, governorateName: 'Hawalli', governorateNameAr: 'حولي' });
+});

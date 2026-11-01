@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, chooseBookingCity } from './fixtures.js';
 
 test.use({ isMobile: true, hasTouch: true });
 
@@ -14,7 +14,7 @@ for (const language of ['en', 'ar']) {
     await expect(page.locator('.cb-city-step > .cb-helper, .cb-section-pending')).toHaveCount(0);
     await expect(page.locator('[data-booking-section] > .cb-section-heading > h2')).toHaveCount(6);
     await page.screenshot({ path: `.cloud-test/booking-clean-${browserName}-${language}.png`, fullPage: true });
-    await page.locator('#booking-city').selectOption('Kuwait City');
+    await chooseBookingCity(page, 'Kuwait City');
     await page.locator('.cb-option:has(input[name="branch"][value="10000000-0000-4000-8000-000000000011"])').click();
     await page.locator('.cb-option:has(input[name="barber"])').first().click();
     await page.locator('#choose-services .cb-service').first().click();

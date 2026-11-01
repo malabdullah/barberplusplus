@@ -34,7 +34,7 @@ Deno.serve(createCustomerBookingHandler({
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services] = await Promise.all([
-      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,areas(name_en,name_ar)').eq('status', 'active').order('name'),
+      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').order('name'),
       admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
     ]);

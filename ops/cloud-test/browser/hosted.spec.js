@@ -1,4 +1,4 @@
-import {test,expect} from './fixtures.js';
+import {test,expect,chooseBookingCity} from './fixtures.js';
 import fs from 'node:fs';
 import path from 'node:path';
 async function chooseTheme(page, theme) {
@@ -87,7 +87,7 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
 
 test('guest completes a real hosted booking',async ({page})=>{
   await page.goto('/book');
-  await page.locator('#booking-city').selectOption('Kuwait City');
+  await chooseBookingCity(page, 'Kuwait City');
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
   await page.locator('input[name="barber"]').first().check();
   await page.locator('#choose-services input[type="checkbox"]').first().check();
