@@ -11,7 +11,7 @@ const screenshot = name => path.resolve('.cloud-test',`${name}.png`);
 for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent','/agent'],['barber','/barber']]) {
   test(`${role}: hosted login, workspace, mobile Arabic and theme`, async ({page}) => {
     await page.goto('/login');
-    await page.getByLabel('Email',{exact:true}).fill(`${role}@barber.test`);
+    await page.getByLabel('Email address',{exact:true}).fill(`${role}@barber.test`);
     await page.getByLabel('Password',{exact:true}).fill(state.staffPassword);
     const settingsLoaded = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings?') && response.status() === 200);
     await page.locator('button[type="submit"]').click();

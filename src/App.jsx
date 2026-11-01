@@ -57,6 +57,7 @@ import { customerFeaturesEnabled } from './lib/runtimeConfig';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
 const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerification'));
+const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
 const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
 const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
@@ -148,6 +149,7 @@ function AppRoutes() {
         element={<Landing />}
       />
 
+      <Route path="/team/auth-callback" element={<Suspense fallback={null}><TeamAuthCallback /></Suspense>} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />}

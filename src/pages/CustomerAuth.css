@@ -85,3 +85,8 @@
   .ca-auth .ca-main { padding-inline: 16px; }
   .ca-panel { padding-inline: 16px; }
 }
+
+.ca-provider-hint { margin: 16px 0 0; font-size: 13px; line-height: 1.6; }
+.customer-booking.ca-manager-social { min-height: 0; background: transparent; }
+.ca-manager-social .ca-social { max-width: 430px; margin: 16px 0 0; }
+.ca-manager-social .cb-helper { margin: 0 0 16px; line-height: 1.6; }

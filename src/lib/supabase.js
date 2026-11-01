@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { appConfig, isTest } from './runtimeConfig';
+import { appConfig } from './runtimeConfig';
 import { functionFetch } from './functionFetch';
 
 export const supabaseUrl = appConfig.supabaseUrl;
@@ -12,7 +12,7 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: !(isTest && typeof window !== 'undefined' && ['/customer/auth-callback', '/customer/email-callback'].includes(window.location.pathname)),
+      detectSessionInUrl: !(typeof window !== 'undefined' && ['/customer/auth-callback', '/customer/email-callback', '/team/auth-callback'].includes(window.location.pathname)),
     },
   }
 );

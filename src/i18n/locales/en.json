@@ -1536,6 +1536,20 @@
       "servicesFirst": "Choose your services, then continue to see available times."
     }
   },
+  "teamAuth": {
+    "eyebrow": "Shop team account",
+    "backHome": "Back to home",
+    "intro": "Sign in to manage your shop and your working day.",
+    "socialHint": "Google and Apple are for existing shop managers. Team members can sign in with email.",
+    "callbackTitle": "Signing you in",
+    "backLogin": "Back to team sign in",
+    "failed": "We couldn’t complete sign-in. Try again, or use your email and password.",
+    "managerRequired": "This Google or Apple account is not connected to an existing shop manager. Sign in with your manager email and password, then connect it in Settings.",
+    "connectTitle": "Google & Apple sign-in",
+    "connectDescription": "Connect a sign-in method to your existing manager account.",
+    "connectIntro": "Continue with Google or Apple below to connect it. You’ll keep the same shops and access. An identity already used by another account cannot be connected here.",
+    "connected": "Connected: {{providers}}"
+  },
   "customerAuth": {
     "signIn": "Sign in",
     "signOut": "Sign out",
