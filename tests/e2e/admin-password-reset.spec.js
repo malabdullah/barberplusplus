@@ -5,7 +5,7 @@ const synthetic = { id: '20000000-0000-4000-8000-000000000002', email: 'user@bar
 test('administrator can select a non-admin and submit a temporary password', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@barber.test');
-  await page.getByLabel('Password').fill('LocalOnly123!');
+  await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/admin/);
   let resets = 0;
@@ -32,7 +32,7 @@ test('administrator can select a non-admin and submit a temporary password', asy
 test('non-admin users cannot open the admin reset page', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('manager@barber.test');
-  await page.getByLabel('Password').fill('LocalOnly123!');
+  await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/dashboard/);
   await page.goto('/admin/users/passwords');
