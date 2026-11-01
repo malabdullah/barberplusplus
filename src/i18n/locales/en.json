@@ -1688,9 +1688,9 @@
     "website": "Visit website",
     "hero": {
       "badge": "For customers and shop teams",
-      "titleStart": "Your next great cut.",
-      "titleAccent": "Your shop, connected.",
-      "subtitle": "Book your next appointment, or bring your shop’s bookings, barbers and daily work together with Barber++.",
+      "titleStart": "Book appointments.",
+      "titleAccent": "Manage your barbershop.",
+      "subtitle": "Customers book their next appointment. Shop teams manage bookings, barbers, services and multiple shops from one dashboard.",
       "shopCta": "I run a shop"
     }
   }
