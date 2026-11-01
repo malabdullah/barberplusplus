@@ -43,8 +43,17 @@ test('manager settings expose provider connections without affecting another sho
   await page.locator('button[type="submit"]').click(); await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/dashboard/settings');
   await expect(page.getByRole('heading', { name: 'Google & Apple sign-in', exact: true })).toBeVisible();
-  await expect(page.locator('.ca-manager-social .ca-social-google')).toBeEnabled();
-  await expect(page.locator('.ca-manager-social .ca-social-apple')).toBeEnabled();
+  await expect(page.locator('.ca-manager-social').getByText('Loading…', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.ca-manager-social [role="alert"]')).toHaveCount(0);
+  for (const provider of ['google', 'apple']) {
+    const button = page.locator(`.ca-manager-social .ca-social-${provider}`);
+    const status = page.locator('.ca-manager-social [role="status"]');
+    const connected = await status.count() && (await status.textContent()).includes(provider === 'google' ? 'Google' : 'Apple');
+    if (connected) {
+      if (await button.count()) await expect(button).toBeDisabled();
+      await expect(status).toContainText(provider === 'google' ? 'Google' : 'Apple');
+    } else await expect(button).toBeEnabled();
+  }
   await expect(page.locator('.ca-manager-social')).toContainText('same shops and access');
   await page.screenshot({ path: `.cloud-test/manager-provider-connections-${engine}.png`, fullPage: true });
 });

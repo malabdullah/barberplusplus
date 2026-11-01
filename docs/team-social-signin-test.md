@@ -32,3 +32,17 @@ that final external-provider interaction.
 
 The owner approved manual linking on 2026-11-01. It is enabled in hosted Test;
 all five exact Test redirect URLs are retained, including the new team callback.
+
+## Real manager verification — 2026-11-01
+
+Google connection and subsequent sign-out/sign-in passed against the original
+Test manager ID. Its trusted manager role, original email and shop access were
+preserved. Apple is configured and its link endpoint passed; a real manager Apple
+connection has not been completed.
+
+The first Google connection exceeded Supabase's five-minute OAuth state window.
+The retry entered ordinary sign-in and created an unused customer Auth record.
+After verifying zero profile, booking ownership and customer associations, the
+owner explicitly approved deleting only that new record. The fresh connection
+from manager Settings succeeded. Expired manager connections now direct users
+back to Settings rather than ordinary sign-in; they never promote a customer.
