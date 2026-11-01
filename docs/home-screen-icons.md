@@ -38,3 +38,20 @@ treatment even when it supplies only one PNG. Separate icon variants are not a
 prerequisite for system-generated treatment. Record the actual iOS version and
 installation method when checking behavior, rather than generalizing a result
 from another device or version.
+
+## Investigation outcome — 2026-11-01
+
+Status: **complete; investigation stopped at the owner's request as an observed
+iOS limitation, without claiming automatic appearance switching is fixed.**
+
+- A fresh Safari **Add to Home Screen** installation of Cinema++ retained the
+  same icon artwork in light and dark mode on the iOS 27.0 simulator. Home Screen
+  automatic dark appearance was enabled; stock icons changed while the Cinema++
+  web shortcut stayed unchanged.
+- On the owner's iOS 27.2 iPhone, a fresh Barber++ Test installation now displays
+  the correct logo, but the owner confirmed it still does not adapt to appearance.
+- Cinema++ has not been verified on the owner's exact iOS 27.2 device. The
+  simulator result must not be presented as proof for every iOS version.
+- The owner instructed us to stop if Cinema++ showed the same issue. No further
+  automatic-icon workaround is planned. The separate installation/asset-access
+  fix remains on dev and hosted Test; main and production are unchanged.
