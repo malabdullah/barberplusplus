@@ -30,7 +30,8 @@
 .ca-social-buttons button { width: 100%; }
 .ca-social-buttons button:disabled { opacity: 1; cursor: default; }
 .ca-social-buttons .ca-social-google { background: #fff; color: #1f1f1f; border-color: #747775; }
-.ca-social-buttons .ca-social-apple { background: #000; color: #fff; border-color: #000; }
+.ca-social-buttons .ca-social-apple { background: #fff; color: #000; border-color: #fff; }
+[data-theme='light'] .ca-social-buttons .ca-social-apple { background: #000; color: #fff; border-color: #000; }
 .ca-social-logo { width: 20px; height: 20px; flex: 0 0 20px; display: inline-block; }
 .ca-social-logo-google { background: url('/customer-signin/google-light.png') center / 40px 40px no-repeat; }
 .ca-social-buttons button:disabled { cursor: not-allowed; }
