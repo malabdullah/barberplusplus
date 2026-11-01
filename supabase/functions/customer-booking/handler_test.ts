@@ -4,6 +4,21 @@ const make = (overrides = {}) => createCustomerBookingHandler({ environment: 'te
 const request = (body: unknown, origin = 'http://localhost:5173') => new Request('http://127.0.0.1:55321/functions/v1/customer-booking', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const selection = { branchId: '10000000-0000-4000-8000-000000000011', barberId: '30000000-0000-4000-8000-000000000111', serviceIds: ['20000000-0000-4000-8000-000000000111'], date: '2026-11-01', time: '10:00' };
 
+Deno.test('public statistics project only nonnegative counts and keep origin protection', async () => {
+  const handler = make({ statistics: async () => ({shops:0,monthlyBookings:18,barbers:9,privateRows:['not public']}) });
+  const response = await handler(request({action:'statistics'}));
+  assert(response.status === 200);
+  assert(JSON.stringify(await response.json()) === JSON.stringify({shops:0,monthlyBookings:18,barbers:9}));
+  assert((await handler(request({action:'statistics'},'https://foreign.example'))).status === 403);
+});
+Deno.test('failed or invalid statistics never fabricate zero counts or expose errors', async () => {
+  for (const statistics of [async () => {throw Error('private database details');}, async () => ({shops:-1,monthlyBookings:0,barbers:0})]) {
+    const response = await make({statistics})(request({action:'statistics'}));
+    assert(response.status === 503);
+    assert(JSON.stringify(await response.json()) === JSON.stringify({error:'UNAVAILABLE'}));
+  }
+});
+
 Deno.test('customer booking is disabled in production and for nonlocal backends', async () => {
   for (const config of [{ environment: 'production' }, { publicUrl: 'https://backend.example.test' }, { appUrl: '' }, { publicUrl: '' }]) {
     assert((await make(config)(request({ action: 'catalog' }))).status === 404);

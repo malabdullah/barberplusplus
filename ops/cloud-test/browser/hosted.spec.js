@@ -1,6 +1,10 @@
 import {test,expect} from './fixtures.js';
 import fs from 'node:fs';
 import path from 'node:path';
+async function chooseTheme(page, theme) {
+  if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.preferences-selector').nth(1).locator('button').first().click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+}
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json',import.meta.url)));
 const screenshot = name => path.resolve('.cloud-test',`${name}.png`);
 
@@ -15,16 +19,14 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await settingsLoaded;
     await page.locator('.preferences-selector').first().locator('button').first().click();
     await page.getByRole('button',{name:'English',exact:true}).click();
-    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-    await page.locator('.preferences-option').filter({hasText:'Dark'}).click();
+    await chooseTheme(page, 'dark');
     await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
     await expect(page.locator('.environment-banner')).toContainText(/TEST/);
     const brand = page.locator('.sidebar-logo .brand-logo');
     await expect(brand).toBeVisible();
     await expect(brand.locator('.brand-logo-dark')).toBeVisible();
     await page.screenshot({path:screenshot(`brand-${role}-desktop-dark`)});
-    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-    await page.locator('.preferences-option').filter({hasText:'Light'}).click();
+    await chooseTheme(page, 'light');
     await expect(brand.locator('.brand-logo-light')).toBeVisible();
     await page.screenshot({path:screenshot(`brand-${role}-desktop-light`)});
     if (role === 'manager') {
@@ -41,8 +43,7 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.locator('.preferences-selector').first().locator('button').first().click();
     await page.getByRole('button',{name:'العربية',exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('dir','rtl');
-    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-    await page.locator('.preferences-option').filter({hasText:'فاتح'}).click();
+    await chooseTheme(page, 'light');
     await expect(page.locator('html')).toHaveAttribute('data-theme','light');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth+1)).toBe(true);
     await page.screenshot({path:screenshot(`${role}-mobile-arabic`)});
@@ -62,8 +63,7 @@ for (const [role, home] of [['admin','/admin'],['manager','/dashboard'],['agent'
     await page.keyboard.press('Escape');
     await page.locator('.preferences-selector').first().locator('button').first().click();
     await page.getByRole('button',{name:'English',exact:true}).click();
-    await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-    await page.locator('.preferences-option').filter({hasText:'Dark'}).click();
+    await chooseTheme(page, 'dark');
     await page.locator('.topbar-menu-btn').click();
     await expect(brand.locator('.brand-logo-dark')).toBeVisible();
     await expect.poll(async()=>{

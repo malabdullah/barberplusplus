@@ -288,7 +288,6 @@ export default function Settings() {
             >
               <option value="dark">{t('settings.themeDark')}</option>
               <option value="light">{t('settings.themeLight')}</option>
-              <option value="system">{t('settings.themeSystem')}</option>
             </select>
           </SettingsItem>
 

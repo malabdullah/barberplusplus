@@ -19,6 +19,7 @@ import { validateUserRole } from '../utils/security';
 import logger from '../utils/logger';
 import i18n from '../i18n';
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
+import { resolveTheme } from '../utils/theme';
 
 const AppContext = createContext(null);
 
@@ -38,7 +39,7 @@ export function AppProvider({ children }) {
   const [barberProfileError, setBarberProfileError] = useState(null);
   const [theme, setThemeState] = useState(() => {
     const saved = localStorage.getItem('barber-theme');
-    return saved || 'dark';
+    return resolveTheme(saved);
   });
   const [language, setLanguageState] = useState(() => {
     const saved = localStorage.getItem('barber-language');
@@ -57,11 +58,7 @@ export function AppProvider({ children }) {
 
   // Apply theme to DOM
   const applyTheme = useCallback((newTheme) => {
-    let effectiveTheme = newTheme;
-    if (newTheme === 'system') {
-      effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    document.documentElement.setAttribute('data-theme', resolveTheme(newTheme));
   }, []);
 
   // Save user settings to database
@@ -83,10 +80,11 @@ export function AppProvider({ children }) {
 
   // Set theme with persistence
   const setTheme = useCallback((newTheme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('barber-theme', newTheme);
-    applyTheme(newTheme);
-    saveUserSettings({ theme: newTheme });
+    const mode = resolveTheme(newTheme);
+    setThemeState(mode);
+    localStorage.setItem('barber-theme', mode);
+    applyTheme(mode);
+    saveUserSettings({ theme: mode });
   }, [applyTheme, saveUserSettings]);
 
   // Apply language direction (RTL/LTR)
@@ -104,16 +102,10 @@ export function AppProvider({ children }) {
     saveUserSettings({ language: newLanguage });
   }, [applyLanguage, saveUserSettings]);
 
-  // Apply theme on mount and listen for system theme changes
+  // Persist a concrete mode, including preferences saved before System was retired.
   useEffect(() => {
     applyTheme(theme);
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme('system');
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
+    localStorage.setItem('barber-theme', theme);
   }, [theme, applyTheme]);
 
   // Apply language direction on mount
@@ -141,9 +133,10 @@ export function AppProvider({ children }) {
         if (data) {
           // Apply database settings, update localStorage
           if (data.theme) {
-            setThemeState(data.theme);
-            localStorage.setItem('barber-theme', data.theme);
-            applyTheme(data.theme);
+            const mode = resolveTheme(data.theme);
+            setThemeState(mode);
+            localStorage.setItem('barber-theme', mode);
+            applyTheme(mode);
           }
           if (data.language) {
             setLanguageState(data.language);

@@ -812,6 +812,16 @@
   margin: 0 auto;
 }
 
+.benefits-brand-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.hero-stat-value { unicode-bidi: isolate; }
+.hero-stats-unavailable { color: var(--text-muted); font-size: 0.875rem; }
+
 .benefits-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
