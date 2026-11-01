@@ -12,11 +12,6 @@ export default function HeroSection() {
       <div className="hero-inner">
         {/* Content */}
         <div className="hero-content">
-          <div className="hero-badge">
-            <span className="hero-badge-dot" aria-hidden="true" />
-            <span>{t('publicNav.hero.badge')}</span>
-          </div>
-
           <h1 id="hero-title" className="hero-title">
             {t('publicNav.hero.titleStart')}{' '}
             <span className="hero-title-accent">{t('publicNav.hero.titleAccent')}</span>

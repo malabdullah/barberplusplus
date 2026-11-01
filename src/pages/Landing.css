@@ -426,28 +426,6 @@
   max-width: 600px;
 }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-md);
-  background: rgba(212, 168, 83, 0.1);
-  border: 1px solid rgba(212, 168, 83, 0.2);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--accent-primary);
-  margin-bottom: var(--space-lg);
-}
-
-.hero-badge-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-}
-
 .hero-title {
   font-family: var(--font-display);
   font-size: clamp(2.5rem, 5vw, 4rem);
@@ -1137,6 +1115,7 @@
 
   .steps-container {
     flex-direction: column;
+    align-items: stretch;
     gap: var(--space-2xl);
   }
 
@@ -1228,10 +1207,6 @@
     display: none;
   }
 
-  .hero-badge {
-    font-size: 0.6875rem;
-  }
-
   .section-title {
     font-size: 1.5rem;
   }
@@ -1259,8 +1234,10 @@
   background: linear-gradient(270deg, var(--accent-primary), transparent);
 }
 
-[dir="rtl"] .hero-cta {
-  flex-direction: row-reverse;
+@media (min-width: 769px) {
+  [dir="rtl"] .hero-cta {
+    flex-direction: row-reverse;
+  }
 }
 
 [dir="rtl"] .benefit-card:hover {
