@@ -37,12 +37,13 @@ test('real customer profile edit, cancel, booking details and account actions', 
   await expect(main(page).locator('.ca-profile-details')).toContainText('Account Design Customer');
   await main(page).getByRole('button', { name: 'Edit details', exact: true }).click();
   await expect(page.locator('#account-name')).toHaveValue('Account Design Customer');
-  await page.locator('#account-name').fill('Barber Test Customer'); await page.locator('#account-phone').fill('50000992');
+  const phone = '5' + String(Date.now() % 10000000).padStart(7, '0');
+  await page.locator('#account-name').fill('Barber Test Customer'); await page.locator('#account-phone').fill(phone);
   await expect(page.getByRole('combobox', { name: 'Country calling code' }).locator('option').first()).toContainText('🇰🇼');
   await main(page).getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(main(page).getByRole('status')).toContainText('Your details have been saved.');
   await page.reload(); await expect(main(page).locator('.ca-profile-details')).toContainText('Barber Test Customer');
-  await expect(main(page).locator('.ca-profile-details')).toContainText('+965 50000992');
+  await expect(main(page).locator('.ca-profile-details')).toContainText(`+965 ${phone}`);
   await main(page).getByRole('link', { name: 'Book an appointment', exact: true }).click();
   await page.locator('#booking-city').selectOption('Kuwait City');
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
@@ -58,6 +59,7 @@ test('real customer profile edit, cancel, booking details and account actions', 
   await expect(main(page).locator('.ca-status')).toContainText('Confirmed');
   await expect(main(page).locator('time')).toBeVisible(); await noOverflow(page);
   await page.setViewportSize({ width: 1280, height: 900 });
+  await main(page).getByRole('heading', { name: 'My account', exact: true }).click();
   await page.screenshot({ path: `.cloud-test/account-${engine}-desktop-light.png`, fullPage: true });
   await main(page).getByRole('link', { name: 'Change password', exact: true }).click();
   await expect(page).toHaveURL(/\/customer\/forgot-password$/);

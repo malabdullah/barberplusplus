@@ -24,6 +24,7 @@ export default function CustomerAccount() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', countryCode: '+965', phone: '' });
   const [busy, setBusy] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const arabic = i18n.language.startsWith('ar');
@@ -53,14 +54,14 @@ export default function CustomerAccount() {
   };
   const signOut = async () => {
     if (busy) return;
-    setBusy(true); setError('');
+    setSigningOut(true); setBusy(true); setError('');
     try { await logout(); navigate('/book', { replace: true }); }
-    catch { setError(tr('errors.UNAVAILABLE')); }
+    catch { setSigningOut(false); setError(tr('errors.UNAVAILABLE')); }
     finally { setBusy(false); }
   };
   const appointmentDate = booking => new Date(`${booking.date}T${booking.time.slice(0, 5)}:00+03:00`);
   const dateOptions = { timeZone: 'Asia/Kuwait' };
-  if (!loading && !customer) return <Navigate to="/customer/sign-in" state={{ returnTo: '/customer/account' }} replace />;
+  if (!loading && !customer) return <Navigate to={signingOut ? '/book' : '/customer/sign-in'} state={{ returnTo: '/customer/account' }} replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account">
     {loading ? <p className="ca-loading" role="status"><Loader2 className="cb-spinner" size={24} aria-hidden="true" />{tr('loading')}</p> : <>
       <header className="ca-account-heading">
