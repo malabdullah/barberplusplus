@@ -40,3 +40,9 @@ Guest bookings cannot use a shop contact number. Valid profile changes preserve
 owned appointment history. Named inactive shop/barber fixtures used for these
 checks are retained in Test; their identifiers are recorded in ignored private
 verification manifests. No remote cleanup deletions are performed.
+
+The initial Test migration was applied by the hosted migration runner inside its
+transaction. Its pre-release source now also contains explicit BEGIN/COMMIT so
+CLI replay retains the same atomic lock/backfill/trigger installation. This
+transaction wrapper changes no stored database definitions; the existing Test
+migration ledger is preserved.

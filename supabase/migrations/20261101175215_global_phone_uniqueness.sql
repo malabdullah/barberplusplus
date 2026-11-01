@@ -1,3 +1,6 @@
+-- Keep the lock/backfill/trigger installation atomic in CLI and SQL runners.
+begin;
+
 -- One international contact number per customer, staff identity or shop.
 -- Customer account/business records are representations of one contact; their
 -- booking ownership and live-session checks remain independent of the phone.
@@ -177,3 +180,5 @@ create trigger enforce_global_phone after insert or update or delete on public.b
 create trigger enforce_global_phone after insert or update or delete on public.branches for each row execute function private.guard_global_phone();
 create trigger enforce_global_phone after insert or update or delete on public.customers for each row execute function private.guard_global_phone();
 create trigger enforce_global_phone after insert or update or delete on private.customer_accounts for each row execute function private.guard_global_phone();
+
+commit;
