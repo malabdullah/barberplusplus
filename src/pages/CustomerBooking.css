@@ -91,7 +91,7 @@
 .cb-phone-input { display: flex; border: 1px solid var(--booking-control); border-radius: 8px; background: var(--booking-surface); overflow: hidden; }
 .cb-phone-input:focus-within { outline: 2px solid var(--booking-link); outline-offset: 3px; }
 .cb-phone-input input, .cb-phone-input select { min-height: 48px; border: 0; outline: 0; background: transparent; color: var(--booking-text); padding: 10px 12px; min-width: 0; }
-.cb-phone-input select { border-right: 1px solid var(--booking-divider); width: 96px; flex-shrink: 0; }
+.cb-phone-input select { border-right: 1px solid var(--booking-divider); width: 128px; flex-shrink: 0; }
 .cb-phone-input input { flex: 1; width: 100%; }
 .cb-field-error { margin: 8px 0; color: #b42318; font-size: 14px; }
 .customer-booking [aria-invalid='true'] { border-color: #b42318; }
