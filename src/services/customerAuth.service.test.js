@@ -73,3 +73,23 @@ it('does not hide unrelated Auth sign-out failures', async () => {
   await expect(customerAuthService.logout()).rejects.toThrow('UNAVAILABLE');
   expect(localStorage.getItem('barber-customer-auth')).toBe('customer-session');
 });
+
+it.each(['signup', 'recovery'])('verifies the emailed %s code using Supabase OTP', async purpose => {
+  auth.verifyOtp.mockResolvedValue({ data: { session: { access_token: 'customer-token' }, user: { app_metadata: { role: 'customer' }, email_confirmed_at: 'confirmed' } } });
+  await customerAuthService.verifyEmailCode({ email: 'Customer@Example.test ', code: '123456', purpose });
+  expect(auth.verifyOtp).toHaveBeenCalledWith({ email: 'customer@example.test', token: '123456', type: purpose === 'recovery' ? 'recovery' : 'email' });
+});
+it('rejects incorrect codes and never accepts staff or unconfirmed sessions as customers', async () => {
+  auth.verifyOtp.mockResolvedValue({ data: {}, error: { status: 403 } });
+  await expect(customerAuthService.verifyEmailCode({ email: 'a@example.test', code: '123456', purpose: 'signup' })).rejects.toThrow('INVALID_CODE');
+  auth.verifyOtp.mockResolvedValue({ data: { session: {}, user: { app_metadata: { role: 'admin' }, email_confirmed_at: 'confirmed' } } });
+  await expect(customerAuthService.verifyEmailCode({ email: 'a@example.test', code: '123456', purpose: 'signup' })).rejects.toThrow('INVALID_CODE');
+  expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+});
+it('removes callback credentials and handles Supabase expired-link errors', async () => {
+  window.history.replaceState({}, '', '/customer/email-callback?token_hash=used&type=signup');
+  auth.verifyOtp.mockResolvedValue({ data: {}, error: { status: 403 } });
+  await expect(customerAuthService.finishEmail(window.location.href)).rejects.toThrow('INVALID_CODE');
+  expect(window.location.search).toBe('');
+  await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback#error=access_denied&error_code=otp_expired')).rejects.toThrow('INVALID_CODE');
+});

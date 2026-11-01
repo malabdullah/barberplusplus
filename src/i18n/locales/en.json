@@ -1619,19 +1619,40 @@
       "orEmail": "or use your email",
       "callbackTitle": "Confirming your email",
       "invalidLink": "This link is invalid or has expired. Please request a new link.",
-      "signupSent": "Check your email for a confirmation link.",
-      "recoverySent": "If an account exists, a password reset link has been sent.",
-      "resend": "Resend confirmation link",
+      "signupSent": "We sent a confirmation link and code to:",
+      "recoverySent": "If an account exists, we sent a reset link and code to:",
+      "resend": "Resend code",
       "sendRecovery": "Send reset link",
       "socialIntro": "Enter your name to finish creating your account.",
       "continue": "Continue",
       "changeSent": "Check your email to confirm your new address.",
       "intros": {
-        "sign-up": "Create your account with your name, email and password.",
-        "forgot-password": "Enter your email address to get a reset link.",
-        "reset-password": "Choose a new password."
-      }
-    }
+        "sign-in": "Sign in to manage your appointments.",
+        "sign-up": "Your next appointment starts here. Create your customer account.",
+        "forgot-password": "Enter your email to get a reset link or a verification code.",
+        "reset-password": "Choose a new password for your account."
+      },
+      "verifyTitle": "Verify your email",
+      "recoveryTitle": "Check your email",
+      "verifyIntro": "Enter the code from your email to continue.",
+      "codeLabel": "Verification code",
+      "codeHint": "You can paste the code or use your keyboard’s suggested code.",
+      "verifyCode": "Verify & continue",
+      "resendCode": "Resend code",
+      "resendIn": "Resend in {{seconds}}s",
+      "resent": "If your account is eligible, a new email has been sent. Use the newest code or link.",
+      "changeAddress": "Change email address",
+      "linkAlternative": "You can also open the link in your email. Check your spam folder if you don’t see it.",
+      "verifiedTitle": "Email verified",
+      "verifiedIntro": "Your account is ready. Book an appointment or manage your bookings.",
+      "verifiedStatus": "Your email address has been confirmed.",
+      "passwordUpdatedTitle": "Password updated",
+      "invalidLinkTitle": "This link has expired",
+      "requestNewLink": "Get a new reset link",
+      "requestConfirmation": "Verify email or request a new code"
+    },
+    "backToSignIn": "Back to sign in",
+    "customerAccount": "Customer account"
   },
   "customerPrivacy": {
     "title": "Privacy policy",

@@ -123,6 +123,8 @@ test('customer email signup confirms through the private test inbox',async ({pag
     url.searchParams.set('redirect_to',data.redirect_to);return url.href;
   })();
   await page.goto(confirmation);
+  await expect(page.locator('#customer-auth-title')).toHaveText('Email verified');
+  await page.locator('.ca-main').getByRole('link', { name: 'My account', exact: true }).click();
   await expect(page).toHaveURL(/\/customer\/account$/);
   await expect(page.locator('body')).toContainText('Cloud Test Customer');
   await page.screenshot({path:screenshot('customer-account'),fullPage:true});

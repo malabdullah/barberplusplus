@@ -85,6 +85,8 @@ test('homepage to customer signup restores the booking and offers account naviga
     url.searchParams.set('token', data.token_hash); url.searchParams.set('type', data.email_action_type); url.searchParams.set('redirect_to', data.redirect_to); return url.href;
   })();
   await page.goto(confirmation);
+  await expect(page.locator('#customer-auth-title')).toHaveText('Email verified');
+  await page.locator('.ca-main').getByRole('link', { name: 'Book an appointment', exact: true }).click();
   await expect(page).toHaveURL(/\/book$/);
   await expect(page.locator('#choose-services input[type="checkbox"]').first()).toBeChecked();
   await page.locator('.public-header').getByRole('button', { name: 'My account', exact: true }).click();
