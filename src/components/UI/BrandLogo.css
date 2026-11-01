@@ -22,6 +22,7 @@
 .brand-logo--auth { width: 220px; }
 .brand-logo--footer { width: 170px; }
 .brand-logo--compact { width: 165px; }
+.brand-logo--symbol { width: 36px; }
 .brand-logo-tagline {
   color: var(--text-muted);
   font-size: 10px;

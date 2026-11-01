@@ -847,6 +847,8 @@
     "december": "December"
   },
   "preferences": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
     "selectLanguage": "Select Language",
     "selectTheme": "Select Theme"
   },
@@ -1266,9 +1268,10 @@
       "secondaryCta": "Sign In",
       "preview": {"alt": "Booking dashboard illustration", "eyebrow": "Your barbershop", "title": "Your day at a glance", "appointments": "Appointments", "manage": "Review and manage bookings", "team": "Your team", "branches": "Manage barbers and branches"},
       "stats": {
-        "barbershops": "Barbershops",
-        "bookings": "Monthly Bookings",
-        "rating": "Average Rating"
+        "barbershops": "Active shops",
+        "bookings": "Appointments this month",
+        "barbers": "Active barbers",
+        "unavailable": "Statistics are temporarily unavailable."
       }
     },
     "features": {
@@ -1320,6 +1323,7 @@
     "benefits": {
       "eyebrow": "Benefits",
       "title": "Why Choose Barber++?",
+      "titleWithLogo": "Why Choose <brand/>?",
       "subtitle": "Built with modern barbershops in mind, designed to save you time and delight your customers",
       "multilingual": {
         "title": "English & Arabic",
@@ -1344,7 +1348,7 @@
     },
     "cta": {
       "title": "Ready to Modernize Your Barbershop?",
-      "subtitle": "Join hundreds of barbershop owners who have streamlined their booking process",
+      "subtitle": "Bring your bookings, barbers and services together in one dashboard.",
       "button": "Create Free Account"
     },
     "footer": {
@@ -1688,9 +1692,9 @@
     "website": "Visit website",
     "hero": {
       "badge": "For customers and shop teams",
-      "titleStart": "Your next great cut.",
-      "titleAccent": "Your shop, connected.",
-      "subtitle": "Book your next appointment, or bring your shop’s bookings, barbers and daily work together with Barber++.",
+      "titleStart": "Book appointments.",
+      "titleAccent": "Manage your barbershop.",
+      "subtitle": "Customers book their next appointment. Shop teams manage bookings, barbers, services and multiple shops from one dashboard.",
       "shopCta": "I run a shop"
     }
   }

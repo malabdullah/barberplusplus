@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+async function chooseTheme(page, theme) {
+  if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.preferences-selector').nth(1).locator('button').first().click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+}
+
 const roles = [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']];
 const sizes = [[360, 800], [390, 844], [430, 932], [768, 1024], [1023, 900], [1024, 900], [1025, 900], [1365, 900]];
 for (const [role, home] of roles) {
@@ -20,9 +25,7 @@ for (const [role, home] of roles) {
       await page.getByRole('button', { name: language === 'ar' ? 'العربية' : 'English', exact: true }).click();
       await expect(page.locator('html')).toHaveAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
       for (const theme of ['dark', 'light']) {
-        await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-        const label = language === 'en' ? (theme === 'dark' ? 'Dark' : 'Light') : (theme === 'dark' ? 'داكن' : 'فاتح');
-        await page.locator('.preferences-option').filter({ hasText: label }).click();
+        await chooseTheme(page, theme);
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         for (const [width, height] of sizes) {
           await page.setViewportSize({ width, height });
@@ -69,10 +72,7 @@ for (const [role, home] of roles) {
         await page.setViewportSize({ width: 1365, height: 900 });
         await page.locator('.preferences-selector').first().locator('button').first().click();
         await page.getByRole('button', { name: original.language === 'ar' ? 'العربية' : 'English', exact: true }).click();
-        await page.locator('.preferences-selector').nth(1).locator('button').first().click();
-        const label = original.language === 'en' ? ({ dark: 'Dark', light: 'Light', system: 'System' })[original.theme]
-          : ({ dark: 'داكن', light: 'فاتح', system: 'النظام' })[original.theme];
-        await page.locator('.preferences-option').filter({ hasText: label }).click();
+        await chooseTheme(page, original.theme === 'light' ? 'light' : 'dark');
       }
     }
   });

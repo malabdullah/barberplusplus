@@ -18,6 +18,12 @@ const request = async (action, body = {}) => {
 };
 
 export const customerBookingService = {
+  async getStatistics() {
+    const totals = await request('statistics');
+    const counts = { shops: totals.shops, monthlyBookings: totals.monthlyBookings, barbers: totals.barbers };
+    if (Object.values(counts).some(value => !Number.isSafeInteger(value) || value < 0)) throw new Error('UNAVAILABLE');
+    return counts;
+  },
   async getCatalog() {
     const result = await request('catalog');
     return {

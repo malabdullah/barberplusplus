@@ -1,5 +1,6 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import BrandLogo from '../UI/BrandLogo';
 import {
   Languages,
   Smartphone,
@@ -49,8 +50,8 @@ export default function BenefitsSection() {
         {/* Section Header */}
         <header className="section-header animate-on-scroll">
           <span className="section-eyebrow">{t('landing.benefits.eyebrow')}</span>
-          <h2 id="benefits-title" className="section-title">
-            {t('landing.benefits.title')}
+          <h2 id="benefits-title" className="section-title benefits-brand-title" aria-label={t('landing.benefits.title')}>
+            <Trans i18nKey="landing.benefits.titleWithLogo" components={{ brand: <BrandLogo symbolOnly decorative /> }} />
           </h2>
           <p className="section-subtitle">
             {t('landing.benefits.subtitle')}

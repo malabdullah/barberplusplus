@@ -9,6 +9,7 @@ type Dependencies = {
   publicUrl: string;
   secret: string;
   catalog: () => Promise<unknown>;
+  statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
   customer?: (token: string) => Promise<{id: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
@@ -68,6 +69,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
       }
       if (body.action === 'catalog') return reply(200, await deps.catalog());
+      if (body.action === 'statistics') {
+        if (!deps.statistics) return reply(503, { error: 'UNAVAILABLE' });
+        const totals = await deps.statistics();
+        const counts = { shops: totals.shops, monthlyBookings: totals.monthlyBookings, barbers: totals.barbers };
+        if (Object.values(counts).some(value => !Number.isSafeInteger(value) || value < 0)) throw Error('Invalid statistics');
+        return reply(200, counts);
+      }
       if (body.action === 'guest-proof') {
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
