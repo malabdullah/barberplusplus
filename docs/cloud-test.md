@@ -101,7 +101,13 @@ The Worker forwards only named Functions and never exposes that shared secret
 to the browser. Supabase Auth, REST, Storage and Realtime use the test project
 directly with normal user authorization and RLS.
 
-Every website asset and the inbox pass through the test access gate. A secure
+The application, its JavaScript/runtime configuration and the inbox pass through
+the test access gate. Five exact public installation resources bypass it for
+iOS Home Screen installation: `/apple-touch-icon.png`, `/apple-touch-icon-v2.png`,
+`/icon-192.png`, `/icon-512.png` and `/site.webmanifest`. These contain only
+public branding and launch metadata, never Test records or credentials. This
+GET/HEAD-only exception issues no access cookie, forwards no credentials, and
+rejects SPA HTML fallbacks. A secure
 HttpOnly cookie allows staff bearer tokens to coexist with that gate. Password
 rotation invalidates the gate cookie. Responses use no-store caching, noindex
 headers and a CSP restricted to the test backend. The free Worker request quota
