@@ -13,7 +13,11 @@ export default function CustomerEmailVerification() {
   const tr = key => t(`customerAuth.${key}`);
   const location = useLocation(); const navigate = useNavigate(); const { refresh } = useCustomerAuth();
   const purpose = new URLSearchParams(location.search).get('purpose') === 'recovery' ? 'recovery' : 'signup';
-  const [pending] = useState(() => { const value = location.state || pendingEmail(); return value?.purpose === purpose ? value : null; });
+  const [pending] = useState(() => {
+    const cached = pendingEmail(); const routed = location.state;
+    const value = cached?.purpose === purpose && (!routed?.sentAt || cached.sentAt >= routed.sentAt) ? cached : routed;
+    return value?.purpose === purpose ? value : null;
+  });
   const returnTo = emailDestination(pending?.returnTo);
   const [email, setEmail] = useState(pending?.email || '');
   const [editing, setEditing] = useState(!pending?.email);
@@ -66,7 +70,10 @@ export default function CustomerEmailVerification() {
         <p className="cb-helper" id="email-code-hint">{tr('email.codeHint')}</p>
         <button type="submit" className="cb-primary ca-submit" disabled={busy}>{busy && <Loader2 className="cb-spinner" size={18} aria-hidden="true" />}{tr('email.verifyCode')}</button>
       </fieldset></form>
-      <div className="ca-verification-actions"><button type="button" className="cb-text-button" onClick={resend} disabled={busy || remaining > 0}>{remaining ? t('customerAuth.email.resendIn', { seconds: remaining }) : tr('email.resendCode')}</button>{!editing && <button className="cb-text-button" type="button" disabled={busy} onClick={() => { setEditing(true); setCode(''); setError(''); }}>{tr('email.changeAddress')}</button>}</div>
+      <div className="ca-verification-actions"><button type="button" className="cb-text-button" onClick={resend} disabled={busy || remaining > 0}>{remaining ? t('customerAuth.email.resendIn', { seconds: remaining }) : tr('email.resendCode')}</button>{!editing && <button className="cb-text-button" type="button" disabled={busy} onClick={() => {
+        if (purpose === 'signup') { navigate('/customer/sign-up', { state: { email, returnTo } }); return; }
+        setEditing(true); setCode(''); setError('');
+      }}>{tr('email.changeAddress')}</button>}</div>
       <p className="cb-helper ca-email-hint">{tr('email.linkAlternative')}</p>
     </>}
   </CustomerAuthLayout>;

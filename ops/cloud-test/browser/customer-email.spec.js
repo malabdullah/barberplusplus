@@ -2,6 +2,8 @@ import { test, expect } from './fixtures.js';
 import fs from 'node:fs';
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json', import.meta.url)));
 const uniqueEmail = () => `auth-design-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`;
+const engine = process.env.CLOUD_TEST_BROWSER || 'chromium';
+test.use({ browserName: engine });
 const panel = page => page.locator('.ca-main');
 async function mail(request, email, type) {
   let found;
@@ -80,7 +82,7 @@ test('email code signup, refresh, wrong code, password recovery and new-password
 test('confirmation and recovery email links work in another browser context', async ({ page, request, browser, context }) => {
   const email = uniqueEmail(); await signup(page, email);
   const confirmation = await mail(request, email, 'signup');
-  const other = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const other = await browser.newContext({ baseURL: state.appUrl, viewport: { width: 390, height: 844 } });
   await other.addCookies((await context.cookies()).filter(cookie => cookie.name === 'barber_test_access'));
   const target = await other.newPage();
   try {
@@ -99,10 +101,7 @@ test('confirmation and recovery email links work in another browser context', as
   } finally { await other.close(); }
 });
 
-for (const engine of ['chromium', 'webkit']) {
-  test.describe(`${engine} responsive authentication`, () => {
-    test.use({ browserName: engine });
-    test('English and Arabic, both themes, mobile widths and expired callback', async ({ page }) => {
+test('responsive authentication: English and Arabic, both themes, mobile widths and expired callback', async ({ page }) => {
       for (const language of ['en', 'ar']) {
         await page.addInitScript(language => localStorage.setItem('barber-language', language), language);
         for (const width of [320, 390, 768, 1280]) {
@@ -121,5 +120,20 @@ for (const engine of ['chromium', 'webkit']) {
         }
       }
     });
-  });
-}
+
+test('resends confirmation, rejects the old code and verifies the latest code', async ({ page, request }) => {
+  test.setTimeout(150000);
+  const email = uniqueEmail(); await signup(page, email);
+  const first = await mail(request, email, 'signup');
+  // Observe the real resend cooldown; do not bypass the UI or Auth rate limits.
+  await expect(panel(page).getByRole('button', { name: /^Resend in/ })).toBeDisabled();
+  await expect(panel(page).getByRole('button', { name: 'Resend code', exact: true })).toBeEnabled({ timeout: 75000 });
+  await panel(page).getByRole('button', { name: 'Resend code', exact: true }).click();
+  await expect(panel(page).getByText(/new email has been sent/)).toBeVisible();
+  let latest;
+  await expect.poll(async () => { latest = await mail(request, email, 'signup'); return latest.token_hash !== first.token_hash; }).toBe(true);
+  await enterCode(page, first.token);
+  await expect(panel(page).getByRole('alert')).toContainText('incorrect');
+  await enterCode(page, latest.token);
+  await expect(page.locator('#customer-auth-title')).toHaveText('Email verified');
+});

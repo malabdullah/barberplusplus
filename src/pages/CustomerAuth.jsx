@@ -16,7 +16,7 @@ export default function CustomerAuth({ mode }) {
   const { customer, loading, login, resetPassword } = useCustomerAuth();
   const navigate = useNavigate(); const location = useLocation();
   const returnTo = location.state?.returnTo === '/book' ? '/book' : '/customer/account';
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: typeof location.state?.email === 'string' ? location.state.email.slice(0, 254) : '', password: '', confirmPassword: '' });
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false); const [resetDone, setResetDone] = useState(false);
   usePublicNavigationBusy(busy);
