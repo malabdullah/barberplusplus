@@ -5,7 +5,7 @@ for (const language of ['en', 'ar']) {
     await page.setViewportSize({width:465,height:827});
     await page.addInitScript(language => {
       localStorage.setItem('barber-language',language);
-      localStorage.setItem('barber-theme','light');
+      if (!localStorage.getItem('barber-theme')) localStorage.setItem('barber-theme','light');
     },language);
     const response = await request.post('/test-api/customer-booking',{data:{action:'statistics'}});
     expect(response.ok()).toBe(true);
