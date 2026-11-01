@@ -20,7 +20,7 @@
 .public-dropdown-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; color: var(--text-primary); border-radius: 6px; }
 .public-dropdown-links a:hover { background: var(--bg-tertiary); }
 .public-mobile-toggle { display: none; width: 44px; padding: 10px; }
-.public-mobile-links { display: none; }
+.public-mobile-menu, .public-mobile-links { display: none; }
 .public-header :where(a, button):focus-visible, .public-footer a:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
 .public-header [aria-disabled='true'], .public-footer [aria-disabled='true'], .public-header button:disabled { opacity: .6; cursor: wait; }
 .public-footer { padding: 48px 32px 24px; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
@@ -82,3 +82,44 @@
 .public-desktop-nav a.public-book-link { color: #151A20; background: var(--accent-primary); border-radius: 8px; padding: 10px 18px; }
 .public-desktop-nav a.public-book-link:hover { background: #C89B49; }
 .public-disclosure-button { border: 0; padding-inline: 0; }
+
+/* Keep panels mounted so both opening and closing can finish naturally. */
+.public-dropdown-links {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
+}
+.public-dropdown-links[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+.public-disclosure-button svg { transition: transform 160ms ease; }
+.public-disclosure-button[aria-expanded='true'] svg { transform: rotate(180deg); }
+@media (max-width: 1050px) {
+  .public-mobile-menu {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: grid-template-rows 180ms ease, opacity 180ms ease, visibility 0s linear 180ms;
+  }
+  .public-mobile-menu[data-open='true'] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  .public-mobile-clip { min-height: 0; overflow: hidden; }
+  .public-mobile-links { transform: translateY(-4px); transition: transform 180ms ease; }
+  .public-mobile-menu[data-open='true'] .public-mobile-links { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-mobile-menu, .public-mobile-links, .public-dropdown-links, .public-disclosure-button svg { transition: none; }
+}

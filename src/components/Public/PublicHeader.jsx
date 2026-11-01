@@ -62,7 +62,7 @@ export default function PublicHeader() {
     <button type="button" className="public-disclosure-button" ref={element => { dropdownButtons.current[id] = element; }} disabled={busy} aria-expanded={openDropdown === id} aria-controls={`public-${id}-links`} onClick={() => setOpenDropdown(current => current === id ? null : id)}>
       {label}<ChevronDown size={16} aria-hidden="true" />
     </button>
-    {openDropdown === id && <div id={`public-${id}-links`} className="public-dropdown-links" role="group" aria-label={label}>{content}</div>}
+    <div id={`public-${id}-links`} className="public-dropdown-links" role="group" aria-label={label} aria-hidden={openDropdown !== id} inert={openDropdown === id ? undefined : ''} data-open={openDropdown === id}>{content}</div>
   </div>;
 
   return <header className="public-header">
@@ -78,14 +78,18 @@ export default function PublicHeader() {
         <button type="button" ref={mobileButton} className="public-mobile-toggle" aria-expanded={mobileOpen} aria-controls="public-mobile-links" aria-label={t(mobileOpen ? 'publicNav.closeMenu' : 'publicNav.openMenu')} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
     </div>
-    {mobileOpen && <nav id="public-mobile-links" className="public-mobile-links" aria-label={t('publicNav.navigation')}>
-      {customerFeaturesEnabled && <div className="public-mobile-group" role="group" aria-labelledby="public-customers-label">
-        <h2 id="public-customers-label">{t('publicNav.customers')}</h2>{bookLink}{customerLinks}
-      </div>}
-      <div className="public-mobile-group" role="group" aria-labelledby="public-shops-label">
-        <h2 id="public-shops-label">{t('publicNav.shops')}</h2>{shopLinks}
+    <div className="public-mobile-menu" data-open={mobileOpen} aria-hidden={!mobileOpen} inert={mobileOpen ? undefined : ''}>
+      <div className="public-mobile-clip">
+        <nav id="public-mobile-links" className="public-mobile-links" aria-label={t('publicNav.navigation')}>
+          {customerFeaturesEnabled && <div className="public-mobile-group" role="group" aria-labelledby="public-customers-label">
+            <h2 id="public-customers-label">{t('publicNav.customers')}</h2>{bookLink}{customerLinks}
+          </div>}
+          <div className="public-mobile-group" role="group" aria-labelledby="public-shops-label">
+            <h2 id="public-shops-label">{t('publicNav.shops')}</h2>{shopLinks}
+          </div>
+        </nav>
       </div>
-    </nav>}
+    </div>
     {busy && <span className="sr-only" role="status">{t('publicNav.saving')}</span>}
   </header>;
 }

@@ -71,6 +71,21 @@ describe('simple public navigation', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveFocus();
   });
+  it('makes a closing panel inert immediately while retaining it for its exit transition', () => {
+    mount();
+    const shops = openShops();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(shops).toHaveAttribute('inert', '');
+    expect(shops).toHaveAttribute('aria-hidden', 'true');
+    expect(header().queryByRole('link', { name: 'Team sign in' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const mobile = document.querySelector('.public-mobile-menu');
+    expect(mobile).not.toHaveAttribute('inert');
+    fireEvent.click(screen.getByRole('button', { name: 'Close menu' }));
+    expect(mobile).toHaveAttribute('inert', '');
+    expect(mobile).toHaveAttribute('aria-hidden', 'true');
+    expect(header().queryByRole('group', { name: 'Customers' })).not.toBeInTheDocument();
+  });
   it('shows both audience groups and all four mobile links without nested disclosures', () => {
     mount(); fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const customers = header().getByRole('group', { name: 'Customers' });

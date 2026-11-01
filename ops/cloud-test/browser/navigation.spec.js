@@ -53,7 +53,7 @@ for (const language of ['en', 'ar']) {
     await toggle.click();
     await page.locator('#public-mobile-links').getByRole('link', { name: book, exact: true }).click();
     await expect(page).toHaveURL(/\/book$/);
-    await expect(page.locator('#public-mobile-links')).toHaveCount(0);
+    await expect(page.locator('#public-mobile-links')).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 }
