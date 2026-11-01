@@ -17,10 +17,11 @@ let i18n;
 beforeEach(async () => {
   state.isAuthenticated = false; state.userRole = null; state.customer = null;
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  vi.stubGlobal('matchMedia', () => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   i18n = i18next.createInstance();
   await i18n.init({ lng: 'en', resources: { en: { translation: en }, ar: { translation: ar } }, interpolation: { escapeValue: false } });
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 function Destination({ busy = false }) {
   usePublicNavigationBusy(busy);
   const location = useLocation();
@@ -29,55 +30,69 @@ function Destination({ busy = false }) {
 function mount(path = '/', busy = false) {
   return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[path]}><Routes><Route element={<PublicLayout />}><Route path="*" element={<Destination busy={busy} />} /></Route></Routes></MemoryRouter></I18nextProvider>);
 }
-function openAccount() { fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true })); return screen.getByRole('navigation', { name: 'Account options' }); }
+const header = () => within(screen.getByRole('banner'));
+function openShops() { fireEvent.click(header().getByRole('button', { name: 'Shops', exact: true })); return header().getByRole('group', { name: 'Shops' }); }
 
-describe('unified public navigation', () => {
-  it('separates customer and shop team entry points and preserves the booking return', () => {
+describe('simple public navigation', () => {
+  it('keeps customer actions direct and shop actions grouped, preserving the booking return', () => {
     mount('/book');
-    const account = openAccount();
-    expect(within(account).getByRole('link', { name: 'Shop team sign-in' })).toHaveAttribute('href', '/login');
-    fireEvent.click(within(account).getByRole('link', { name: 'Customer sign-in' }));
+    expect(header().queryByRole('link', { name: 'Home', exact: true })).not.toBeInTheDocument();
+    expect(header().getByRole('link', { name: 'Book appointment', exact: true })).toHaveAttribute('href', '/book');
+    const shops = openShops();
+    expect(within(shops).getByRole('link', { name: 'Team sign in' })).toHaveAttribute('href', '/login');
+    expect(within(shops).getByRole('link', { name: 'Register your shop' })).toHaveAttribute('href', '/signup');
+    fireEvent.click(header().getByRole('link', { name: 'Customer sign in' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/customer/sign-in');
     expect(screen.getByRole('status')).toHaveTextContent('/book');
-    expect(screen.queryByRole('navigation', { name: 'Account options' })).not.toBeInTheDocument();
+    expect(header().queryByRole('group', { name: 'Shops' })).not.toBeInTheDocument();
   });
   it.each([['admin','/admin'],['manager','/dashboard'],['agent','/agent'],['barber','/barber']])('takes signed-in %s back to the correct workspace', (role, path) => {
     state.isAuthenticated = true; state.userRole = role;
     mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Open workspace', exact: true }));
-    expect(within(screen.getByRole('navigation', { name: 'Account options' })).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', path);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/');
+    const shops = openShops();
+    expect(within(shops).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', path);
+    expect(within(shops).queryByRole('link', { name: 'Register your shop' })).not.toBeInTheDocument();
+    expect(header().getByRole('link', { name: 'Customer sign in' })).toBeInTheDocument();
   });
   it('keeps customer and staff destinations available when both sessions are present', () => {
     state.customer = { name: 'Customer' }; state.isAuthenticated = true; state.userRole = 'manager'; mount();
-    fireEvent.click(screen.getByRole('button', { name: 'My account', exact: true }));
-    const account = screen.getByRole('navigation', { name: 'Account options' });
-    expect(within(account).getByRole('link', { name: 'My appointments' })).toHaveAttribute('href', '/customer/account#appointments');
-    expect(within(account).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', '/dashboard');
+    fireEvent.click(header().getByRole('button', { name: 'My account', exact: true }));
+    expect(within(header().getByRole('group', { name: 'My account' })).getByRole('link', { name: 'My appointments' })).toHaveAttribute('href', '/customer/account#appointments');
+    const shops = openShops();
+    expect(header().queryByRole('group', { name: 'My account' })).not.toBeInTheDocument();
+    expect(within(shops).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', '/dashboard');
   });
-  it('uses real cross-page links and closes disclosures with Escape, restoring focus', () => {
+  it('closes disclosures with Escape and restores focus', () => {
     mount('/customer/sign-in');
-    expect(screen.getAllByRole('link', { name: 'For shops', exact: true })[0]).toHaveAttribute('href', '/#for-shops');
-    openAccount(); fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.getByRole('button', { name: 'Sign in', exact: true })).toHaveFocus();
+    openShops(); fireEvent.keyDown(document, { key: 'Escape' });
+    expect(header().getByRole('button', { name: 'Shops', exact: true })).toHaveFocus();
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     expect(screen.getByRole('button', { name: 'Close menu' })).toHaveAttribute('aria-expanded', 'true');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveFocus();
-    expect(screen.queryByText('Close menu')).not.toBeInTheDocument();
   });
-  it('guards navigation and preferences while a request is saving', async () => {
+  it('shows both audience groups and all four mobile links without nested disclosures', () => {
+    mount(); fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const customers = header().getByRole('group', { name: 'Customers' });
+    const shops = header().getByRole('group', { name: 'Shops' });
+    expect(within(customers).getAllByRole('link')).toHaveLength(2);
+    expect(within(shops).getAllByRole('link')).toHaveLength(2);
+    expect(within(customers).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(shops).queryByRole('button')).not.toBeInTheDocument();
+  });
+  it('guards direct navigation and preferences while saving', async () => {
     mount('/book', true);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in', exact: true })).toBeDisabled());
+    await waitFor(() => expect(header().getByRole('button', { name: 'Shops', exact: true })).toBeDisabled());
     expect(screen.getByRole('button', { name: en.preferences.selectLanguage })).toBeDisabled();
-    const home = screen.getAllByRole('link', { name: 'Home', exact: true })[0];
-    expect(home).toHaveAttribute('aria-disabled', 'true'); fireEvent.click(home);
+    const signIn = header().getByRole('link', { name: 'Customer sign in' });
+    expect(signIn).toHaveAttribute('aria-disabled', 'true'); fireEvent.click(signIn);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/book');
   });
-  it('translates the complete mobile navigation into Arabic', async () => {
+  it('translates both mobile groups into Arabic', async () => {
     await i18n.changeLanguage('ar'); mount();
     fireEvent.click(screen.getByRole('button', { name: ar.publicNav.openMenu }));
-    expect(screen.getAllByRole('link', { name: ar.publicNav.customerSignIn }).length).toBeGreaterThan(0);
+    expect(header().getByRole('group', { name: ar.publicNav.customers })).toBeInTheDocument();
+    expect(header().getByRole('group', { name: ar.publicNav.shops })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: ar.publicNav.closeMenu })).toHaveAttribute('aria-expanded', 'true');
   });
 });

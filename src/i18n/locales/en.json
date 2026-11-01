@@ -1663,14 +1663,16 @@
     "contact": "Contact Barber++"
   },
   "publicNav": {
+    "shops": "Shops",
+    "customers": "Customers",
     "pageTitle": "Book your next cut. Manage your shop.",
     "home": "Home",
     "book": "Book appointment",
     "forShops": "For shops",
     "forCustomers": "For customers",
     "signIn": "Sign in",
-    "customerSignIn": "Customer sign-in",
-    "teamSignIn": "Shop team sign-in",
+    "customerSignIn": "Customer sign in",
+    "teamSignIn": "Team sign in",
     "registerShop": "Register your shop",
     "myAccount": "My account",
     "myAppointments": "My appointments",

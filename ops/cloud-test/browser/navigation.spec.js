@@ -12,13 +12,13 @@ test('one public header and footer connect every entry page', async ({ page }) =
     await expect(page.locator('.public-footer')).toBeVisible();
     await expect(header.getByRole('link', { name: 'Barber++ home' })).toHaveAttribute('href', '/');
     await expect(header.getByRole('link', { name: 'Book appointment', exact: true })).toHaveAttribute('href', '/book');
-    await header.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(header.getByRole('link', { name: 'Customer sign-in' })).toHaveAttribute('href', '/customer/sign-in');
-    await expect(header.getByRole('link', { name: 'Shop team sign-in' })).toHaveAttribute('href', '/login');
+    await header.getByRole('button', { name: 'Shops', exact: true }).click();
+    await expect(header.getByRole('link', { name: 'Customer sign in' })).toHaveAttribute('href', '/customer/sign-in');
+    await expect(header.getByRole('link', { name: 'Team sign in' })).toHaveAttribute('href', '/login');
     await page.keyboard.press('Escape');
-    await expect(header.getByRole('button', { name: 'Sign in', exact: true })).toBeFocused();
+    await expect(header.getByRole('button', { name: 'Shops', exact: true })).toBeFocused();
   }
-  await page.locator('.public-header').getByRole('link', { name: 'For shops', exact: true }).click();
+  await page.locator('.public-footer').getByRole('link', { name: 'Features', exact: true }).click();
   await expect(page).toHaveURL(/\/#for-shops$/);
   await expect.poll(() => page.locator('#for-shops').evaluate(el => {
     const headerBottom = document.querySelector('.public-header').getBoundingClientRect().bottom;
@@ -42,6 +42,12 @@ for (const language of ['en', 'ar']) {
     })).toBe(true);
     await toggle.click();
     await expect(page.getByRole('button', { name: close })).toHaveAttribute('aria-expanded', 'true');
+    const menu = page.locator('#public-mobile-links');
+    await expect(menu.getByRole('heading', { name: language === 'ar' ? 'العملاء' : 'Customers', exact: true })).toBeVisible();
+    await expect(menu.getByRole('heading', { name: language === 'ar' ? 'الصالونات' : 'Shops', exact: true })).toBeVisible();
+    await expect(menu.getByRole('link')).toHaveCount(4);
+    for (const link of await menu.getByRole('link').all()) await expect(link).toBeInViewport();
+    await expect(menu.getByRole('button')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(toggle).toBeFocused();
     await toggle.click();
@@ -60,8 +66,7 @@ test('homepage to customer signup restores the booking and offers account naviga
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
   await page.locator('input[name="barber"]').first().check();
   await page.locator('#choose-services input[type="checkbox"]').first().check();
-  await page.locator('.public-header').getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.locator('#public-account-links').getByRole('link', { name: 'Customer sign-in' }).click();
+  await page.locator('.public-header').getByRole('link', { name: 'Customer sign in' }).click();
   await page.locator('.ca-main').getByRole('link', { name: 'Create account', exact: true }).click();
   await page.locator('#customer-auth-name').fill('Navigation Test Customer');
   await page.locator('#customer-auth-email').fill(email);
@@ -89,7 +94,7 @@ test('homepage to customer signup restores the booking and offers account naviga
   await expect(page.locator('.ca-main')).toContainText('Navigation Test Customer');
   await page.reload();
   await expect(page.locator('.ca-main')).toContainText('Navigation Test Customer');
-  await page.locator('.public-header').getByRole('link', { name: 'Home', exact: true }).click();
+  await page.locator('.public-header').getByRole('link', { name: 'Barber++ home', exact: true }).click();
   await expect(page.locator('#hero-title')).toBeVisible();
   await expect(page.locator('.public-header').getByRole('button', { name: 'My account', exact: true })).toBeVisible();
 });

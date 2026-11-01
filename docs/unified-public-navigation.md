@@ -4,10 +4,13 @@ The public website shares one header and footer across the homepage, booking,
 customer accounts, customer sign-in and recovery, shop-team sign-in and recovery,
 shop registration, invitations, MFA setup and privacy pages.
 
-- Home, Book appointment and For shops are available from every public page.
-- Sign in distinguishes customer accounts from shop-team accounts. Signed-in
-  customers see My account and My appointments; staff see their own workspace.
-  Both destinations remain available when both independent sessions are present.
+- Desktop offers Book appointment and Customer sign in directly, plus one Shops
+  dropdown containing Team sign in and Register your shop. The logo returns home.
+- Mobile shows Customers and Shops groups with their links immediately available,
+  without nested dropdowns. The public header uses the existing B++ symbol alone
+  at 600px and below, while larger headers retain the full wordmark.
+- Signed-in customers see My account and My appointments; staff see Open workspace
+  under Shops. Both destinations remain available with independent sessions.
 - Staff can visit the homepage without being redirected to their workspace.
   Every workspace toolbar includes a website shortcut; desktop also links to
   customer booking. Role-specific navigation and authorization stay in place.

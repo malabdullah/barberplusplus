@@ -21,6 +21,13 @@ for (const width of [1440, 390]) {
           expect(logoBox.y).toBeGreaterThanOrEqual(bannerBox.y + bannerBox.height);
           expect(await logo.evaluate(el => getComputedStyle(el).direction)).toBe('ltr');
           const treatment = theme;
+          const artwork = logo.locator(`.brand-logo-${treatment}`);
+          await expect.poll(() => artwork.evaluate(img => img.currentSrc)).toContain(width <= 600 ? `/brand/barber-symbol-${theme}.svg` : `/brand/barber-horizontal-${theme}.svg`);
+          if (width <= 600) {
+            const symbol = await artwork.boundingBox();
+            expect(symbol.width).toBeLessThanOrEqual(44);
+            expect(symbol.height / symbol.width).toBeCloseTo(304 / 260, 1);
+          }
           await expect(logo.locator(`.brand-logo-${treatment}`)).toBeVisible();
           await expect(logo.locator(`.brand-logo-${treatment === 'light' ? 'dark' : 'light'}`)).toBeHidden();
           await expect.poll(() => logo.locator(`.brand-logo-${treatment}`).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);

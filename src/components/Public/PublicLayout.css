@@ -8,17 +8,17 @@
 .public-brand { display: inline-flex; flex-shrink: 0; align-items: center; min-height: 44px; }
 .public-desktop-nav { display: flex; align-items: center; gap: 24px; margin-inline: auto; }
 .public-header a, .public-footer a { text-decoration: none; }
-.public-desktop-nav a, .public-account-button { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.public-desktop-nav a, .public-disclosure-button { font-size: 15px; font-weight: 500; white-space: nowrap; }
 .public-desktop-nav a { color: var(--text-secondary); min-height: 44px; display: flex; align-items: center; }
-.public-desktop-nav a:hover, .public-desktop-nav a[aria-current], .public-footer a:hover { color: var(--booking-link); }
+.public-desktop-nav a:not(.public-book-link):hover, .public-desktop-nav a:not(.public-book-link)[aria-current], .public-footer a:hover { color: var(--booking-link); }
 .public-header-actions { display: flex; align-items: center; gap: 8px; }
 .public-header .topbar-icon-btn { width: 44px; height: 44px; }
 .public-header .topbar-dropdown { z-index: 110; }
-.public-account { position: relative; }
-.public-account-button, .public-mobile-toggle { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 16px; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; }
-.public-account-links { position: absolute; inset-inline-end: 0; top: calc(100% + 10px); width: max-content; min-width: 230px; max-width: calc(100vw - 32px); padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); box-shadow: 0 8px 24px #0002; }
-.public-account-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; color: var(--text-primary); border-radius: 6px; }
-.public-account-links a:hover { background: var(--bg-tertiary); }
+.public-nav-disclosure { position: relative; }
+.public-disclosure-button, .public-mobile-toggle { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 16px; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; }
+.public-dropdown-links { position: absolute; inset-inline-end: 0; top: calc(100% + 10px); width: max-content; min-width: 230px; max-width: calc(100vw - 32px); padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); box-shadow: 0 8px 24px #0002; }
+.public-dropdown-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; color: var(--text-primary); border-radius: 6px; }
+.public-dropdown-links a:hover { background: var(--bg-tertiary); }
 .public-mobile-toggle { display: none; width: 44px; padding: 10px; }
 .public-mobile-links { display: none; }
 .public-header :where(a, button):focus-visible, .public-footer a:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
@@ -42,19 +42,22 @@
   .public-site { --public-header-height: 72px; }
   .public-header-inner { padding: 10px 24px; gap: 16px; }
   .public-header-actions { margin-inline-start: auto; }
-  .public-desktop-nav, .public-account { display: none; }
+  .public-desktop-nav, .public-nav-disclosure { display: none; }
   .public-mobile-toggle { display: flex; }
   .public-mobile-links { display: flex; flex-direction: column; padding: 0 24px 16px; max-height: calc(100dvh - var(--public-header-height) - var(--environment-banner-height, 0px)); overflow-y: auto; }
   .public-mobile-links a { min-height: 48px; padding: 12px 8px; color: var(--text-primary); border-radius: 6px; }
   .public-mobile-links a:hover, .public-mobile-links a[aria-current] { background: var(--bg-secondary); color: var(--booking-link); }
-  .public-menu-divider { height: 1px; background: var(--border-color); margin-block: 8px; }
+  .public-mobile-group { display: flex; flex-direction: column; }
+  .public-mobile-group + .public-mobile-group { margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+  .public-mobile-group h2 { font: 600 13px/1.5 var(--font-body); color: var(--text-secondary); margin: 8px 8px 4px; }
   .public-footer-inner { grid-template-columns: 1fr 1fr; gap: 32px; }
 }
 @media (max-width: 600px) {
   .public-site { --public-header-height: 68px; }
   .public-header-inner { padding: 10px 16px; gap: 8px; }
   .public-header-actions { gap: 2px; }
-  .public-header .brand-logo--compact { width: 128px; }
+  .public-header .brand-logo--responsive-symbol { width: 32px; }
+  .public-brand { min-width: 44px; justify-content: center; }
   .public-mobile-links { padding-inline: 16px; }
   .public-site .hero-section { padding-top: 40px; }
   .public-footer { padding: 32px 22px 24px; }
@@ -75,3 +78,7 @@
   .public-site .hero-content { order: 0; }
   .public-site .hero-visual { order: 1; }
 }
+
+.public-desktop-nav a.public-book-link { color: #151A20; background: var(--accent-primary); border-radius: 8px; padding: 10px 18px; }
+.public-desktop-nav a.public-book-link:hover { background: #C89B49; }
+.public-disclosure-button { border: 0; padding-inline: 0; }
