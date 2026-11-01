@@ -9,6 +9,8 @@ import ar from '../i18n/locales/ar.json';
 import CustomerBooking from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
+import { rebookingDraft } from '../utils/customerRebooking';
+import { saveBookingDraft } from '../utils/customerBookingDraft';
 
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
@@ -314,4 +316,30 @@ it('shows a legacy saved location in Arabic when it has no built-in city transla
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
   fireEvent.focus(await screen.findByLabelText('المدينة'));
   expect(await screen.findByRole('option', { name: 'حولي' })).toBeInTheDocument();
+});
+
+it('starts rebooking at services with editable location summaries and no old service, date or time selection', async () => {
+  cleanup();
+  const draft = rebookingDraft({ date: '2025-01-01', time: '10:00', status: 'completed', branch_id: 'branch', barber_id: 'omar' }, catalog);
+  saveBookingDraft(draft);
+  render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[{ pathname: '/book', state: { rebookingDraft: draft } }]}><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await waitFor(() => expect(section('Services')).toHaveClass('is-open'));
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Book again');
+  expect(screen.getByRole('checkbox', { name: /Haircut/ })).not.toBeChecked();
+  expect(screen.getByLabelText('Select a date')).toHaveValue(getKuwaitDate());
+  expect(customerBookingService.getSlots).not.toHaveBeenCalled();
+  click('Edit: Choose your city');
+  changeCity('Salmiya');
+  expect(section('Choose your shop')).toHaveClass('is-open');
+  expect(screen.queryByRole('button', { name: 'Edit: Choose your barber' })).not.toBeInTheDocument();
+  expect(JSON.parse(sessionStorage.getItem('barber-customer-booking-draft'))).toMatchObject({ city: 'Salmiya', branchId: '', barberId: '', serviceIds: [], time: '' });
+});
+
+it('offers another barber when a past appointment’s barber is no longer available', async () => {
+  cleanup();
+  saveBookingDraft(rebookingDraft({ date: '2025-01-01', time: '10:00', status: 'completed', branch_id: 'branch', barber_id: 'removed' }, catalog));
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await waitFor(() => expect(section('Choose your barber')).toHaveClass('is-open'));
+  expect(screen.getByText(en.customerBooking.rebooking.barberUnavailable)).toBeVisible();
+  expect(screen.getByRole('radio', { name: /Omar/ })).not.toBeChecked();
 });

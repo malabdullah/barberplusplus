@@ -22,6 +22,14 @@ select is((select count(*) from private.customer_accounts where phone='50009999'
 select is(public.customer_account_api('profile',current_setting('email.one')::jsonb)->>'email','email-one@customer.test','untrusted profile email cannot replace Auth identity');
 select throws_ok($$select public.customer_account_api('profile',current_setting('email.one')::jsonb||'{"session_id":"99999999-0000-4000-8000-000000000302"}')$$,'P0001','AUTH_REQUIRED','another session cannot access profile');
 select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb),'[]'::jsonb,'empty account has no inferred phone-based history');
+insert into public.bookings(id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type) values
+('99999999-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121',array['20000000-0000-4000-8000-000000000121']::uuid[],current_date-1,'09:00',30,5,'completed','system');
+select private.record_customer_booking_owner('99999999-0000-4000-8000-000000000401','99999999-0000-4000-8000-000000000101','99999999-0000-4000-8000-000000000301');
+select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->>'branch_id','10000000-0000-4000-8000-000000000012','owned history returns exact shop ID for rebooking');
+select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->>'barber_id','30000000-0000-4000-8000-000000000121','owned history returns exact barber ID for rebooking');
+select is(public.customer_account_api('bookings',current_setting('email.one')::jsonb)->0->'service_ids','["20000000-0000-4000-8000-000000000121"]'::jsonb,'owned history retains service IDs for the iOS client');
+select is(public.customer_account_api('bookings',current_setting('email.two')::jsonb),'[]'::jsonb,'another customer sharing the phone cannot read rebooking selections');
+select throws_ok($$select public.customer_account_api('bookings',current_setting('email.one')::jsonb||'{"session_id":"99999999-0000-4000-8000-000000000302"}')$$,'P0001','AUTH_REQUIRED','rebooking history requires the original customer session');
 select ok(not has_table_privilege('authenticated','private.customer_accounts','SELECT'),'customers cannot directly read private profiles');
 select * from finish();
 rollback;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
@@ -44,7 +44,10 @@ function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, d
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
-  const [draft] = useState(readBookingDraft);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [draft] = useState(() => location.state?.rebookingDraft || readBookingDraft());
+  const [rebookNotice, setRebookNotice] = useState(draft?.rebookNotice || '');
   const restoredDraft = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
   const isArabic = i18n.language.startsWith('ar');
@@ -82,7 +85,7 @@ export default function CustomerBooking() {
   const cityGroups = useMemo(() => bookingCityGroups(catalog.branches), [catalog.branches]);
   const governorateName = group => group.key === 'other' ? tr('otherLocations') : tr(`governorates.${group.key}`, { defaultValue: isArabic && group.nameAr ? group.nameAr : group.name });
   const branch = catalog.branches.find(item => item.id === branchId);
-  const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId);
+  const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
   const branches = useMemo(() => searchBranches(catalog.branches, city, query), [catalog.branches, city, query]);
   const barbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
   const services = getBarberServices(catalog, branchId, barberId);
@@ -103,15 +106,15 @@ export default function CustomerBooking() {
   const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); };
   const changeCity = value => {
     if (value !== city) { setCity(value); setBranchId(''); setQuery(''); clearAfterBranch(); }
-    openPanel(value ? 'shop' : 'city'); setError('');
+    openPanel(value ? 'shop' : 'city'); setError(''); setRebookNotice('');
   };
   const selectBranch = id => {
     if (id !== branchId) { setBranchId(id); clearAfterBranch(); }
-    openPanel('barber'); setError('');
+    openPanel('barber'); setError(''); setRebookNotice('');
   };
   const selectBarber = id => {
     if (id !== barberId) { setBarberId(id); setServiceIds([]); setTime(''); setSlots([]); }
-    openPanel('services'); setError('');
+    openPanel('services'); setError(''); setRebookNotice('');
   };
   const toggleService = id => {
     setServiceIds(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
@@ -120,18 +123,21 @@ export default function CustomerBooking() {
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
   useEffect(() => {
+    if (location.state?.rebookingDraft) navigate(location.pathname, { replace: true, state: null });
+  }, []);
+  useEffect(() => {
     if (customer) { setDetails(current => ({ ...current, name: customer.name, countryCode: customer.countryCode || '+965', phone: customer.phone || '' })); setVerification(''); }
   }, [customer?.id, customer?.name, customer?.phone]);
   useEffect(() => {
     if (catalogLoading || catalogError || restoredDraft.current) return;
     restoredDraft.current = true;
     if (!draft) return;
-    if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); return; }
-    if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); return; }
+    if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); if (draft.rebooking) setRebookNotice('shopUnavailable'); return; }
+    if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); if (draft.rebooking) setRebookNotice('shopUnavailable'); return; }
     const validServices = barber && serviceIds.length > 0 && selectedServices.length === serviceIds.length;
     const validDate = barber && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= getKuwaitDate() && date <= addBookingDays(getKuwaitDate(), barber.maxBookingDays || 30);
     const validTime = validDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-    if (!barber) clearAfterBranch();
+    if (!barber) { clearAfterBranch(); if (draft.rebooking) setRebookNotice('barberUnavailable'); }
     else if (!validServices) { setServiceIds([]); setTime(''); }
     if (!validDate) { setDate(getKuwaitDate()); setTime(''); }
     if (!validTime) setTime('');
@@ -140,7 +146,7 @@ export default function CustomerBooking() {
     const available = { city: true, shop: Boolean(city), barber: Boolean(branch), services: Boolean(barber), time: validServices, details: validServices && validTime };
     openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
-  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2) }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt]);
+  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2), rebooking: Boolean(draft?.rebooking), rebookNotice }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt, rebookNotice]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
@@ -213,7 +219,7 @@ export default function CustomerBooking() {
   const finalDetails = panel === 'details';
   const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr('confirm');
   const panelIndex = PANELS.indexOf(panel);
-  const title = receipt ? tr('successTitle') : tr('onePage.title');
+  const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
   const downloadCalendar = () => {
     const url = URL.createObjectURL(new Blob([bookingCalendar(receipt)], { type: 'text/calendar;charset=utf-8' }));
     const link = document.createElement('a');
@@ -240,7 +246,8 @@ export default function CustomerBooking() {
         </div>}
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
-        <p className="cb-intro">{receipt ? tr('successIntro') : tr('onePage.intro')}</p>
+        <p className="cb-intro">{receipt ? tr('successIntro') : tr(draft?.rebooking ? 'rebooking.intro' : 'onePage.intro')}</p>
+        {!receipt && ['shopUnavailable', 'barberUnavailable'].includes(rebookNotice) && <p className="cb-alert" role="status">{tr(`rebooking.${rebookNotice}`)}</p>}
         {catalogError && bookingError}
         {catalogLoading ? <div className="cb-loading" role="status"><Loader2 size={22} className="cb-spinner" />{tr('loading')}</div> : receipt ? <div className="cb-success">
           <div className="cb-reference"><ShieldCheck size={20} aria-hidden="true" /><span>{tr('reference')} <strong dir="ltr">{receipt.reference}</strong></span></div>

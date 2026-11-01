@@ -1540,6 +1540,12 @@
       "barberFirst": "Choose a barber to see their services.",
       "timeFirst": "Choose a date and time to continue."
     },
+    "rebooking": {
+      "title": "Book again",
+      "intro": "Choose your services and a new date and time. You can change the city, shop or barber above.",
+      "shopUnavailable": "This shop is no longer available for online booking. Choose a city and a new shop to continue.",
+      "barberUnavailable": "This barber is no longer available at the shop. Choose another barber or change your shop."
+    },
     "onePage": {
       "title": "Book your appointment",
       "intro": "Choose your city to get started. We’ll guide you through the rest.",
@@ -1683,6 +1689,12 @@
     "backToSignIn": "Back to sign in",
     "customerAccount": "Customer account",
     "account": {
+      "upcoming": "Upcoming",
+      "pastAppointments": "Past appointments",
+      "noPastTitle": "No past appointments yet",
+      "noPastDescription": "Your previous appointments will appear here.",
+      "bookAgain": "Book again",
+      "rebookError": "We couldn’t load the current shops and barbers. Try booking again.",
       "intro": "Your details and appointments, all in one place.",
       "profileTitle": "Profile details",
       "emailHint": "A new email address must be confirmed before it replaces your current one.",
