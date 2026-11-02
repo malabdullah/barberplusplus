@@ -32,7 +32,7 @@ select is(public.customer_account_api('social-link',current_setting('test.social
 select is(public.customer_account_api('profile',current_setting('test.social')::jsonb)->>'name','Existing Customer','linking preserves existing name');
 select is(public.customer_account_api('profile',current_setting('test.social')::jsonb)->>'email','kept@customer.test','linking preserves profile email');
 select is(public.customer_account_api('social-status',current_setting('test.social')::jsonb)->'profile'->>'id','88888888-0000-4000-8000-000000000101','returning social identity resolves existing profile');
-select is((select count(*) from private.customer_accounts where phone_e164='+96559999711'),1::bigint,'no duplicate customer account is created');
+select is((select count(*) from private.customer_account_profiles where phone_e164='+96559999711'),1::bigint,'no duplicate customer account is created');
 select throws_ok($$select public.customer_account_api('profile',current_setting('test.social')::jsonb||'{"session_id":"88888888-0000-4000-8000-000000000304"}')$$,'P0001','AUTH_REQUIRED','linked identity still cannot use another session');
 -- A new phone creates a canonical customer; provider email stays Auth-only.
 select set_config('test.new_social','{"user_id":"88888888-0000-4000-8000-000000000106","session_id":"88888888-0000-4000-8000-000000000306"}',true);

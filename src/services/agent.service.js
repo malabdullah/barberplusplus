@@ -109,8 +109,8 @@ const customerToFrontend = (customer) => {
     countryCode: customer.country_code,
     phone: customer.phone,
     email: customer.email,
-    notes: customer.notes,
-    tags: customer.tags || [],
+    notes: customer.staff_details?.notes,
+    tags: customer.staff_details?.tags || [],
     preferredBarberId: customer.preferred_barber_id,
     preferredBranchId: customer.preferred_branch_id,
     status: customer.status,
@@ -517,7 +517,7 @@ export const agentService = {
     try {
       let query = supabase
         .from('customers')
-        .select('*', { count: 'exact' })
+        .select('*, staff_details:customer_staff_details(notes,tags)', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       // Status filter
@@ -563,7 +563,7 @@ export const agentService = {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('*')
+        .select('*, staff_details:customer_staff_details(notes,tags)')
         .eq('id', customerId)
         .single();
 
@@ -589,10 +589,7 @@ export const agentService = {
       });
 
       const { data, error } = await supabase
-        .from('customers')
-        .insert([dbData])
-        .select()
-        .single();
+        .rpc('save_customer_profile', { p_id: null, p_data: dbData });
 
       if (error) {
         // Handle unique constraint violation
@@ -618,11 +615,7 @@ export const agentService = {
       const dbData = customerToDatabase(customerData);
 
       const { data, error } = await supabase
-        .from('customers')
-        .update(dbData)
-        .eq('id', customerId)
-        .select()
-        .single();
+        .rpc('save_customer_profile', { p_id: customerId, p_data: dbData });
 
       if (error) {
         // Handle unique constraint violation

@@ -11,8 +11,8 @@ const toFrontend = (customer) => {
     countryCode: customer.country_code,
     phone: customer.phone,
     email: customer.email,
-    notes: customer.notes,
-    tags: customer.tags || [],
+    notes: customer.staff_details?.notes,
+    tags: customer.staff_details?.tags || [],
     preferredBarberId: customer.preferred_barber_id,
     preferredBranchId: customer.preferred_branch_id,
     status: customer.status,
@@ -63,6 +63,7 @@ export const customersService = {
         .from('customers')
         .select(`
           *,
+          staff_details:customer_staff_details(notes,tags),
           preferred_barber:barbers!preferred_barber_id(id, name)
         `)
         .eq('country_code', countryCode)
@@ -157,8 +158,7 @@ export const customersService = {
           id,
           total_bookings,
           last_booking_date,
-          notes,
-          tags,
+          staff_details:customer_staff_details(notes,tags),
           preferred_barber_id,
           preferred_branch_id,
           created_at,
@@ -175,8 +175,8 @@ export const customersService = {
         preferredBarber: data.preferred_barber?.name || null,
         preferredBarberId: data.preferred_barber_id,
         preferredBranchId: data.preferred_branch_id,
-        notes: data.notes,
-        tags: data.tags || [],
+        notes: data.staff_details?.notes,
+        tags: data.staff_details?.tags || [],
         memberSince: data.created_at,
       };
     } catch (error) {
@@ -196,6 +196,7 @@ export const customersService = {
         .from('customers')
         .select(`
           *,
+          staff_details:customer_staff_details(notes,tags),
           preferred_barber:barbers!preferred_barber_id(id, name)
         `)
         .eq('id', customerId)

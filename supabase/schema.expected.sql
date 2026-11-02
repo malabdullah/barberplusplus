@@ -807,6 +807,33 @@ $$;
 ALTER FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare c public.customers%rowtype; details public.customer_staff_details%rowtype;
+begin
+  if not (public.is_agent() or public.is_admin()) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  if p_id is null then
+    insert into public.customers(name,name_ar,country_code,phone,email,preferred_barber_id,preferred_branch_id,status,created_by_type,created_by_user_id)
+    values(p_data->>'name',p_data->>'name_ar',coalesce(p_data->>'country_code','+965'),p_data->>'phone',nullif(p_data->>'email',''),nullif(p_data->>'preferred_barber_id','')::uuid,nullif(p_data->>'preferred_branch_id','')::uuid,coalesce(p_data->>'status','active'),p_data->>'created_by_type',auth.uid()) returning * into c;
+  else
+    select * into c from public.customers where id=p_id for update;
+    if c.id is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+    c:=jsonb_populate_record(c,p_data-array['id','notes','tags','created_at','updated_at','created_by_user_id','created_by_type','total_bookings','last_booking_date']);
+    update public.customers set name=c.name,name_ar=c.name_ar,country_code=c.country_code,phone=c.phone,email=c.email,preferred_barber_id=c.preferred_barber_id,preferred_branch_id=c.preferred_branch_id,status=c.status,updated_at=now() where id=p_id returning * into c;
+  end if;
+  if p_data ? 'notes' or p_data ? 'tags' then
+    insert into public.customer_staff_details as d(customer_id,notes,tags)
+    values(c.id,p_data->>'notes',coalesce(array(select jsonb_array_elements_text(p_data->'tags')),'{}'))
+    on conflict(customer_id) do update set notes=case when p_data ? 'notes' then excluded.notes else d.notes end,tags=case when p_data ? 'tags' then excluded.tags else d.tags end;
+  end if;
+  select * into details from public.customer_staff_details where customer_id=c.id;
+  return to_jsonb(c)||jsonb_build_object('staff_details',to_jsonb(details));
+end $$;
+
+ALTER FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1077,15 +1104,21 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
 ALTER TABLE "public"."branches" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."customer_staff_details" (
+    "customer_id" "uuid" NOT NULL,
+    "notes" "text",
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL
+);
+
+ALTER TABLE "public"."customer_staff_details" OWNER TO "postgres";
+
 CREATE TABLE IF NOT EXISTS "public"."customers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" character varying(255) NOT NULL,
     "name_ar" character varying(255),
     "country_code" character varying(10) DEFAULT '+965'::character varying NOT NULL,
-    "phone" character varying(20) NOT NULL,
+    "phone" character varying(20),
     "email" character varying(255),
-    "notes" "text",
-    "tags" "text"[] DEFAULT '{}'::"text"[],
     "preferred_barber_id" "uuid",
     "preferred_branch_id" "uuid",
     "status" character varying(20) DEFAULT 'active'::character varying NOT NULL,
@@ -1372,6 +1405,9 @@ ALTER TABLE ONLY "public"."branches"
     ADD CONSTRAINT "branches_pkey" PRIMARY KEY ("id");
 
 
+
+ALTER TABLE ONLY "public"."customer_staff_details"
+    ADD CONSTRAINT "customer_staff_details_pkey" PRIMARY KEY ("customer_id");
 
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_phone_unique" UNIQUE ("country_code", "phone");
@@ -1847,6 +1883,9 @@ ALTER TABLE ONLY "public"."branches"
     ADD CONSTRAINT "branches_governorate_id_fkey" FOREIGN KEY ("governorate_id") REFERENCES "public"."governorates"("id");
 
 
+
+ALTER TABLE ONLY "public"."customer_staff_details"
+    ADD CONSTRAINT "customer_staff_details_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_created_by_user_id_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
@@ -2444,6 +2483,8 @@ CREATE POLICY "agents_admins_insert_customers" ON "public"."customers" FOR INSER
 
 
 
+CREATE POLICY "agents_admins_manage_customer_details" ON "public"."customer_staff_details" TO "authenticated" USING (("public"."is_agent"() OR "public"."is_admin"())) WITH CHECK (("public"."is_agent"() OR "public"."is_admin"()));
+
 CREATE POLICY "agents_admins_update_customers" ON "public"."customers" FOR UPDATE USING (("public"."is_agent"() OR "public"."is_admin"()));
 
 
@@ -2465,6 +2506,8 @@ ALTER TABLE "public"."bookings" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."branches" ENABLE ROW LEVEL SECURITY;
 
+
+ALTER TABLE "public"."customer_staff_details" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
 
@@ -2508,6 +2551,10 @@ ALTER TABLE "public"."whatsapp_logs" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."whatsapp_messages" ENABLE ROW LEVEL SECURITY;
 
+
+CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_details" TO "service_role" USING (true) WITH CHECK (true);
+
+CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
@@ -2654,6 +2701,9 @@ GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO
 
 
 
+REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
+
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";
@@ -2735,6 +2785,9 @@ GRANT ALL ON TABLE "public"."branches" TO "authenticated";
 GRANT ALL ON TABLE "public"."branches" TO "service_role";
 
 
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "authenticated";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "service_role";
 
 GRANT ALL ON TABLE "public"."customers" TO "anon";
 GRANT ALL ON TABLE "public"."customers" TO "authenticated";
