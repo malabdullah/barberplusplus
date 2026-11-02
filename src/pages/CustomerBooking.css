@@ -186,3 +186,12 @@
 .cb-progress { color: var(--booking-muted); font-size: 14px; margin-bottom: 24px; }
 .cb-progress-track { height: 3px; background: var(--booking-divider); margin-top: 10px; }
 .cb-progress-track span { display: block; height: 100%; background: var(--booking-amber); }
+
+.cb-account-choice { margin-block: 24px; padding: 20px; border: 1px solid var(--booking-divider); border-radius: 12px; background: var(--booking-subtle); }
+.cb-account-choice h2, .cb-account-choice h3 { margin: 0 0 8px; font: 600 20px/1.4 var(--font-body); color: var(--booking-text); }
+.cb-account-choice p { margin: 0 0 16px; color: var(--booking-muted); overflow-wrap: anywhere; }
+.cb-account-choice p[role='status'] { display: flex; align-items: center; gap: 10px; }
+.cb-account-choice-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.cb-account-choice .cb-secondary { color: var(--booking-text); }
+.cb-account-choice .cb-helper { margin: 16px 0 0; }
+@media (max-width: 767px) { .cb-account-choice-actions { flex-direction: column; } .cb-account-choice-actions > * { width: 100%; } }

@@ -5,7 +5,7 @@ import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Se
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
-import { readBookingDraft, saveBookingDraft } from '../utils/customerBookingDraft';
+import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
 import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
@@ -71,9 +71,12 @@ export default function CustomerBooking() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
-  const [details, setDetails] = useState({ name: '', countryCode: '+965', phone: '', notes: '' });
+  const [details, setDetails] = useState(() => ({ name: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
-  const [receipt, setReceipt] = useState(null);
+  const [receipt, setReceipt] = useState(() => location.state?.rebookingDraft ? null : readBookingReceipt());
+  const [guest, setGuest] = useState(draft?.guest === true);
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimError, setClaimError] = useState('');
   const [busy, setBusy] = useState(false);
   usePublicNavigationBusy(busy);
   const [error, setError] = useState('');
@@ -123,7 +126,8 @@ export default function CustomerBooking() {
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
   useEffect(() => {
-    if (location.state?.rebookingDraft) navigate(location.pathname, { replace: true, state: null });
+    forgetBookingReturn();
+    if (location.state?.rebookingDraft) { saveBookingReceipt(null); navigate(location.pathname, { replace: true, state: null }); }
   }, []);
   useEffect(() => {
     if (customer) { setDetails(current => ({ ...current, name: customer.name, countryCode: customer.countryCode || '+965', phone: customer.phone || '' })); setVerification(''); }
@@ -146,7 +150,7 @@ export default function CustomerBooking() {
     const available = { city: true, shop: Boolean(city), barber: Boolean(branch), services: Boolean(barber), time: validServices, details: validServices && validTime };
     openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
-  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2), rebooking: Boolean(draft?.rebooking), rebookNotice }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt, rebookNotice]);
+  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2), rebooking: Boolean(draft?.rebooking), rebookNotice, guest, details }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt, rebookNotice, guest, details]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
@@ -177,7 +181,7 @@ export default function CustomerBooking() {
   const serviceKey = serviceIds.join(',');
   const checkingAvailability = (panel === 'time' || panel === 'details') && Boolean(branch && barber && selectedServices.length);
   useEffect(() => {
-    if (!checkingAvailability || !date) return undefined;
+    if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
     setSlotsLoading(true); setSlots([]); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
@@ -185,7 +189,7 @@ export default function CustomerBooking() {
       .catch(failure => { if (active) { setError(failure.message); setSlotError(true); setTime(''); openPanel('time'); } })
       .finally(() => { if (active) setSlotsLoading(false); });
     return () => { active = false; };
-  }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry]);
+  }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry, receipt, customer?.id]);
 
   const validGuestDetails = () => {
     const errors = {};
@@ -197,7 +201,7 @@ export default function CustomerBooking() {
   };
   const confirmBooking = async event => {
     event.preventDefault();
-    if (busy || !appointmentReady || panel !== 'details') return;
+    if (busy || !appointmentReady || panel !== 'details' || accountLoading || (!customer && !guest)) return;
     if (!validGuestDetails()) return;
     setBusy(true); setError('');
     try {
@@ -207,7 +211,9 @@ export default function CustomerBooking() {
       // Preserve the same signed booking ID across uncertain network retries.
       const proof = verification || (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
       setVerification(proof);
-      setReceipt(await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes }));
+      const result = await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes });
+      const confirmed = { ...result, accountSaved: Boolean(customer) };
+      saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
@@ -215,8 +221,8 @@ export default function CustomerBooking() {
     } finally { setBusy(false); }
   };
   const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError);
-  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading;
   const finalDetails = panel === 'details';
+  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
   const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr('confirm');
   const panelIndex = PANELS.indexOf(panel);
   const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
@@ -253,7 +259,21 @@ export default function CustomerBooking() {
           <div className="cb-reference"><ShieldCheck size={20} aria-hidden="true" /><span>{tr('reference')} <strong dir="ltr">{receipt.reference}</strong></span></div>
           {renderSummary(receipt)}
           <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
-          <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => window.location.reload()}>{tr('anotherBooking')}</button></div>
+          <section className="cb-account-choice" aria-label={tr('accountChoice.saveTitle')}>
+            {receipt.accountSaved ? <><p role="status"><CheckCircle2 size={20} aria-hidden="true" />{tr('accountChoice.saved')}</p><Link className="cb-text-button" to="/customer/account">{t('customerAuth.myAccount')}</Link></> : <>
+              <h2>{tr('accountChoice.saveTitle')}</h2><p>{tr('accountChoice.saveHint')}</p>
+              {claimError && <p className="cb-alert" role="alert">{tr(`accountChoice.${claimError === 'CLAIM_UNAVAILABLE' ? 'claimMismatch' : 'claimFailed'}`)}</p>}
+              {!customer ? <Link className="cb-secondary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{tr('accountChoice.signInSave')}</Link> : <>
+                <button className="cb-secondary" type="button" disabled={claimBusy || accountLoading || !receipt.claimToken} onClick={async () => {
+                  setClaimBusy(true); setClaimError('');
+                  try { await customerBookingService.claim(receipt.claimToken); const saved = { ...receipt, accountSaved: true, claimToken: undefined }; saveBookingReceipt(saved); setReceipt(saved); }
+                  catch (failure) { setClaimError(failure.message); } finally { setClaimBusy(false); }
+                }}>{claimBusy && <Loader2 className="cb-spinner" size={18} aria-hidden="true" />}{tr('accountChoice.save')}</button>
+                {claimError === 'CLAIM_UNAVAILABLE' && <Link className="cb-text-button" to="/customer/account">{t('customerAuth.manageAccount')}</Link>}
+              </>}
+            </>}
+          </section>
+          <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.reload(); }}>{tr('anotherBooking')}</button></div>
         </div> : <>
           <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => openPanel('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
             <div className="cb-city-step"><CityPicker groups={cityGroups} value={city} onChange={changeCity} cityName={cityName} governorateName={governorateName} disabled={busy || !cities.length} />{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}</div>
@@ -278,8 +298,13 @@ export default function CustomerBooking() {
           </BookingSection>
           <BookingSection feedback={panel === 'details' && !catalogError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
               {time && date && <>
+                {!customer && !accountLoading && <section className="cb-account-choice" aria-labelledby="booking-account-choice-title">
+                  <h3 id="booking-account-choice-title">{tr('accountChoice.title')}</h3><p>{tr('accountChoice.hint')}</p>
+                  <div className="cb-account-choice-actions"><Link className="cb-primary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{t('customerAuth.signIn')}</Link><button className="cb-secondary" type="button" onClick={() => { setGuest(true); setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0); }} aria-pressed={guest}>{tr('accountChoice.guest')}</button></div>
+                  {guest && <p className="cb-helper">{tr('accountChoice.guestHint')}</p>}
+                </section>}
                 <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
-                <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
+                {(customer || guest) && !accountLoading && <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
                       <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
@@ -291,12 +316,12 @@ export default function CustomerBooking() {
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
                     </>}
                   </fieldset>
-                </form>
+                </form>}
                 <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
               </>}
           </BookingSection>
         </>}
-        {!catalogLoading && !receipt && <footer className="cb-actions">
+        {!catalogLoading && !receipt && (!finalDetails || customer || guest) && <footer className="cb-actions">
           <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
             <button id="booking-next" type={finalDetails ? 'submit' : 'button'} form={finalDetails ? 'booking-confirm-form' : undefined} className="cb-primary" disabled={!canContinue || busy || catalogError} onClick={!finalDetails ? () => openPanel(PANELS[panelIndex + 1]) : undefined}>{busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : nextLabel}{!busy && <ArrowRight size={20} className="cb-directional" />}</button>
