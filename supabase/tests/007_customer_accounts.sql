@@ -18,7 +18,7 @@ select is(public.customer_account_api('limit',jsonb_build_object('key',repeat('a
 select is(public.customer_account_api('limit',jsonb_build_object('key',repeat('a',64),'max',1)),'false'::jsonb,'server rate limit persists across calls');
 select throws_ok($$select public.customer_account_api('link','{"user_id":"00000000-0000-4000-8000-000000000082","name":"Forged","country_code":"+965","phone":"59999881","phone_e164":"+96559999881"}')$$,'P0001','ACCOUNT_UNAVAILABLE','staff identities cannot be linked as customers');
 select lives_ok($$select public.customer_account_api('link','{"user_id":"00000000-0000-4000-8000-000000000081","name":"Customer Test","country_code":"+965","phone":"59999881","phone_e164":"+96559999881"}')$$,'verified phone customer links without email');
-select is((select email from private.customer_accounts where user_id='00000000-0000-4000-8000-000000000081'),null,'email remains optional');
+select is((select email from private.customer_account_profiles where user_id='00000000-0000-4000-8000-000000000081'),null,'email remains optional');
 select throws_ok($$select public.customer_account_api('profile','{"user_id":"00000000-0000-4000-8000-000000000081","session_id":"00000000-0000-4000-8000-000000000099"}')$$,'P0001','AUTH_REQUIRED','profile requires live session');
 select public.customer_account_api('issue','{"id":"00000000-0000-4000-8000-000000000091","purpose":"signup","phone_e164":"+96559999881","code_hash":"correct","payload":{"name":"Bound Name"}}');
 select is(public.customer_account_api('consume','{"id":"00000000-0000-4000-8000-000000000091","purpose":"signup","code_hash":"wrong"}'),'null'::jsonb,'wrong code rejected');

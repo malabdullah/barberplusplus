@@ -6,6 +6,8 @@
 
 // Common Supabase/PostgreSQL error patterns
 const ERROR_PATTERNS = {
+  'PHONE_IN_USE': 'errors.phoneInUse',
+  'PHONE_REGISTRATION_CONFLICT': 'errors.phoneRegistrationConflict',
   // Authentication errors
   'Invalid login credentials': 'auth.invalidCredentials',
   'Email not confirmed': 'auth.emailNotConfirmed',
@@ -95,8 +97,10 @@ export const getErrorKey = (error, context = 'unknown') => {
  * @param {string} fallback - Fallback message if no match found
  * @returns {string} User-friendly error message
  */
-export const getErrorMessage = (error, fallback = 'An error occurred. Please try again.') => {
+export const getErrorMessage = (error, fallback = 'An error occurred. Please try again.', translate) => {
   const errorMessage = typeof error === 'string' ? error : error?.message || '';
+  if (errorMessage.includes('PHONE_IN_USE')) return translate ? translate('errors.phoneInUse') : 'This phone number is already in use. Use a different number.';
+  if (errorMessage.includes('PHONE_REGISTRATION_CONFLICT')) return translate ? translate('errors.phoneRegistrationConflict') : 'Could not create the account. Check your details and use an unregistered phone number.';
 
   // Direct message mappings for non-i18n contexts
   const directMappings = {

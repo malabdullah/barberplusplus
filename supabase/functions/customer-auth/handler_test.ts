@@ -4,6 +4,11 @@ const make=(overrides={})=>createCustomerAuthHandler({environment:'test',appUrl:
 const req=(body:unknown,origin='http://localhost:5173',token='')=>new Request('http://127.0.0.1:55321/functions/v1/customer-auth',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
 const details={name:'Customer Name',countryCode:'+965',phone:'5000-0099'};
 const password='Short12!';
+Deno.test('duplicate contact numbers return a stable conflict without exposing their owner',async()=>{
+ const handler=make({identity:async()=>({user_id:'account',session_id:'session'}),rpc:async(action:string)=>{if(action==='update-profile')throw Error('23505 PHONE_IN_USE');return true;}});
+ const response=await handler(req({action:'update-profile',...details,email:'test@example.test'},'http://localhost:5173','token'));
+ assert(response.status===409);assert(JSON.stringify(await response.json())===JSON.stringify({error:'PHONE_IN_USE'}));
+});
 function fixture(overrides={}){
  let saved:Record<string,unknown>={};let used=false;const events:string[]=[];let created:Record<string,unknown>={};
  const handler=make({rpc:async(action:string,data:Record<string,unknown>)=>{

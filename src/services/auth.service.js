@@ -68,6 +68,7 @@ export const authService = {
 
     if (error) {
       // Map Supabase error to user-friendly message
+      if (/Database error saving new user/i.test(error.message)) return { success: false, error: 'PHONE_REGISTRATION_CONFLICT' };
       const friendlyError = getErrorMessage(error, 'Registration failed. Please try again.');
       return { success: false, error: friendlyError };
     }

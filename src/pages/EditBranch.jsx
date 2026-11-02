@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import BranchForm from '../components/Forms/BranchForm';
 import BackLink from '../components/UI/BackLink';
+import { getErrorMessage } from '../utils/errorMessages';
 import './AddBranch.css';
 
 export default function EditBranch() {
@@ -11,12 +12,17 @@ export default function EditBranch() {
   const { branchId } = useParams();
   const navigate = useNavigate();
   const { branches, updateBranch } = useApp();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const branch = branches.find((b) => b.id === branchId);
 
-  const handleSubmit = (data) => {
-    updateBranch(branchId, data);
-    navigate('/dashboard/branches');
+  const handleSubmit = async (data) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true); setErrorMessage('');
+    try { await updateBranch(branchId, data); navigate('/dashboard/branches'); }
+    catch (error) { setErrorMessage(getErrorMessage(error, t('common.error'), t)); }
+    finally { setIsSubmitting(false); }
   };
 
   const handleCancel = () => {
@@ -47,10 +53,12 @@ export default function EditBranch() {
       </div>
 
       <div className="edit-branch-form-container animate-fade-in-up stagger-1">
+        {errorMessage && <p className="error-banner" role="alert">{errorMessage}</p>}
         <BranchForm
           branch={branch}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          isSubmitting={isSubmitting}
         />
       </div>
     </div>
