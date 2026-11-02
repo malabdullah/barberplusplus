@@ -12,3 +12,15 @@ assert m.behavioral_schema("SELECT 'COMMENT ON TABLE';\\n")=="SELECT 'COMMENT ON
   const r = spawnSync('python3', ['-c', code], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
   assert.equal(r.status, 0, r.stderr);
 });
+
+test('schema mismatch diagnostics contain hashes and positions but no SQL or private values', () => {
+  const code = `import importlib.util,json
+s=importlib.util.spec_from_file_location('diagnostic','scripts/schema-drift-summary.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+result=json.dumps(m.summary("SELECT 'private-sentinel';", "SELECT 'different-private-value';"))
+assert 'private-sentinel' not in result and 'SELECT' not in result and 'different-private-value' not in result
+assert m.summary('same','same')==[]
+assert m.summary('a','b')[0]['expectedCount']==1
+`;
+  const r = spawnSync('python3', ['-c', code], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+  assert.equal(r.status, 0, r.stderr);
+});

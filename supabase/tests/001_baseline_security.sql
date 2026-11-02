@@ -17,8 +17,8 @@ select is(
     where n.nspname = 'public'
       and c.relkind in ('r', 'p')
   ),
-  20::bigint,
-  'all 20 production application tables are present'
+  21::bigint,
+  'all 21 application tables, including staff annotations, are present'
 );
 
 select ok(
@@ -35,8 +35,8 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  123::bigint,
-  'all baseline and trusted-role RLS policies are present'
+  126::bigint,
+  'all baseline, trusted-role and staff-annotation RLS policies are present'
 );
 
 select is(
