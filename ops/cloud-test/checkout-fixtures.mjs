@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {randomInt} from 'node:crypto';
 import {createClient} from '@supabase/supabase-js';
-const c=JSON.parse(await fs.readFile('.cloud-test/credentials.json'));assert.equal(c.projectRef,'qvkucvcjmojjbphlzlks');
+const c=JSON.parse(await fs.readFile('.cloud-test/credentials.json'));assert.equal(c.projectRef,'qvkucvcjmojjbphlzlks');assert.equal(c.appUrl,'https://barber-test.alabdullah-cs.workers.dev');
 const keys=JSON.parse(await fs.readFile('.cloud-test/api-keys.json'));const key=keys.find(k=>k.name==='anon').api_key;
 const origin=c.appUrl;const url=`https://${c.projectRef}.supabase.co`;
 const gate=await fetch(origin,{headers:{authorization:`Basic ${btoa(`tester:${c.accessPassword}`)}`}});assert.equal(gate.status,200);const cookie=gate.headers.get('set-cookie').split(';')[0];

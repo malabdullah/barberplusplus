@@ -105,7 +105,7 @@ test('guest confirms, signs in, saves one receipt, and sees it in account histor
   await page.getByRole('button', { name: 'Save to my account', exact: true }).click(); expect((await saved).status()).toBe(200);
   await expect(page.getByText(copy.en.customerBooking.accountChoice.saved, { exact: true })).toBeVisible();
   const history = page.waitForResponse(response => response.url().includes('customer-auth') && response.request().postDataJSON()?.action === 'bookings');
-  await page.getByRole('link', { name: copy.en.customerAuth.myAccount, exact: true }).click();
+  await page.locator('.cb-success').getByRole('link', { name: copy.en.customerAuth.myAccount, exact: true }).click();
   expect((await (await history).json()).bookings.some(booking => booking.id === receipt.id)).toBe(true);
   await expect(page.locator('.ca-profile-details')).toContainText(customers[0].profile.name);
   await expect(page.locator('.ca-booking-list')).toContainText(receipt.branch_name);
@@ -159,7 +159,7 @@ for (const provider of ['Google', 'Apple']) {
     await page.route('**/auth/v1/authorize?**', route => route.fulfill({ status: 302, headers: { location: `${state.appUrl}/customer/auth-callback?error=access_denied` }, body: '' }));
     await page.getByRole('button', { name: `Continue with ${provider}`, exact: true }).click();
     await expect(page.getByRole('alert')).toBeVisible();
-    await page.locator('.ca-footer').getByRole('link', { name: 'Continue as guest', exact: true }).click();
+    await page.locator('.ca-footer').getByRole('link', { name: copy.en.customerAuth.continueGuest, exact: true }).click();
     await expect(page.locator('#choose-details')).toHaveClass(/is-open/);
     const after = await page.evaluate(() => JSON.parse(localStorage.getItem('barber-customer-booking-draft')));
     expect(after.time).toBe(before.time); expect(after.serviceIds).toEqual(before.serviceIds);
