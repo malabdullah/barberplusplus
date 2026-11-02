@@ -12,20 +12,25 @@ import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../context/AppContext';
 import { notificationPreferencesService } from '../services';
 import './Notifications.css';
+import { useNavigate } from 'react-router-dom';
+import { notificationCopy, notificationDestination } from '../utils/dashboardNotifications';
 
-const NotificationItem = memo(function NotificationItem({ notification, onMarkRead }) {
-  const { i18n } = useTranslation();
+const NotificationItem = memo(function NotificationItem({ notification, onMarkRead, onOpen }) {
+  const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
   return (
     <div
       className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
-      onClick={() => !notification.isRead && onMarkRead(notification.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(notification); } }}
+      onClick={() => onOpen(notification)}
     >
       {!notification.isRead && <div className="notification-unread-dot" />}
       <div className="notification-content">
-        <span className="notification-title">{notification.title}</span>
-        <span className="notification-message">{notification.message}</span>
+        <span className="notification-title">{notificationCopy(notification, t).title}</span>
+        <span className="notification-message">{notificationCopy(notification, t).message}</span>
         <span className="notification-time">
           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: dateLocale })}
         </span>
@@ -37,7 +42,7 @@ const NotificationItem = memo(function NotificationItem({ notification, onMarkRe
             e.stopPropagation();
             onMarkRead(notification.id);
           }}
-          title="Mark as read"
+          title={t('notifications.markRead')}
         >
           <Check size={16} />
         </button>
@@ -51,6 +56,11 @@ export default function Notifications() {
   const {
     notifications,
     notificationsLoading,
+    unreadCount,
+    loadMoreNotifications,
+    hasMoreNotifications,
+    userRole,
+    setSelectedBranchId,
     notificationPreferences,
     markNotificationRead,
     markAllNotificationsRead,
@@ -78,10 +88,12 @@ export default function Notifications() {
     }
   }, [visibleNotifications, filter]);
 
-  // Count unread
-  const unreadCount = useMemo(() => {
-    return visibleNotifications.filter(n => !n.isRead).length;
-  }, [visibleNotifications]);
+  const navigate = useNavigate();
+  const handleOpen = async notification => {
+    if (!notification.isRead) await markNotificationRead(notification.id);
+    if (userRole === 'manager' && notification.recipientBranchId) setSelectedBranchId(notification.recipientBranchId);
+    navigate(notificationDestination(notification, userRole));
+  };
 
   const handleMarkRead = async (id) => {
     await markNotificationRead(id);
@@ -127,6 +139,9 @@ export default function Notifications() {
         </div>
       </div>
 
+      {hasMoreNotifications && (
+        <button className="btn btn-secondary" onClick={loadMoreNotifications}>{t('notifications.loadMore')}</button>
+      )}
       {/* Notifications List */}
       <div className="notifications-list animate-fade-in-up stagger-2">
         {notificationsLoading ? (
@@ -152,6 +167,7 @@ export default function Notifications() {
               key={notification.id}
               notification={notification}
               onMarkRead={handleMarkRead}
+              onOpen={handleOpen}
             />
           ))
         )}

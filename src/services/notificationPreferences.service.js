@@ -16,6 +16,8 @@ const TYPE_TO_PREFERENCE = {
   booking_reminder: 'newBookings',
   booking_status_changed: 'bookingUpdates',
   booking_completed: 'bookingUpdates',
+  booking_updated: 'bookingUpdates',
+  booking_reassigned: 'bookingUpdates',
   booking_cancelled: 'cancellations',
   barber_profile_updated: 'barberUpdates',
   barber_availability_updated: 'barberUpdates',

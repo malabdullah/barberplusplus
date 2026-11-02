@@ -576,7 +576,8 @@
       "barber": "Barber",
       "agent": "Agent",
       "admin": "Admin",
-      "system": "System"
+      "system": "System",
+      "customer": "Customer"
     },
     "modifiedBy": {
       "label": "Last Modified By",
@@ -794,7 +795,23 @@
     "newBooking": "New Booking",
     "bookingCancelled": "Booking Cancelled",
     "bookingUpdated": "Booking Updated",
-    "systemAlert": "System Alert"
+    "systemAlert": "System Alert",
+    "markRead": "Mark as read",
+    "bookingUnavailable": "This appointment is no longer available to your account. It may have been reassigned or removed.",
+    "loadMore": "Load more notifications",
+    "bookingDetails": "{{customer}} · {{shop}} · {{barber}} · {{date}} at {{time}} (Kuwait time)",
+    "barberDetails": "{{barber}} updated their shop details.",
+    "events": {
+      "booking_created": "New appointment",
+      "booking_cancelled": "Appointment cancelled",
+      "booking_completed": "Appointment completed",
+      "booking_status_changed": "Appointment status changed",
+      "booking_updated": "Appointment updated",
+      "booking_reassigned": "Appointment reassigned",
+      "barber_invite_accepted": "Invitation accepted",
+      "barber_availability_updated": "Barber availability updated",
+      "barber_profile_updated": "Barber profile updated"
+    }
   },
   "errors": {
     "phoneInUse": "This phone number is already in use. Use a different number.",
