@@ -60,6 +60,7 @@ export default function AgentNewBooking() {
       navigate('/agent/bookings');
     } catch (error) {
       console.error('Error creating booking:', error);
+      throw error;
     } finally {
       setSubmitting(false);
     }

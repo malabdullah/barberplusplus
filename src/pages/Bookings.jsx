@@ -326,11 +326,11 @@ export default function Bookings() {
     setSelectedBooking(booking);
   };
 
-  const handleFormSubmit = (data) => {
+  const handleFormSubmit = async (data) => {
     if (editingBooking) {
-      updateBooking(editingBooking.id, data);
+      await updateBooking(editingBooking.id, data);
     } else {
-      addBooking(data);
+      await addBooking(data);
     }
     setIsFormOpen(false);
     setEditingBooking(null);

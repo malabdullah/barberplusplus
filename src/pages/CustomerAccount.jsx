@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, CheckCircle2, ChevronRight, Loader2, LogOut, Pencil, Plus } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, Loader2, LogOut, Pencil, Plus, RotateCcw } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
+import { customerBookingService } from '../services/customerBooking.service';
+import { appointmentDate, isPastAppointment, rebookingDraft } from '../utils/customerRebooking';
+import { saveBookingDraft } from '../utils/customerBookingDraft';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { validatePhoneNumber } from '../utils/validation';
 import { shopWording } from '../utils/customerTerminology';
@@ -27,15 +30,23 @@ export default function CustomerAccount() {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [showPast, setShowPast] = useState(false);
+  const [rebookingId, setRebookingId] = useState('');
+  const [rebookErrorId, setRebookErrorId] = useState('');
+  const accountRequest = useRef(0);
+  const errorRef = useRef(null);
   const arabic = i18n.language.startsWith('ar');
   const locale = arabic ? 'ar-KW' : 'en-KW';
-  usePublicNavigationBusy(busy);
+  usePublicNavigationBusy(busy || Boolean(rebookingId));
   useEffect(() => { document.title = `${t('customerAuth.myAccount')} | Barber++`; }, [t]);
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   useEffect(() => {
+    accountRequest.current++;
+    setBookings([]); setRebookingId(''); setRebookErrorId('');
     if (!customer) return undefined;
     let active = true; setListLoading(true); setListError(false);
     customerAuthService.bookings().then(data => { if (active) setBookings(data); }).catch(() => { if (active) setListError(true); }).finally(() => { if (active) setListLoading(false); });
-    return () => { active = false; };
+    return () => { active = false; accountRequest.current++; };
   }, [customer?.id, retry]);
   const edit = () => {
     setForm({ name: customer.name, email: customer.email || '', countryCode: customer.countryCode || '+965', phone: customer.phone || '' });
@@ -49,7 +60,7 @@ export default function CustomerAccount() {
     try {
       const changedEmail = form.email.trim().toLowerCase() !== (customer.email || '').toLowerCase();
       await updateProfile(form); setEditing(false); setSaved(changedEmail ? 'email' : 'profile');
-    } catch { setError(tr('errors.UNAVAILABLE')); }
+    } catch (failure) { setError(tr(failure.message === 'PHONE_IN_USE' ? 'errors.PHONE_IN_USE' : 'errors.UNAVAILABLE')); }
     finally { setBusy(false); }
   };
   const signOut = async () => {
@@ -59,7 +70,22 @@ export default function CustomerAccount() {
     catch { setSigningOut(false); setError(tr('errors.UNAVAILABLE')); }
     finally { setBusy(false); }
   };
-  const appointmentDate = booking => new Date(`${booking.date}T${booking.time.slice(0, 5)}:00+03:00`);
+  const repeatBooking = async booking => {
+    if (busy || rebookingId) return;
+    const request = accountRequest.current;
+    setRebookingId(booking.id); setRebookErrorId('');
+    try {
+      const catalog = await customerBookingService.getCatalog();
+      if (request !== accountRequest.current) return;
+      const draft = rebookingDraft(booking, catalog);
+      saveBookingDraft(draft);
+      navigate('/book', { state: { rebookingDraft: draft } });
+    } catch { if (request === accountRequest.current) setRebookErrorId(booking.id); }
+    finally { if (request === accountRequest.current) setRebookingId(''); }
+  };
+  const now = Date.now();
+  const appointments = bookings.filter(booking => isPastAppointment(booking, now) === showPast)
+    .sort((a, b) => (appointmentDate(a) - appointmentDate(b)) * (showPast ? -1 : 1));
   const dateOptions = { timeZone: 'Asia/Kuwait' };
   if (!loading && !customer) return <Navigate to={signingOut ? '/book' : '/customer/sign-in'} state={{ returnTo: '/customer/account' }} replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account">
@@ -71,7 +97,7 @@ export default function CustomerAccount() {
       <div className="ca-account-layout">
         <section className="ca-profile-panel" aria-labelledby="profile-title">
           <header className="ca-section-heading"><h2 id="profile-title">{tr('account.profileTitle')}</h2>{!editing && <button type="button" className="cb-text-button" onClick={edit} disabled={busy}><Pencil size={16} aria-hidden="true" />{tr('editDetails')}</button>}</header>
-          {error && <p className="cb-alert" role="alert" id="profile-error">{error}</p>}
+          {error && <p className="cb-alert" role="alert" id="profile-error" ref={errorRef} tabIndex={-1}>{error}</p>}
           {saved && <p className="ca-profile-saved" role="status"><CheckCircle2 size={18} aria-hidden="true" />{tr(saved === 'email' ? 'email.changeSent' : 'profileSaved')}</p>}
           {editing ? <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>
             <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-name">{tr('name')}</label><input className="cb-input" id="account-name" autoComplete="name" value={form.name} maxLength={120} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} required /></div>
@@ -87,13 +113,18 @@ export default function CustomerAccount() {
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">
           <header className="ca-appointments-heading"><h2 id="appointments">{tr('myAppointments')}</h2><p>{tr('account.appointmentsIntro')}</p></header>
-          {listLoading ? <p className="ca-appointments-state ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{tr('loading')}</p> : listError ? <div className="cb-alert" role="alert">{tr('bookingsError')}<button type="button" onClick={() => setRetry(value => value + 1)}>{tr('retry')}</button></div> : !bookings.length ? <div className="ca-appointments-empty"><CalendarDays size={32} aria-hidden="true" /><h3>{tr('account.noAppointmentsTitle')}</h3><p>{tr('noAppointments')}</p><Link className="cb-text-button" to="/book">{tr('account.findShop')}<ChevronRight size={18} aria-hidden="true" /></Link></div> : <div className="ca-booking-list">{bookings.map(booking => {
+          <div className="ca-appointment-filters" role="group" aria-label={tr('myAppointments')}>
+            <button type="button" aria-pressed={!showPast} onClick={() => setShowPast(false)}>{tr('account.upcoming')}</button>
+            <button type="button" aria-pressed={showPast} onClick={() => setShowPast(true)}>{tr('account.pastAppointments')}</button>
+          </div>
+          {listLoading ? <p className="ca-appointments-state ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{tr('loading')}</p> : listError ? <div className="cb-alert" role="alert">{tr('bookingsError')}<button type="button" onClick={() => setRetry(value => value + 1)}>{tr('retry')}</button></div> : !appointments.length ? <div className="ca-appointments-empty"><CalendarDays size={32} aria-hidden="true" /><h3>{tr(showPast ? 'account.noPastTitle' : 'account.noAppointmentsTitle')}</h3><p>{tr(showPast ? 'account.noPastDescription' : 'noAppointments')}</p><Link className="cb-text-button" to="/book">{tr('account.findShop')}<ChevronRight size={18} aria-hidden="true" /></Link></div> : <div className="ca-booking-list">{appointments.map(booking => {
             const date = appointmentDate(booking);
             return <article className="ca-booking-row" key={booking.id}>
               <div className="ca-booking-date" aria-hidden="true"><span>{new Intl.DateTimeFormat(locale, { month: 'short', ...dateOptions }).format(date)}</span><strong>{new Intl.DateTimeFormat(locale, { day: 'numeric', ...dateOptions }).format(date)}</strong></div>
               <div className="ca-booking-copy"><div className="ca-booking-heading"><h3>{shopWording(arabic && booking.shop_name_ar || booking.shop_name)}</h3><span className="ca-status" data-status={booking.status}>{t(`bookings.status.${booking.status === 'no_show' ? 'noShow' : booking.status}`)}</span></div>
                 <p>{arabic && booking.barber_name_ar || booking.barber_name}</p><p>{(booking.services || []).map(item => arabic && item.name_ar || item.name).join(arabic ? '، ' : ', ')}</p>
                 <div className="ca-booking-meta"><time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(date)}</time><strong>{new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>
+                {showPast && <div className="ca-rebook-action"><button type="button" className="cb-secondary" disabled={busy || Boolean(rebookingId)} onClick={() => repeatBooking(booking)}>{rebookingId === booking.id ? <Loader2 className="cb-spinner" size={17} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}{tr('account.bookAgain')}</button>{rebookErrorId === booking.id && <p role="alert" className="cb-alert">{tr('account.rebookError')}</p>}</div>}
               </div>
             </article>;
           })}<p className="ca-timezone-note">{tr('account.timezone')}</p></div>}

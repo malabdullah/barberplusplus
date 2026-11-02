@@ -55,16 +55,19 @@ try {
   assert.notEqual(second.id, first.id, 'separate provider identities keep separate accounts');
   for (const user of [google, apple]) {
     const updated = await call('update-profile', { name: 'Social Probe Customer', countryCode: '+965', phone, email: 'untrusted@customer.test' }, user.token);
-    assert.equal(updated.status, 200); assert.equal(updated.data.profile.phone, phone);
-    assert.notEqual(updated.data.profile.email, 'untrusted@customer.test');
+    assert.equal(updated.status, user.id === google.id ? 200 : 409);
+    if (user.id === google.id) {
+      assert.equal(updated.data.profile.phone, phone);
+      assert.notEqual(updated.data.profile.email, 'untrusted@customer.test');
+    } else assert.equal(updated.data.error, 'PHONE_IN_USE');
     assert.deepEqual((await call('bookings', {}, user.token)).data.bookings, []);
   }
-  assert.equal(sql(`select count(*) from private.customer_accounts where phone='${phone}'`), '2');
+  assert.equal(sql(`select count(*) from private.customer_accounts where phone='${phone}'`), '1');
   assert.equal(sql(`select count(*) from public.customers where phone='${phone}'`), '0');
   assert.equal((await call('logout', {}, apple.token)).status, 200);
   assert.equal((await call('profile', {}, apple.token)).status, 401);
   assert.equal((await call('profile', {}, google.token)).status, 200);
-  console.log('CUSTOMER_SOCIAL_GATEWAY_PASS: synthetic Google/Apple identities, missing-name completion, phone-optional accounts, shared-phone isolation, trusted email, private history and session-scoped logout. Provider OAuth not exercised.');
+  console.log('CUSTOMER_SOCIAL_GATEWAY_PASS: synthetic Google/Apple identities, missing-name completion, phone-optional accounts, duplicate-phone rejection, trusted email, private history and session-scoped logout. Provider OAuth not exercised.');
 } finally {
   for (const client of clients) await client.auth.signOut({ scope: 'local' }).catch(() => {});
   for (const id of users.reverse()) { assert.match(id, /^[a-f0-9-]{36}$/); sql(`delete from auth.users where id='${id}' and raw_app_meta_data->>'role'='customer';`); }
