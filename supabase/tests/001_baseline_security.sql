@@ -35,8 +35,8 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  126::bigint,
-  'all baseline, trusted-role and staff-annotation RLS policies are present'
+  119::bigint,
+  'all baseline policies including personal dashboard delivery are present'
 );
 
 select is(
