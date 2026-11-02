@@ -2831,8 +2831,8 @@ GRANT ALL ON TABLE "public"."notification_templates" TO "service_role";
 
 
 
-GRANT SELECT ON TABLE "public"."notifications" TO "authenticated";
 GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+GRANT SELECT ON TABLE "public"."notifications" TO "authenticated";
 
 
 
