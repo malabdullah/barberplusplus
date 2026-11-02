@@ -353,8 +353,8 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         </div>
 
         {/* Customer summary card for returning customers */}
-        {!booking && (initialCustomer?.id || foundCustomer) && (
-          <CustomerSummaryCard customer={initialCustomer?.id ? initialCustomer : foundCustomer} />
+        {!booking && foundCustomer && (
+          <CustomerSummaryCard customer={foundCustomer} />
         )}
 
         {/* New customer indicator */}
