@@ -20,6 +20,11 @@ for(let i=0;i<2;i++){
  assert.equal(p.status,200,'synthetic profile saved');
  fixtures.push({email,password,phone,profile:p.data.profile,session:verified.data.session});
 }
+let previous=[];let history=[];
+try{previous=JSON.parse(await fs.readFile('.cloud-test/flow-fixtures.json'));}catch{/* First checkout run. */}
+try{history=JSON.parse(await fs.readFile('.cloud-test/flow-fixture-history.json'));}catch{/* First checkout run. */}
+const records=new Map([...history,...previous,...fixtures].map(item=>[item.profile.id,{email:item.email,profile:item.profile}]));
+await fs.writeFile('.cloud-test/flow-fixture-history.json',JSON.stringify([...records.values()]),{mode:0o600});
 await fs.writeFile('.cloud-test/flow-fixtures.json',JSON.stringify(fixtures),{mode:0o600});
 const selection={branchId:'b6110203-0000-4000-8000-000000000001',barberId:'b6110205-0000-4000-8000-000000000001',serviceIds:['b6110204-0000-4000-8000-000000000011'],date:new Date(Date.now()+3*86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Kuwait'})};
 let slots;for(let day=1;day<14;day++){selection.date=new Date(Date.now()+day*86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Kuwait'});slots=await call('slots',selection,'','customer-booking');assert.equal(slots.status,200);if(slots.data.slots.length>10)break;}assert.ok(slots.data.slots.length>10);

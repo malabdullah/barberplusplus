@@ -69,7 +69,8 @@ for (const language of ['en', 'ar']) for (const theme of ['light', 'dark']) {
     await page.locator('#booking-notes').fill('Preserve this note through login');
     const before = await page.evaluate(() => JSON.parse(localStorage.getItem('barber-customer-booking-draft')));
     await page.getByRole('link', { name: copy[language].customerAuth.signIn, exact: true }).click();
-    await page.reload();
+    await expect(page.locator('#password')).toBeVisible();
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.locator('#password')).toBeVisible();
     const otherTab = await page.context().newPage(); await otherTab.goto('/book', { waitUntil: 'domcontentloaded' });
     await expect(otherTab.locator('#customer-name')).toHaveValue('Guest draft name');
@@ -156,7 +157,7 @@ for (const provider of ['Google', 'Apple']) {
     await page.getByRole('link', { name: 'Sign in', exact: true }).click();
     // Exercise the real PKCE start and our cancellation callback without asking
     // for the owner's provider credentials or changing any provider settings.
-    await page.route('**/auth/v1/authorize?**', route => route.fulfill({ status: 302, headers: { location: `${state.appUrl}/customer/auth-callback?error=access_denied` }, body: '' }));
+    await page.route('**/auth/v1/authorize?**', route => route.fulfill({ status: 200, contentType: 'text/html', body: `<html><head><meta http-equiv="refresh" content="0;url=${state.appUrl}/customer/auth-callback?error=access_denied"></head></html>` }));
     await page.getByRole('button', { name: `Continue with ${provider}`, exact: true }).click();
     await expect(page.getByRole('alert')).toBeVisible();
     await page.locator('.ca-footer').getByRole('link', { name: copy.en.customerAuth.continueGuest, exact: true }).click();
