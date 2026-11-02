@@ -85,7 +85,7 @@ const parsePhone = (fullPhone) => {
 export default function Settings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
+  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
   // Use cached geolocation hook instead of direct API call
@@ -117,7 +117,9 @@ export default function Settings() {
     setNotificationPreferences((prev) => ({ ...prev, [key]: newValue }));
 
     try {
-      await notificationPreferencesService.updateSingle(key, newValue);
+      const saved = await notificationPreferencesService.updateSingle(key, newValue);
+      setNotificationPreferences(saved);
+      await reloadNotifications();
     } catch (error) {
       console.error('Error saving notification preference:', error);
       // Revert on failure
