@@ -299,7 +299,7 @@ export default function AgentCustomers() {
                   <span className="agent-customer-name">{customer.name}</span>
                   <span className="agent-customer-phone">
                     <Phone size={12} />
-                    {customer.countryCode} {customer.phone}
+                    {customer.phone ? `${customer.countryCode} ${customer.phone}` : '—'}
                   </span>
                   {customer.tags?.length > 0 && (
                     <div className="agent-customer-tags">
@@ -349,7 +349,7 @@ export default function AgentCustomers() {
                   )}
                   <p>
                     <Phone size={14} />
-                    {selectedCustomer.countryCode} {selectedCustomer.phone}
+                    {selectedCustomer.phone ? `${selectedCustomer.countryCode} ${selectedCustomer.phone}` : '—'}
                   </p>
                   {selectedCustomer.email && (
                     <p>

@@ -474,12 +474,16 @@ begin
     if v_time is null or not v_slots ? to_char(v_date + v_time, 'HH24:MI') then
       raise exception 'SLOT_UNAVAILABLE';
     end if;
-    -- No existing customer information is exposed or overwritten by this flow.
-    insert into public.customers (name, country_code, phone, preferred_branch_id, preferred_barber_id, created_by_type)
-      values (v_name, v_code, v_phone, v_branch.id, v_barber.id, 'customer')
-      on conflict (country_code, phone) do nothing;
-    select id into v_customer from public.customers where country_code = v_code and phone = v_phone and status = 'active';
-    if v_customer is null then raise exception 'BOOKING_UNAVAILABLE'; end if;
+    if nullif(p_data->>'account_user_id','') is not null then
+      v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
+      if not exists(select 1 from public.customers where id=v_customer and phone=v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
+    else
+      -- Guests reuse a contact without editing it or acquiring its history.
+      insert into public.customers(name,country_code,phone,preferred_branch_id,preferred_barber_id,created_by_type)
+        values(v_name,v_code,v_phone,v_branch.id,v_barber.id,'customer') on conflict(country_code,phone) do nothing;
+      select id into v_customer from public.customers where country_code=v_code and phone=v_phone and status='active';
+      if v_customer is null then raise exception 'BOOKING_UNAVAILABLE'; end if;
+    end if;
     insert into public.bookings (id, branch_id, barber_id, service_ids, customer_id, date, time,
       duration, price, status, notes, added_by_type)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
@@ -956,6 +960,29 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."customers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(255) NOT NULL,
+    "name_ar" character varying(255),
+    "country_code" character varying(10) DEFAULT '+965'::character varying NOT NULL,
+    "phone" character varying(20),
+    "email" character varying(255),
+    "preferred_barber_id" "uuid",
+    "preferred_branch_id" "uuid",
+    "status" character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    "total_bookings" integer DEFAULT 0,
+    "last_booking_date" "date",
+    "created_by_type" character varying(50),
+    "created_by_user_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
+);
+
+
+ALTER TABLE "public"."customers" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."admin_settings" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "setting_key" character varying(100) NOT NULL,
@@ -1112,27 +1139,6 @@ CREATE TABLE IF NOT EXISTS "public"."customer_staff_details" (
 
 ALTER TABLE "public"."customer_staff_details" OWNER TO "postgres";
 
-CREATE TABLE IF NOT EXISTS "public"."customers" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "name" character varying(255) NOT NULL,
-    "name_ar" character varying(255),
-    "country_code" character varying(10) DEFAULT '+965'::character varying NOT NULL,
-    "phone" character varying(20),
-    "email" character varying(255),
-    "preferred_barber_id" "uuid",
-    "preferred_branch_id" "uuid",
-    "status" character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    "total_bookings" integer DEFAULT 0,
-    "last_booking_date" "date",
-    "created_by_type" character varying(50),
-    "created_by_user_id" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
-);
-
-
-ALTER TABLE "public"."customers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."governorates" (
@@ -2736,6 +2742,10 @@ GRANT ALL ON FUNCTION "public"."update_whatsapp_conversation_timestamp"() TO "se
 
 
 
+GRANT ALL ON TABLE "public"."customers" TO "anon";
+GRANT ALL ON TABLE "public"."customers" TO "authenticated";
+GRANT ALL ON TABLE "public"."customers" TO "service_role";
+
 GRANT ALL ON TABLE "public"."admin_settings" TO "anon";
 GRANT ALL ON TABLE "public"."admin_settings" TO "authenticated";
 GRANT ALL ON TABLE "public"."admin_settings" TO "service_role";
@@ -2791,9 +2801,6 @@ GRANT ALL ON TABLE "public"."branches" TO "service_role";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "authenticated";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "service_role";
 
-GRANT ALL ON TABLE "public"."customers" TO "anon";
-GRANT ALL ON TABLE "public"."customers" TO "authenticated";
-GRANT ALL ON TABLE "public"."customers" TO "service_role";
 
 
 
