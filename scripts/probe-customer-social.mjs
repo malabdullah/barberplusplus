@@ -62,8 +62,8 @@ try {
     } else assert.equal(updated.data.error, 'PHONE_IN_USE');
     assert.deepEqual((await call('bookings', {}, user.token)).data.bookings, []);
   }
-  assert.equal(sql(`select count(*) from private.customer_accounts where phone='${phone}'`), '1');
-  assert.equal(sql(`select count(*) from public.customers where phone='${phone}'`), '0');
+  assert.equal(sql(`select count(*) from private.customer_account_profiles where phone='${phone}'`), '1');
+  assert.equal(sql(`select count(*) from public.customers where phone='${phone}'`), '1');
   assert.equal((await call('logout', {}, apple.token)).status, 200);
   assert.equal((await call('profile', {}, apple.token)).status, 401);
   assert.equal((await call('profile', {}, google.token)).status, 200);

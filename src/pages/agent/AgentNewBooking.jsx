@@ -14,7 +14,13 @@ export default function AgentNewBooking() {
   const { selectedBranchId, user } = useApp();
 
   // Get pre-filled customer data from navigation state (e.g., from conversations page)
-  const prefilledCustomer = location.state?.customer || null;
+  const sourceCustomer = location.state?.customer || location.state;
+  const prefilledCustomer = sourceCustomer ? {
+    id: sourceCustomer.customerId || sourceCustomer.id || null,
+    name: sourceCustomer.name || sourceCustomer.customerName || '',
+    countryCode: sourceCustomer.countryCode || sourceCustomer.customerCountryCode || '+965',
+    phone: sourceCustomer.phone || sourceCustomer.customerPhone || '',
+  } : null;
 
   const [barbers, setBarbers] = useState([]);
   const [services, setServices] = useState([]);
@@ -110,7 +116,7 @@ export default function AgentNewBooking() {
           </div>
         ) : (
           <BookingForm
-            booking={prefilledCustomer}
+            initialCustomer={prefilledCustomer}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             barbers={barbers}

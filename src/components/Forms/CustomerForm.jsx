@@ -77,9 +77,9 @@ function CustomerForm({ customer, branches = [], barbers = [], onSubmit, onCance
       newErrors.name = t('agent.customers.validation.nameRequired');
     }
 
-    if (!formData.phone.trim()) {
+    if (!formData.phone.trim() && !customer?.id) {
       newErrors.phone = t('agent.customers.validation.phoneRequired');
-    } else {
+    } else if (formData.phone.trim()) {
       const phoneValidation = validatePhoneNumber(
         formData.phone,
         formData.countryCode
@@ -166,7 +166,7 @@ function CustomerForm({ customer, branches = [], barbers = [], onSubmit, onCance
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t('agent.customers.form.phone')}</label>
+            <label className="form-label">{t('agent.customers.form.phone')} {customer?.id && <span>{t('customerAuth.account.optional')}</span>}</label>
             <div className="phone-input-group">
               <select
                 name="countryCode"
