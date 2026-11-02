@@ -1,3 +1,4 @@
+import { customerReturnTo } from '../utils/customerBookingDraft';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,7 @@ export default function CustomerSocialAuth() {
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState('');
   usePublicNavigationBusy(busy);
-  const callbackRef = useRef(null); const returnTo = location.state?.returnTo === '/book' ? '/book' : '/customer/account';
+  const callbackRef = useRef(null); const returnTo = customerReturnTo(location);
   useEffect(() => { document.title = `${tr('social.completeTitle')} | Barber++`; }, [t]);
   useEffect(() => {
     let active = true;

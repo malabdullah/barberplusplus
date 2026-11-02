@@ -1370,6 +1370,19 @@
     }
   },
   "customerBooking": {
+    "accountChoice": {
+      "title": "How would you like to continue?",
+      "hint": "Sign in to use your saved details and manage this appointment in your account. Your selections will stay here.",
+      "guest": "Continue as guest",
+      "guestHint": "No account needed. Sign in before confirming to save this booking to your account, or save it after booking.",
+      "saveTitle": "Keep this appointment in your account",
+      "saveHint": "Sign in and save this appointment using the account with the same mobile number. This option is available for one hour on this browser.",
+      "signInSave": "Sign in to save this appointment",
+      "save": "Save to my account",
+      "saved": "This appointment is saved to your account.",
+      "claimMismatch": "We could not save this appointment to this account. Check that your account uses the same mobile number and that you are saving within one hour of booking. Your appointment is still confirmed.",
+      "claimFailed": "We could not save this appointment. Please try again. Your appointment is still confirmed."
+    },
     "pageTitle": "Book an appointment | Barber++",
     "header": "Book an appointment",
     "progress": "Booking progress",
@@ -1575,6 +1588,7 @@
     "backSettings": "Back to manager Settings"
   },
   "customerAuth": {
+    "resumeBooking": "Continue booking",
     "signIn": "Sign in",
     "signOut": "Sign out",
     "createAccount": "Create account",

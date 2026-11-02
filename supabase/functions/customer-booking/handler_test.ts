@@ -122,3 +122,27 @@ Deno.test('guest proof requires valid contact details and binds them without a c
   assert((await handler(request({action:'book',...selection,verification:proof.verification,name:'Forged',phone:'99999999'}))).status===200);
   assert(received.name==='Guest Name' && received.phone==='50000099');
 });
+
+Deno.test('guest receipt claims require a successful booking, signed receipt and matching live account', async () => {
+  let phone = '50000099'; let active = true; let claims = 0; let claimedId = '';
+  const handler = make({ customer: async (token: string) => active && token === 'live' ? { id: 'account', session_id: 'session', name: 'Customer', phone, countryCode: '+965' } : null,
+    claim: async (data: Record<string, unknown>) => { claims++; claimedId = String(data.booking_id); assert(data.account_user_id === 'account' && data.session_id === 'session'); return { saved: true }; } });
+  const authorized = (body: unknown) => { const r = request(body); const h = new Headers(r.headers); h.set('authorization', 'Bearer live'); return new Request(r, { headers: h }); };
+  const proof = await (await handler(request({ action: 'guest-proof', name: 'Guest', phone, countryCode: '+965' }))).json();
+  assert((await handler(authorized({ action: 'claim-booking', claimToken: proof.verification }))).status === 403);
+  const receipt = await (await handler(request({ action: 'book', ...selection, verification: proof.verification }))).json();
+  assert(typeof receipt.claimToken === 'string');
+  assert((await handler(request({ action: 'claim-booking', claimToken: receipt.claimToken }))).status === 401);
+  assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken + 'tampered' }))).status === 403);
+  phone = '50000100';
+  assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken }))).status === 403);
+  assert(claims === 0);
+  phone = '50000099';
+  assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken, bookingId: selection.branchId }))).status === 200);
+  assert(claims === 1 && claimedId === receipt.id);
+  active = false;
+  assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken }))).status === 401);
+  active = true; const now = Date.now; Date.now = () => now() + 3600001;
+  try { assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken }))).status === 403); } finally { Date.now = now; }
+  assert(claims === 1);
+});

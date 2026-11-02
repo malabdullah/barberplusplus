@@ -19,7 +19,7 @@ it('sends email signup through the customer gateway without a phone', async () =
 it('checks the configured provider and sends PKCE to the isolated customer callback', async () => {
   await customerAuthService.startSocial('google', 'https://untrusted.example');
   expect(auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: `${window.location.origin}/customer/auth-callback` } });
-  expect(sessionStorage.getItem('barber-customer-oauth-return')).toBe('/customer/account');
+  expect(localStorage.getItem('barber-customer-oauth-return')).toBe('/customer/account');
   await expect(customerAuthService.startSocial('apple', '/book')).rejects.toThrow('PROVIDER_UNAVAILABLE');
   expect(auth.signInWithOAuth).toHaveBeenCalledTimes(1);
 });
@@ -31,7 +31,7 @@ it('exchanges only a started callback, handles cancellation, and clears its retu
   expect(auth.exchangeCodeForSession).not.toHaveBeenCalled();
   expect(await customerAuthService.finishSocial('http://localhost/customer/auth-callback?code=provider-code')).toBe('/book');
   expect(auth.exchangeCodeForSession).toHaveBeenCalledWith('provider-code');
-  expect(sessionStorage.getItem('barber-customer-oauth-return')).toBeNull();
+  expect(localStorage.getItem('barber-customer-oauth-return')).toBeNull();
 });
 
 it('accepts an email change callback only after verifying the customer session', async () => {
