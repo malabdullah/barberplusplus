@@ -1798,6 +1798,8 @@ CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR 
 
 
 
+CREATE OR REPLACE TRIGGER "link_staff_customer_booking_owner" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."link_staff_customer_booking_owner"();
+
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();

@@ -41,7 +41,7 @@ It needs its own reviewed release; it is not an automatic production promotion.
 
 ## Test verification
 
-Hosted verification covers 131 account/social/email/phone/canonical-profile
+Hosted verification covers 135 account/social/email/phone/canonical-profile
 assertions, 12 Chromium/WebKit customer and staff browser cases across both
 languages and themes, and real gateway/API signup, confirmation, shared editing,
 booking, duplicate-phone rejection, notes isolation and history after phone
@@ -53,3 +53,9 @@ retained as synthetic fixtures. Test account link rows contain no contact copies
 The provider-status response still uses `{profile: {...}}`; it includes the
 canonical `customerId` without changing the existing account `id`. The follow-up
 response-contract migration is included in the same coordinated release.
+
+Staff booking forms carry a selected `customerId` directly and keep the contact
+fields read-only; a staff member can book for an existing phone-optional profile
+without creating a second contact. Authorized staff inserts grant the linked
+account ownership of that new appointment. Guest service calls never infer that
+ownership from a matching number. Existing guest history is not backfilled.

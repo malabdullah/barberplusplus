@@ -21,8 +21,8 @@ for(const language of ['en','ar'])for(const theme of ['light','dark']){
   await page.reload();await expect(page.locator('.ca-profile-details')).toContainText(name);
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth',await page.locator('body').evaluate(e=>e.clientWidth));
   await main.getByRole('button',{name:language==='en'?'Past appointments':'المواعيد السابقة',exact:true}).click();
-  await expect(main.locator('.ca-booking-row')).toHaveCount(1);
-  await main.getByRole('button',{name:language==='en'?'Book again':'احجز مرة أخرى',exact:true}).click();
+  await expect(main.locator('.ca-booking-row').first()).toBeVisible();
+  await main.getByRole('button',{name:language==='en'?'Book again':'احجز مرة أخرى',exact:true}).first().click();
   await expect(page).toHaveURL(/\/book$/);await expect(page.locator('#choose-services')).toHaveClass(/is-open/);
   await expect(page.locator('#choose-services input:checked')).toHaveCount(0);
   await page.goto('/customer/account');await main.getByRole('button',{name:edit,exact:true}).click();

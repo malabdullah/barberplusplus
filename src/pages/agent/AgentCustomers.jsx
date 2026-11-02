@@ -368,11 +368,12 @@ export default function AgentCustomers() {
                   </button>
                   <Link
                     to="/agent/bookings/new"
-                    state={{
-                      customerName: selectedCustomer.name,
-                      customerCountryCode: selectedCustomer.countryCode,
-                      customerPhone: selectedCustomer.phone,
-                    }}
+                    state={{ customer: {
+                      id: selectedCustomer.id,
+                      name: selectedCustomer.name,
+                      countryCode: selectedCustomer.countryCode,
+                      phone: selectedCustomer.phone,
+                    } }}
                     className="btn btn-primary"
                   >
                     {t('agent.customers.createBooking')}

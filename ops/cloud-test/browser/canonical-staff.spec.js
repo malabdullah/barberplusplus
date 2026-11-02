@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 const path=new URL('../../../.cloud-test/canonical-agent-session.json',import.meta.url);
 const state=fs.existsSync(path)?JSON.parse(fs.readFileSync(path)):null;
+const fixture=state?JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/canonical-test-account.json',import.meta.url))):{};
 const engine=process.env.CLOUD_TEST_BROWSER||'chromium';
 test.use({browserName:engine,viewport:{width:1280,height:900},...(state?{storageState:state}:{})});
 test.skip(!state,'Requires the ordinary synthetic Test agent session.');
@@ -29,5 +30,15 @@ for(const language of ['en','ar'])for(const theme of ['light','dark']){
   await page.reload();await open();await expect(page.locator('html')).toHaveAttribute('lang',language);await expect(page.locator('html')).toHaveAttribute('data-theme',theme);await expect(modal.locator('[name="notes"]')).toHaveValue(note);await expect(modal.locator('[name="tags"]')).toHaveValue('canonical');
   await modal.screenshot({path:`.cloud-test/canonical-staff-${language}-${theme}.png`});
   await modal.locator('[name="notes"]').fill('');await modal.locator('[name="tags"]').fill('');await modal.locator('button[type="submit"]').click();await expect(modal).not.toBeVisible();
+  await page.locator('.agent-customer-header-actions a').click();
+  await expect(page).toHaveURL(/\/agent\/bookings\/new$/);
+  await page.locator('.topbar-branch-btn').click();
+  await page.locator('.topbar-branch-dropdown .topbar-dropdown-item').first().click();
+  await expect(page.locator('[name="customerName"]')).toHaveValue('Canonical Hosted Customer');
+  await expect(page.locator('[name="customerPhone"]')).toHaveValue('');
+  await expect(page.locator('[name="customerName"]')).toHaveAttribute('readonly','');
+  await expect(page.locator('[name="customerPhone"]')).toHaveAttribute('readonly','');
+  const selected=await page.evaluate(()=>history.state.usr.customer);
+  expect(selected.id).toBe(fixture.customerId);
  });
 }

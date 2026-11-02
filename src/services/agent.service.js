@@ -374,9 +374,12 @@ export const agentService = {
    */
   createBooking: async (bookingData) => {
     try {
-      // Find or create customer first
-      let customerId = null;
-      if (bookingData.customerPhone && bookingData.customerCountryCode) {
+      // Explicit customer references remain stable even without a phone.
+      let customerId = bookingData.customerId || null;
+      if (customerId) {
+        const customer = await agentService.getCustomerById(customerId);
+        if (!customer || customer.status !== 'active') throw new Error('INVALID_CUSTOMER');
+      } else if (bookingData.customerPhone && bookingData.customerCountryCode) {
         const customer = await agentService.findOrCreateCustomer(
           bookingData.customerCountryCode,
           bookingData.customerPhone,

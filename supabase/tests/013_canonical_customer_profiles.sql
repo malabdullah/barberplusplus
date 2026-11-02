@@ -50,5 +50,19 @@ select is((select notes from public.customer_staff_details where customer_id=(cu
 reset role;
 select is(public.customer_account_api('profile',current_setting('canonical.one')::jsonb)->>'name','Agent Correction','staff RPC edits are visible in the customer profile');
 select ok(not (public.customer_account_api('profile',current_setting('canonical.one')::jsonb) ? 'notes'),'customer API never exposes staff notes');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"}}',true);
+set local role authenticated;
+insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)
+values('ab920000-0000-4000-8000-000000000302',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121',array['20000000-0000-4000-8000-000000000121']::uuid[],'2039-01-03','09:00',30,5,'cancelled','whatsapp_agent');
+reset role;
+select is((select account_user_id from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000302'),'ab920000-0000-4000-8000-000000000101'::uuid,'staff-selected canonical customer receives ownership of the new appointment');
+select ok(exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000302'),'staff-created appointment appears in the linked customer history');
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+set local role service_role;
+insert into public.bookings(id,customer_id,branch_id,barber_id,date,time,duration,price,status,added_by_type)
+values('ab920000-0000-4000-8000-000000000303',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121','2039-01-04','09:00',30,5,'cancelled','system');
+reset role;
+select is((select count(*) from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000303'),0::bigint,'guest service call does not infer ownership from a matching contact');
+select ok(not exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000303'),'phone-matched guest appointment is excluded from private account history');
 select * from finish();
 rollback;
