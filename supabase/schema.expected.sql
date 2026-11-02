@@ -474,12 +474,16 @@ begin
     if v_time is null or not v_slots ? to_char(v_date + v_time, 'HH24:MI') then
       raise exception 'SLOT_UNAVAILABLE';
     end if;
-    -- No existing customer information is exposed or overwritten by this flow.
-    insert into public.customers (name, country_code, phone, preferred_branch_id, preferred_barber_id, created_by_type)
-      values (v_name, v_code, v_phone, v_branch.id, v_barber.id, 'customer')
-      on conflict (country_code, phone) do nothing;
-    select id into v_customer from public.customers where country_code = v_code and phone = v_phone and status = 'active';
-    if v_customer is null then raise exception 'BOOKING_UNAVAILABLE'; end if;
+    if nullif(p_data->>'account_user_id','') is not null then
+      v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
+      if not exists(select 1 from public.customers where id=v_customer and phone=v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
+    else
+      -- Guests reuse a contact without editing it or acquiring its history.
+      insert into public.customers(name,country_code,phone,preferred_branch_id,preferred_barber_id,created_by_type)
+        values(v_name,v_code,v_phone,v_branch.id,v_barber.id,'customer') on conflict(country_code,phone) do nothing;
+      select id into v_customer from public.customers where country_code=v_code and phone=v_phone and status='active';
+      if v_customer is null then raise exception 'BOOKING_UNAVAILABLE'; end if;
+    end if;
     insert into public.bookings (id, branch_id, barber_id, service_ids, customer_id, date, time,
       duration, price, status, notes, added_by_type)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
@@ -807,6 +811,33 @@ $$;
 ALTER FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare c public.customers%rowtype; details public.customer_staff_details%rowtype;
+begin
+  if not (public.is_agent() or public.is_admin()) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  if p_id is null then
+    insert into public.customers(name,name_ar,country_code,phone,email,preferred_barber_id,preferred_branch_id,status,created_by_type,created_by_user_id)
+    values(p_data->>'name',p_data->>'name_ar',coalesce(p_data->>'country_code','+965'),p_data->>'phone',nullif(p_data->>'email',''),nullif(p_data->>'preferred_barber_id','')::uuid,nullif(p_data->>'preferred_branch_id','')::uuid,coalesce(p_data->>'status','active'),p_data->>'created_by_type',auth.uid()) returning * into c;
+  else
+    select * into c from public.customers where id=p_id for update;
+    if c.id is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+    c:=jsonb_populate_record(c,p_data-array['id','notes','tags','created_at','updated_at','created_by_user_id','created_by_type','total_bookings','last_booking_date']);
+    update public.customers set name=c.name,name_ar=c.name_ar,country_code=c.country_code,phone=c.phone,email=c.email,preferred_barber_id=c.preferred_barber_id,preferred_branch_id=c.preferred_branch_id,status=c.status,updated_at=now() where id=p_id returning * into c;
+  end if;
+  if p_data ? 'notes' or p_data ? 'tags' then
+    insert into public.customer_staff_details as d(customer_id,notes,tags)
+    values(c.id,p_data->>'notes',coalesce(array(select jsonb_array_elements_text(p_data->'tags')),'{}'))
+    on conflict(customer_id) do update set notes=case when p_data ? 'notes' then excluded.notes else d.notes end,tags=case when p_data ? 'tags' then excluded.tags else d.tags end;
+  end if;
+  select * into details from public.customer_staff_details where customer_id=c.id;
+  return to_jsonb(c)||jsonb_build_object('staff_details',to_jsonb(details));
+end $$;
+
+ALTER FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -927,6 +958,29 @@ ALTER FUNCTION "public"."update_whatsapp_conversation_timestamp"() OWNER TO "pos
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."customers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(255) NOT NULL,
+    "name_ar" character varying(255),
+    "country_code" character varying(10) DEFAULT '+965'::character varying NOT NULL,
+    "phone" character varying(20),
+    "email" character varying(255),
+    "preferred_barber_id" "uuid",
+    "preferred_branch_id" "uuid",
+    "status" character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    "total_bookings" integer DEFAULT 0,
+    "last_booking_date" "date",
+    "created_by_type" character varying(50),
+    "created_by_user_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
+);
+
+
+ALTER TABLE "public"."customers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."admin_settings" (
@@ -1077,29 +1131,14 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
 ALTER TABLE "public"."branches" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."customers" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "name" character varying(255) NOT NULL,
-    "name_ar" character varying(255),
-    "country_code" character varying(10) DEFAULT '+965'::character varying NOT NULL,
-    "phone" character varying(20) NOT NULL,
-    "email" character varying(255),
+CREATE TABLE IF NOT EXISTS "public"."customer_staff_details" (
+    "customer_id" "uuid" NOT NULL,
     "notes" "text",
-    "tags" "text"[] DEFAULT '{}'::"text"[],
-    "preferred_barber_id" "uuid",
-    "preferred_branch_id" "uuid",
-    "status" character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    "total_bookings" integer DEFAULT 0,
-    "last_booking_date" "date",
-    "created_by_type" character varying(50),
-    "created_by_user_id" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
+ALTER TABLE "public"."customer_staff_details" OWNER TO "postgres";
 
-ALTER TABLE "public"."customers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."governorates" (
@@ -1372,6 +1411,9 @@ ALTER TABLE ONLY "public"."branches"
     ADD CONSTRAINT "branches_pkey" PRIMARY KEY ("id");
 
 
+
+ALTER TABLE ONLY "public"."customer_staff_details"
+    ADD CONSTRAINT "customer_staff_details_pkey" PRIMARY KEY ("customer_id");
 
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_phone_unique" UNIQUE ("country_code", "phone");
@@ -1756,6 +1798,8 @@ CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR 
 
 
 
+CREATE OR REPLACE TRIGGER "link_staff_customer_booking_owner" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."link_staff_customer_booking_owner"();
+
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
@@ -1847,6 +1891,9 @@ ALTER TABLE ONLY "public"."branches"
     ADD CONSTRAINT "branches_governorate_id_fkey" FOREIGN KEY ("governorate_id") REFERENCES "public"."governorates"("id");
 
 
+
+ALTER TABLE ONLY "public"."customer_staff_details"
+    ADD CONSTRAINT "customer_staff_details_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_created_by_user_id_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
@@ -2444,6 +2491,8 @@ CREATE POLICY "agents_admins_insert_customers" ON "public"."customers" FOR INSER
 
 
 
+CREATE POLICY "agents_admins_manage_customer_details" ON "public"."customer_staff_details" TO "authenticated" USING (("public"."is_agent"() OR "public"."is_admin"())) WITH CHECK (("public"."is_agent"() OR "public"."is_admin"()));
+
 CREATE POLICY "agents_admins_update_customers" ON "public"."customers" FOR UPDATE USING (("public"."is_agent"() OR "public"."is_admin"()));
 
 
@@ -2465,6 +2514,8 @@ ALTER TABLE "public"."bookings" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."branches" ENABLE ROW LEVEL SECURITY;
 
+
+ALTER TABLE "public"."customer_staff_details" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
 
@@ -2488,8 +2539,12 @@ ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_details" TO "service_role" USING (true) WITH CHECK (true);
+
 ALTER TABLE "public"."services" ENABLE ROW LEVEL SECURITY;
 
+
+CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 ALTER TABLE "public"."suspicious_activities" ENABLE ROW LEVEL SECURITY;
 
@@ -2507,6 +2562,8 @@ ALTER TABLE "public"."whatsapp_logs" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."whatsapp_messages" ENABLE ROW LEVEL SECURITY;
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -2654,6 +2711,9 @@ GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO
 
 
 
+REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
+
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";
@@ -2683,6 +2743,10 @@ GRANT ALL ON FUNCTION "public"."update_whatsapp_conversation_timestamp"() TO "au
 GRANT ALL ON FUNCTION "public"."update_whatsapp_conversation_timestamp"() TO "service_role";
 
 
+
+GRANT ALL ON TABLE "public"."customers" TO "anon";
+GRANT ALL ON TABLE "public"."customers" TO "authenticated";
+GRANT ALL ON TABLE "public"."customers" TO "service_role";
 
 GRANT ALL ON TABLE "public"."admin_settings" TO "anon";
 GRANT ALL ON TABLE "public"."admin_settings" TO "authenticated";
@@ -2736,9 +2800,9 @@ GRANT ALL ON TABLE "public"."branches" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."customers" TO "anon";
-GRANT ALL ON TABLE "public"."customers" TO "authenticated";
-GRANT ALL ON TABLE "public"."customers" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "authenticated";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "service_role";
+
 
 
 
