@@ -2531,8 +2531,12 @@ ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_details" TO "service_role" USING (true) WITH CHECK (true);
+
 ALTER TABLE "public"."services" ENABLE ROW LEVEL SECURITY;
 
+
+CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 ALTER TABLE "public"."suspicious_activities" ENABLE ROW LEVEL SECURITY;
 
@@ -2552,9 +2556,7 @@ ALTER TABLE "public"."whatsapp_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."whatsapp_messages" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_details" TO "service_role" USING (true) WITH CHECK (true);
 
-CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
