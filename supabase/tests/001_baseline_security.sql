@@ -35,8 +35,8 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  126::bigint,
-  'all baseline, trusted-role and staff-annotation RLS policies are present'
+  119::bigint,
+  'all baseline policies including personal dashboard delivery are present'
 );
 
 select is(
@@ -114,8 +114,8 @@ select is(
     from pg_policies
     where schemaname = 'public'
       and policyname in (
-        'Barbers view own notifications',
-        'Managers view branch notifications',
+        'notifications_read_recipient',
+        'notifications_update_recipient',
         'Barbers view own logs',
         'Managers view branch logs',
         'Admins view all logs',
@@ -133,8 +133,8 @@ select ok(
     from pg_policies
     where schemaname = 'public'
       and policyname in (
-        'Barbers view own notifications',
-        'Managers view branch notifications',
+        'notifications_read_recipient',
+        'notifications_update_recipient',
         'Barbers view own logs',
         'Managers view branch logs',
         'Admins view all logs',

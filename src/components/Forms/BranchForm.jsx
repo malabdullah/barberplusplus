@@ -326,13 +326,14 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         <h4 className="form-section-title">{t('branches.operatingHours')}</h4>
 
         <div className="hours-editor">
-          {DAYS.map(({ key, label, labelAr }) => {
+          {DAYS.map(({ key }) => {
             const dayHours = formData.openingHours[key];
             const isClosed = !dayHours?.open;
+            const dayLabel = t(`days.${key}`);
 
             return (
               <div key={key} className="hours-row-edit">
-                <span className="hours-day-label">{i18n.language === 'ar' ? labelAr : label}</span>
+                <span className="hours-day-label">{dayLabel}</span>
                 <div className="hours-inputs">
                   {isClosed ? (
                     <span className="hours-closed-label">{t('availability.closed')}</span>
@@ -340,6 +341,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                     <>
                       <input
                         type="time"
+                        aria-label={`${dayLabel} — ${t('branches.openingTime')}`}
                         value={dayHours?.open || ''}
                         onChange={(e) => handleHoursChange(key, 'open', e.target.value)}
                         className="form-input time-input"
@@ -347,6 +349,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                       <span className="hours-separator">{t('branches.to')}</span>
                       <input
                         type="time"
+                        aria-label={`${dayLabel} — ${t('branches.closingTime')}`}
                         value={dayHours?.close || ''}
                         onChange={(e) => handleHoursChange(key, 'close', e.target.value)}
                         className="form-input time-input"

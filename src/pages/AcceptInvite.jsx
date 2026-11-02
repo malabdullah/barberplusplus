@@ -4,7 +4,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { notificationsService } from '../services';
 import { logErrorDev } from '../utils/security';
 import { validatePassword } from '../utils/validation';
 import './Login.css';
@@ -155,21 +154,7 @@ export default function AcceptInvite() {
           .eq('id', barberData.id)
           .eq('user_id', user.id);
 
-        // Create notification for manager
-        if (barberData?.branch_id) {
-          notificationsService.create({
-            recipientBranchId: barberData.branch_id,
-            recipientRole: 'manager',
-            type: 'barber_invite_accepted',
-            title: 'New Team Member',
-            message: `${barberData.name || userName || 'A barber'} has accepted your invitation and joined the team`,
-            entityType: 'barber',
-            entityId: barberData.id,
-            metadata: {
-              barberName: barberData.name || userName,
-            },
-          }).catch(err => logErrorDev('Error creating invite accepted notification:', err));
-        }
+
       }
 
       setIsSuccess(true);

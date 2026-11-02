@@ -21,6 +21,7 @@ const toFrontend = (booking) => {
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
     customerId: booking.customer_id,
+    barberName: booking.barber?.name || null,
     // Customer data from joined customers table
     customer: customer.id ? {
       id: customer.id,
@@ -95,9 +96,9 @@ export const bookingsService = {
   getById: async (id) => {
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, country_code, phone)')
+      .select('*, customer:customers(id, name, country_code, phone), barber:barbers(name)')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     return toFrontend(data);
   },

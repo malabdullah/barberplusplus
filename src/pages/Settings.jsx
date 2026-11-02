@@ -52,11 +52,13 @@ function SettingsItem({ label, description, children }) {
   );
 }
 
-function Toggle({ checked, onChange }) {
+function Toggle({ checked, onChange, disabled = false }) {
   return (
     <button
       className={`toggle ${checked ? 'active' : ''}`}
       onClick={() => onChange(!checked)}
+      disabled={disabled}
+      aria-busy={disabled}
       role="switch"
       aria-checked={checked}
     >
@@ -85,7 +87,7 @@ const parsePhone = (fullPhone) => {
 export default function Settings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading } = useApp();
+  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
   // Use cached geolocation hook instead of direct API call
@@ -110,18 +112,25 @@ export default function Settings() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
+  const [savingNotificationPreference, setSavingNotificationPreference] = useState(false);
   const handleNotificationChange = async (key) => {
+    if (savingNotificationPreference) return;
+    setSavingNotificationPreference(true);
     const newValue = !notificationPreferences?.[key];
 
     // Optimistic update
     setNotificationPreferences((prev) => ({ ...prev, [key]: newValue }));
 
     try {
-      await notificationPreferencesService.updateSingle(key, newValue);
+      const saved = await notificationPreferencesService.updateSingle(key, newValue);
+      setNotificationPreferences(saved);
+      await reloadNotifications();
     } catch (error) {
       console.error('Error saving notification preference:', error);
       // Revert on failure
       setNotificationPreferences((prev) => ({ ...prev, [key]: !newValue }));
+    } finally {
+      setSavingNotificationPreference(false);
     }
   };
 
@@ -232,6 +241,7 @@ export default function Settings() {
                 description={t('settings.newBookingsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.newBookings}
                   onChange={() => handleNotificationChange('newBookings')}
                 />
@@ -242,6 +252,7 @@ export default function Settings() {
                 description={t('settings.bookingUpdatesDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.bookingUpdates}
                   onChange={() => handleNotificationChange('bookingUpdates')}
                 />
@@ -252,6 +263,7 @@ export default function Settings() {
                 description={t('settings.cancellationsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.cancellations}
                   onChange={() => handleNotificationChange('cancellations')}
                 />
@@ -267,6 +279,7 @@ export default function Settings() {
                 description={t('settings.systemAlertsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.systemAlerts}
                   onChange={() => handleNotificationChange('systemAlerts')}
                 />

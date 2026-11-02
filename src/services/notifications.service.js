@@ -1,245 +1,69 @@
 import { supabase } from '../lib/supabase';
-import logger from '../utils/logger';
+import { notificationPreferencesService } from './notificationPreferences.service';
 
-// Convert snake_case DB columns to camelCase for frontend
-const toFrontend = (notification) => {
-  if (!notification) return null;
-  return {
-    id: notification.id,
-    recipientUserId: notification.recipient_user_id,
-    recipientBranchId: notification.recipient_branch_id,
-    recipientRole: notification.recipient_role,
-    type: notification.type,
-    title: notification.title,
-    message: notification.message,
-    entityType: notification.entity_type,
-    entityId: notification.entity_id,
-    isRead: notification.is_read,
-    readAt: notification.read_at,
-    metadata: notification.metadata,
-    createdAt: notification.created_at,
-  };
+const toFrontend = n => ({
+  id: n.id, recipientUserId: n.recipient_user_id, recipientBranchId: n.recipient_branch_id,
+  recipientRole: n.recipient_role, type: n.type, title: n.title, message: n.message,
+  entityType: n.entity_type, entityId: n.entity_id, isRead: n.is_read,
+  readAt: n.read_at, metadata: n.metadata, createdAt: n.created_at,
+});
+
+// Apply identical preference/cutoff rules to history and the full unread count.
+// Values originate from our fixed type map and validated ISO timestamps.
+export const preferenceFilter = preferences => {
+  if (!preferences) return null;
+  const types = Object.keys(notificationPreferencesService.TYPE_TO_PREFERENCE);
+  const enabled = types.flatMap(type => {
+    if (!notificationPreferencesService.isTypeEnabled(preferences, type)) return [];
+    const key = notificationPreferencesService.getPreferenceKey(type);
+    const cutoff = preferences[`${key}EnabledAt`];
+    return cutoff && Number.isFinite(Date.parse(cutoff))
+      ? [`and(type.eq.${type},created_at.gte.${new Date(cutoff).toISOString()})`]
+      : [`type.eq.${type}`];
+  });
+  return [`type.not.in.(${types.join(',')})`, ...enabled].join(',');
 };
-
-// Convert camelCase frontend data to snake_case for DB
-const toDatabase = (data) => {
-  const result = {};
-  if (data.recipientUserId !== undefined) result.recipient_user_id = data.recipientUserId;
-  if (data.recipientBranchId !== undefined) result.recipient_branch_id = data.recipientBranchId;
-  if (data.recipientRole !== undefined) result.recipient_role = data.recipientRole;
-  if (data.type !== undefined) result.type = data.type;
-  if (data.title !== undefined) result.title = data.title;
-  if (data.message !== undefined) result.message = data.message;
-  if (data.entityType !== undefined) result.entity_type = data.entityType;
-  if (data.entityId !== undefined) result.entity_id = data.entityId;
-  if (data.isRead !== undefined) result.is_read = data.isRead;
-  if (data.readAt !== undefined) result.read_at = data.readAt;
-  if (data.metadata !== undefined) result.metadata = data.metadata;
-  return result;
+const applyPreferences = (query, preferences) => {
+  const filter = preferenceFilter(preferences);
+  return filter ? query.or(filter) : query;
 };
 
 export const notificationsService = {
-  /**
-   * Get all notifications for current user
-   * @param {object} options - { limit, offset, unreadOnly }
-   * @returns {Promise<Array>}
-   */
-  getAll: async (options = {}) => {
-    const { limit = 50, offset = 0, unreadOnly = false } = options;
-
-    let query = supabase
-      .from('notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
+  getAll: async ({ limit = 50, offset = 0, unreadOnly = false, preferences } = {}) => {
+    let query = supabase.from('notifications').select('*')
+      .order('created_at', { ascending: false }).order('id', { ascending: false })
       .range(offset, offset + limit - 1);
-
-    if (unreadOnly) {
-      query = query.eq('is_read', false);
-    }
-
-    const { data, error } = await query;
+    if (unreadOnly) query = query.eq('is_read', false);
+    const { data, error } = await applyPreferences(query, preferences);
     if (error) throw error;
     return (data || []).map(toFrontend);
   },
-
-  /**
-   * Get unread count for current user
-   * @returns {Promise<number>}
-   */
-  getUnreadCount: async () => {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_read', false);
-
+  getUnreadCount: async preferences => {
+    const { count, error } = await applyPreferences(supabase.from('notifications')
+      .select('*', { count: 'exact', head: true }).eq('is_read', false), preferences);
     if (error) throw error;
     return count || 0;
   },
-
-  /**
-   * Mark a single notification as read
-   * @param {string} id
-   * @returns {Promise<object>}
-   */
-  markRead: async (id) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
+  markRead: async id => {
+    const { error } = await supabase.from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() }).eq('id', id).eq('is_read', false);
     if (error) throw error;
-    return toFrontend(data);
   },
-
-  /**
-   * Mark all notifications as read for current user
-   * @returns {Promise<void>}
-   */
   markAllRead: async () => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('is_read', false);
-
+    const { error } = await supabase.from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() }).eq('is_read', false);
     if (error) throw error;
   },
-
-  /**
-   * Create a notification
-   * @param {object} notificationData
-   * @returns {Promise<object>}
-   */
-  create: async (notificationData) => {
-    const dbData = toDatabase(notificationData);
-
-    const { error } = await supabase
-      .from('notifications')
-      .insert([dbData]);
-
-    if (error) {
-      logger.error('Notification create error', error);
-      throw error;
-    }
-
-    // Return the input data with a generated ID since we don't use .select()
-    return toFrontend({
-      ...dbData,
-      id: crypto.randomUUID(), // Client-side ID for immediate use
-      created_at: new Date().toISOString(),
-      is_read: false,
-    });
-  },
-
-  /**
-   * Create multiple notifications (batch)
-   * @param {Array} notifications
-   * @returns {Promise<Array>}
-   */
-  createBatch: async (notifications) => {
-    if (!notifications || notifications.length === 0) {
-      logger.debug('createBatch: No notifications to create');
-      return [];
-    }
-
-    const dbNotifications = notifications.map(toDatabase);
-    logger.debug('createBatch: Inserting notifications', { count: dbNotifications.length });
-
-    // Don't use .select() - it triggers SELECT RLS policies which may not match the inserting user
-    const { error } = await supabase
-      .from('notifications')
-      .insert(dbNotifications);
-
-    if (error) {
-      logger.error('createBatch error', error);
-      throw error;
-    }
-
-    logger.debug('createBatch success');
-
-    // Return transformed input data with generated IDs
-    return dbNotifications.map(dbNotif => toFrontend({
-      ...dbNotif,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      is_read: false,
-    }));
-  },
-
-  /**
-   * Delete a notification
-   * @param {string} id
-   * @returns {Promise<boolean>}
-   */
-  delete: async (id) => {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    return true;
-  },
-
-  /**
-   * Subscribe to real-time notifications
-   * @param {function} onInsert - callback when new notification arrives
-   * @param {function} onUpdate - callback when notification is updated
-   * @param {string} userId - current user ID for filtering
-   * @param {Array<string>} branchIds - branch IDs for manager filtering (optional)
-   * @returns {object} - Supabase channel (call .unsubscribe() to cleanup)
-   */
-  subscribe: (onInsert, onUpdate, userId, branchIds = []) => {
-    logger.debug('Setting up realtime subscription');
-    const channel = supabase.channel('notifications-realtime');
-
-    // Subscribe to notifications for this user
-    channel.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-      },
-      (payload) => {
-        logger.debug('Realtime INSERT received');
-        const notification = toFrontend(payload.new);
-        // Filter on client side - check if notification is for this user or their branches
-        if (
-          notification.recipientUserId === userId ||
-          branchIds.includes(notification.recipientBranchId)
-        ) {
-          logger.debug('Notification matches user/branch');
-          onInsert(notification);
-        }
-      }
-    );
-
-    channel.on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-      },
-      (payload) => {
-        logger.debug('Realtime UPDATE received');
-        const notification = toFrontend(payload.new);
-        if (
-          notification.recipientUserId === userId ||
-          branchIds.includes(notification.recipientBranchId)
-        ) {
-          onUpdate(notification);
-        }
-      }
-    );
-
-    channel.subscribe((status) => {
-      logger.debug('Realtime subscription status', { status });
-    });
-    return channel;
-  },
+  subscribe: (onInsert, onUpdate, userId, onStatus) => supabase
+    .channel(`dashboard-notifications:${userId}:${crypto.randomUUID()}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}`,
+    }, payload => onInsert(toFrontend(payload.new)))
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}`,
+    }, payload => onUpdate(toFrontend(payload.new)))
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') onStatus?.();
+    }),
 };
-
 export default notificationsService;

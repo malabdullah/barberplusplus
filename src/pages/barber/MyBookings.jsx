@@ -1,3 +1,4 @@
+import { useNotificationBooking } from '../../hooks/useNotificationBooking';
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -47,6 +48,7 @@ const ADDED_BY_ICONS = {
   whatsapp_agent: UserCog,
   admin: Shield,
   system: Bot,
+  customer: User,
 };
 
 // Day index to key mapping (0=Sunday in JS Date.getDay())
@@ -327,6 +329,8 @@ export default function MyBookings() {
     return enriched;
   }, [bookingsByDate, barberServices]);
 
+  const notificationBookingUnavailable = useNotificationBooking(barberServices, setSelectedBooking, setCurrentWeek);
+
   // Compute unavailability blocks for each day in the visible week
   const unavailabilityByDate = useMemo(() => {
     if (!currentBarber) return {};
@@ -452,6 +456,7 @@ export default function MyBookings() {
 
   return (
     <div className="bookings-page barber-bookings-page">
+      {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('nav.myBookings')}</h2>
