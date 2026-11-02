@@ -52,11 +52,13 @@ function SettingsItem({ label, description, children }) {
   );
 }
 
-function Toggle({ checked, onChange }) {
+function Toggle({ checked, onChange, disabled = false }) {
   return (
     <button
       className={`toggle ${checked ? 'active' : ''}`}
       onClick={() => onChange(!checked)}
+      disabled={disabled}
+      aria-busy={disabled}
       role="switch"
       aria-checked={checked}
     >
@@ -110,7 +112,10 @@ export default function Settings() {
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
+  const [savingNotificationPreference, setSavingNotificationPreference] = useState(false);
   const handleNotificationChange = async (key) => {
+    if (savingNotificationPreference) return;
+    setSavingNotificationPreference(true);
     const newValue = !notificationPreferences?.[key];
 
     // Optimistic update
@@ -124,6 +129,8 @@ export default function Settings() {
       console.error('Error saving notification preference:', error);
       // Revert on failure
       setNotificationPreferences((prev) => ({ ...prev, [key]: !newValue }));
+    } finally {
+      setSavingNotificationPreference(false);
     }
   };
 
@@ -234,6 +241,7 @@ export default function Settings() {
                 description={t('settings.newBookingsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.newBookings}
                   onChange={() => handleNotificationChange('newBookings')}
                 />
@@ -244,6 +252,7 @@ export default function Settings() {
                 description={t('settings.bookingUpdatesDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.bookingUpdates}
                   onChange={() => handleNotificationChange('bookingUpdates')}
                 />
@@ -254,6 +263,7 @@ export default function Settings() {
                 description={t('settings.cancellationsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.cancellations}
                   onChange={() => handleNotificationChange('cancellations')}
                 />
@@ -269,6 +279,7 @@ export default function Settings() {
                 description={t('settings.systemAlertsDesc')}
               >
                 <Toggle
+                  disabled={savingNotificationPreference}
                   checked={notificationPreferences?.systemAlerts}
                   onChange={() => handleNotificationChange('systemAlerts')}
                 />
