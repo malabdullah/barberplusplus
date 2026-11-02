@@ -10,6 +10,7 @@ import { useCustomerLookup } from '../../hooks/useCustomerLookup';
 import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import CustomerSummaryCard from './CustomerSummaryCard';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 /**
  * Shared BookingForm component for both manager and barber views
@@ -23,7 +24,7 @@ import CustomerSummaryCard from './CustomerSummaryCard';
  * @param {Function} props.onSubmit - Callback when form is submitted
  * @param {Function} props.onCancel - Callback when form is cancelled
  */
-function BookingForm({ booking, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
+function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
   const { t } = useTranslation();
 
   // Determine mode: manager (has barbers array) or barber (has currentBarber)
@@ -32,12 +33,12 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   const isManagerView = !currentBarber && Array.isArray(barbers);
 
   // Use geolocation hook for initial country code
-  const { dialCode } = useGeoLocation(booking?.customerCountryCode);
+  const { dialCode } = useGeoLocation(booking?.customerCountryCode || initialCustomer?.countryCode);
 
   const [formData, setFormData] = useState({
-    customerName: booking?.customerName || '',
-    customerCountryCode: booking?.customerCountryCode || dialCode,
-    customerPhone: booking?.customerPhone || '',
+    customerName: booking?.customerName || initialCustomer?.name || '',
+    customerCountryCode: booking?.customerCountryCode || initialCustomer?.countryCode || dialCode,
+    customerPhone: booking?.customerPhone || initialCustomer?.phone || '',
     barberId: booking?.barberId || (currentBarber?.id || ''),
     serviceIds: booking?.serviceIds || [],
     date: booking?.date || format(new Date(), 'yyyy-MM-dd'),
@@ -46,11 +47,14 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
   });
 
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [filteredTimeSlots, setFilteredTimeSlots] = useState([]);
   const [dateError, setDateError] = useState(null);
 
   // Customer lookup state
-  const [customerId, setCustomerId] = useState(booking?.customerId || null);
+  const contactLocked = Boolean(booking?.customerId || initialCustomer?.id);
+  const [customerId, setCustomerId] = useState(booking?.customerId || initialCustomer?.id || null);
 
   // Customer lookup hook - only active for new bookings (not edit mode)
   const {
@@ -87,18 +91,18 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
   // Auto-fill customer name when existing customer is found (new bookings only)
   useEffect(() => {
-    if (foundCustomer && !booking) {
+    if (foundCustomer && !booking && !initialCustomer?.id) {
       // Auto-fill name from found customer
       setFormData(prev => ({
         ...prev,
         customerName: foundCustomer.name || prev.customerName,
       }));
       setCustomerId(foundCustomer.id);
-    } else if (isNewCustomer && !booking) {
+    } else if (isNewCustomer && !booking && !initialCustomer?.id) {
       // New customer - clear customerId
       setCustomerId(null);
     }
-  }, [foundCustomer, isNewCustomer, booking]);
+  }, [foundCustomer, isNewCustomer, booking, initialCustomer?.id]);
 
   // Get the currently selected barber
   const selectedBarber = useMemo(() => {
@@ -147,6 +151,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (!contactLocked && ['customerPhone', 'customerCountryCode'].includes(name)) setCustomerId(null);
 
     // Clear date and time when barber changes
     if (name === 'barberId') {
@@ -196,9 +201,9 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       newErrors.customerName = t('bookings.validation.customerNameRequired');
     }
 
-    if (!formData.customerPhone.trim()) {
+    if (!formData.customerPhone.trim() && !customerId) {
       newErrors.customerPhone = t('bookings.validation.phoneRequired');
-    } else {
+    } else if (formData.customerPhone.trim()) {
       const phoneValidation = validatePhoneNumber(
         formData.customerPhone,
         formData.customerCountryCode
@@ -258,9 +263,11 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (validate()) {
+      setSubmitError(''); setSaving(true);
       const submitData = {
         ...formData,
         duration: totalDuration,
@@ -272,12 +279,15 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       if (!isManagerView && currentBarber) {
         submitData.barberId = currentBarber.id;
       }
-      onSubmit(submitData);
+      try { await onSubmit(submitData); }
+      catch (error) { setSubmitError(getErrorMessage(error, t('common.error'), t)); }
+      finally { setSaving(false); }
     }
   };
 
   return (
     <form className="form" onSubmit={handleSubmit}>
+      {submitError && <p className="error-banner" role="alert">{submitError}</p>}
       <div className="form-section">
         <h4 className="form-section-title">{t('bookings.customerInformation')}</h4>
 
@@ -287,6 +297,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
             <input
               type="text"
               name="customerName"
+              readOnly={contactLocked || !!foundCustomer}
               value={formData.customerName}
               onChange={handleChange}
               className={`form-input ${errors.customerName ? 'error' : ''}`}
@@ -300,6 +311,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
             <div className="phone-input-group">
               <select
                 name="customerCountryCode"
+                disabled={contactLocked}
                 value={formData.customerCountryCode}
                 onChange={handleChange}
                 className="form-input form-select country-code-select"
@@ -314,6 +326,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
                 <input
                   type="tel"
                   name="customerPhone"
+                  readOnly={contactLocked}
                   value={formData.customerPhone}
                   onChange={handleChange}
                   className={`form-input phone-number-input ${errors.customerPhone ? 'error' : ''} ${foundCustomer ? 'customer-found' : ''}`}
@@ -345,7 +358,7 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
         )}
 
         {/* New customer indicator */}
-        {!booking && isNewCustomer && formData.customerPhone.replace(/\s/g, '').length >= 6 && (
+        {!booking && !initialCustomer?.id && isNewCustomer && formData.customerPhone.replace(/\s/g, '').length >= 6 && (
           <div className="new-customer-badge">
             <UserPlus size={16} />
             <span>{t('bookings.newCustomer')}</span>
@@ -488,10 +501,10 @@ function BookingForm({ booking, barbers, currentBarber, services, existingBookin
       </div>
 
       <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
           {t('common.cancel')}
         </button>
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={saving}>
           {booking ? t('bookings.updateBooking') : t('bookings.createBooking')}
         </button>
       </div>

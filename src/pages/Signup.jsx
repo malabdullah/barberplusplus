@@ -101,14 +101,14 @@ export default function Signup() {
       } else {
         // Use errorMessages utility to get user-friendly message
         const errorMessage = result.error 
-          ? getErrorMessage(result.error, t('auth.registrationFailed'))
+          ? getErrorMessage(result.error, t('auth.registrationFailed'), t)
           : t('auth.registrationFailed');
         setError(errorMessage);
         setIsLoading(false);
       }
     } catch (error) {
       logErrorSafely(error, 'Signup.handleSubmit');
-      const errorMessage = getErrorMessage(error, t('auth.registrationFailed'));
+      const errorMessage = getErrorMessage(error, t('auth.registrationFailed'), t);
       setError(errorMessage);
       setIsLoading(false);
     }

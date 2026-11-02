@@ -130,6 +130,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       return reply(200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
+      if (/PHONE_IN_USE/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });
       if (/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/.test(message)) return reply(400, { error: message.match(/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/)![0] });
       return reply(503, { error: 'UNAVAILABLE' });

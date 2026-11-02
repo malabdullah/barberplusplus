@@ -22,7 +22,7 @@ export default function AddBranch() {
       navigate('/dashboard/branches');
     } catch (err) {
       logErrorSafely(err, 'AddBranch');
-      setError(getErrorMessage(err, t('errors.createBranchFailed')));
+      setError(getErrorMessage(err, t('errors.createBranchFailed'), t));
       setIsSubmitting(false);
     }
   };

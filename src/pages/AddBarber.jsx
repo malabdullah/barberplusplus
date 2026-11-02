@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
 import BackLink from '../components/UI/BackLink';
 import { logErrorDev } from '../utils/security';
+import { getErrorMessage } from '../utils/errorMessages';
 import './AddBranch.css';
 
 export default function AddBarber() {
@@ -22,7 +23,7 @@ export default function AddBarber() {
       navigate('/dashboard/barbers');
     } catch (err) {
       logErrorDev('Error creating barber:', err);
-      setError(err.message || t('errors.createBarberFailed'));
+      setError(getErrorMessage(err, t('errors.createBarberFailed'), t));
       setIsSubmitting(false);
     }
   };
