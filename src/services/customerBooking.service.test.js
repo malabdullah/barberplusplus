@@ -45,3 +45,13 @@ it('preserves governorate labels and falls back to the saved area relation', asy
   const { branches } = await customerBookingService.getCatalog();
   for (const branch of branches) expect(branch).toMatchObject({ city: 'New district', governorateId: 2, governorateName: 'Hawalli', governorateNameAr: 'حولي' });
 });
+
+it('uses the saved Arabic area name when an explicit city matches it, without translating a different city', async () => {
+  functionFetch.mockResolvedValue({ ok: true, json: async () => ({ branches: [
+    { id: 'matched', city: '  Sharq  ', areas: { name_en: 'Sharq', name_ar: 'شرق' } },
+    { id: 'different', city: 'Mirqab', areas: { name_en: 'Sharq', name_ar: 'شرق' } },
+  ], barbers: [], services: [] }) });
+  const { branches } = await customerBookingService.getCatalog();
+  expect(branches[0]).toMatchObject({ city: 'Sharq', cityAr: 'شرق' });
+  expect(branches[1]).toMatchObject({ city: 'Mirqab', cityAr: '' });
+});
