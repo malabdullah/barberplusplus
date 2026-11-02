@@ -19,6 +19,7 @@ import { notificationPreferencesService } from '../../services';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
+import { notificationCopy, notificationDestination } from '../../utils/dashboardNotifications';
 import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
 
 /**
@@ -44,6 +45,7 @@ const TopBar = memo(function TopBar({
     setSelectedBranchId,
     notifications,
     notificationsLoading,
+    unreadCount,
     notificationPreferences,
     markNotificationRead,
     markAllNotificationsRead,
@@ -68,10 +70,7 @@ const TopBar = memo(function TopBar({
     );
   }, [notifications, notificationPreferences]);
 
-  // Calculate visible unread count
-  const visibleUnreadCount = useMemo(() => {
-    return visibleNotifications.filter(n => !n.isRead).length;
-  }, [visibleNotifications]);
+  const visibleUnreadCount = unreadCount;
 
   // Filter branches based on search query
   const filteredBranches = useMemo(() => {
@@ -116,7 +115,10 @@ const TopBar = memo(function TopBar({
     if (!notification.isRead) {
       await markNotificationRead(notification.id);
     }
-  }, [markNotificationRead]);
+    if (notification.recipientBranchId && userRole === 'manager') setSelectedBranchId(notification.recipientBranchId);
+    setNotificationsOpen(false);
+    navigate(notificationDestination(notification, userRole));
+  }, [markNotificationRead, navigate, setSelectedBranchId, userRole]);
 
   const handleMarkAllRead = useCallback(async () => {
     await markAllNotificationsRead();
@@ -127,7 +129,7 @@ const TopBar = memo(function TopBar({
     const routes = {
       admin: '/admin/notifications',
       barber: '/barber/notifications',
-      manager: '/notifications',
+      manager: '/dashboard/notifications',
     };
     navigate(routes[userRole] || '/notifications');
   }, [navigate, userRole]);
@@ -245,6 +247,8 @@ const TopBar = memo(function TopBar({
           <button
             className="topbar-icon-btn"
             onClick={handleNotificationsToggle}
+            aria-label={t('notifications.title')}
+            aria-expanded={notificationsOpen}
           >
             <Bell size={20} strokeWidth={1.5} />
             {visibleUnreadCount > 0 && (
@@ -286,10 +290,10 @@ const TopBar = memo(function TopBar({
                       {!notification.isRead && <div className="topbar-notification-dot" />}
                       <div className="topbar-notification-content">
                         <span className="topbar-notification-title">
-                          {notification.title}
+                          {notificationCopy(notification, t).title}
                         </span>
                         <span className="topbar-notification-text">
-                          {notification.message}
+                          {notificationCopy(notification, t).message}
                         </span>
                         <span className="topbar-notification-time">
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: dateLocale })}

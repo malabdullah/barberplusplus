@@ -1,3 +1,4 @@
+import { useNotificationBooking } from '../hooks/useNotificationBooking';
 import React, { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -43,6 +44,7 @@ const ADDED_BY_ICONS = {
   whatsapp_agent: UserCog,
   admin: Shield,
   system: Bot,
+  customer: User,
 };
 
 // PERFORMANCE: Moved outside component to avoid recreation on every render
@@ -300,6 +302,8 @@ export default function Bookings() {
     return enriched;
   }, [bookingsByDate, branchBarbers, branchServices]);
 
+  const notificationBookingUnavailable = useNotificationBooking(Object.values(enrichedBookingsByDate).flat(), setSelectedBooking, setCurrentWeek, setSelectedDay);
+
   const navigateWeek = (direction) => {
     setCurrentWeek((prev) =>
       direction === 'next' ? addWeeks(prev, 1) : subWeeks(prev, 1)
@@ -351,6 +355,7 @@ export default function Bookings() {
 
   return (
     <div className="bookings-page manager-bookings-page">
+      {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('nav.bookings')}</h2>

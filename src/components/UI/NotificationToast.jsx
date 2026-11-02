@@ -2,9 +2,13 @@ import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { Bell, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import './NotificationToast.css';
+import { useTranslation } from 'react-i18next';
+import { ar, enUS } from 'date-fns/locale';
+import { notificationCopy } from '../../utils/dashboardNotifications';
 
 // PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
 const NotificationToast = memo(function NotificationToast({ notification, onClose, duration = 5000 }) {
+  const { t, i18n } = useTranslation();
   const [isExiting, setIsExiting] = useState(false);
 
   // PERFORMANCE: Use ref to avoid effect re-running when onClose changes
@@ -41,14 +45,14 @@ const NotificationToast = memo(function NotificationToast({ notification, onClos
       </div>
       <div className="notification-toast-content">
         <div className="notification-toast-header">
-          <span className="notification-toast-title">{notification.title}</span>
-          <button className="notification-toast-close" onClick={handleClose}>
+          <span className="notification-toast-title">{notificationCopy(notification, t).title}</span>
+          <button className="notification-toast-close" aria-label={t('common.close')} onClick={handleClose}>
             <X size={16} strokeWidth={1.5} />
           </button>
         </div>
-        <p className="notification-toast-message">{notification.message}</p>
+        <p className="notification-toast-message">{notificationCopy(notification, t).message}</p>
         <span className="notification-toast-time">
-          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: i18n.language === 'ar' ? ar : enUS })}
         </span>
       </div>
     </div>

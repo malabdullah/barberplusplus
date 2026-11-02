@@ -501,7 +501,8 @@
       "barber": "الحلاق",
       "agent": "وكيل",
       "admin": "المسؤول",
-      "system": "النظام"
+      "system": "النظام",
+      "customer": "العميل"
     },
     "modifiedBy": {
       "label": "آخر تعديل بواسطة",
@@ -719,7 +720,23 @@
     "newBooking": "حجز جديد",
     "bookingCancelled": "حجز ملغي",
     "bookingUpdated": "حجز محدث",
-    "systemAlert": "تنبيه النظام"
+    "systemAlert": "تنبيه النظام",
+    "markRead": "تحديد كمقروء",
+    "bookingUnavailable": "لم يعد هذا الموعد متاحاً لحسابك. ربما تم تغيير الحلاق أو حذف الحجز.",
+    "loadMore": "عرض المزيد من الإشعارات",
+    "bookingDetails": "{{customer}} · {{shop}} · {{barber}} · {{date}} الساعة {{time}} (بتوقيت الكويت)",
+    "barberDetails": "حدّث {{barber}} بياناته في الصالون.",
+    "events": {
+      "booking_created": "حجز جديد",
+      "booking_cancelled": "تم إلغاء الحجز",
+      "booking_completed": "تم إكمال الحجز",
+      "booking_status_changed": "تم تغيير حالة الحجز",
+      "booking_updated": "تم تحديث الحجز",
+      "booking_reassigned": "تم تغيير حلاق الحجز",
+      "barber_invite_accepted": "تم قبول الدعوة",
+      "barber_availability_updated": "تم تحديث أوقات الحلاق",
+      "barber_profile_updated": "تم تحديث ملف الحلاق"
+    }
   },
   "errors": {
     "phoneInUse": "رقم الهاتف هذا مستخدم بالفعل. استخدم رقماً آخر.",

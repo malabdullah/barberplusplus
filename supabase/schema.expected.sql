@@ -487,7 +487,7 @@ begin
     insert into public.bookings (id, branch_id, barber_id, service_ids, customer_id, date, time,
       duration, price, status, notes, added_by_type)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
-      v_duration, v_price, 'confirmed', nullif(trim(p_data ->> 'notes'), ''), 'system') returning * into v_booking;
+      v_duration, v_price, 'confirmed', nullif(trim(p_data ->> 'notes'), ''), 'customer') returning * into v_booking;
   end if;
   if p_action = 'book' and nullif(p_data->>'account_user_id','') is not null then
     perform private.record_customer_booking_owner(v_booking.id, (p_data->>'account_user_id')::uuid, (p_data->>'session_id')::uuid);
@@ -1109,8 +1109,8 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "modified_by_type" "text",
     "modified_by_user_id" "uuid",
     "customer_id" "uuid",
-    CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text"]))),
-    CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text"]))),
+    CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
+    CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
     CONSTRAINT "bookings_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'confirmed'::"text", 'completed'::"text", 'cancelled'::"text", 'no_show'::"text"])))
 );
 
@@ -1227,8 +1227,9 @@ CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "read_at" timestamp with time zone,
     "metadata" "jsonb" DEFAULT '{}'::"jsonb",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "event_id" "uuid",
     CONSTRAINT "notifications_recipient_role_check" CHECK ((("recipient_role")::"text" = ANY (ARRAY[('manager'::character varying)::"text", ('barber'::character varying)::"text"]))),
-    CONSTRAINT "notifications_type_check" CHECK ((("type")::"text" = ANY (ARRAY[('booking_created'::character varying)::"text", ('booking_cancelled'::character varying)::"text", ('booking_completed'::character varying)::"text", ('booking_status_changed'::character varying)::"text", ('booking_reminder'::character varying)::"text", ('barber_invite_accepted'::character varying)::"text", ('barber_availability_updated'::character varying)::"text", ('barber_profile_updated'::character varying)::"text", ('low_availability_warning'::character varying)::"text", ('system_alert'::character varying)::"text"])))
+    CONSTRAINT "notifications_type_check" CHECK ((("type")::"text" = ANY ((ARRAY['booking_created'::character varying, 'booking_cancelled'::character varying, 'booking_completed'::character varying, 'booking_status_changed'::character varying, 'booking_updated'::character varying, 'booking_reassigned'::character varying, 'booking_reminder'::character varying, 'barber_invite_accepted'::character varying, 'barber_availability_updated'::character varying, 'barber_profile_updated'::character varying, 'low_availability_warning'::character varying, 'system_alert'::character varying])::"text"[])))
 );
 
 
@@ -1776,6 +1777,8 @@ CREATE INDEX "idx_whatsapp_messages_session" ON "public"."whatsapp_messages" USI
 
 
 
+CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifications" USING "btree" ("event_id", "recipient_user_id") WHERE ("event_id" IS NOT NULL);
+
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
 
 
@@ -1819,6 +1822,10 @@ CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
+
+CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."notify_barber_change"();
+
+CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 
@@ -2268,9 +2275,6 @@ CREATE POLICY "Barbers view branch logs via barber record" ON "public"."logs" FO
 
 
 
-CREATE POLICY "Barbers view branch notifications secure" ON "public"."notifications" FOR SELECT USING ((("recipient_branch_id" IN ( SELECT "barbers"."branch_id"
-   FROM "public"."barbers"
-  WHERE ("barbers"."user_id" = "auth"."uid"()))) AND (("recipient_role")::"text" = 'barber'::"text")));
 
 
 
@@ -2278,7 +2282,6 @@ CREATE POLICY "Barbers view own logs" ON "public"."logs" FOR SELECT TO "authenti
 
 
 
-CREATE POLICY "Barbers view own notifications" ON "public"."notifications" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'barber'::"text") AND ("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
@@ -2342,9 +2345,6 @@ CREATE POLICY "Managers can view services in own branches" ON "public"."services
 
 
 
-CREATE POLICY "Managers insert branch notifications" ON "public"."notifications" FOR INSERT WITH CHECK (((("recipient_branch_id" IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."branches"
-  WHERE (("branches"."id" = "notifications"."recipient_branch_id") AND ("branches"."manager_id" = "auth"."uid"()))))) OR (("recipient_user_id" = "auth"."uid"()) AND ("recipient_branch_id" IS NULL))));
 
 
 
@@ -2354,15 +2354,9 @@ CREATE POLICY "Managers view branch logs" ON "public"."logs" FOR SELECT TO "auth
 
 
 
-CREATE POLICY "Managers view branch notifications" ON "public"."notifications" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'manager'::"text") AND (("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("recipient_branch_id" IN ( SELECT "branches"."id"
-   FROM "public"."branches"
-  WHERE ("branches"."manager_id" = ( SELECT "auth"."uid"() AS "uid")))))));
 
 
 
-CREATE POLICY "Managers view branch notifications secure" ON "public"."notifications" FOR SELECT USING (("recipient_branch_id" IN ( SELECT "branches"."id"
-   FROM "public"."branches"
-  WHERE ("branches"."manager_id" = "auth"."uid"()))));
 
 
 
@@ -2420,7 +2414,6 @@ CREATE POLICY "Service role full access to services" ON "public"."services" TO "
 
 
 
-CREATE POLICY "Service role insert notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("auth"."role"() = 'service_role'::"text"));
 
 
 
@@ -2468,9 +2461,6 @@ CREATE POLICY "Users can view own settings" ON "public"."user_settings" FOR SELE
 
 
 
-CREATE POLICY "Users delete own notifications" ON "public"."notifications" FOR DELETE USING ((("auth"."uid"() = "recipient_user_id") OR (EXISTS ( SELECT 1
-   FROM "public"."branches"
-  WHERE (("branches"."id" = "notifications"."recipient_branch_id") AND ("branches"."manager_id" = "auth"."uid"()))))));
 
 
 
@@ -2478,11 +2468,6 @@ CREATE POLICY "Users insert own logs" ON "public"."logs" FOR INSERT WITH CHECK (
 
 
 
-CREATE POLICY "Users update own notifications" ON "public"."notifications" FOR UPDATE USING ((("auth"."uid"() = "recipient_user_id") OR (EXISTS ( SELECT 1
-   FROM "public"."branches"
-  WHERE (("branches"."id" = "notifications"."recipient_branch_id") AND ("branches"."manager_id" = "auth"."uid"())))))) WITH CHECK ((("auth"."uid"() = "recipient_user_id") OR (EXISTS ( SELECT 1
-   FROM "public"."branches"
-  WHERE (("branches"."id" = "notifications"."recipient_branch_id") AND ("branches"."manager_id" = "auth"."uid"()))))));
 
 
 
@@ -2490,7 +2475,6 @@ CREATE POLICY "Users view own logs" ON "public"."logs" FOR SELECT USING (("user_
 
 
 
-CREATE POLICY "Users view own notifications" ON "public"."notifications" FOR SELECT USING (("recipient_user_id" = "auth"."uid"()));
 
 
 
@@ -2548,6 +2532,10 @@ ALTER TABLE "public"."notification_templates" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "notifications_read_recipient" ON "public"."notifications" FOR SELECT TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")))));
+
+CREATE POLICY "notifications_update_recipient" ON "public"."notifications" FOR UPDATE TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))))) WITH CHECK ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")))));
 
 
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
@@ -2843,9 +2831,16 @@ GRANT ALL ON TABLE "public"."notification_templates" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."notifications" TO "anon";
-GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
+GRANT SELECT ON TABLE "public"."notifications" TO "authenticated";
 GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+
+
+
+GRANT UPDATE("is_read") ON TABLE "public"."notifications" TO "authenticated";
+
+
+
+GRANT UPDATE("read_at") ON TABLE "public"."notifications" TO "authenticated";
 
 
 

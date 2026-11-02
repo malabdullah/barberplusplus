@@ -9,6 +9,7 @@ export const ADDED_BY_TYPES = {
   AGENT: 'whatsapp_agent',
   ADMIN: 'admin',
   SYSTEM: 'system',
+  CUSTOMER: 'customer',
 };
 
 /**
@@ -31,6 +32,7 @@ export const ADDED_BY_CONFIG = {
     labelKey: 'bookings.addedBy.admin',
     icon: 'Shield',
   },
+  customer: { labelKey: 'bookings.addedBy.customer', icon: 'User' },
   system: {
     labelKey: 'bookings.addedBy.system',
     icon: 'Bot',
