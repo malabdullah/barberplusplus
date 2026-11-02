@@ -340,6 +340,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                     <>
                       <input
                         type="time"
+                        aria-label={`${i18n.language === 'ar' ? labelAr : label} — ${t('branches.openingTime')}`}
                         value={dayHours?.open || ''}
                         onChange={(e) => handleHoursChange(key, 'open', e.target.value)}
                         className="form-input time-input"
@@ -347,6 +348,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                       <span className="hours-separator">{t('branches.to')}</span>
                       <input
                         type="time"
+                        aria-label={`${i18n.language === 'ar' ? labelAr : label} — ${t('branches.closingTime')}`}
                         value={dayHours?.close || ''}
                         onChange={(e) => handleHoursChange(key, 'close', e.target.value)}
                         className="form-input time-input"

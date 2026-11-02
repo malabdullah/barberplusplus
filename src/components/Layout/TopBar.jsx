@@ -26,12 +26,14 @@ import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
  * @param {Object} props
  * @param {Function} props.onMenuClick - Handler for mobile menu toggle
  * @param {boolean} props.showBranchSelector - Whether to show branch selector (manager) or just display branch name (barber)
+ * @param {boolean} props.showSearch - Show the reserved global search UI when its workflow is available
  * @param {string} props.searchPlaceholderKey - Translation key for search placeholder
  */
 // PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
 const TopBar = memo(function TopBar({
   onMenuClick,
   showBranchSelector = true,
+  showSearch = false,
   searchPlaceholderKey = 'common.search',
 }) {
   const { t, i18n } = useTranslation();
@@ -152,8 +154,7 @@ const TopBar = memo(function TopBar({
 
         <Link to="/" className="topbar-icon-btn" aria-label={t('publicNav.website')} title={t('publicNav.website')}><Home size={20} strokeWidth={1.5} /></Link>
         {customerFeaturesEnabled && <Link to="/book" className="topbar-website-book">{t('publicNav.book')}</Link>}
-        {/* Search */}
-        <div className="topbar-search">
+        {showSearch && <div className="topbar-search">
           <Search size={18} strokeWidth={1.5} />
           <input
             type="text"
@@ -161,7 +162,7 @@ const TopBar = memo(function TopBar({
             className="topbar-search-input"
           />
           <span className="topbar-search-shortcut">⌘K</span>
-        </div>
+        </div>}
       </div>
 
       <div className="topbar-right" ref={dropdownRef}>

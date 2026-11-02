@@ -92,8 +92,11 @@
 
 /* Time Input */
 .time-input {
-  width: 120px;
+  width: 11rem;
+  min-width: min(100%, 11rem);
+  flex: 0 0 11rem;
   text-align: center;
+  direction: ltr;
 }
 
 /* Phone Input Group */
@@ -120,6 +123,7 @@
 
 .hours-row-edit {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
@@ -129,6 +133,7 @@
 
 .hours-day-label {
   width: 100px;
+  flex-shrink: 0;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-primary);
@@ -136,9 +141,11 @@
 
 .hours-inputs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  flex: 1;
+  flex: 1 1 24rem;
+  min-width: 0;
 }
 
 .hours-separator {
@@ -467,12 +474,13 @@
 
   .hours-inputs {
     width: 100%;
+    flex-basis: 100%;
     flex-wrap: wrap;
   }
 
   .time-input {
-    flex: 1;
-    min-width: 80px;
+    flex: 1 1 11rem;
+    min-width: min(100%, 11rem);
     min-height: 48px;
     font-size: 16px;
   }
@@ -619,26 +627,15 @@
   }
 
   .time-input {
-    min-width: 0;
-    flex: 1;
+    flex: 1 1 11rem;
   }
 
   .hours-separator {
     display: none;
   }
 
-  .hours-inputs::after {
-    content: '–';
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    color: var(--text-tertiary);
-    pointer-events: none;
-  }
-
   .hours-inputs {
-    position: relative;
-    gap: var(--space-xl);
+    gap: var(--space-sm);
   }
 }
 
