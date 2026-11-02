@@ -18,6 +18,8 @@ select set_config('canonical.profile',public.customer_account_api('email-ensure'
 select public.customer_account_api('email-ensure',current_setting('canonical.two')::jsonb);
 select is(current_setting('canonical.profile')::jsonb->>'id','ab920000-0000-4000-8000-000000000101','existing API id remains the account identity for web and iOS');
 select ok((current_setting('canonical.profile')::jsonb->>'customerId')::uuid is not null,'API exposes the canonical customer reference');
+select is(public.customer_account_api('social-status',current_setting('canonical.one')::jsonb)->'profile'->>'id','ab920000-0000-4000-8000-000000000101','provider status preserves the established profile envelope');
+select is(public.customer_account_api('social-status',current_setting('canonical.one')::jsonb)->'profile'->>'customerId',current_setting('canonical.profile')::jsonb->>'customerId','provider status exposes the same canonical profile ID');
 select public.customer_account_api('update-profile',current_setting('canonical.one')::jsonb||'{"name":"Changed Once","phone":"59998401","country_code":"+965"}');
 select is((select name::text from public.customers where id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),'Changed Once','customer edit changes the actual staff/booking profile');
 select is((select phone::text from public.customers where id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),'59998401','phone is stored in the one customer record');

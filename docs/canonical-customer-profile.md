@@ -38,3 +38,18 @@ No admin credentials, role, identity or profile are part of this refactor.
 
 This is a coordinated, incompatible schema change for future production delivery.
 It needs its own reviewed release; it is not an automatic production promotion.
+
+## Test verification
+
+Hosted verification covers 131 account/social/email/phone/canonical-profile
+assertions, 12 Chromium/WebKit customer and staff browser cases across both
+languages and themes, and real gateway/API signup, confirmation, shared editing,
+booking, duplicate-phone rejection, notes isolation and history after phone
+changes. Every original account (88) and appointment (113) is preserved. No
+admin login or admin write is used, and the admin Auth-row fingerprint remains
+identical. The dedicated new API-test account and its cancelled appointment are
+retained as synthetic fixtures. Test account link rows contain no contact copies.
+
+The provider-status response still uses `{profile: {...}}`; it includes the
+canonical `customerId` without changing the existing account `id`. The follow-up
+response-contract migration is included in the same coordinated release.
