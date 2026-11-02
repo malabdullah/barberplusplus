@@ -1,3 +1,4 @@
+import { customerReturnTo, customerAuthPath } from '../utils/customerBookingDraft';
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +16,7 @@ export default function CustomerAuth({ mode }) {
   const tr = key => t(`customerAuth.${key}`);
   const { customer, loading, login, resetPassword } = useCustomerAuth();
   const navigate = useNavigate(); const location = useLocation();
-  const returnTo = location.state?.returnTo === '/book' ? '/book' : '/customer/account';
+  const returnTo = customerReturnTo(location);
   const [form, setForm] = useState({ name: '', email: typeof location.state?.email === 'string' ? location.state.email.slice(0, 254) : '', password: '', confirmPassword: '' });
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false); const [resetDone, setResetDone] = useState(false);
@@ -51,14 +52,14 @@ export default function CustomerAuth({ mode }) {
   return <CustomerAuthLayout title={tr(resetDone ? 'email.passwordUpdatedTitle' : `titles.${mode}`)} intro={resetDone ? undefined : tr(`email.intros.${mode}`)} returnTo={returnTo} backToBooking={mode === 'sign-in'}>
     {(mode === 'sign-in' || signup) && <CustomerSocialButtons returnTo={returnTo} disabled={busy || loading} />}
     {error && <p className="cb-alert" role="alert">{tr(`errors.${errors.includes(error) ? error : 'UNAVAILABLE'}`)}</p>}
-    {resetDone ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('resetSuccess')}</p><Link className="cb-primary ca-submit" to="/customer/sign-in" state={{ returnTo }}>{tr('signIn')}</Link></div> : reset && !location.state?.recovery ? <div className="ca-result"><p className="cb-alert" role="alert">{tr('email.invalidLink')}</p><Link className="cb-primary ca-submit" to="/customer/forgot-password" state={{ returnTo }}>{tr('email.requestNewLink')}</Link></div> : <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy || loading}>
+    {resetDone ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('resetSuccess')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/sign-in', returnTo)} state={{ returnTo }}>{tr('signIn')}</Link></div> : reset && !location.state?.recovery ? <div className="ca-result"><p className="cb-alert" role="alert">{tr('email.invalidLink')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo }}>{tr('email.requestNewLink')}</Link></div> : <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy || loading}>
       {signup && <div className="ca-field"><label className="cb-field-label" htmlFor="customer-auth-name">{tr('name')}</label><input className="cb-input" id="customer-auth-name" autoComplete="name" value={form.name} maxLength={120} onChange={event => update('name', event.target.value)} required /></div>}
       {!reset && <div className="ca-field"><label className="cb-field-label" htmlFor="customer-auth-email">{tr('email.label')}</label><input className="cb-input" id="customer-auth-email" type="email" dir="ltr" autoComplete="email" value={form.email} maxLength={254} onChange={event => update('email', event.target.value)} required /></div>}
       {(mode === 'sign-in' || signup || reset) && <>{passwordField('password', tr(reset ? 'newPassword' : 'password'))}{(signup || reset) && <>{passwordField('confirmPassword', tr('confirmPassword'))}<p className="cb-helper ca-password-hint">{tr('passwordRules')}</p></>}</>}
-      {mode === 'sign-in' && <Link className="cb-text-button ca-forgot" to="/customer/forgot-password" state={{ returnTo }}>{tr('forgotPassword')}</Link>}
+      {mode === 'sign-in' && <Link className="cb-text-button ca-forgot" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo }}>{tr('forgotPassword')}</Link>}
       <button type="submit" className="cb-primary ca-submit" disabled={busy || loading}>{busy && <Loader2 size={18} className="cb-spinner" aria-hidden="true" />}{tr(mode === 'sign-in' ? 'signIn' : signup ? 'createAccount' : recovery ? 'email.sendRecovery' : 'resetPassword')}</button>
     </fieldset></form>}
-    {mode === 'sign-in' && <p className="ca-switch">{tr('noAccount')} <Link to="/customer/sign-up" state={{ returnTo }}>{tr('createAccount')}</Link></p>}
-    {signup && <p className="ca-switch">{tr('hasAccount')} <Link to="/customer/sign-in" state={{ returnTo }}>{tr('signIn')}</Link></p>}
+    {mode === 'sign-in' && <p className="ca-switch">{tr('noAccount')} <Link to={customerAuthPath('/customer/sign-up', returnTo)} state={{ returnTo }}>{tr('createAccount')}</Link></p>}
+    {signup && <p className="ca-switch">{tr('hasAccount')} <Link to={customerAuthPath('/customer/sign-in', returnTo)} state={{ returnTo }}>{tr('signIn')}</Link></p>}
   </CustomerAuthLayout>;
 }

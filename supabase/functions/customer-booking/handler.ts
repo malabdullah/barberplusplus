@@ -11,6 +11,7 @@ type Dependencies = {
   catalog: () => Promise<unknown>;
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
   customer?: (token: string) => Promise<{id: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
+  claim?: (data: Body) => Promise<unknown>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
 type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string };
@@ -61,6 +62,21 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
+      if (body.action === 'claim-booking') {
+        const proof = await verify(body.claimToken, 'receipt');
+        if (!proof || proof.user_id) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+        const account = token && deps.customer ? await deps.customer(token) : null;
+        if (!account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
+        if (account.phone !== proof.phone || account.countryCode !== proof.country_code) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        if (!deps.claim) throw Error('Claim unavailable');
+        try { await deps.claim({ booking_id: proof.id, account_user_id: account.id, session_id: account.session_id }); }
+        catch (error) {
+          if (error instanceof Error && /INVALID_REQUEST|AUTH_REQUIRED/.test(error.message)) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+          throw error;
+        }
+        return reply(200, { saved: true });
+      }
       if (body.action === 'account-proof') {
         const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
         const account = token && deps.customer ? await deps.customer(token) : null;
@@ -126,6 +142,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         // https://www.postgresql.org/docs/16/mvcc-serialization-failure-handling.html
         if (body.action !== 'book' || !(failure instanceof Error) || !/^(40P01|40001)\b/.test(failure.message)) throw failure;
         result = await deps.booking('book', data);
+      }
+      if (body.action === 'book') {
+        const proof = await verify(body.verification, 'verified');
+        // Only a successful guest booking earns a receipt capability. It is
+        // short-lived, binds exactly one booking, and never appears in a URL.
+        const receipt = result as Record<string, unknown>;
+        if (proof && !proof.user_id && receipt.id === proof.id) return reply(200, { ...receipt, claimToken: await sign({ ...proof, purpose: 'receipt', expires: Date.now() + 60 * 60_000 }) });
       }
       return reply(200, result);
     } catch (error) {

@@ -1,3 +1,4 @@
+import { rememberBookingReturn } from '../utils/customerBookingDraft';
 import { createClient } from '@supabase/supabase-js';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
 import { functionFetch } from '../lib/functionFetch';
@@ -51,20 +52,21 @@ export const customerAuthService = {
     if (!customerFeaturesEnabled || !['google', 'apple'].includes(provider)) throw new Error('PROVIDER_UNAVAILABLE');
     const enabled = await this.socialProviders();
     if (!enabled[provider]) throw new Error('PROVIDER_UNAVAILABLE');
-    sessionStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
+    if (returnTo === '/book') rememberBookingReturn();
+    localStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
     callbackExchange = null;
     const { error } = await customerSupabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/customer/auth-callback` } });
-    if (error) { sessionStorage.removeItem(OAUTH_RETURN_KEY); throw new Error('SOCIAL_SIGN_IN_FAILED'); }
+    if (error) { localStorage.removeItem(OAUTH_RETURN_KEY); throw new Error('SOCIAL_SIGN_IN_FAILED'); }
   },
   async finishSocial(url) {
     const callback = new URL(url);
-    const returnTo = sessionStorage.getItem(OAUTH_RETURN_KEY);
+    const returnTo = localStorage.getItem(OAUTH_RETURN_KEY);
     const code = callback.searchParams.get('code');
     if (callback.searchParams.has('error') || !code || !returnTo) throw new Error('SOCIAL_SIGN_IN_FAILED');
     callbackExchange ||= customerSupabase.auth.exchangeCodeForSession(code);
     const { error } = await callbackExchange;
     if (error) throw new Error('SOCIAL_SIGN_IN_FAILED');
-    sessionStorage.removeItem(OAUTH_RETURN_KEY);
+    localStorage.removeItem(OAUTH_RETURN_KEY);
     return destination(returnTo);
   },
   socialStatus: () => request('social-status', {}, true),

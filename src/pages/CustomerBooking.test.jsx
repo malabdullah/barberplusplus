@@ -15,7 +15,7 @@ import { saveBookingDraft } from '../utils/customerBookingDraft';
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), book: vi.fn() } }));
+vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
 const catalog = {
   branches: [{ id: 'branch', name: 'Seafront shop', city: 'Kuwait City', address: 'Waterfront' }, { id: 'other', name: 'Salmiya shop', city: 'Salmiya' }],
   barbers: [{ id: 'omar', branchId: 'branch', name: 'Omar', serviceIds: ['hair', 'wash'], maxBookingDays: 30 }, { id: 'ali', branchId: 'branch', name: 'Ali', serviceIds: ['beard'], maxBookingDays: 30 }],
@@ -25,7 +25,7 @@ const receipt = { id: 'saved', reference: 'TESTREF', branchName: 'Seafront shop'
 let i18n;
 beforeEach(async () => {
   vi.resetAllMocks();
-  sessionStorage.clear();
+  sessionStorage.clear(); localStorage.clear();
   customerState.customer = null;
   customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -72,6 +72,9 @@ async function chooseAppointment() {
   expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
   expect(heading()).toHaveTextContent('Book your appointment');
+  expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
+  click('Continue as guest');
   expect(screen.getByLabelText('Your name')).toBeVisible();
 }
 async function requestVerification() {
@@ -332,7 +335,7 @@ it('starts rebooking at services with editable location summaries and no old ser
   changeCity('Salmiya');
   expect(section('Choose your shop')).toHaveClass('is-open');
   expect(screen.queryByRole('button', { name: 'Edit: Choose your barber' })).not.toBeInTheDocument();
-  expect(JSON.parse(sessionStorage.getItem('barber-customer-booking-draft'))).toMatchObject({ city: 'Salmiya', branchId: '', barberId: '', serviceIds: [], time: '' });
+  expect(JSON.parse(localStorage.getItem('barber-customer-booking-draft'))).toMatchObject({ city: 'Salmiya', branchId: '', barberId: '', serviceIds: [], time: '' });
 });
 
 it('offers another barber when a past appointment’s barber is no longer available', async () => {
@@ -342,4 +345,44 @@ it('offers another barber when a past appointment’s barber is no longer availa
   await waitFor(() => expect(section('Choose your barber')).toHaveClass('is-open'));
   expect(screen.getByText(en.customerBooking.rebooking.barberUnavailable)).toBeVisible();
   expect(screen.getByRole('radio', { name: /Omar/ })).not.toBeChecked();
+});
+
+it('keeps guest details and notes when sign-in is cancelled or the page reloads', async () => {
+  await chooseAppointment(); await requestVerification();
+  fireEvent.change(screen.getByLabelText(en.customerBooking.notesLabel), { target: { value: 'Please keep my note' } });
+  expect(screen.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/customer/sign-in?next=book');
+  cleanup(); sessionStorage.clear();
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  expect(await screen.findByLabelText('Your name')).toHaveValue('Test Customer');
+  expect(screen.getByLabelText('Mobile number')).toHaveValue('5000-0099');
+  expect(screen.getByLabelText(en.customerBooking.notesLabel)).toHaveValue('Please keep my note');
+  expect(customerBookingService.book).not.toHaveBeenCalled();
+});
+
+it('retains the shop, barber, services and notes when login returns to a taken slot', async () => {
+  await chooseAppointment(); await requestVerification();
+  fireEvent.change(screen.getByLabelText(en.customerBooking.notesLabel), { target: { value: 'Retain this' } });
+  cleanup(); customerState.customer = { id: 'customer', name: 'Saved Name', phone: '50000099', countryCode: '+965' };
+  customerBookingService.getSlots.mockResolvedValue({ slots: ['10:30'] });
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.customerBooking.errors.SLOT_UNAVAILABLE);
+  expect(section('Date & time')).toHaveClass('is-open');
+  fireEvent.click(await screen.findByRole('radio', { name: /10:30/ }));
+  expect(screen.getByText('Saved Name')).toBeInTheDocument();
+  expect(screen.getByLabelText(en.customerBooking.notesLabel)).toHaveValue('Retain this');
+  expect(screen.getByRole('region', { name: 'Booking summary' })).toHaveTextContent('Seafront shop');
+  expect(customerBookingService.book).not.toHaveBeenCalled();
+});
+
+it('restores a completed guest receipt after login and saves only that receipt on request', async () => {
+  customerBookingService.book.mockResolvedValue({ ...receipt, claimToken: 'receipt-proof' });
+  customerBookingService.claim.mockResolvedValue({ saved: true });
+  await chooseAppointment(); await requestVerification(); click('Confirm booking'); await screen.findByText('TESTREF');
+  expect(screen.getByRole('link', { name: en.customerBooking.accountChoice.signInSave })).toHaveAttribute('href', '/customer/sign-in?next=book');
+  cleanup(); customerState.customer = { id: 'customer', name: 'Saved Name', phone: '50000099', countryCode: '+965' };
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await screen.findByText('TESTREF'); click(en.customerBooking.accountChoice.save);
+  expect(await screen.findByText(en.customerBooking.accountChoice.saved)).toBeInTheDocument();
+  expect(customerBookingService.claim).toHaveBeenCalledWith('receipt-proof');
+  expect(customerBookingService.book).toHaveBeenCalledTimes(1);
 });

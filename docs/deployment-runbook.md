@@ -110,3 +110,10 @@ guards or audit records.
 Run `node scripts/test-admin-reset-concurrency.cjs` from a running local Test
 checkout to exercise both competing role-change orderings. The script checks the
 local API address and creates and removes only disposable local accounts.
+
+### Customer checkout release handoff
+
+When publishing the customer booking sign-in/guest flow, complete the pending
+production-to-iOS handoff in [Customer booking checkout](customer-booking-checkout.md#pending-production-handoff)
+after successful production verification. The owner authorized that notification
+after publication; Test deployment alone does not trigger it.

@@ -5,7 +5,7 @@ import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
-  const token = action === 'account-proof' || action === 'book' ? await customerToken() : '';
+  const token = action === 'account-proof' || action === 'book' || action === 'claim-booking' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -48,6 +48,7 @@ export const customerBookingService = {
       })),
     };
   },
+  claim: claimToken => request('claim-booking', { claimToken }),
   accountProof: () => request('account-proof'),
   getSlots: data => request('slots', data),
   guestProof: data => request('guest-proof', data),
