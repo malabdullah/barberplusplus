@@ -167,3 +167,21 @@ for (const provider of ['Google', 'Apple']) {
     await expect(page.locator('.cb-success')).toHaveCount(0);
   });
 }
+
+test('login before confirmation creates an account-owned appointment directly', async ({ page }) => {
+  await choose(page);
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click(); await login(page);
+  await expect(page.locator('.cb-verified-details')).toContainText(customers[0].profile.name);
+  await expect(page.locator('.cb-success')).toHaveCount(0);
+  await page.locator('#booking-notes').fill('Synthetic checkout account test');
+  await expect(page.locator('#booking-next')).toBeEnabled();
+  const booked = page.waitForResponse(response => response.url().includes('customer-booking') && response.request().postDataJSON()?.action === 'book');
+  await page.locator('#booking-next').click(); const response = await booked; expect(response.status()).toBe(200); const receipt = await response.json();
+  expect(receipt.claimToken).toBeUndefined();
+  fs.writeFileSync(`.cloud-test/checkout-${engine}-account-booking.json`, JSON.stringify({ id: receipt.id }));
+  await expect(page.getByText(copy.en.customerBooking.accountChoice.saved, { exact: true })).toBeVisible();
+  const history = page.waitForResponse(response => response.url().includes('customer-auth') && response.request().postDataJSON()?.action === 'bookings');
+  await page.locator('.cb-success').getByRole('link', { name: copy.en.customerAuth.myAccount, exact: true }).click();
+  expect((await (await history).json()).bookings.some(booking => booking.id === receipt.id)).toBe(true);
+  await expect(page.locator('.ca-profile-details')).toContainText(customers[0].profile.name);
+});
