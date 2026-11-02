@@ -42,6 +42,11 @@ Deno.serve(createCustomerBookingHandler({
     const branchIds = new Set(branches.data.map(branch => branch.id));
     return { branches: branches.data, barbers: barbers.data.filter(barber => branchIds.has(barber.branch_id)), services: services.data.filter(service => branchIds.has(service.branch_id)) };
   },
+  claim: async data => {
+    const result = await admin.rpc('customer_claim_booking', { p_booking: data.booking_id, p_account: data.account_user_id, p_session: data.session_id });
+    if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
+    return result.data;
+  },
   booking: async (action, data) => {
     const result = await admin.rpc('customer_booking', { p_action: action, p_data: data });
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);

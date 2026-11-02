@@ -1,3 +1,4 @@
+import { customerReturnTo } from '../utils/customerBookingDraft';
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +19,7 @@ export default function CustomerEmailVerification() {
     const value = cached?.purpose === purpose && (!routed?.sentAt || cached.sentAt >= routed.sentAt) ? cached : routed;
     return value?.purpose === purpose ? value : null;
   });
-  const returnTo = emailDestination(pending?.returnTo);
+  const returnTo = emailDestination(pending?.returnTo || customerReturnTo(location));
   const [email, setEmail] = useState(pending?.email || '');
   const [editing, setEditing] = useState(!pending?.email);
   const [code, setCode] = useState(''); const [busy, setBusy] = useState(false);
@@ -59,7 +60,7 @@ export default function CustomerEmailVerification() {
   };
   const title = tr(verified ? 'email.verifiedTitle' : purpose === 'recovery' ? 'email.recoveryTitle' : 'email.verifyTitle');
   return <CustomerAuthLayout title={title} intro={tr(verified ? 'email.verifiedIntro' : 'email.verifyIntro')} returnTo={returnTo}>
-    {verified ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('email.verifiedStatus')}</p><Link className="cb-primary ca-submit" to={returnTo} replace>{tr(returnTo === '/book' ? 'bookNow' : 'myAccount')}</Link></div> : <>
+    {verified ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('email.verifiedStatus')}</p><Link className="cb-primary ca-submit" to={returnTo} replace>{tr(returnTo === '/book' ? 'resumeBooking' : 'myAccount')}</Link></div> : <>
       <div className="ca-email-summary" role="status"><Mail size={20} aria-hidden="true" /><p>{tr(purpose === 'recovery' ? 'email.recoverySent' : 'email.signupSent')}{!editing && <strong dir="ltr">{email}</strong>}</p></div>
       {error && <p className="cb-alert" role="alert" id="email-code-error">{tr(`errors.${error}`)}</p>}
       {notice && <p className="ca-notice" role="status">{notice}</p>}

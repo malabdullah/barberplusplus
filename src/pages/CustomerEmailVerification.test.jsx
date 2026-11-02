@@ -31,7 +31,7 @@ it('keeps an incorrect-code error on the form, then confirms a valid code and of
   expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.INVALID_CODE);
   verify('123456'); await screen.findByRole('heading', { name: en.customerAuth.email.verifiedTitle });
   expect(refresh).toHaveBeenCalled();
-  expect(screen.getByRole('link', { name: en.customerAuth.bookNow })).toHaveAttribute('href', '/book');
+  expect(screen.getByRole('link', { name: en.customerAuth.resumeBooking })).toHaveAttribute('href', '/book');
 });
 it('accepts pasted Arabic digits and routes a recovery code to password reset', async () => {
   mount('recovery'); verify('١٢٣٤٥٦');

@@ -64,5 +64,13 @@ values('ab920000-0000-4000-8000-000000000303',(current_setting('canonical.profil
 reset role;
 select is((select count(*) from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000303'),0::bigint,'guest service call does not infer ownership from a matching contact');
 select ok(not exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000303'),'phone-matched guest appointment is excluded from private account history');
+select ok(not has_function_privilege('anon','public.customer_claim_booking(uuid,uuid,uuid)','EXECUTE'),'anonymous clients cannot call the claim RPC');
+select ok(not has_function_privilege('authenticated','public.customer_claim_booking(uuid,uuid,uuid)','EXECUTE'),'authenticated clients cannot bypass the receipt gateway');
+select throws_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000102','ab920000-0000-4000-8000-000000000202')$$,'P0001','INVALID_REQUEST','a different canonical customer cannot claim the receipt');
+select throws_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000202')$$,'P0001','AUTH_REQUIRED','another session cannot claim the receipt');
+select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201')$$,'the gateway can attach the single receipt to its matching live account');
+select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201')$$,'repeated saves are idempotent');
+select is((select count(*) from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000303'),1::bigint,'one booking gets exactly one explicit owner');
+select ok(exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000303'),'claimed appointment appears in account history');
 select * from finish();
 rollback;

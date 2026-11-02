@@ -5,7 +5,7 @@ import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
-  const token = action === 'account-proof' || action === 'book' ? await customerToken() : '';
+  const token = action === 'account-proof' || action === 'book' || action === 'claim-booking' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -30,7 +30,8 @@ export const customerBookingService = {
       branches: result.branches.map(branch => ({
         id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar),
         city: branch.city?.trim() || branch.areas?.name_en || '',
-        cityAr: branch.city?.trim() ? '' : branch.areas?.name_ar || '',
+        cityAr: !branch.city?.trim() || branch.city.trim() === branch.areas?.name_en
+          ? branch.areas?.name_ar || '' : '',
         address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url,
         area: branch.areas?.name_en || '', areaAr: branch.areas?.name_ar || '',
         governorateId: (branch.governorates || branch.areas?.governorates)?.id ?? null,
@@ -47,6 +48,7 @@ export const customerBookingService = {
       })),
     };
   },
+  claim: claimToken => request('claim-booking', { claimToken }),
   accountProof: () => request('account-proof'),
   getSlots: data => request('slots', data),
   guestProof: data => request('guest-proof', data),

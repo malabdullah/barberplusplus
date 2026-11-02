@@ -508,6 +508,20 @@ $_$;
 
 ALTER FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 
+CREATE OR REPLACE FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform 1 from public.bookings where id=p_booking for update;
+  if not found then raise exception 'INVALID_REQUEST'; end if;
+  perform private.record_customer_booking_owner(p_booking,p_account,p_session);
+  return jsonb_build_object('saved',true);
+end;
+$$;
+ALTER FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") OWNER TO "postgres";
+
+
 
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2632,6 +2646,11 @@ GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data
 
 REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
+
+
+REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
+
 
 
 
