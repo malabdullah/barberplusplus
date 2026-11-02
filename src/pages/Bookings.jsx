@@ -302,7 +302,7 @@ export default function Bookings() {
     return enriched;
   }, [bookingsByDate, branchBarbers, branchServices]);
 
-  const notificationBookingUnavailable = useNotificationBooking(Object.values(enrichedBookingsByDate).flat(), setSelectedBooking, setCurrentWeek, setSelectedDay);
+  const notificationBookingUnavailable = useNotificationBooking(branchServices, setSelectedBooking, setCurrentWeek, setSelectedDay);
 
   const navigateWeek = (direction) => {
     setCurrentWeek((prev) =>

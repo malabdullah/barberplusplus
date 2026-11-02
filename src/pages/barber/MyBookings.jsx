@@ -329,7 +329,7 @@ export default function MyBookings() {
     return enriched;
   }, [bookingsByDate, barberServices]);
 
-  const notificationBookingUnavailable = useNotificationBooking(Object.values(enrichedBookingsByDate).flat(), setSelectedBooking, setCurrentWeek);
+  const notificationBookingUnavailable = useNotificationBooking(barberServices, setSelectedBooking, setCurrentWeek);
 
   // Compute unavailability blocks for each day in the visible week
   const unavailabilityByDate = useMemo(() => {

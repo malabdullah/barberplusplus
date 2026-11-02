@@ -492,6 +492,14 @@ export function AppProvider({ children }) {
         if (!active || seen.has(notification.id)) return;
         seen.add(notification.id);
         if (!notification.isRead) setToastNotification(notification);
+        if (notification.entityType === 'booking') {
+          bookingsService.getById(notification.entityId).then(booking => {
+            if (!active) return;
+            setBookings(previous => booking
+              ? [...previous.filter(item => item.id !== booking.id), booking]
+              : previous.filter(item => item.id !== notification.entityId));
+          }).catch(error => logger.error('Error reconciling notified booking:', error));
+        }
         refresh();
       }, refresh, user.id, refresh
     );
