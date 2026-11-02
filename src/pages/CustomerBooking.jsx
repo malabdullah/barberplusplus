@@ -298,12 +298,12 @@ export default function CustomerBooking() {
           </BookingSection>
           <BookingSection feedback={panel === 'details' && !catalogError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
               {time && date && <>
-                <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
                 {!customer && !accountLoading && <section className="cb-account-choice" aria-labelledby="booking-account-choice-title">
                   <h3 id="booking-account-choice-title">{tr('accountChoice.title')}</h3><p>{tr('accountChoice.hint')}</p>
                   <div className="cb-account-choice-actions"><Link className="cb-primary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{t('customerAuth.signIn')}</Link><button className="cb-secondary" type="button" onClick={() => { setGuest(true); setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0); }} aria-pressed={guest}>{tr('accountChoice.guest')}</button></div>
                   {guest && <p className="cb-helper">{tr('accountChoice.guestHint')}</p>}
                 </section>}
+                <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
                 {(customer || guest) && !accountLoading && <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
@@ -321,7 +321,7 @@ export default function CustomerBooking() {
               </>}
           </BookingSection>
         </>}
-        {!catalogLoading && !receipt && <footer className="cb-actions">
+        {!catalogLoading && !receipt && (!finalDetails || customer || guest) && <footer className="cb-actions">
           <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
             <button id="booking-next" type={finalDetails ? 'submit' : 'button'} form={finalDetails ? 'booking-confirm-form' : undefined} className="cb-primary" disabled={!canContinue || busy || catalogError} onClick={!finalDetails ? () => openPanel(PANELS[panelIndex + 1]) : undefined}>{busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : nextLabel}{!busy && <ArrowRight size={20} className="cb-directional" />}</button>

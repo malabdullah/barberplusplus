@@ -49,3 +49,13 @@ receipt expiry and ownership checks, preserve-on-sign-in behavior, final explici
 confirmation, and guest receipt save UX. Record the sent handoff here.
 
 Handoff status: **pending owner acceptance and production publication**.
+
+## Repeat hosted verification
+
+Run `npm run test:cloud-checkout` for synthetic API ownership checks followed by
+mobile browser checkout tests. Use `CLOUD_TEST_BROWSER=webkit` for WebKit.
+The command creates two dedicated confirmed Test customers and Test appointments,
+records their IDs privately in `.cloud-test/`, and never signs in as the admin.
+Cancel only the recorded synthetic appointments after verification if they are
+no longer needed. Fixtures require the Kuwait Test catalog. Email remains in
+the private Test inbox. Browser traces and videos stay disabled.

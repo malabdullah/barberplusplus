@@ -73,7 +73,7 @@ async function chooseAppointment() {
   fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
   expect(heading()).toHaveTextContent('Book your appointment');
   expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Confirm booking' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Confirm booking' })).not.toBeInTheDocument();
   click('Continue as guest');
   expect(screen.getByLabelText('Your name')).toBeVisible();
 }
