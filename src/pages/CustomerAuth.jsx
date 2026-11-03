@@ -8,6 +8,7 @@ import { customerAuthService } from '../services/customerAuth.service';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import CustomerSocialButtons from '../components/Customer/CustomerSocialButtons';
 import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
+import { readFavouriteIntent } from '../utils/customerFavourites';
 import { rememberEmail } from '../lib/customerEmailFlow';
 import { validatePassword } from '../utils/validation';
 
@@ -50,6 +51,7 @@ export default function CustomerAuth({ mode }) {
   const errors = ['INVALID_DETAILS', 'WEAK_PASSWORD', 'PASSWORD_MISMATCH', 'INVALID_LOGIN', 'ACCOUNT_UNAVAILABLE', 'RATE_LIMITED', 'AUTH_REQUIRED', 'SIGN_IN_REQUIRED'];
   if (!loading && customer && !reset && !recovery) return <Navigate to={returnTo} replace />;
   return <CustomerAuthLayout title={tr(resetDone ? 'email.passwordUpdatedTitle' : `titles.${mode}`)} intro={resetDone ? undefined : tr(`email.intros.${mode}`)} returnTo={returnTo} backToBooking={mode === 'sign-in'}>
+    {readFavouriteIntent() && <p className="cf-auth-hint" role="status">{t('customerFavourites.signInHint')}</p>}
     {(mode === 'sign-in' || signup) && <CustomerSocialButtons returnTo={returnTo} disabled={busy || loading} />}
     {error && <p className="cb-alert" role="alert">{tr(`errors.${errors.includes(error) ? error : 'UNAVAILABLE'}`)}</p>}
     {resetDone ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('resetSuccess')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/sign-in', returnTo)} state={{ returnTo }}>{tr('signIn')}</Link></div> : reset && !location.state?.recovery ? <div className="ca-result"><p className="cb-alert" role="alert">{tr('email.invalidLink')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo }}>{tr('email.requestNewLink')}</Link></div> : <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy || loading}>

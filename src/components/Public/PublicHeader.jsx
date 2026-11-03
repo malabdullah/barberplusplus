@@ -49,6 +49,7 @@ export default function PublicHeader() {
 
   const customerLinks = customer ? <>
     <NavigationLink to="/customer/account">{t('publicNav.myAccount')}</NavigationLink>
+    <NavigationLink to="/customer/favourites">{t('customerFavourites.title')}</NavigationLink>
     <NavigationLink to="/customer/account#appointments">{t('publicNav.myAppointments')}</NavigationLink>
   </> : <NavigationLink to="/customer/sign-in" state={{ returnTo }} aria-current={location.pathname === '/customer/sign-in' ? 'page' : undefined}>{t('publicNav.customerSignIn')}</NavigationLink>;
   const shopLinks = <>

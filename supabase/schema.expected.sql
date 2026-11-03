@@ -522,6 +522,15 @@ $$;
 ALTER FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$ select private.customer_favourites_api(p_action,p_data); $$;
+
+
+ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+
+
 
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2636,8 +2645,13 @@ REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
 
 
+
+
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 
 
 

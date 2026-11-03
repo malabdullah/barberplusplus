@@ -3,14 +3,18 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useCustomerFavourites } from '../context/CustomerFavouritesContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
-import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
+import { readBookingDraft, readBookingReturnDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
 import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { bookingCityGroups } from '../utils/bookingCityGroups';
 import CityPicker from '../components/Customer/CityPicker';
+import BookingImage from '../components/Customer/BookingImage';
+import FavouriteButton from '../components/Customer/FavouriteButton';
+import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
 import { addBookingDays, bookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
 import './CustomerBooking.css';
@@ -19,15 +23,6 @@ const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
 const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'PHONE_IN_USE'];
 
-function BookingImage({ src, name, person = false }) {
-  const [failed, setFailed] = useState(false);
-  const url = safeBookingUrl(src);
-  useEffect(() => setFailed(false), [src]);
-  const Fallback = person ? UserRound : Store;
-  return <span className={`cb-image ${person ? 'cb-avatar' : ''}`}>
-    {url && !failed ? <img src={url} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <Fallback size={26} aria-hidden="true" />}
-  </span>;
-}
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
   return <section id={id} className={`cb-appointment-section ${open ? 'is-open' : ''} ${!open && !summary ? 'is-pending' : ''}`} aria-labelledby={`${id}-title`} data-booking-section={id}>
@@ -41,12 +36,19 @@ function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, d
   </section>;
 }
 
+function favouritesFirst(options, favourites, kind) {
+  const saved = new Set(favourites.filter(item => item.kind === kind).map(item => item.targetId));
+  return [...options].sort((a, b) => Number(saved.has(b.id)) - Number(saved.has(a.id)));
+}
+
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
+  const { items: favourites } = useCustomerFavourites();
   const location = useLocation();
   const navigate = useNavigate();
-  const [draft] = useState(() => location.state?.rebookingDraft || readBookingDraft());
+  const [returnDraft] = useState(readBookingReturnDraft);
+  const [draft] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft || readBookingDraft());
   const [rebookNotice, setRebookNotice] = useState(draft?.rebookNotice || '');
   const restoredDraft = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
@@ -60,8 +62,9 @@ export default function CustomerBooking() {
   const [catalogError, setCatalogError] = useState(false);
   const [reload, setReload] = useState(0);
   const [panel, setPanel] = useState('city');
+  const [draftRestored, setDraftRestored] = useState(!draft);
   const [city, setCity] = useState(draft?.city || '');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => typeof draft?.query === 'string' ? draft.query : '');
   const [branchId, setBranchId] = useState(draft?.branchId || '');
   const [barberId, setBarberId] = useState(draft?.barberId || '');
   const [serviceIds, setServiceIds] = useState(draft?.serviceIds || []);
@@ -73,7 +76,7 @@ export default function CustomerBooking() {
   const [slotError, setSlotError] = useState(false);
   const [details, setDetails] = useState(() => ({ name: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
-  const [receipt, setReceipt] = useState(() => location.state?.rebookingDraft ? null : readBookingReceipt());
+  const [receipt, setReceipt] = useState(() => (location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft) ? null : readBookingReceipt());
   const [guest, setGuest] = useState(draft?.guest === true);
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState('');
@@ -89,8 +92,9 @@ export default function CustomerBooking() {
   const governorateName = group => group.key === 'other' ? tr('otherLocations') : tr(`governorates.${group.key}`, { defaultValue: isArabic && group.nameAr ? group.nameAr : group.name });
   const branch = catalog.branches.find(item => item.id === branchId);
   const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
-  const branches = useMemo(() => searchBranches(catalog.branches, city, query), [catalog.branches, city, query]);
-  const barbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const branches = useMemo(() => favouritesFirst(searchBranches(catalog.branches, city, query), favourites, 'shop'), [catalog.branches, city, query, favourites]);
+  const eligibleBarbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const barbers = favouritesFirst(eligibleBarbers, favourites, 'barber');
   const services = getBarberServices(catalog, branchId, barberId);
   const selectedServices = services.filter(item => serviceIds.includes(item.id));
   const duration = selectedServices.reduce((sum, item) => sum + item.duration, 0);
@@ -126,8 +130,9 @@ export default function CustomerBooking() {
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
   useEffect(() => {
+    if (returnDraft && draft === returnDraft) { saveBookingDraft(returnDraft); saveBookingReceipt(null); }
     forgetBookingReturn();
-    if (location.state?.rebookingDraft) { saveBookingReceipt(null); navigate(location.pathname, { replace: true, state: null }); }
+    if (location.state?.bookingDraft || location.state?.rebookingDraft) { saveBookingReceipt(null); navigate(location.pathname, { replace: true, state: null }); }
   }, []);
   useEffect(() => {
     if (customer) { setDetails(current => ({ ...current, name: customer.name, countryCode: customer.countryCode || '+965', phone: customer.phone || '' })); setVerification(''); }
@@ -136,12 +141,13 @@ export default function CustomerBooking() {
     if (catalogLoading || catalogError || restoredDraft.current) return;
     restoredDraft.current = true;
     if (!draft) return;
-    if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); if (draft.rebooking) setRebookNotice('shopUnavailable'); return; }
-    if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); if (draft.rebooking) setRebookNotice('shopUnavailable'); return; }
+    setDraftRestored(true);
+    if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); if (draft.rebooking || draft.favourite) setRebookNotice('shopUnavailable'); return; }
+    if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); if (draft.rebooking || draft.favourite) setRebookNotice('shopUnavailable'); return; }
     const validServices = barber && serviceIds.length > 0 && selectedServices.length === serviceIds.length;
     const validDate = barber && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= getKuwaitDate() && date <= addBookingDays(getKuwaitDate(), barber.maxBookingDays || 30);
     const validTime = validDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-    if (!barber) { clearAfterBranch(); if (draft.rebooking) setRebookNotice('barberUnavailable'); }
+    if (!barber) { clearAfterBranch(); if (draft.rebooking || (draft.favourite && draft.barberId)) setRebookNotice('barberUnavailable'); }
     else if (!validServices) { setServiceIds([]); setTime(''); }
     if (!validDate) { setDate(getKuwaitDate()); setTime(''); }
     if (!validTime) setTime('');
@@ -150,7 +156,14 @@ export default function CustomerBooking() {
     const available = { city: true, shop: Boolean(city), barber: Boolean(branch), services: Boolean(barber), time: validServices, details: validServices && validTime };
     openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
-  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2), rebooking: Boolean(draft?.rebooking), rebookNotice, guest, details }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt, rebookNotice, guest, details]);
+  useEffect(() => {
+    if (receipt) saveBookingDraft(null);
+    else if (draftRestored && city) saveBookingDraft({
+      city, branchId, barberId, serviceIds, date, time, panel, query,
+      step: Math.floor(PANELS.indexOf(panel) / 2),
+      rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
+    });
+  }, [draftRestored, city, branchId, barberId, serviceIds, date, time, panel, query, receipt, rebookNotice, guest, details]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
@@ -275,16 +288,17 @@ export default function CustomerBooking() {
           </section>
           <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.reload(); }}>{tr('anotherBooking')}</button></div>
         </div> : <>
+          <FavouriteFeedback />
           <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => openPanel('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
             <div className="cb-city-step"><CityPicker groups={cityGroups} value={city} onChange={changeCity} cityName={cityName} governorateName={governorateName} disabled={busy || !cities.length} />{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}</div>
           </BookingSection>
           <BookingSection feedback={panel === 'shop' && !catalogError ? bookingError : null} id="choose-shop" title={tr('titles.branch')} summary={name(branch)} open={panel === 'shop' && Boolean(city)} onEdit={() => openPanel('shop')} onDone={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
               <label className="cb-field-label" htmlFor="branch-search">{tr('searchLabel')}</label><div className="cb-search"><Search size={23} aria-hidden="true" /><input id="branch-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr('searchPlaceholder')} /></div><p className="cb-result-count" aria-live="polite">{tr('branchesCount', { count: branches.length })}</p>
-              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.branch')}</legend>{branches.map(item => <label key={item.id} className={`cb-option ${branchId === item.id ? 'selected' : ''}`}><input type="radio" name="branch" value={item.id} checked={branchId === item.id} onClick={() => { if (branchId === item.id) openPanel('barber'); }} onChange={() => selectBranch(item.id)} /><BookingImage src={item.logoUrl} name={name(item)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{(isArabic ? item.areaAr : item.area) || item.address || item.city}</span></span><span className="cb-radio" aria-hidden="true">{branchId === item.id && <Check size={17} />}</span></label>)}</fieldset>
+              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.branch')}</legend>{branches.map(item => <div key={item.id} className="cf-select-row"><label className={`cb-option ${branchId === item.id ? 'selected' : ''}`}><input type="radio" name="branch" value={item.id} checked={branchId === item.id} onClick={() => { if (branchId === item.id) openPanel('barber'); }} onChange={() => selectBranch(item.id)} /><BookingImage src={item.logoUrl} name={name(item)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{(isArabic ? item.areaAr : item.area) || item.address || item.city}</span></span><span className="cb-radio" aria-hidden="true">{branchId === item.id && <Check size={17} />}</span></label><FavouriteButton kind="shop" targetId={item.id} name={name(item)} disabled={busy} /></div>)}</fieldset>
               {branches.length === 0 && <div className="cb-empty"><Store size={28} aria-hidden="true" /><h2>{tr('noBranches')}</h2><p>{tr('noBranchesHint')}</p>{query && <button type="button" className="cb-text-button" onClick={() => setQuery('')}>{tr('clearSearch')}</button>}</div>}
           </BookingSection>
           <BookingSection feedback={panel === 'barber' && !catalogError ? bookingError : null} id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber'} onEdit={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('services')} disabled={busy}>
-              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.barber')}</legend>{barbers.map(item => <label key={item.id} className={`cb-option ${barberId === item.id ? 'selected' : ''}`}><input type="radio" name="barber" checked={barberId === item.id} onClick={() => { if (barberId === item.id) openPanel('services'); }} onChange={() => selectBarber(item.id)} /><BookingImage src={item.avatarUrl} name={name(item)} person /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('servicesCount', { count: getBarberServices(catalog, branchId, item.id).length })}</span></span><span className="cb-radio" aria-hidden="true">{barberId === item.id && <Check size={17} />}</span></label>)}</fieldset>
+              <fieldset className="cb-options"><legend className="sr-only">{tr('titles.barber')}</legend>{barbers.map(item => <div key={item.id} className="cf-select-row"><label className={`cb-option ${barberId === item.id ? 'selected' : ''}`}><input type="radio" name="barber" checked={barberId === item.id} onClick={() => { if (barberId === item.id) openPanel('services'); }} onChange={() => selectBarber(item.id)} /><BookingImage src={item.avatarUrl} name={name(item)} person /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('servicesCount', { count: getBarberServices(catalog, branchId, item.id).length })}</span></span><span className="cb-radio" aria-hidden="true">{barberId === item.id && <Check size={17} />}</span></label><FavouriteButton kind="barber" targetId={item.id} name={name(item)} disabled={busy} /></div>)}</fieldset>
               {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{tr('noBarbers')}</h2><p>{tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
           </BookingSection>
           <BookingSection feedback={panel === 'services' && !catalogError ? bookingError : null} id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' && Boolean(barber)} onEdit={() => openPanel('services')} editLabel={tr('edit')} disabled={busy}>

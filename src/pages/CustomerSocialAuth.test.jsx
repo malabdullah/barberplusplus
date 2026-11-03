@@ -49,3 +49,11 @@ it('does not expose profile completion after a rejected callback', async () => {
   expect(screen.queryByLabelText('Mobile number')).not.toBeInTheDocument();
   expect(customerAuthService.socialStatus).not.toHaveBeenCalled();
 });
+it('explains the staff account restriction and preserves the return to booking', async () => {
+  customerAuthService.socialStatus.mockRejectedValue(new Error('STAFF_ACCOUNT'));
+  mount();
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.STAFF_ACCOUNT);
+  expect(screen.getByRole('heading', { name: 'Choose a customer account' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute('href', '/customer/sign-in?next=book');
+  expect(customerAuthService.ensureEmailProfile).not.toHaveBeenCalled();
+});
