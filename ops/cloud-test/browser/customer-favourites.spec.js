@@ -73,7 +73,7 @@ test('guest save returns to the booking draft; both favourite types persist and 
   await page.getByRole('button', { name: /حلاق المفضلة.*المفضلة/ }).click();
   await expect(page.getByRole('heading', { name: 'حلاق المفضلة (اختبار)', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: /صالون الميناء.*المفضلة/ }).click();
-  await expect(page.getByRole('heading', { name: 'احتفظ بخياراتك المفضلة' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'لا توجد مفضلات بعد' })).toBeVisible();
 });
 test('leaving the sign-in prompt cancels the save; another account starts with an empty list', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 900 });
@@ -84,6 +84,6 @@ test('leaving the sign-in prompt cancels the save; another account starts with a
   await page.goto('/customer/sign-in'); await login(page, fixture.users[1]);
   await expect(page).toHaveURL(/\/customer\/account$/);
   await page.locator('main').getByRole('link', { name: 'Favourites', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Keep your favourites close' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No favourites yet' })).toBeVisible();
   await noOverflow(page);
 });

@@ -8,8 +8,6 @@
 .cf-feedback { font: 400 14px/1.6 var(--font-body); color: var(--booking-link); margin-block: 12px; }
 .cf-auth-hint { color: var(--booking-muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
 .cf-page > .ca-back { margin-bottom: 24px; }
-.cf-page .ca-account-heading { display: flex; justify-content: space-between; }
-.cf-page .ca-account-heading > .cb-secondary { flex-shrink: 0; padding: 12px 20px; }
 .cf-group { margin-top: 36px; }
 .cf-group > header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--booking-divider); }
 .cf-group h2 { font: 600 22px/1.5 var(--font-body); margin: 0; }
@@ -29,8 +27,6 @@
 .cf-empty { text-align: center; padding: 52px 20px; border-block: 1px solid var(--booking-divider); }
 .cf-empty > svg { color: var(--booking-link); }
 .cf-empty h2 { margin: 18px 0 10px; font: 600 24px/1.5 var(--font-body); }
-.cf-empty p { color: var(--booking-muted); margin: 0 0 24px; line-height: 1.6; }
-.cf-empty .cb-primary { display: inline-flex; padding: 14px 22px; }
 .cf-review::backdrop { background: #0009; }
 .cf-review { border: 1px solid var(--booking-divider); width: min(100%, 440px); max-height: 90dvh; overflow-y: auto; padding: 28px; border-radius: 16px; background: var(--bg-primary); color: var(--booking-text); box-shadow: 0 12px 60px #0004; }
 .cf-review h2 { font: 600 22px/1.5 var(--font-body); margin: 0 0 16px; }
@@ -40,8 +36,6 @@
 [dir='rtl'] .cf-book-actions svg:not(.cb-spinner), [dir='rtl'] .cf-page > .ca-back svg { transform: rotate(180deg); }
 @media (max-width: 700px) {
   .cf-list { grid-template-columns: minmax(0, 1fr); }
-  .cf-page .ca-account-heading { display: block; }
-  .cf-page .ca-account-heading > .cb-secondary { display: inline-flex; margin-top: 18px; }
   .cf-item { gap: 12px; }
   .cf-item .cb-image { width: 52px; height: 52px; flex-basis: 52px; }
   .cf-group { margin-top: 28px; }
