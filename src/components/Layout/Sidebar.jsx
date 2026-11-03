@@ -22,13 +22,14 @@ const navItems = [
   { path: '/dashboard/services', icon: Scissors, labelKey: 'nav.services' },
   { path: '/dashboard/barbers', icon: Users, labelKey: 'nav.barbers' },
   { path: '/dashboard/bookings', icon: Calendar, labelKey: 'nav.bookings' },
+  { path: '/dashboard/my-chair', icon: Scissors, labelKey: 'chair.title', chairOnly: true },
   { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
   const sidebarRef = useSidebarAccessibility(isOpen, onClose, t('common.navigation'));
-  const { manager } = useApp();
+  const { manager, managerChair } = useApp();
   const location = useLocation();
 
   // Close sidebar when navigating on mobile
@@ -76,7 +77,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {navItems.map((item, index) => {
+        {navItems.filter(item => !item.chairOnly || managerChair).map((item, index) => {
           const Icon = item.icon;
           const isActive = item.exact
             ? location.pathname === item.path

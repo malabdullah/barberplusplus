@@ -28,12 +28,12 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
   const initials = barber.name?.split(' ').map((n) => n[0]).join('') || '??';
 
   const handleCardClick = () => {
-    navigate(`/dashboard/barbers/${barber.id}/edit`);
+    navigate(barber.managerChair ? '/dashboard/my-chair' : `/dashboard/barbers/${barber.id}/edit`);
   };
 
   const handleEditClick = (e) => {
     e.stopPropagation();
-    navigate(`/dashboard/barbers/${barber.id}/edit`);
+    handleCardClick();
   };
 
   const handleScheduleClick = (e) => {
@@ -160,14 +160,14 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
             >
               <Calendar size={16} strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <button
+            {!barber.managerChair && <button
               className="action-btn danger"
               onClick={handleDeleteClick}
               title={t('barbers.remove')}
               aria-label={t('barbers.remove')}
             >
               <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
-            </button>
+            </button>}
           </div>
         </div>
       </div>

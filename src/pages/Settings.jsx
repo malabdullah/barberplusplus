@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   ShieldAlert,
   FileText,
+  Scissors,
 } from 'lucide-react';
 import ManagerSocialAccounts from '../components/Customer/ManagerSocialAccounts';
 import SignOutCard from '../components/UI/SignOutCard';
@@ -340,6 +341,15 @@ export default function Settings() {
         </SettingsSection>
 
         {userRole === 'manager' && <SettingsSection icon={User} title={t('teamAuth.connectTitle')} description={t('teamAuth.connectDescription')}><ManagerSocialAccounts /></SettingsSection>}
+
+        {userRole === 'manager' && (
+          <SettingsSection icon={Scissors} title={t('chair.title')} description={t('chair.settingsDescription')}>
+            <button className="settings-link-btn" onClick={() => navigate('/dashboard/my-chair')}>
+              {t('chair.open')}
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          </SettingsSection>
+        )}
 
         {/* Help Section */}
         <SettingsSection

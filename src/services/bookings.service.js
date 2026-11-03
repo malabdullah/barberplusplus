@@ -88,6 +88,21 @@ export const bookingsService = {
     return (data || []).map(toFrontend);
   },
 
+  getChairAppointments: async ({ branchId, barberId, history, today, time, start, count }) => {
+    const open = 'pending,confirmed';
+    const upcoming = `date.gt.${today},and(date.eq.${today},time.gte.${time})`;
+    let query = supabase.from('bookings').select('*, customer:customers(id,name)')
+      .eq('branch_id', branchId).eq('barber_id', barberId);
+    query = history
+      ? query.or(`status.not.in.(${open}),date.lt.${today},and(date.eq.${today},time.lt.${time})`)
+      : query.in('status', open.split(',')).or(upcoming);
+    const ascending = !history;
+    const { data, error } = await query.order('date', { ascending }).order('time', { ascending })
+      .order('id', { ascending }).range(start, start + count - 1);
+    if (error) throw error;
+    return data.map(toFrontend);
+  },
+
   /**
    * Get a single booking by ID
    * @param {string} id
