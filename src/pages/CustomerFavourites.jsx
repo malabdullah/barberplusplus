@@ -32,6 +32,7 @@ export default function CustomerFavourites() {
   useEffect(() => { document.title = `${tr('title')} | Barber++`; }, [t]);
   useEffect(() => { setBooking(''); setBookingError(''); setReview(null); }, [customer?.id]);
   const display = (en, ar) => shopWording(arabic && ar || en || '');
+  const cityLabel = item => item.city ? t(`customerBooking.cities.${item.city}`, { defaultValue: arabic && item.cityAr || item.city }) : '';
   const startBooking = async (item, acceptedLocation = false) => {
     if (booking || busy || loading) return;
     if (item.locationChanged && !acceptedLocation) { setReview(item); return; }
@@ -60,7 +61,7 @@ export default function CustomerFavourites() {
       {['barber', 'shop'].map(kind => <section key={kind} className="cf-group" aria-labelledby={`favourite-${kind}-title`}><header><h2 id={`favourite-${kind}-title`}>{tr(kind === 'barber' ? 'barbers' : 'shops')}</h2><span>{items.filter(item => item.kind === kind).length}</span></header>
         {!items.some(item => item.kind === kind) ? <p className="cf-group-empty">{tr(kind === 'barber' ? 'noBarbers' : 'noShops')}</p> : <div className="cf-list">{items.filter(item => item.kind === kind).map(item => <article className="cf-item" key={`${kind}:${item.targetId}`}>
           <BookingImage src={item.imageUrl} name={display(item.name, item.nameAr)} person={kind === 'barber'} />
-          <div className="cf-item-copy"><h3>{display(item.name, item.nameAr)}</h3>{kind === 'barber' && <p>{display(item.shopName, item.shopNameAr)}</p>}<p className="cf-location"><MapPin size={15} aria-hidden="true" />{display(item.city, item.cityAr)}</p>
+          <div className="cf-item-copy"><h3>{display(item.name, item.nameAr)}</h3>{kind === 'barber' && <p>{display(item.shopName, item.shopNameAr)}</p>}<p className="cf-location"><MapPin size={15} aria-hidden="true" />{cityLabel(item)}</p>
             {!item.available && <p className="cf-notice">{tr('unavailable')}</p>}{item.available && item.locationChanged && <p className="cf-notice">{tr('locationChanged')}</p>}
             <div className="cf-book-actions">{item.available ? <button type="button" className="cb-secondary" disabled={Boolean(booking) || busy} onClick={() => startBooking(item)}>{booking === item.targetId && <Loader2 className="cb-spinner" size={17} aria-hidden="true" />}{tr(item.locationChanged ? 'reviewLocation' : 'book')}<ArrowRight size={17} aria-hidden="true" /></button> : <Link className="cb-text-button" to="/book">{tr('alternatives')}</Link>}</div>
             {bookingError === item.targetId && <p role="alert" className="cb-alert">{tr('bookingError')}</p>}
@@ -68,6 +69,6 @@ export default function CustomerFavourites() {
         </article>)}</div>}
       </section>)}
     </>}
-    {review && <dialog ref={dialog} className="cf-review" aria-labelledby="cf-review-title" onCancel={event => { if (booking) event.preventDefault(); else setReview(null); }}><h2 id="cf-review-title">{tr('reviewLocation')}</h2><p>{tr('locationChanged')}</p><strong>{display(review.name, review.nameAr)}</strong><p>{display(review.shopName, review.shopNameAr)} · {display(review.city, review.cityAr)}</p><div><button type="button" className="cb-primary" disabled={Boolean(booking)} onClick={() => startBooking(review, true)}>{tr('continueServices')}</button><button type="button" className="cb-secondary" disabled={Boolean(booking)} onClick={() => setReview(null)}>{t('customerAuth.cancel')}</button></div></dialog>}
+    {review && <dialog ref={dialog} className="cf-review" aria-labelledby="cf-review-title" onCancel={event => { if (booking) event.preventDefault(); else setReview(null); }}><h2 id="cf-review-title">{tr('reviewLocation')}</h2><p>{tr('locationChanged')}</p><strong>{display(review.name, review.nameAr)}</strong><p>{display(review.shopName, review.shopNameAr)} · {cityLabel(review)}</p><div><button type="button" className="cb-primary" disabled={Boolean(booking)} onClick={() => startBooking(review, true)}>{tr('continueServices')}</button><button type="button" className="cb-secondary" disabled={Boolean(booking)} onClick={() => setReview(null)}>{t('customerAuth.cancel')}</button></div></dialog>}
   </main></div>;
 }

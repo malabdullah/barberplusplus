@@ -46,7 +46,7 @@ test('guest save returns to the booking draft; both favourite types persist and 
   const light = page.getByRole('button', { name: 'Switch to light mode' });
   if (await light.isVisible()) await light.click();
   await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
-  await page.screenshot({ path: `.cloud-test/favourites-${engine}-en-light.png`, fullPage: true });
+  await page.locator('.cf-page').screenshot({ path: `.cloud-test/favourites-${engine}-en-light.png`, animations: 'disabled' });
   await shop.getByRole('button', { name: 'Book appointment' }).click();
   await expect(panel(page, 'barber')).toHaveClass(/is-open/);
   await expect(panel(page, 'barber').getByRole('radio', { name: new RegExp(fixture.barberName) })).not.toBeChecked();
@@ -67,7 +67,9 @@ test('guest save returns to the booking draft; both favourite types persist and 
   await expect(page.locator('main')).toContainText('المفضلة');
   await expect(page.locator('.cf-page').locator('..')).toHaveAttribute('dir', 'rtl');
   await noOverflow(page);
-  await page.screenshot({ path: `.cloud-test/favourites-${engine}-ar-dark.png`, fullPage: true });
+  await expect(page.getByRole('heading', { name: 'حلاق المفضلة (اختبار)', exact: true })).toBeVisible();
+  await expect(page.locator('.cf-location').first()).toContainText('مدينة الكويت');
+  await page.locator('.cf-page').screenshot({ path: `.cloud-test/favourites-${engine}-ar-dark.png`, animations: 'disabled' });
   await page.getByRole('button', { name: /حلاق المفضلة.*المفضلة/ }).click();
   await expect(page.getByRole('heading', { name: 'حلاق المفضلة (اختبار)', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: /صالون الميناء.*المفضلة/ }).click();
