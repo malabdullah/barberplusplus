@@ -1210,7 +1210,15 @@ export function AppProvider({ children }) {
   const isAgent = useMemo(() => userRole === 'agent', [userRole]);
 
   // Barber-specific data - use fetched profile (not raw auth user)
-  const currentBarber = userRole === 'barber' ? barberProfile : null;
+  const managerChair = userRole === 'manager'
+    ? barbers.find(barber => barber.managerChair && barber.userId === user?.id) ?? null
+    : null;
+  const createManagerChair = useCallback(async (branchId, name) => {
+    const chair = await barbersService.createManagerChair({ userId: user?.id, branchId, name });
+    setBarbers(previous => [...previous.filter(barber => barber.id !== chair.id), chair]);
+    return chair;
+  }, [user?.id]);
+  const currentBarber = userRole === 'barber' ? barberProfile : managerChair;
   const barberBookings = useMemo(() => {
     if (!currentBarber) return [];
     return bookings.filter(b => b.barberId === currentBarber.id);
@@ -1287,6 +1295,8 @@ export function AppProvider({ children }) {
     language,
 
     // Barber-specific state
+    managerChair,
+    createManagerChair,
     currentBarber,
     barberBookings,
     barberMetrics,
@@ -1342,6 +1352,7 @@ export function AppProvider({ children }) {
     selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
     metrics, isAuthenticated, loading, theme, language,
     // Barber state
+    managerChair, createManagerChair,
     currentBarber, barberBookings, barberMetrics, barberServices, barberBranch,
     barberProfileLoading, barberProfileError,
     // Notifications
