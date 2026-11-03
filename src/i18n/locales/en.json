@@ -1671,6 +1671,7 @@
       "AUTH_REQUIRED": "Your session has expired. Please sign in again.",
       "SIGN_IN_REQUIRED": "Your account was created. Please sign in to continue.",
       "UNAVAILABLE": "We could not complete this request. Please try again.",
+      "STAFF_ACCOUNT": "This sign-in is linked to a Barber++ staff account. Go back and sign in with a different account to save favourites as a customer.",
       "SOCIAL_SIGN_IN_FAILED": "Could not complete social sign-in. Please sign in again."
     },
     "requestNewCode": "Get a new recovery code",
@@ -1679,6 +1680,7 @@
       "apple": "Continue with Apple",
       "unavailable": "Google and Apple sign-in aren’t available yet. Please use your email.",
       "orPhone": "or use your mobile number",
+      "staffAccountTitle": "Choose a customer account",
       "completeTitle": "Complete your account",
       "completeIntro": "Confirm your name and verify your mobile number to continue.",
       "verifyPhone": "Verify mobile number",
@@ -1803,6 +1805,33 @@
       "titleAccent": "Manage your barbershop.",
       "subtitle": "Customers book their next appointment. Shop teams manage bookings, barbers, services and multiple shops from one dashboard.",
       "shopCta": "I run a shop"
+    }
+  },
+  "customerFavourites": {
+    "labelNamed": "{{name}} favourite",
+    "title": "Favourites",
+    "backAccount": "Back to my account",
+    "barbers": "Barbers",
+    "shops": "Shops",
+    "saveNamed": "Save {{name}} to favourites",
+    "removeNamed": "Remove {{name}} from favourites",
+    "saved": "Saved to your favourites.",
+    "removed": "Removed from your favourites.",
+    "signInHint": "Sign in to save this favourite. Your booking selections will be waiting for you.",
+    "emptyTitle": "No favourites yet",
+    "noBarbers": "No favourite barbers yet.",
+    "noShops": "No favourite shops yet.",
+    "book": "Book appointment",
+    "unavailable": "Currently unavailable for online booking.",
+    "alternatives": "Find an alternative",
+    "locationChanged": "This barber’s shop has changed. Review the current location before booking.",
+    "reviewLocation": "Review location",
+    "continueServices": "Continue to services",
+    "bookingError": "We couldn’t open this booking. Please try again.",
+    "errors": {
+      "FAVOURITE_UNAVAILABLE": "This shop or barber is no longer available. Choose another favourite.",
+      "FAVOURITES_LIMIT": "You’ve reached the limit of 500 favourites. Remove one before adding another.",
+      "UNAVAILABLE": "We couldn’t update your favourites. Please try again."
     }
   }
 }

@@ -109,7 +109,7 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button></div>
+          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button></div>
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">
           <header className="ca-appointments-heading"><h2 id="appointments">{tr('myAppointments')}</h2><p>{tr('account.appointmentsIntro')}</p></header>

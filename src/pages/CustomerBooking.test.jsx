@@ -10,8 +10,10 @@ import CustomerBooking from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
 import { rebookingDraft } from '../utils/customerRebooking';
-import { saveBookingDraft } from '../utils/customerBookingDraft';
+import { rememberBookingReturn, saveBookingDraft } from '../utils/customerBookingDraft';
 
+const favouritesState = vi.hoisted(() => ({ items: [] }));
+vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: () => ({ items: favouritesState.items, loading: false, busy: false, toggle: vi.fn() }) }));
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
@@ -27,6 +29,7 @@ beforeEach(async () => {
   vi.resetAllMocks();
   sessionStorage.clear(); localStorage.clear();
   customerState.customer = null;
+  favouritesState.items = [];
   customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   customerBookingService.getCatalog.mockResolvedValue(catalog);
@@ -385,4 +388,44 @@ it('restores a completed guest receipt after login and saves only that receipt o
   expect(await screen.findByText(en.customerBooking.accountChoice.saved)).toBeInTheDocument();
   expect(customerBookingService.claim).toHaveBeenCalledWith('receipt-proof');
   expect(customerBookingService.book).toHaveBeenCalledTimes(1);
+});
+
+it('restores the sign-in snapshot after the live booking draft was replaced', async () => {
+  cleanup();
+  const selection = { city: 'Kuwait City', branchId: 'branch', barberId: 'omar', serviceIds: ['hair'], date: getKuwaitDate(), time: '', panel: 'time', step: 2, query: 'Sea' };
+  saveBookingDraft(selection);
+  rememberBookingReturn();
+  saveBookingDraft({ ...selection, city: 'Salmiya', branchId: '', barberId: '', serviceIds: [], panel: 'shop', step: 0 });
+  rememberBookingReturn({ preserveDraft: true });
+
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await waitFor(() => expect(screen.getByLabelText('Select a date')).toBeVisible());
+  expect(JSON.parse(localStorage.getItem('barber-customer-booking-draft'))).toMatchObject(selection);
+  expect(screen.getByRole('button', { name: 'Edit: Choose your shop' })).toBeVisible();
+  click('Edit: Choose your shop');
+  expect(screen.getByLabelText('Search shops')).toHaveValue('Sea');
+});
+
+it('prioritizes favourites among matching shops and eligible barbers', async () => {
+  cleanup();
+  favouritesState.items = [
+    { kind: 'shop', targetId: 'harbor' }, { kind: 'shop', targetId: 'other' },
+    { kind: 'barber', targetId: 'ali' },
+  ];
+  customerBookingService.getCatalog.mockResolvedValue({
+    ...catalog,
+    branches: [...catalog.branches, { id: 'harbor', name: 'Harbor shop', city: 'Kuwait City' }],
+  });
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await waitFor(() => expect(screen.getByLabelText('City')).toBeEnabled());
+  changeCity('Kuwait City');
+  expect(screen.getAllByRole('radio')).toEqual([
+    screen.getByRole('radio', { name: /Harbor/ }), screen.getByRole('radio', { name: /Seafront/ }),
+  ]);
+  fireEvent.change(screen.getByLabelText('Search shops'), { target: { value: 'Seafront' } });
+  expect(screen.queryByRole('radio', { name: /Harbor/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('radio', { name: /Seafront/ }));
+  expect(screen.getAllByRole('radio')).toEqual([
+    screen.getByRole('radio', { name: /Ali/ }), screen.getByRole('radio', { name: /Omar/ }),
+  ]);
 });
