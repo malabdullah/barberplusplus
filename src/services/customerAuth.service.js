@@ -55,7 +55,7 @@ export const customerAuthService = {
     if (!customerFeaturesEnabled || !['google', 'apple'].includes(provider)) throw new Error('PROVIDER_UNAVAILABLE');
     const enabled = await this.socialProviders();
     if (!enabled[provider]) throw new Error('PROVIDER_UNAVAILABLE');
-    if (returnTo === '/book') rememberBookingReturn();
+    if (returnTo === '/book') rememberBookingReturn({ preserveDraft: true });
     localStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
     callbackExchange = null;
     const { error } = await customerSupabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/customer/auth-callback` } });

@@ -5,7 +5,7 @@ import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Se
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
-import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
+import { readBookingDraft, readBookingReturnDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
 import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
@@ -40,7 +40,8 @@ export default function CustomerBooking() {
   const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [draft] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || readBookingDraft());
+  const [returnDraft] = useState(readBookingReturnDraft);
+  const [draft] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft || readBookingDraft());
   const [rebookNotice, setRebookNotice] = useState(draft?.rebookNotice || '');
   const restoredDraft = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
@@ -54,8 +55,9 @@ export default function CustomerBooking() {
   const [catalogError, setCatalogError] = useState(false);
   const [reload, setReload] = useState(0);
   const [panel, setPanel] = useState('city');
+  const [draftRestored, setDraftRestored] = useState(!draft);
   const [city, setCity] = useState(draft?.city || '');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => typeof draft?.query === 'string' ? draft.query : '');
   const [branchId, setBranchId] = useState(draft?.branchId || '');
   const [barberId, setBarberId] = useState(draft?.barberId || '');
   const [serviceIds, setServiceIds] = useState(draft?.serviceIds || []);
@@ -67,7 +69,7 @@ export default function CustomerBooking() {
   const [slotError, setSlotError] = useState(false);
   const [details, setDetails] = useState(() => ({ name: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
-  const [receipt, setReceipt] = useState(() => (location.state?.bookingDraft || location.state?.rebookingDraft) ? null : readBookingReceipt());
+  const [receipt, setReceipt] = useState(() => (location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft) ? null : readBookingReceipt());
   const [guest, setGuest] = useState(draft?.guest === true);
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimError, setClaimError] = useState('');
@@ -120,6 +122,7 @@ export default function CustomerBooking() {
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
   useEffect(() => {
+    if (returnDraft && draft === returnDraft) { saveBookingDraft(returnDraft); saveBookingReceipt(null); }
     forgetBookingReturn();
     if (location.state?.bookingDraft || location.state?.rebookingDraft) { saveBookingReceipt(null); navigate(location.pathname, { replace: true, state: null }); }
   }, []);
@@ -130,6 +133,7 @@ export default function CustomerBooking() {
     if (catalogLoading || catalogError || restoredDraft.current) return;
     restoredDraft.current = true;
     if (!draft) return;
+    setDraftRestored(true);
     if (!cities.includes(city)) { setCity(''); setBranchId(''); clearAfterBranch(); if (draft.rebooking || draft.favourite) setRebookNotice('shopUnavailable'); return; }
     if (!branch || branch.city !== city) { setBranchId(''); clearAfterBranch(); openPanel('shop'); if (draft.rebooking || draft.favourite) setRebookNotice('shopUnavailable'); return; }
     const validServices = barber && serviceIds.length > 0 && selectedServices.length === serviceIds.length;
@@ -144,7 +148,14 @@ export default function CustomerBooking() {
     const available = { city: true, shop: Boolean(city), barber: Boolean(branch), services: Boolean(barber), time: validServices, details: validServices && validTime };
     openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
-  useEffect(() => { if (receipt) saveBookingDraft(null); else if (city) saveBookingDraft({ city, branchId, barberId, serviceIds, date, time, panel, step: Math.floor(PANELS.indexOf(panel) / 2), rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details }); }, [city, branchId, barberId, serviceIds, date, time, panel, receipt, rebookNotice, guest, details]);
+  useEffect(() => {
+    if (receipt) saveBookingDraft(null);
+    else if (draftRestored && city) saveBookingDraft({
+      city, branchId, barberId, serviceIds, date, time, panel, query,
+      step: Math.floor(PANELS.indexOf(panel) / 2),
+      rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
+    });
+  }, [draftRestored, city, branchId, barberId, serviceIds, date, time, panel, query, receipt, rebookNotice, guest, details]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
