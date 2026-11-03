@@ -19,6 +19,7 @@ type Dependencies = {
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const validRating = (value: unknown) => typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 5;
 const strong = (s: unknown): s is string => typeof s === 'string' && s.length >= 8 && new TextEncoder().encode(s).length <= 72 && /[a-z]/.test(s) && /[A-Z]/.test(s) && /\d/.test(s) && /[^\w\s]/.test(s);
 const contact = (body: Data) => {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -104,6 +105,17 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(action!=='favourites-list' && (!['shop','barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId))))return reply(400,{error:'INVALID_REQUEST'});
         return reply(200,{favourites:await deps.rpc(action,{...identity,kind:body.kind,target_id:body.targetId})});
       }
+      if (action === 'rate-booking') {
+        const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+        const identity = await deps.identity(token);
+        if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });
+        const { bookingId, shopRating, barberRating } = body;
+        if (typeof bookingId !== 'string' || !uuid.test(bookingId) ||
+          !validRating(shopRating) || !validRating(barberRating)) {
+          return reply(400, { error: 'INVALID_RATING' });
+        }
+        return reply(200, await deps.rpc(action, { ...identity, booking_id: bookingId, shop_rating: shopRating, barber_rating: barberRating }));
+      }
       if(['profile','update-profile','bookings','logout'].includes(action)) {
         const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';
         const identity=await deps.identity(token);
@@ -174,6 +186,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       return reply(200,{session:result.session,profile:await deps.rpc('profile',result.identity)});
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
+      if (message === 'BOOKING_NOT_RATEABLE') return reply(409, { error: message });
+      if (message === 'INVALID_RATING') return reply(400, { error: message });
       if(/FAVOURITE_UNAVAILABLE/.test(message))return reply(409,{error:'FAVOURITE_UNAVAILABLE'});
       if(/FAVOURITES_LIMIT/.test(message))return reply(409,{error:'FAVOURITES_LIMIT'});
       if(/PHONE_IN_USE/.test(message))return reply(409,{error:'PHONE_IN_USE'});

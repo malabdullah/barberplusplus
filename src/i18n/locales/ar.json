@@ -1458,6 +1458,15 @@
     }
   },
   "customerBooking": {
+    "catalogRating": {
+      "none": "لا توجد تقييمات بعد",
+      "count_one": "قيّم عميل واحد",
+      "count_two": "قيّم عميلان",
+      "count_few": "قيّم {{number}} عملاء",
+      "count_many": "قيّم {{number}} عميلاً",
+      "count_other": "قيّم {{number}} عميل",
+      "score": "{{average}} من ٥"
+    },
     "accountChoice": {
       "title": "كيف تود المتابعة؟",
       "hint": "سجّل الدخول لاستخدام بياناتك المحفوظة وإدارة هذا الموعد من حسابك. ستبقى اختياراتك محفوظة.",
@@ -1688,6 +1697,19 @@
     "backSettings": "العودة إلى إعدادات المدير"
   },
   "customerAuth": {
+    "rating": {
+      "shop": "قيّم الصالون",
+      "barber": "قيّم الحلاق",
+      "score_one": "نجمة واحدة",
+      "score_other": "{{count}} نجوم",
+      "save": "حفظ التقييمات",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم حفظ التقييمات.",
+      "unavailable": "لا يمكن تقييم هذا الموعد الآن.",
+      "error": "تعذّر حفظ تقييمك. حاول مرة أخرى.",
+      "score_two": "نجمتان",
+      "score_few": "{{count}} نجوم"
+    },
     "resumeBooking": "متابعة الحجز",
     "signIn": "تسجيل الدخول",
     "signOut": "تسجيل الخروج",
