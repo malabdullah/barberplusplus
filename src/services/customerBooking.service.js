@@ -32,7 +32,7 @@ export const customerBookingService = {
         city: branch.city?.trim() || branch.areas?.name_en || '',
         cityAr: !branch.city?.trim() || branch.city.trim() === branch.areas?.name_en
           ? branch.areas?.name_ar || '' : '',
-        address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url,
+        address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url, rating: branch.rating,
         area: branch.areas?.name_en || '', areaAr: branch.areas?.name_ar || '',
         governorateId: (branch.governorates || branch.areas?.governorates)?.id ?? null,
         governorateName: (branch.governorates || branch.areas?.governorates)?.name_en || '',
@@ -40,7 +40,7 @@ export const customerBookingService = {
       })),
       barbers: result.barbers.map(barber => ({
         id: barber.id, branchId: barber.branch_id, name: barber.name, nameAr: barber.name_ar,
-        avatarUrl: barber.avatar_url, serviceIds: barber.service_ids || [], maxBookingDays: barber.max_booking_days,
+        avatarUrl: barber.avatar_url, serviceIds: barber.service_ids || [], maxBookingDays: barber.max_booking_days, rating: barber.rating,
       })),
       services: result.services.map(service => ({
         id: service.id, branchId: service.branch_id, name: service.name, nameAr: service.name_ar,

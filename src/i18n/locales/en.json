@@ -1455,6 +1455,12 @@
     }
   },
   "customerBooking": {
+    "catalogRating": {
+      "none": "No ratings yet",
+      "count_one": "{{number}} customer rated",
+      "count_other": "{{number}} customers rated",
+      "score": "{{average}} out of 5"
+    },
     "accountChoice": {
       "title": "How would you like to continue?",
       "hint": "Sign in to use your saved details and manage this appointment in your account. Your selections will stay here.",

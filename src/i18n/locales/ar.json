@@ -1458,6 +1458,15 @@
     }
   },
   "customerBooking": {
+    "catalogRating": {
+      "none": "لا توجد تقييمات بعد",
+      "count_one": "قيّم عميل واحد",
+      "count_two": "قيّم عميلان",
+      "count_few": "قيّم {{number}} عملاء",
+      "count_many": "قيّم {{number}} عميلاً",
+      "count_other": "قيّم {{number}} عميل",
+      "score": "{{average}} من ٥"
+    },
     "accountChoice": {
       "title": "كيف تود المتابعة؟",
       "hint": "سجّل الدخول لاستخدام بياناتك المحفوظة وإدارة هذا الموعد من حسابك. ستبقى اختياراتك محفوظة.",
