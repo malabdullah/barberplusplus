@@ -15,8 +15,8 @@ export default function CatalogRating({ rating }) {
       <Star size={15} fill="currentColor" aria-hidden="true" />
       <span className="sr-only">{t('customerBooking.catalogRating.score', { average })}</span>
       <bdi className="cb-catalog-score" aria-hidden="true">{average}</bdi>
-      <span aria-hidden="true">·</span>
-      <span>{t('customerBooking.catalogRating.count', { count: rating.count, number })}</span>
+      <bdi aria-hidden="true">({number})</bdi>
+      <span className="sr-only">{t('customerBooking.catalogRating.count', { count: rating.count, number })}</span>
     </span>
   );
 }
