@@ -15,7 +15,9 @@ export default function CustomerSocialAuth() {
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [name, setName] = useState('');
   usePublicNavigationBusy(busy);
   const callbackRef = useRef(null); const returnTo = customerReturnTo(location);
-  useEffect(() => { document.title = `${tr('social.completeTitle')} | Barber++`; }, [t]);
+  const staffAccount = error === 'STAFF_ACCOUNT';
+  const title = tr(staffAccount ? 'social.staffAccountTitle' : 'social.completeTitle');
+  useEffect(() => { document.title = `${title} | Barber++`; }, [title]);
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -32,7 +34,7 @@ export default function CustomerSocialAuth() {
         if (!active) return;
         if (profile.needsName) { setName(result.name || ''); setReady(true); setLoading(false); }
         else { await refresh(); if (active) navigate(returnTo, { replace: true }); }
-      } catch { if (active) { setError('SOCIAL_SIGN_IN_FAILED'); setLoading(false); } }
+      } catch (failure) { if (active) { setError(failure?.message === 'STAFF_ACCOUNT' ? 'STAFF_ACCOUNT' : 'SOCIAL_SIGN_IN_FAILED'); setLoading(false); } }
     };
     load(); return () => { active = false; };
   }, [location.pathname, returnTo]);
@@ -44,7 +46,7 @@ export default function CustomerSocialAuth() {
     catch { setError('SOCIAL_SIGN_IN_FAILED'); }
     finally { setBusy(false); }
   };
-  return <CustomerAuthLayout title={tr('social.completeTitle')} intro={tr('email.socialIntro')} returnTo={returnTo}>
+  return <CustomerAuthLayout title={title} intro={staffAccount ? undefined : tr('email.socialIntro')} returnTo={returnTo}>
     {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
     {loading ? <p role="status"><Loader2 className="cb-spinner" />{tr('loading')}</p> : ready && <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>
       <label className="cb-field-label" htmlFor="social-name">{tr('name')}</label><input id="social-name" className="cb-input" autoComplete="name" value={name} maxLength={120} onChange={event => { setName(event.target.value); setError(''); }} required />

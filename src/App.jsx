@@ -54,6 +54,7 @@ import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import EnvironmentBanner from './components/EnvironmentBanner';
 import { customerFeaturesEnabled } from './lib/runtimeConfig';
+import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
 const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerification'));
@@ -61,6 +62,7 @@ const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
 const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
 const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
+const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
@@ -141,6 +143,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
       {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
+      {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
       <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
@@ -275,7 +278,7 @@ export default function App() {
     <>
       <EnvironmentBanner />
       <AppProvider>
-        <CustomerAuthProvider><AppRoutes /></CustomerAuthProvider>
+        <CustomerAuthProvider><CustomerFavouritesProvider><AppRoutes /></CustomerFavouritesProvider></CustomerAuthProvider>
       </AppProvider>
     </>
   );

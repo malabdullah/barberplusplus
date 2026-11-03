@@ -41,6 +41,9 @@ let callbackExchange;
 const destination = value => value === '/book' ? '/book' : '/customer/account';
 
 export const customerAuthService = {
+  async favourites() { return (await request('favourites-list', {}, true)).favourites; },
+  async saveFavourite(kind, targetId) { return (await request('favourites-save', { kind, targetId }, true)).favourites; },
+  async removeFavourite(kind, targetId) { return (await request('favourites-remove', { kind, targetId }, true)).favourites; },
   async socialProviders() {
     if (!customerFeaturesEnabled) return { google: false, apple: false };
     const response = await fetch(`${appConfig.supabaseUrl}/auth/v1/settings`, { headers: { apikey: appConfig.supabasePublishableKey }, signal: AbortSignal.timeout(10000) });
@@ -52,7 +55,7 @@ export const customerAuthService = {
     if (!customerFeaturesEnabled || !['google', 'apple'].includes(provider)) throw new Error('PROVIDER_UNAVAILABLE');
     const enabled = await this.socialProviders();
     if (!enabled[provider]) throw new Error('PROVIDER_UNAVAILABLE');
-    if (returnTo === '/book') rememberBookingReturn();
+    if (returnTo === '/book') rememberBookingReturn({ preserveDraft: true });
     localStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
     callbackExchange = null;
     const { error } = await customerSupabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/customer/auth-callback` } });
