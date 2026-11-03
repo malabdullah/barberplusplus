@@ -1671,6 +1671,7 @@
       "AUTH_REQUIRED": "Your session has expired. Please sign in again.",
       "SIGN_IN_REQUIRED": "Your account was created. Please sign in to continue.",
       "UNAVAILABLE": "We could not complete this request. Please try again.",
+      "STAFF_ACCOUNT": "This sign-in is linked to a Barber++ staff account. Go back and sign in with a different account to save favourites as a customer.",
       "SOCIAL_SIGN_IN_FAILED": "Could not complete social sign-in. Please sign in again."
     },
     "requestNewCode": "Get a new recovery code",
@@ -1679,6 +1680,7 @@
       "apple": "Continue with Apple",
       "unavailable": "Google and Apple sign-in aren’t available yet. Please use your email.",
       "orPhone": "or use your mobile number",
+      "staffAccountTitle": "Choose a customer account",
       "completeTitle": "Complete your account",
       "completeIntro": "Confirm your name and verify your mobile number to continue.",
       "verifyPhone": "Verify mobile number",

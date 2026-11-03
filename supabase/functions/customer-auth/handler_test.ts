@@ -119,3 +119,8 @@ Deno.test('favourites require verified customer identity and ignore supplied own
  assert((await handler(req({action:'favourites-save',kind:'admin',targetId},undefined,'token'))).status===400);
  assert((await handler(req({action:'favourites-save',kind:'shop',targetId:'invalid'},undefined,'token'))).status===400);
 });
+Deno.test('a verified staff session receives a specific error without creating a customer profile',async()=>{
+ const handler=make({socialIdentity:async()=>{throw Error('STAFF_ACCOUNT');},rpc:async()=>{throw Error('Unexpected customer RPC');}});
+ const response=await handler(req({action:'social-status'},undefined,'verified-staff-token'));
+ assert(response.status===403 && (await response.json()).error==='STAFF_ACCOUNT');
+});

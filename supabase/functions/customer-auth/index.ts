@@ -80,12 +80,14 @@ Deno.serve(createCustomerAuthHandler({
   },
   identity:token=>customerIdentity(admin,token),
   socialIdentity:async(token)=>{
-    const identity=await customerIdentity(admin,token);
-    if(!identity)return null;
     const {data,error}=await admin.auth.getUser(token);
-    if(error || !data.user?.identities?.some(item=>['google','apple'].includes(item.provider)))return null;
+    const session_id=sessionId(token);
+    if(error || !data.user || !session_id)return null;
+    const role=data.user.app_metadata.role;
+    if(['admin','manager','barber','agent'].includes(String(role)))throw Error('STAFF_ACCOUNT');
+    if(role!=='customer' || !data.user.identities?.some(item=>['google','apple'].includes(item.provider)))return null;
     const name=data.user.user_metadata?.name || data.user.user_metadata?.full_name;
-    return {...identity,name:typeof name==='string' ? name.slice(0,120) : ''};
+    return {user_id:data.user.id,session_id,name:typeof name==='string' ? name.slice(0,120) : ''};
   },
   resetPassword:async(id,password)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || data.user.app_metadata.role!=='customer')throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password});if(result.error)throw Error('UNAVAILABLE');},
 }));

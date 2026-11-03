@@ -178,6 +178,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       if(/FAVOURITES_LIMIT/.test(message))return reply(409,{error:'FAVOURITES_LIMIT'});
       if(/PHONE_IN_USE/.test(message))return reply(409,{error:'PHONE_IN_USE'});
       if(/INVALID_PHONE/.test(message))return reply(400,{error:'INVALID_DETAILS'});
+      if(message==='STAFF_ACCOUNT')return reply(403,{error:'STAFF_ACCOUNT'});
       if(/AUTH_REQUIRED/.test(message))return reply(401,{error:'AUTH_REQUIRED'});
       if(/ACCOUNT_UNAVAILABLE|23505/.test(message))return reply(400,{error:'ACCOUNT_UNAVAILABLE'});
       return reply(503,{error:'UNAVAILABLE'});
