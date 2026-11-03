@@ -32,7 +32,13 @@ def main():
     # App-owned roles are recreated by their migrations, just like app-owned
     # Auth triggers and Storage policies below. Keep only platform role setup.
     roles = ('\n'.join(line for line in roles.decode().splitlines() if not re.match(r'^(CREATE|ALTER) ROLE "?barber_reminder_writer"?(?:\s|;)',line))+'\n').encode()
-    platform = docker('exec',source,'pg_dump','-U','supabase_admin','-d','postgres','--format=custom','--schema-only','--no-owner','--exclude-schema=public','--exclude-schema=secure','--exclude-schema=private','--exclude-schema=supabase_migrations')
+    # These schemas and the migration ledger are created during the replay.
+    replayed_schemas = ('public', 'secure', 'private', 'shop_handover', 'supabase_migrations')
+    platform = docker(
+        'exec', source, 'pg_dump', '-U', 'supabase_admin', '-d', 'postgres',
+        '--format=custom', '--schema-only', '--no-owner',
+        *(f'--exclude-schema={schema}' for schema in replayed_schemas),
+    )
     started = False
     try:
         command = 'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp -c shared_preload_libraries=pg_cron,pg_net,pg_stat_statements -c cron.database_name=postgres -c cron.launch_active_jobs=off'

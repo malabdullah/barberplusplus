@@ -523,6 +523,55 @@ export function AppProvider({ children }) {
     };
   }, [isAuthenticated, user?.id, userRole]);
 
+  // A transferred shop is no longer visible to its former manager through
+  // RLS, so a subscription to that row cannot reliably report the change.
+  useEffect(() => {
+    const managerId = user?.id;
+    if (!isAuthenticated || userRole !== 'manager' || !managerId || loading || !branches.length) return;
+
+    let active = true;
+    let checking = false;
+    const refreshShopAccess = async () => {
+      if (checking || document.visibilityState !== 'visible') return;
+      checking = true;
+      try {
+        const managedIds = new Set(await branchesService.getManagedIds(managerId));
+        if (!active) return;
+        const lostIds = new Set(branches.filter(branch => !managedIds.has(branch.id)).map(branch => branch.id));
+        if (!lostIds.size) return;
+
+        const retained = branches.filter(branch => !lostIds.has(branch.id));
+        const keep = item => !lostIds.has(item.branchId);
+        setBranches(previous => previous.filter(branch => !lostIds.has(branch.id)));
+        setSelectedBranchId(previous => lostIds.has(previous) ? retained[0]?.id ?? null : previous);
+        setBookings(previous => previous.filter(keep));
+        setServices(previous => previous.filter(keep));
+        setBarbers(previous => previous.filter(barber =>
+          keep(barber) || (barber.managerChair && barber.userId === managerId)
+        ));
+        setNotifications(previous => previous.filter(item => !lostIds.has(item.recipientBranchId)));
+        setToastNotification(previous => lostIds.has(previous?.recipientBranchId) ? null : previous);
+        void reloadNotifications();
+      } catch (error) {
+        logger.error('Error checking managed shops:', error);
+      } finally {
+        checking = false;
+      }
+    };
+
+    window.addEventListener('focus', refreshShopAccess);
+    window.addEventListener('online', refreshShopAccess);
+    document.addEventListener('visibilitychange', refreshShopAccess);
+    const interval = window.setInterval(refreshShopAccess, 10000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshShopAccess);
+      window.removeEventListener('online', refreshShopAccess);
+      document.removeEventListener('visibilitychange', refreshShopAccess);
+    };
+  }, [branches, isAuthenticated, loading, reloadNotifications, user?.id, userRole]);
+
   // Setup bookings realtime subscription
   useEffect(() => {
     let bookingsChannel = null;

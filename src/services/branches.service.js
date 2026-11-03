@@ -53,6 +53,15 @@ const toDatabase = (data) => {
 };
 
 export const branchesService = {
+  getManagedIds: async (managerId) => {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('id')
+      .eq('manager_id', managerId);
+    if (error) throw error;
+    return (data || []).map(branch => branch.id);
+  },
+
   /**
    * Get all branches for the current manager
    * @returns {Promise<Array>}

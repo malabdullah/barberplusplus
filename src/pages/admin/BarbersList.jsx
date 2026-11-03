@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import Modal from '../../components/UI/Modal';
+import BranchManagerTransfer from './BranchManagerTransfer';
 import './AdminPages.css';
 
 export default function BarbersList() {
@@ -28,6 +29,8 @@ export default function BarbersList() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [managerFilter, setManagerFilter] = useState('all');
   const [selectedBarber, setSelectedBarber] = useState(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferNotice, setTransferNotice] = useState(null);
 
   // Load data
   useEffect(() => {
@@ -84,8 +87,14 @@ export default function BarbersList() {
   }, []);
 
   const handleCloseModal = useCallback(() => {
+    if (!transferBusy) setSelectedBarber(null);
+  }, [transferBusy]);
+
+  const handleTransferred = (review) => {
+    setTransferNotice(review);
     setSelectedBarber(null);
-  }, []);
+    void loadData();
+  };
 
   // Format date
   const formatDate = (dateString) => {
@@ -122,6 +131,8 @@ export default function BarbersList() {
         <h1>{t('admin.users.barbers')}</h1>
         <p>{t('admin.users.barbersDesc')}</p>
       </div>
+
+      {transferNotice && <p role="status">{t('admin.managerTransfer.success', transferNotice)}</p>}
 
       {/* Toolbar */}
       <div className="admin-toolbar">
@@ -304,6 +315,10 @@ export default function BarbersList() {
                 <span>{t('admin.users.managedBy')}: {selectedBarber.managerName || '-'}</span>
               </div>
             </div>
+
+            {selectedBarber.userId && selectedBarber.managerId && !selectedBarber.managerChair && (
+              <BranchManagerTransfer barber={selectedBarber} onBusyChange={setTransferBusy} onTransferred={handleTransferred} />
+            )}
 
             {/* Invite Status */}
             {selectedBarber.inviteStatus && (

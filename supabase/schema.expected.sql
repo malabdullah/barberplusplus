@@ -23,6 +23,17 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE OR REPLACE FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean DEFAULT NULL::boolean) RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$
+  select shop_handover.transfer_manager(p_branch_id,p_barber_id,p_expected_manager_id,p_keep_bookable)
+$$;
+
+
+ALTER FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."begin_admin_password_reset"("p_actor" "uuid", "p_target" "uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -2554,9 +2565,9 @@ ALTER TABLE "public"."notification_templates" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "notifications_read_recipient" ON "public"."notifications" FOR SELECT TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")))));
+CREATE POLICY "notifications_read_recipient" ON "public"."notifications" FOR SELECT TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")))));
 
-CREATE POLICY "notifications_update_recipient" ON "public"."notifications" FOR UPDATE TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))))) WITH CHECK ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")))));
+CREATE POLICY "notifications_update_recipient" ON "public"."notifications" FOR UPDATE TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids"))))) WITH CHECK ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")))));
 
 
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
@@ -2594,6 +2605,11 @@ GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT USAGE ON SCHEMA "public" TO "barber_reminder_writer";
+
+
+
+REVOKE ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) TO "authenticated";
 
 
 

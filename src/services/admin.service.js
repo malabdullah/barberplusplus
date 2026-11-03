@@ -307,6 +307,17 @@ export const adminService = {
     }
   },
 
+  transferBranchManager: async (barber, keepBookable) => {
+    const { data, error } = await supabase.rpc('admin_transfer_branch_manager', {
+      p_branch_id: barber.branchId,
+      p_barber_id: barber.id,
+      p_expected_manager_id: barber.managerId,
+      p_keep_bookable: keepBookable,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   /**
    * Get all barbers platform-wide with pagination
    */
@@ -371,6 +382,8 @@ export const adminService = {
           id: barber.id,
           name: barber.name,
           nameAr: barber.name_ar,
+          userId: barber.user_id,
+          managerChair: barber.manager_chair === true,
           email: barber.email,
           phone: barber.phone,
           countryCode: barber.country_code,
