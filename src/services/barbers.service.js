@@ -1,3 +1,4 @@
+import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
 import { supabase } from '../lib/supabase';
 import { logErrorDev } from '../utils/security';
 
@@ -10,6 +11,7 @@ const toFrontend = (barber) => {
   return {
     id: barber.id,
     userId: barber.user_id,
+    managerChair: barber.manager_chair === true,
     branchId: barber.branch_id,
     name: barber.name,
     nameAr: barber.name_ar,
@@ -75,6 +77,21 @@ export const barbersService = {
     const { data, error } = await query.order('name');
     if (error) throw error;
     return (data || []).map(toFrontend);
+  },
+
+  createManagerChair: async ({ userId, branchId, name }) => {
+    const { data, error } = await supabase.from('barbers').insert({
+      user_id: userId,
+      branch_id: branchId,
+      name,
+      manager_chair: true,
+      status: 'inactive',
+      availability: Object.fromEntries(Object.entries(BARBER_DEFAULT_SCHEDULE)
+        .map(([day, hours]) => [day, { ...hours, enabled: false }])),
+      invite_status: 'accepted',
+    }).select().single();
+    if (error) throw error;
+    return toFrontend(data);
   },
 
   /**

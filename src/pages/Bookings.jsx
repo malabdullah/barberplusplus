@@ -29,6 +29,7 @@ import {
 } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../context/AppContext';
+import { getKuwaitDate } from '../utils/customerBooking';
 import Modal from '../components/UI/Modal';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BookingForm from '../components/Forms/BookingForm';
@@ -58,7 +59,7 @@ const STATUS_CONFIG = {
 
 const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onComplete }) {
   const { t } = useTranslation();
-  const status = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
+  const status = STATUS_CONFIG[(booking.status || 'pending').replace('_', '-')] || STATUS_CONFIG.pending;
 
   return (
     <div className={`booking-card status-${status.color}`} onClick={() => onEdit(booking)}>
@@ -90,16 +91,18 @@ const BookingDetails = memo(function BookingDetails({
   barbers,
   existingBookings,
   onModifyServices,
+  onReschedule,
 }) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const barberData = barbers?.find(b => b.id === booking.barberId);
+  const status = (booking.status || 'pending').replace('_', '-');
 
   return (
     <div className="booking-details">
       <div className="booking-details-header">
-        <div className={`booking-status-badge ${booking.status}`}>
-          {t(`bookings.status.${booking.status === 'no-show' ? 'noShow' : booking.status}`)}
+        <div className={`booking-status-badge ${status}`}>
+          {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
         </div>
         <button className="booking-close-btn" onClick={onClose} aria-label={t('common.close')}>
           <X size={20} aria-hidden="true" />
@@ -222,11 +225,16 @@ const BookingDetails = memo(function BookingDetails({
         </div>
       )}
 
+      {barberData?.managerChair && ['pending', 'confirmed'].includes(booking.status)
+        && booking.date >= getKuwaitDate() && (
+          <button className="btn btn-secondary" onClick={onReschedule}>{t('chair.reschedule')}</button>
+        )}
+
       <div className="booking-status-change">
         <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select
           className="status-change-select"
-          value={booking.status}
+          value={status}
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
           {BOOKING_STATUSES.map((status) => (
@@ -261,6 +269,7 @@ export default function Bookings() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancellingBooking, setCancellingBooking] = useState(null);
+  const [statusError, setStatusError] = useState('');
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -327,6 +336,7 @@ export default function Bookings() {
   };
 
   const handleEdit = (booking) => {
+    setStatusError('');
     setSelectedBooking(booking);
   };
 
@@ -355,6 +365,7 @@ export default function Bookings() {
 
   return (
     <div className="bookings-page manager-bookings-page">
+      {statusError && <p className="error-banner" role="alert">{statusError}</p>}
       {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
@@ -528,7 +539,7 @@ export default function Bookings() {
       >
         <BookingForm
           booking={editingBooking}
-          barbers={branchBarbers}
+          barbers={branchBarbers.filter(barber => !barber.managerChair || barber.isActive)}
           services={branchServices}
           existingBookings={branchBookings}
           onSubmit={handleFormSubmit}
@@ -543,9 +554,20 @@ export default function Bookings() {
             <BookingDetails
               booking={selectedBooking}
               onClose={() => setSelectedBooking(null)}
-              onStatusChange={(id, status) => {
-                updateBooking(id, { status });
+              onReschedule={() => {
+                setEditingBooking(selectedBooking);
                 setSelectedBooking(null);
+                setIsFormOpen(true);
+              }}
+              onStatusChange={async (id, status) => {
+                setStatusError('');
+                try {
+                  await updateBooking(id, { status });
+                  setSelectedBooking(null);
+                } catch {
+                  setSelectedBooking(null);
+                  setStatusError(t('common.error'));
+                }
               }}
               services={branchServices}
               barbers={branchBarbers}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import BarberForm from '../components/Forms/BarberForm';
@@ -34,6 +34,8 @@ export default function EditBarber() {
   const handleCancel = () => {
     navigate('/dashboard/barbers');
   };
+
+  if (barber?.managerChair) return <Navigate to="/dashboard/my-chair?view=profile" replace />;
 
   if (!barber) {
     return (

@@ -61,7 +61,7 @@ const toDatabase = (data) => {
   if (data.time !== undefined) result.time = data.time;
   if (data.duration !== undefined) result.duration = data.duration;
   if (data.price !== undefined) result.price = data.price;
-  if (data.status !== undefined) result.status = data.status;
+  if (data.status !== undefined) result.status = data.status === 'no-show' ? 'no_show' : data.status;
   if (data.notes !== undefined) result.notes = data.notes;
   if (data.addedByType !== undefined) result.added_by_type = data.addedByType;
   if (data.addedByUserId !== undefined) result.added_by_user_id = data.addedByUserId;
@@ -86,6 +86,21 @@ export const bookingsService = {
     const { data, error } = await query.order('date').order('time');
     if (error) throw error;
     return (data || []).map(toFrontend);
+  },
+
+  getChairAppointments: async ({ branchId, barberId, history, today, time, start, count }) => {
+    const open = 'pending,confirmed';
+    const upcoming = `date.gt.${today},and(date.eq.${today},time.gte.${time})`;
+    let query = supabase.from('bookings').select('*, customer:customers(id,name)')
+      .eq('branch_id', branchId).eq('barber_id', barberId);
+    query = history
+      ? query.or(`status.not.in.(${open}),date.lt.${today},and(date.eq.${today},time.lt.${time})`)
+      : query.in('status', open.split(',')).or(upcoming);
+    const ascending = !history;
+    const { data, error } = await query.order('date', { ascending }).order('time', { ascending })
+      .order('id', { ascending }).range(start, start + count - 1);
+    if (error) throw error;
+    return data.map(toFrontend);
   },
 
   /**
@@ -140,7 +155,7 @@ export const bookingsService = {
     if (bookingData.time) fieldsToValidate.time = bookingData.time;
     if (bookingData.duration) fieldsToValidate.duration = bookingData.duration;
     if (bookingData.price !== undefined) fieldsToValidate.price = bookingData.price;
-    if (bookingData.status) fieldsToValidate.status = bookingData.status;
+    if (bookingData.status) fieldsToValidate.status = toDatabase({ status: bookingData.status }).status;
 
     // Validate with a schema that has no required fields (partial update)
     const partialSchema = {

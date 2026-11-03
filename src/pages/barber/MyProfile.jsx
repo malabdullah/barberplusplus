@@ -15,7 +15,7 @@ import { GCC_COUNTRIES } from '../../constants/countries';
 import { getErrorMessage } from '../../utils/errorMessages';
 import './MyProfile.css';
 
-export default function MyProfile() {
+export default function MyProfile({ chair = false }) {
   const { t } = useTranslation();
   const { currentBarber, barberBranch, barberServices, updateBarber } = useApp();
 
@@ -90,6 +90,10 @@ export default function MyProfile() {
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('validation.nameRequired');
+    if (chair) {
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }
     if (!formData.email.trim()) {
       newErrors.email = t('validation.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -113,7 +117,8 @@ export default function MyProfile() {
       setIsSubmitting(true);
       setSaveError('');
       try {
-        await updateBarber(currentBarber.id, formData);
+        const { email, phone, countryCode, ...publicProfile } = formData;
+        await updateBarber(currentBarber.id, chair ? publicProfile : { ...publicProfile, email, phone, countryCode });
         setHasChanges(false);
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus(null), 3000);
@@ -233,7 +238,7 @@ export default function MyProfile() {
         </div>
 
         {/* Contact Information */}
-        <div className="profile-section animate-fade-in-up stagger-3">
+        {!chair && <div className="profile-section animate-fade-in-up stagger-3">
           <div className="profile-section-header">
             <Mail size={20} strokeWidth={1.5} />
             <h3>{t('profile.contactInformation')}</h3>
@@ -280,7 +285,7 @@ export default function MyProfile() {
               {errors.phone && <span className="form-error">{errors.phone}</span>}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Services */}
         <div className="profile-section animate-fade-in-up stagger-4">
@@ -296,7 +301,7 @@ export default function MyProfile() {
 
             {barberServices.length > 0 ? (
               <div className="services-grid">
-                {barberServices.map((service) => (
+                {barberServices.filter(service => !chair || service.status === 'active').map((service) => (
                   <label
                     key={service.id}
                     className={`service-card ${formData.services.includes(service.id) ? 'selected' : ''}`}

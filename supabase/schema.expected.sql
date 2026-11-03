@@ -687,7 +687,7 @@ CREATE OR REPLACE FUNCTION "public"."get_barber_branch_id"() RETURNS "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  SELECT branch_id FROM barbers WHERE user_id = auth.uid() LIMIT 1
+  select branch_id from public.barbers where user_id = auth.uid() and not manager_chair limit 1
 $$;
 
 
@@ -800,10 +800,9 @@ CREATE OR REPLACE FUNCTION "public"."is_barber"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM barbers
-    WHERE user_id = auth.uid()
-  );
+  select exists (
+    select 1 from public.barbers where user_id = auth.uid() and not manager_chair
+  )
 $$;
 
 
@@ -1076,6 +1075,7 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     "time_offs" "jsonb" DEFAULT '[]'::"jsonb",
     "vacations" "jsonb" DEFAULT '[]'::"jsonb",
     "max_booking_days" integer DEFAULT 30,
+    "manager_chair" boolean DEFAULT false NOT NULL,
     CONSTRAINT "barbers_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text", 'on_leave'::"text"]))),
     CONSTRAINT "max_booking_days_range" CHECK ((("max_booking_days" >= 1) AND ("max_booking_days" <= 365)))
 );
@@ -1534,6 +1534,9 @@ ALTER TABLE ONLY "public"."whatsapp_messages"
 
 
 
+CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
+
+
 CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
 
 
@@ -1814,6 +1817,9 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
+CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();
+
+
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
@@ -1822,6 +1828,12 @@ CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDAT
 
 CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR UPDATE OF "barber_id", "date", "time", "duration", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_schedule"();
 
+
+
+CREATE OR REPLACE TRIGGER "guard_manager_chair" BEFORE INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair"();
+
+
+CREATE OR REPLACE TRIGGER "guard_manager_chair_booking" AFTER INSERT OR UPDATE OF "barber_id", "branch_id", "date", "time", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair_booking"();
 
 
 CREATE OR REPLACE TRIGGER "link_staff_customer_booking_owner" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."link_staff_customer_booking_owner"();
@@ -2254,7 +2266,7 @@ CREATE POLICY "Barbers can insert bookings in their branch" ON "public"."booking
 
 CREATE POLICY "Barbers can update own bookings" ON "public"."bookings" FOR UPDATE USING (("barber_id" IN ( SELECT "barbers"."id"
    FROM "public"."barbers"
-  WHERE ("barbers"."user_id" = "auth"."uid"()))));
+  WHERE (("barbers"."user_id" = "auth"."uid"()) AND (NOT "barbers"."manager_chair")))));
 
 
 

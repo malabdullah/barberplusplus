@@ -271,7 +271,16 @@
 }
 
 .service-card input {
-  display: none;
+  position: absolute;
+  inset-inline-start: var(--space-sm);
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.service-card:focus-within {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
 }
 
 .service-card-content {
