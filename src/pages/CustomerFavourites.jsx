@@ -54,7 +54,7 @@ export default function CustomerFavourites() {
   };
   if (!authLoading && !customer) return <Navigate to="/customer/sign-in" replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account cf-page">
-    <Link className="cb-text-button ca-back" to="/customer/account"><ArrowLeft size={18} aria-hidden="true" />{tr('backAccount')}</Link>
+    <Link className="cb-text-button ca-back" to="/customer/account" reloadDocument><ArrowLeft size={18} aria-hidden="true" />{tr('backAccount')}</Link>
     <header className="ca-account-heading"><div><p className="ca-eyebrow">{t('customerAuth.customerAccount')}</p><h1>{tr('title')}</h1></div></header>
     <FavouriteFeedback showSaved={false} />
     {authLoading || loading ? <p className="ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{t('customerAuth.loading')}</p> : !error && !items.length ? <section className="cf-empty"><Heart size={34} aria-hidden="true" /><h2>{tr('emptyTitle')}</h2></section> : <>
