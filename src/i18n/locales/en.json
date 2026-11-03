@@ -959,6 +959,35 @@
     "verifyIdentity": "Verify Your Identity"
   },
   "admin": {
+    "managerTransfer": {
+      "title": "Transfer branch management",
+      "review": "Review transfer",
+      "refresh": "Check appointments again",
+      "summary": "{{incomingName}} will replace {{outgoingName}} as manager of {{branchName}}.",
+      "remaining_one": "The outgoing manager keeps their one other branch.",
+      "remaining_other": "The outgoing manager keeps their {{count}} other branches.",
+      "remaining_zero": "The outgoing manager will have no branches assigned after this transfer.",
+      "upcoming_one": "The outgoing manager has one upcoming or in-progress appointment here. Have the manager complete, reassign, or cancel it before transferring this branch.",
+      "upcoming_other": "The outgoing manager has {{count}} upcoming or in-progress appointments here. Have the manager complete, reassign, or cancel them before transferring this branch.",
+      "chair": "Should the incoming manager accept new bookings?",
+      "keepBookable": "Keep taking appointments",
+      "managerOnly": "Start in Manager only mode",
+      "preserved": "The incoming manager keeps their sign-in, schedule and booking history. Ask them to sign in again after the transfer.",
+      "confirm": "Confirm transfer",
+      "success": "{{incomingName}} now manages {{branchName}}. Ask them to sign in again.",
+      "errors": {
+        "forbidden": "Only a signed-in admin can transfer branch management.",
+        "stale": "This assignment changed. Refresh the list and review the transfer again.",
+        "ineligible": "This barber needs a verified, active account assigned only to this branch.",
+        "upcomingChanged": "The outgoing manager has an unresolved appointment. Review the transfer again.",
+        "inactive": "This chair is already closed. Choose Manager only to continue.",
+        "contactMismatch": "The barber profile and login have different phone numbers. Reconcile them before transferring.",
+        "servicesRequired": "The incoming manager needs an active service to keep taking appointments. Choose Manager only to transfer now.",
+        "hoursRequired": "The incoming manager needs valid working hours to keep taking appointments. Choose Manager only to transfer now.",
+        "passwordReset": "A password reset is in progress for this account. Try again when it finishes.",
+        "unavailable": "The transfer could not be completed. Refresh the list before trying again."
+      }
+    },
     "passwordReset": {"title":"Reset a user password","description":"Set a temporary password for a non-admin account.","account":"User account","select":"Select an account","previous":"Previous","next":"Next","page":"Page {{page}}","password":"New password","confirm":"Confirm password","guidance":"Share the password securely. The user can change it from Settings after signing in; the change is not forced automatically.","rules":"Use at least 12 characters, including uppercase, lowercase, a number and a symbol.","invalid":"Select an account and enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","loadError":"Could not load user accounts.","failed":"The reset could not be confirmed. Do not retry; contact the system administrator to check its status.","success":"Password changed. Share it privately with the user.","submit":"Reset password","auditWarning":"Password changed, but its completion audit could not be recorded. Contact the system administrator.","ownInvalid":"Enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","ownFailed":"The password could not be changed. Please try again.","ownSuccess":"Your password has been changed."},
     "searchPlatform": "Search platform...",
     "comingSoon": "Coming Soon",

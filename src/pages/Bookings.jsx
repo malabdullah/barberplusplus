@@ -1,5 +1,5 @@
 import { useNotificationBooking } from '../hooks/useNotificationBooking';
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Calendar,
@@ -270,6 +270,14 @@ export default function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancellingBooking, setCancellingBooking] = useState(null);
   const [statusError, setStatusError] = useState('');
+
+  useEffect(() => {
+    setSelectedBooking(null);
+    setEditingBooking(null);
+    setCancellingBooking(null);
+    setIsFormOpen(false);
+    setStatusError('');
+  }, [selectedBranch?.id]);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
