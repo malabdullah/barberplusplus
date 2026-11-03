@@ -17,7 +17,7 @@ Deno.serve(createCustomerAuthHandler({
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
   cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
-    const result=await admin.rpc('customer_account_api',{p_action:action,p_data:data});
+    const result=await admin.rpc(action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:action,p_data:data});
     if(result.error)throw Error(result.error.message);
     if(action==='update-profile') {
       const changed=await admin.auth.admin.updateUserById(String(result.data.id),{user_metadata:{name:result.data.name}});

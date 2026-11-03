@@ -1804,5 +1804,35 @@
       "subtitle": "Customers book their next appointment. Shop teams manage bookings, barbers, services and multiple shops from one dashboard.",
       "shopCta": "I run a shop"
     }
+  },
+  "customerFavourites": {
+    "labelNamed": "{{name}} favourite",
+    "title": "Favourites",
+    "intro": "Your favourite people and places, ready for your next visit.",
+    "backAccount": "Back to my account",
+    "browse": "Browse shops",
+    "barbers": "Barbers",
+    "shops": "Shops",
+    "saveNamed": "Save {{name}} to favourites",
+    "removeNamed": "Remove {{name}} from favourites",
+    "saved": "Saved to your favourites.",
+    "removed": "Removed from your favourites.",
+    "signInHint": "Sign in to save this favourite. Your booking selections will be waiting for you.",
+    "emptyTitle": "Keep your favourites close",
+    "emptyHint": "Tap the heart beside a shop or barber while browsing to save them here.",
+    "noBarbers": "No favourite barbers yet.",
+    "noShops": "No favourite shops yet.",
+    "book": "Book appointment",
+    "unavailable": "Currently unavailable for online booking.",
+    "alternatives": "Find an alternative",
+    "locationChanged": "This barber’s shop has changed. Review the current location before booking.",
+    "reviewLocation": "Review location",
+    "continueServices": "Continue to services",
+    "bookingError": "We couldn’t open this booking. Please try again.",
+    "errors": {
+      "FAVOURITE_UNAVAILABLE": "This shop or barber is no longer available. Choose another favourite.",
+      "FAVOURITES_LIMIT": "You’ve reached the limit of 500 favourites. Remove one before adding another.",
+      "UNAVAILABLE": "We couldn’t update your favourites. Please try again."
+    }
   }
 }

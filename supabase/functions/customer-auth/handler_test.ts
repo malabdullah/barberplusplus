@@ -108,3 +108,14 @@ Deno.test('email login and recovery enforce rate limits and authenticated identi
 Deno.test('customer passwords shorter than eight characters are rejected for signup and recovery',async()=>{
  for(const action of ['signup','reset-password'])assert((await make()(req({action,challenge:crypto.randomUUID(),code:'123456',password:'Abc12!x'}))).status===400);
 });
+Deno.test('favourites require verified customer identity and ignore supplied owner/session IDs',async()=>{
+ const targetId='aa021100-0000-4000-8000-000000000001';
+ for(const action of ['favourites-list','favourites-save','favourites-remove'])assert((await make()(req({action,kind:'shop',targetId}))).status===401);
+ const calls:{action:string;data:Record<string,unknown>}[]=[];
+ const handler=make({identity:async()=>({user_id:'verified-customer',session_id:'live-session'}),rpc:async(action:string,data:Record<string,unknown>)=>{calls.push({action,data});return[];}});
+ for(const action of ['favourites-list','favourites-save','favourites-remove'])assert((await handler(req({action,kind:'shop',targetId,user_id:'victim',session_id:'other',customer_id:'victim'},undefined,'token'))).status===200);
+ assert(calls.every(({data})=>data.user_id==='verified-customer'&&data.session_id==='live-session'&&!('customer_id'in data)));
+ assert(calls[1].data.target_id===targetId);
+ assert((await handler(req({action:'favourites-save',kind:'admin',targetId},undefined,'token'))).status===400);
+ assert((await handler(req({action:'favourites-save',kind:'shop',targetId:'invalid'},undefined,'token'))).status===400);
+});

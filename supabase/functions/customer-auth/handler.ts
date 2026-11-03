@@ -97,6 +97,13 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const status=await deps.rpc('social-status',social) as Data;
         if (action==='social-status') return reply(200,{...status,name:social.name || ''});
       }
+      if (['favourites-list','favourites-save','favourites-remove'].includes(action)) {
+        const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';
+        const identity=await deps.identity(token);
+        if(!identity)return reply(401,{error:'AUTH_REQUIRED'});
+        if(action!=='favourites-list' && (!['shop','barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId))))return reply(400,{error:'INVALID_REQUEST'});
+        return reply(200,{favourites:await deps.rpc(action,{...identity,kind:body.kind,target_id:body.targetId})});
+      }
       if(['profile','update-profile','bookings','logout'].includes(action)) {
         const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';
         const identity=await deps.identity(token);
@@ -167,6 +174,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       return reply(200,{session:result.session,profile:await deps.rpc('profile',result.identity)});
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
+      if(/FAVOURITE_UNAVAILABLE/.test(message))return reply(409,{error:'FAVOURITE_UNAVAILABLE'});
+      if(/FAVOURITES_LIMIT/.test(message))return reply(409,{error:'FAVOURITES_LIMIT'});
       if(/PHONE_IN_USE/.test(message))return reply(409,{error:'PHONE_IN_USE'});
       if(/INVALID_PHONE/.test(message))return reply(400,{error:'INVALID_DETAILS'});
       if(/AUTH_REQUIRED/.test(message))return reply(401,{error:'AUTH_REQUIRED'});

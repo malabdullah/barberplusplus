@@ -1,0 +1,49 @@
+.cf-select-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cf-select-row .cb-option { flex: 1; min-width: 0; }
+.customer-booking .cf-heart { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid var(--booking-divider); border-radius: 50%; color: var(--booking-muted); background: var(--bg-secondary); cursor: pointer; transition: color .15s ease, background .15s ease; }
+.customer-booking .cf-heart[aria-pressed='true'] { color: var(--booking-link); background: var(--booking-selection); border-color: var(--booking-link); }
+.customer-booking .cf-heart:hover:not(:disabled) { color: var(--booking-link); }
+.customer-booking .cf-heart:focus-visible { outline: 2px solid var(--booking-link); outline-offset: 3px; }
+.customer-booking .cf-heart:disabled { opacity: .55; cursor: wait; }
+.cf-feedback { font: 400 14px/1.6 var(--font-body); color: var(--booking-link); margin-block: 12px; }
+.cf-auth-hint { color: var(--booking-muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+.cf-page > .ca-back { margin-bottom: 24px; }
+.cf-page .ca-account-heading { display: flex; justify-content: space-between; }
+.cf-page .ca-account-heading > .cb-secondary { flex-shrink: 0; padding: 12px 20px; }
+.cf-group { margin-top: 36px; }
+.cf-group > header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--booking-divider); }
+.cf-group h2 { font: 600 22px/1.5 var(--font-body); margin: 0; }
+.cf-group > header > span { font-size: 14px; color: var(--booking-muted); }
+.cf-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+.cf-item { display: flex; align-items: flex-start; gap: 16px; min-width: 0; padding-block: 24px; border-bottom: 1px solid var(--booking-divider); }
+.cf-item .cb-image { width: 64px; height: 64px; flex: 0 0 64px; }
+.cf-item-copy { flex: 1; min-width: 0; }
+.cf-item h3 { margin: 0 0 6px; font: 600 18px/1.5 var(--font-body); overflow-wrap: anywhere; }
+.cf-item p { margin: 4px 0; font-size: 14px; line-height: 1.6; color: var(--booking-muted); overflow-wrap: anywhere; }
+.cf-item .cf-location { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.cf-location svg { flex-shrink: 0; }
+.cf-item .cf-notice { color: var(--booking-link); margin-top: 10px; }
+.cf-book-actions { margin-top: 16px; }
+.cf-book-actions .cb-secondary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 10px 14px; font-size: 14px; }
+.cf-group-empty { font-size: 14px; color: var(--booking-muted); margin-block: 24px; }
+.cf-empty { text-align: center; padding: 52px 20px; border-block: 1px solid var(--booking-divider); }
+.cf-empty > svg { color: var(--booking-link); }
+.cf-empty h2 { margin: 18px 0 10px; font: 600 24px/1.5 var(--font-body); }
+.cf-empty p { color: var(--booking-muted); margin: 0 0 24px; line-height: 1.6; }
+.cf-empty .cb-primary { display: inline-flex; padding: 14px 22px; }
+.cf-review::backdrop { background: #0009; }
+.cf-review { border: 1px solid var(--booking-divider); width: min(100%, 440px); max-height: 90dvh; overflow-y: auto; padding: 28px; border-radius: 16px; background: var(--bg-primary); color: var(--booking-text); box-shadow: 0 12px 60px #0004; }
+.cf-review h2 { font: 600 22px/1.5 var(--font-body); margin: 0 0 16px; }
+.cf-review p { line-height: 1.6; }
+.cf-review > div { display: grid; gap: 12px; margin-top: 24px; }
+.cf-review button { min-height: 48px; }
+[dir='rtl'] .cf-book-actions svg:not(.cb-spinner), [dir='rtl'] .cf-page > .ca-back svg { transform: rotate(180deg); }
+@media (max-width: 700px) {
+  .cf-list { grid-template-columns: minmax(0, 1fr); }
+  .cf-page .ca-account-heading { display: block; }
+  .cf-page .ca-account-heading > .cb-secondary { display: inline-flex; margin-top: 18px; }
+  .cf-item { gap: 12px; }
+  .cf-item .cb-image { width: 52px; height: 52px; flex-basis: 52px; }
+  .cf-group { margin-top: 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .customer-booking .cf-heart { transition: none; } }
