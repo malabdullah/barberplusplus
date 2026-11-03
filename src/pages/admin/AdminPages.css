@@ -644,3 +644,33 @@
 .password-reset-form p { color: var(--text-secondary); }
 .password-reset-form .password-reset-error { color: var(--status-error); }
 .password-reset-pagination { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+.admin-transfer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-transfer p {
+  margin: 0;
+}
+
+.admin-transfer .btn {
+  justify-self: start;
+}
+
+.admin-transfer-alert {
+  color: var(--status-error);
+}
+
+.admin-transfer-options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-transfer-options label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+}
