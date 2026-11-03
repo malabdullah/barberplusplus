@@ -129,6 +129,38 @@ export default function CustomerBooking() {
   };
   const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
 
+  const recoverUnavailableSelection = async (isCurrent = () => true) => {
+    try {
+      const latest = await customerBookingService.getCatalog();
+      if (!isCurrent()) return;
+      setCatalog(latest);
+      setTime('');
+      setSlots([]);
+      const shop = latest.branches.find(item => item.id === branchId && item.city === city);
+      if (!shop) {
+        setBranchId('');
+        clearAfterBranch();
+        const cityStillAvailable = latest.branches.some(item => item.city === city);
+        if (!cityStillAvailable) { setCity(''); setQuery(''); }
+        openPanel(cityStillAvailable ? 'shop' : 'city');
+      } else {
+        const remainingServices = getBarberServices(latest, branchId, barberId);
+        if (!remainingServices.length) {
+          clearAfterBranch();
+          openPanel('barber');
+        } else {
+          setServiceIds(current => current.filter(id => remainingServices.some(service => service.id === id)));
+          openPanel('services');
+        }
+      }
+    } catch {
+      if (!isCurrent()) return;
+      setTime('');
+      setSlotError(true);
+      openPanel('time');
+    }
+  };
+
   useEffect(() => {
     if (returnDraft && draft === returnDraft) { saveBookingDraft(returnDraft); saveBookingReceipt(null); }
     forgetBookingReturn();
@@ -199,7 +231,12 @@ export default function CustomerBooking() {
     setSlotsLoading(true); setSlots([]); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
       .then(result => { if (active) { setSlots(result.slots); setTime(current => result.slots.includes(current) ? current : ''); if (time && !result.slots.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
-      .catch(failure => { if (active) { setError(failure.message); setSlotError(true); setTime(''); openPanel('time'); } })
+      .catch(async failure => {
+        if (!active) return;
+        setError(failure.message);
+        if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection(() => active);
+        else { setSlotError(true); setTime(''); openPanel('time'); }
+      })
       .finally(() => { if (active) setSlotsLoading(false); });
     return () => { active = false; };
   }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry, receipt, customer?.id]);
@@ -230,6 +267,7 @@ export default function CustomerBooking() {
     } catch (failure) {
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
+      if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection();
       if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); if (customer) await refresh(); }
     } finally { setBusy(false); }
   };

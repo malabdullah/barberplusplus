@@ -67,6 +67,8 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
       <div className="schedule-day">
         <button
           className={`schedule-toggle ${schedule.enabled ? 'active' : ''}`}
+          aria-label={day.label}
+          aria-pressed={schedule.enabled}
           onClick={handleToggle}
         >
           {schedule.enabled ? <Check size={14} strokeWidth={2} /> : <X size={14} strokeWidth={2} />}

@@ -429,3 +429,20 @@ it('prioritizes favourites among matching shops and eligible barbers', async () 
     screen.getByRole('radio', { name: /Ali/ }), screen.getByRole('radio', { name: /Omar/ }),
   ]);
 });
+
+it('returns to barber selection and keeps guest details when a chair closes at confirmation', async () => {
+  await chooseAppointment();
+  await requestVerification();
+  customerBookingService.getCatalog.mockResolvedValue({ ...catalog, barbers: catalog.barbers.filter(barber => barber.id !== 'omar') });
+  customerBookingService.book.mockRejectedValueOnce(new Error('INVALID_SELECTION'));
+  click('Confirm booking');
+
+  expect(await screen.findByRole('radio', { name: /Ali/ })).toBeVisible();
+  expect(screen.queryByRole('radio', { name: /Omar/ })).not.toBeInTheDocument();
+  expect(section('Choose your barber')).toHaveClass('is-open');
+  fireEvent.click(screen.getByRole('radio', { name: /Ali/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Beard trim/ }));
+  click('Continue to date & time');
+  fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
+  expect(screen.getByLabelText('Your name')).toHaveValue('Test Customer');
+});
