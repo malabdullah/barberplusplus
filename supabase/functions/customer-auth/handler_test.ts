@@ -124,3 +124,29 @@ Deno.test('a verified staff session receives a specific error without creating a
  const response=await handler(req({action:'social-status'},undefined,'verified-staff-token'));
  assert(response.status===403 && (await response.json()).error==='STAFF_ACCOUNT');
 });
+Deno.test('hosted Test binds native email actions to a UUID and leaves web delivery on its own route',async()=>{
+ const appUrl='https://shop.example.test';
+ const gateway='test-gateway-secret-with-more-than-thirty-two-characters';
+ const state='aa021100-0000-4000-8000-000000000001';
+ const destinations:string[]=[];
+ const emailSignup=async(_name:string,_email:string,_password:string,destination:string)=>{destinations.push(destination);};
+ const emailLink=async(_email:string,_purpose:string,destination:string)=>{destinations.push(destination);};
+ const options={appUrl,rpc:async()=>true,emailSignup,emailLink};
+ const projectRef='abcdefghijklmnopqrst';
+ const cloud=make({...options,environment:'cloud-test',publicUrl:`https://${projectRef}.supabase.co`,
+  cloudTestProjectRef:projectRef,cloudAccessKey:gateway});
+ const production=make({...options,environment:'production',productionEnabled:true,publicUrl:'https://auth.example.test'});
+ const send=(handler:ReturnType<typeof make>,action:string,client:string,nativeState:string)=>{
+  const request=new Request(appUrl+'/test-api/customer-auth',{method:'POST',headers:{
+   'x-cloud-test-key':gateway,'Content-Type':'application/json',Origin:appUrl
+  },body:JSON.stringify({action,client,nativeState,name:'Customer Name',email:'test@example.test',password,returnTo:'/book'})});
+  return handler(request);
+ };
+ for(const action of ['email-signup','email-resend','email-recovery']) {
+  assert((await send(cloud,action,'ios',state)).status===200);
+  assert((await send(cloud,action,'ios',state+'&type=recovery')).status===400);
+  assert((await send(cloud,action,'web',state)).status===200);
+  assert((await send(production,action,'ios',state)).status===200);
+ }
+ assert(JSON.stringify(destinations)===JSON.stringify(Array(3).fill(['native:'+state,'book','book']).flat()));
+});

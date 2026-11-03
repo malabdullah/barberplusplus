@@ -12,6 +12,15 @@ const useAuthMail=environment==='production' || environment==='cloud-test';
 const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
 const emailClient=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
 const deliverEmail=createCustomerEmailDelivery(emailClient.auth,appUrl);
+function emailCallback(type: string, returnTo: string, tokenHash: string) {
+  const native = environment === 'cloud-test' && /^native:[0-9a-f-]{36}$/i.test(returnTo);
+  const callback = new URL(native ? 'barberplusplus-test://email-callback' : '/customer/email-callback', native ? undefined : appUrl);
+  callback.searchParams.set('type', type);
+  callback.searchParams.set('token_hash', tokenHash);
+  if (native) callback.searchParams.set('state', returnTo.slice(7));
+  else callback.searchParams.set('next', returnTo === 'book' ? 'book' : 'account');
+  return callback.href;
+}
 Deno.serve(createCustomerAuthHandler({
   environment,appUrl,publicUrl:Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
@@ -39,29 +48,29 @@ Deno.serve(createCustomerAuthHandler({
     if(lookup.error)throw Error('UNAVAILABLE');
     if(lookup.data) {
       if(!lookup.data.confirmed) {
-        if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
+        if(useAuthMail && !returnTo.startsWith('native:')) {await deliverEmail(email,'confirm',returnTo);return;}
         const link=await admin.auth.admin.generateLink({type:'magiclink',email});
         if(link.error)throw Error('UNAVAILABLE');
-        await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=magiclink&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
+        await sendTestEmail(email,'Confirm your Barber++ account',emailCallback('magiclink',returnTo,link.data.properties.hashed_token));
       }
       return;
     }
     const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
     if(created.error) return; // Generic response also protects staff and duplicate identities.
-    if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
+    if(useAuthMail && !returnTo.startsWith('native:')) {await deliverEmail(email,'confirm',returnTo);return;}
     const link=await admin.auth.admin.generateLink({type:'signup',email,password});
     if(link.error)throw Error('UNAVAILABLE');
-    await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=signup&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
+    await sendTestEmail(email,'Confirm your Barber++ account',emailCallback('signup',returnTo,link.data.properties.hashed_token));
   },
   emailLink:async(email,purpose,returnTo)=>{
     const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
     if(lookup.error)throw Error('UNAVAILABLE');
     if(!lookup.data || (purpose==='recovery' && !lookup.data.confirmed) || (purpose==='confirm' && lookup.data.confirmed))return;
-    if(useAuthMail) {await deliverEmail(email,purpose,returnTo);return;}
+    if(useAuthMail && !returnTo.startsWith('native:')) {await deliverEmail(email,purpose,returnTo);return;}
     const type=purpose==='recovery'?'recovery':'magiclink';
     const link=await admin.auth.admin.generateLink({type,email});
     if(link.error)throw Error('UNAVAILABLE');
-    const callback=`${Deno.env.get('APP_URL')}/customer/email-callback?type=${type}&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`;
+    const callback=emailCallback(type,returnTo,link.data.properties.hashed_token);
     await sendTestEmail(email,purpose==='recovery'?'Reset your Barber++ password':'Confirm your Barber++ account',callback);
   },
   emailSignIn:async(email,password)=>{

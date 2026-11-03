@@ -60,15 +60,20 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(!profile || (profile as Data).needsName)return reply(400,{error:'ACCOUNT_UNAVAILABLE'});
           return reply(200,{session:result.session,profile});
         }
+        const native = deps.environment === 'cloud-test' && body.client === 'ios';
+        if (native && (typeof body.nativeState !== 'string' || !uuid.test(body.nativeState))) {
+          return reply(400,{error:'INVALID_REQUEST'});
+        }
+        const returnTo = native ? `native:${body.nativeState}` : body.returnTo === '/book' ? 'book' : 'account';
         if(action==='email-signup') {
           const name=typeof body.name==='string' ? body.name.trim() : '';
           if(name.length<2 || name.length>120)return reply(400,{error:'INVALID_DETAILS'});
           if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
-          await deps.emailSignup(name,email,body.password,body.returnTo==='/book'?'book':'account');
+          await deps.emailSignup(name,email,body.password,returnTo);
         } else {
           if(!deps.emailLink)throw Error('UNAVAILABLE');
-          await deps.emailLink(email,action==='email-resend'?'confirm':'recovery',body.returnTo==='/book'?'book':'account');
+          await deps.emailLink(email,action==='email-resend'?'confirm':'recovery',returnTo);
         }
         return reply(200,{success:true});
       }
