@@ -365,7 +365,12 @@ ALTER FUNCTION "public"."create_booking_reminder"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
-    AS $$select private.customer_account_api(p_action,p_data);$$;
+    AS $$
+  select case when p_action in ('bookings', 'rate-booking')
+    then private.customer_booking_ratings_api(p_action,p_data)
+    else private.customer_account_api(p_action,p_data)
+  end;
+$$;
 
 
 ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
@@ -518,6 +523,48 @@ $_$;
 
 
 ALTER FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with votes as (
+    select b.branch_id, b.barber_id,
+      coalesce(a.customer_id, b.customer_id) as customer_id,
+      r.shop_rating, r.barber_rating
+    from private.customer_booking_ratings r
+    join public.bookings b on b.id=r.booking_id
+    left join private.customer_booking_owners o on o.booking_id=b.id
+    left join private.customer_accounts a on a.user_id=o.account_user_id
+    where b.status='completed'
+      and coalesce(a.customer_id, b.customer_id) is not null
+  ), per_customer as (
+    -- Give each customer equal weight, even if they rated several visits.
+    select target.kind, target.id, v.customer_id, avg(target.score) as average
+    from votes v
+    cross join lateral (values
+      ('shop', v.branch_id, v.shop_rating),
+      ('barber', v.barber_id, v.barber_rating)
+    ) as target(kind, id, score)
+    where target.id is not null
+    group by target.kind, target.id, v.customer_id
+  ), per_target as (
+    select kind, id, round(avg(average), 1) as average, count(*) as count
+    from per_customer
+    group by kind, id
+  )
+  select jsonb_build_object(
+    'shops', coalesce(jsonb_object_agg(id, jsonb_build_object('average', average, 'count', count))
+      filter (where kind='shop'), '{}'::jsonb),
+    'barbers', coalesce(jsonb_object_agg(id, jsonb_build_object('average', average, 'count', count))
+      filter (where kind='barber'), '{}'::jsonb)
+  )
+  from per_target;
+$$;
+
+
+ALTER FUNCTION "public"."customer_catalog_ratings"() OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql"
@@ -2674,6 +2721,9 @@ GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "j
 
 
 
+
+REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
