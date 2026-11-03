@@ -365,7 +365,12 @@ ALTER FUNCTION "public"."create_booking_reminder"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
-    AS $$select private.customer_account_api(p_action,p_data);$$;
+    AS $$
+  select case when p_action in ('bookings', 'rate-booking')
+    then private.customer_booking_ratings_api(p_action,p_data)
+    else private.customer_account_api(p_action,p_data)
+  end;
+$$;
 
 
 ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";

@@ -1673,6 +1673,17 @@
     "backSettings": "Back to manager Settings"
   },
   "customerAuth": {
+    "rating": {
+      "shop": "Rate the shop",
+      "barber": "Rate the barber",
+      "score_one": "{{count}} star",
+      "score_other": "{{count}} stars",
+      "save": "Save ratings",
+      "saving": "Saving…",
+      "saved": "Ratings saved.",
+      "unavailable": "This appointment can’t be rated right now.",
+      "error": "Couldn’t save your rating. Try again."
+    },
     "resumeBooking": "Continue booking",
     "signIn": "Sign in",
     "signOut": "Sign out",
