@@ -33,14 +33,22 @@ Deno.serve(createCustomerBookingHandler({
   },
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
-    const [branches, barbers, services] = await Promise.all([
+    const [branches, barbers, services, ratingResult] = await Promise.all([
       admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').order('name'),
       admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
+      admin.rpc('customer_catalog_ratings'),
     ]);
     if (branches.error || barbers.error || services.error) throw Error('Catalog unavailable');
     const branchIds = new Set(branches.data.map(branch => branch.id));
-    return { branches: branches.data, barbers: barbers.data.filter(barber => branchIds.has(barber.branch_id)), services: services.data.filter(service => branchIds.has(service.branch_id)) };
+    if (ratingResult.error) console.warn('Catalog ratings unavailable', ratingResult.error.code);
+    const ratings = ratingResult.error ? undefined : ratingResult.data;
+    return {
+      branches: branches.data.map(branch => ({ ...branch, rating: ratings ? ratings.shops[branch.id] ?? null : undefined })),
+      barbers: barbers.data.filter(barber => branchIds.has(barber.branch_id))
+        .map(barber => ({ ...barber, rating: ratings ? ratings.barbers[barber.id] ?? null : undefined })),
+      services: services.data.filter(service => branchIds.has(service.branch_id)),
+    };
   },
   claim: async data => {
     const result = await admin.rpc('customer_claim_booking', { p_booking: data.booking_id, p_account: data.account_user_id, p_session: data.session_id });

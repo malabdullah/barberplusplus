@@ -195,3 +195,7 @@
 .cb-account-choice .cb-secondary { color: var(--booking-text); }
 .cb-account-choice .cb-helper { margin: 16px 0 0; }
 @media (max-width: 767px) { .cb-account-choice-actions { flex-direction: column; } .cb-account-choice-actions > * { width: 100%; } }
+
+.cb-catalog-rating { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
+.cb-catalog-rating svg { color: var(--booking-link); flex-shrink: 0; }
+.cb-catalog-score { font-weight: 600; color: var(--booking-text); }

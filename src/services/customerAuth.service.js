@@ -136,6 +136,9 @@ export const customerAuthService = {
     return (await request('update-profile', { ...data, email: auth.user.email || '' }, true)).profile;
   },
   async bookings() { return (await request('bookings', {}, true)).bookings; },
+  async rateBooking(bookingId, shopRating, barberRating) {
+    return request('rate-booking', { bookingId, shopRating, barberRating }, true);
+  },
   async logout() {
     try { await request('logout', {}, true); } catch (error) { if (error.message !== 'AUTH_REQUIRED') throw error; }
     await clearCustomerSession();
