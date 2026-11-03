@@ -54,7 +54,7 @@ export default function CustomerFavourites() {
   if (!authLoading && !customer) return <Navigate to="/customer/sign-in" replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account cf-page">
     <Link className="cb-text-button ca-back" to="/customer/account"><ArrowLeft size={18} aria-hidden="true" />{tr('backAccount')}</Link>
-    <header className="ca-account-heading"><div><p className="ca-eyebrow">{t('customerAuth.customerAccount')}</p><h1>{tr('title')}</h1><p className="cb-intro">{tr('intro')}</p></div><Link className="cb-secondary" to="/book">{tr('browse')}</Link></header>
+    <header className="ca-account-heading"><div><p className="ca-eyebrow">{t('customerAuth.customerAccount')}</p><h1>{tr('title')}</h1><p className="cb-intro">{tr('intro')}</p></div>{items.length > 0 && <Link className="cb-secondary" to="/book">{tr('browse')}</Link>}</header>
     <FavouriteFeedback />
     {authLoading || loading ? <p className="ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{t('customerAuth.loading')}</p> : !error && !items.length ? <section className="cf-empty"><Heart size={34} aria-hidden="true" /><h2>{tr('emptyTitle')}</h2><p>{tr('emptyHint')}</p><Link className="cb-primary" to="/book">{tr('browse')}</Link></section> : <>
       {['barber', 'shop'].map(kind => <section key={kind} className="cf-group" aria-labelledby={`favourite-${kind}-title`}><header><h2 id={`favourite-${kind}-title`}>{tr(kind === 'barber' ? 'barbers' : 'shops')}</h2><span>{items.filter(item => item.kind === kind).length}</span></header>

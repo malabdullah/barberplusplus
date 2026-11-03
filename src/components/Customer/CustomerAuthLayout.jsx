@@ -17,7 +17,7 @@ export default function CustomerAuthLayout({ title, intro, children, returnTo = 
         <header className="ca-heading"><p className="ca-eyebrow">{t(accountType === 'team' ? 'teamAuth.eyebrow' : 'customerAuth.customerAccount')}</p><h1 id="customer-auth-title">{title}</h1>{intro && <p className="cb-intro">{intro}</p>}</header>
         {children}
       </section>
-      <footer className="ca-footer"><Link to={accountType === 'team' ? '/customer/sign-in' : '/book'}>{t(accountType === 'team' ? 'publicNav.customerSignIn' : 'customerAuth.continueGuest')}</Link><Link to="/privacy">{t('customerPrivacy.title')}</Link></footer>
+      <footer className="ca-footer"><Link onClick={() => { if (accountType === 'customer') clearFavouriteIntent(); }} to={accountType === 'team' ? '/customer/sign-in' : '/book'}>{t(accountType === 'team' ? 'publicNav.customerSignIn' : 'customerAuth.continueGuest')}</Link><Link to="/privacy">{t('customerPrivacy.title')}</Link></footer>
     </main>
   </div>;
 }

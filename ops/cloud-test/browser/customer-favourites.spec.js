@@ -43,6 +43,9 @@ test('guest save returns to the booking draft; both favourite types persist and 
   await expect(barber).toContainText(fixture.shopName);
   await expect(shop).toContainText(fixture.shopName);
   await page.reload(); await expect(barber).toBeVisible(); await expect(shop).toBeVisible();
+  const light = page.getByRole('button', { name: 'Switch to light mode' });
+  if (await light.isVisible()) await light.click();
+  await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
   await page.screenshot({ path: `.cloud-test/favourites-${engine}-en-light.png`, fullPage: true });
   await shop.getByRole('button', { name: 'Book appointment' }).click();
   await expect(panel(page, 'barber')).toHaveClass(/is-open/);
@@ -74,7 +77,7 @@ test('leaving the sign-in prompt cancels the save; another account starts with a
   await page.setViewportSize({ width: 1300, height: 900 });
   await page.goto('/book'); await chooseBookingCity(page, fixture.city); await chooseShop(page);
   await heart(page, fixture.barberName).click(); await expect(page).toHaveURL(/\/customer\/sign-in\?next=book$/);
-  await page.getByRole('link', { name: 'Back to booking', exact: true }).click();
+  await page.getByRole('link', { name: 'Continue as a guest', exact: true }).click();
   await expect(panel(page, 'barber')).toHaveClass(/is-open/);
   await page.goto('/customer/sign-in'); await login(page, fixture.users[1]);
   await expect(page).toHaveURL(/\/customer\/account$/);
