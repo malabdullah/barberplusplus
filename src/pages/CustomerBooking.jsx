@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useCustomerFavourites } from '../context/CustomerFavouritesContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
 import { readBookingDraft, readBookingReturnDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
@@ -35,9 +36,15 @@ function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, d
   </section>;
 }
 
+function favouritesFirst(options, favourites, kind) {
+  const saved = new Set(favourites.filter(item => item.kind === kind).map(item => item.targetId));
+  return [...options].sort((a, b) => Number(saved.has(b.id)) - Number(saved.has(a.id)));
+}
+
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
+  const { items: favourites } = useCustomerFavourites();
   const location = useLocation();
   const navigate = useNavigate();
   const [returnDraft] = useState(readBookingReturnDraft);
@@ -85,8 +92,9 @@ export default function CustomerBooking() {
   const governorateName = group => group.key === 'other' ? tr('otherLocations') : tr(`governorates.${group.key}`, { defaultValue: isArabic && group.nameAr ? group.nameAr : group.name });
   const branch = catalog.branches.find(item => item.id === branchId);
   const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
-  const branches = useMemo(() => searchBranches(catalog.branches, city, query), [catalog.branches, city, query]);
-  const barbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const branches = useMemo(() => favouritesFirst(searchBranches(catalog.branches, city, query), favourites, 'shop'), [catalog.branches, city, query, favourites]);
+  const eligibleBarbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const barbers = favouritesFirst(eligibleBarbers, favourites, 'barber');
   const services = getBarberServices(catalog, branchId, barberId);
   const selectedServices = services.filter(item => serviceIds.includes(item.id));
   const duration = selectedServices.reduce((sum, item) => sum + item.duration, 0);
