@@ -61,7 +61,7 @@ const toDatabase = (data) => {
   if (data.time !== undefined) result.time = data.time;
   if (data.duration !== undefined) result.duration = data.duration;
   if (data.price !== undefined) result.price = data.price;
-  if (data.status !== undefined) result.status = data.status;
+  if (data.status !== undefined) result.status = data.status === 'no-show' ? 'no_show' : data.status;
   if (data.notes !== undefined) result.notes = data.notes;
   if (data.addedByType !== undefined) result.added_by_type = data.addedByType;
   if (data.addedByUserId !== undefined) result.added_by_user_id = data.addedByUserId;
@@ -155,7 +155,7 @@ export const bookingsService = {
     if (bookingData.time) fieldsToValidate.time = bookingData.time;
     if (bookingData.duration) fieldsToValidate.duration = bookingData.duration;
     if (bookingData.price !== undefined) fieldsToValidate.price = bookingData.price;
-    if (bookingData.status) fieldsToValidate.status = bookingData.status;
+    if (bookingData.status) fieldsToValidate.status = toDatabase({ status: bookingData.status }).status;
 
     // Validate with a schema that has no required fields (partial update)
     const partialSchema = {

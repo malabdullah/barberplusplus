@@ -59,7 +59,7 @@ const STATUS_CONFIG = {
 
 const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onComplete }) {
   const { t } = useTranslation();
-  const status = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
+  const status = STATUS_CONFIG[(booking.status || 'pending').replace('_', '-')] || STATUS_CONFIG.pending;
 
   return (
     <div className={`booking-card status-${status.color}`} onClick={() => onEdit(booking)}>
@@ -96,12 +96,13 @@ const BookingDetails = memo(function BookingDetails({
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const barberData = barbers?.find(b => b.id === booking.barberId);
+  const status = (booking.status || 'pending').replace('_', '-');
 
   return (
     <div className="booking-details">
       <div className="booking-details-header">
-        <div className={`booking-status-badge ${booking.status}`}>
-          {t(`bookings.status.${booking.status === 'no-show' ? 'noShow' : booking.status}`)}
+        <div className={`booking-status-badge ${status}`}>
+          {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
         </div>
         <button className="booking-close-btn" onClick={onClose} aria-label={t('common.close')}>
           <X size={20} aria-hidden="true" />
@@ -233,7 +234,7 @@ const BookingDetails = memo(function BookingDetails({
         <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select
           className="status-change-select"
-          value={booking.status}
+          value={status}
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
           {BOOKING_STATUSES.map((status) => (
