@@ -34,7 +34,7 @@ import {
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
-import ConfirmDialog from '../../components/UI/ConfirmDialog';
+import StaffCancelBookingDialog from '../../components/BookingPolicy/StaffCancelBookingDialog';
 import BookingForm from '../../components/Forms/BookingForm';
 import ModifyServicesSection from '../../components/Bookings/ModifyServicesSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../../constants/bookingStatuses';
@@ -444,13 +444,7 @@ export default function MyBookings() {
     setSelectedBooking(null);
   };
 
-  const handleCancelConfirm = () => {
-    if (cancellingBooking) {
-      cancelBooking(cancellingBooking.id);
-      setCancellingBooking(null);
-      setSelectedBooking(null);
-    }
-  };
+
 
   if (!currentBarber) return null;
 
@@ -625,6 +619,9 @@ export default function MyBookings() {
               booking={selectedBooking}
               onClose={() => setSelectedBooking(null)}
               onStatusChange={(id, status) => {
+                if (status === 'cancelled') {
+                  setCancellingBooking(selectedBooking); setSelectedBooking(null); return;
+                }
                 updateBooking(id, { status });
                 setSelectedBooking(null);
               }}
@@ -649,16 +646,8 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* Cancel Confirmation */}
-      <ConfirmDialog
-        isOpen={!!cancellingBooking}
-        onClose={() => setCancellingBooking(null)}
-        onConfirm={handleCancelConfirm}
-        title={t('bookings.cancelBooking')}
-        message={t('bookings.cancelConfirmMessage', { name: cancellingBooking?.customerName })}
-        confirmText={t('bookings.cancelBooking')}
-        variant="danger"
-      />
+      {cancellingBooking && <StaffCancelBookingDialog booking={cancellingBooking}
+        onClose={() => setCancellingBooking(null)} onConfirm={(booking, reason) => cancelBooking(booking.id, reason)} />}
     </div>
   );
 }

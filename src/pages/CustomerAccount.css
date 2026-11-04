@@ -113,3 +113,6 @@
 .ca-appointment-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 24px; background: var(--booking-surface); border-block-start: 1px solid var(--booking-divider); }
 .ca-appointment-dialog-actions .ca-upcoming-danger { color: var(--status-error); border-color: currentColor; }
 .ca-appointment-date-input { min-inline-size: 0; max-inline-size: 100%; -webkit-appearance: none; font-size: 16px; }
+.ca-appointment-policy { flex-basis: 100%; }
+.ca-booking-copy .ca-appointment-policy p { font-size: 13px; color: var(--booking-muted); }
+.ca-staff-cancellation { padding: 12px; margin-block: 12px; border: 1px solid var(--booking-divider); border-radius: 8px; background: var(--booking-subtle); overflow-wrap: anywhere; }

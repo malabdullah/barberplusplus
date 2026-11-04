@@ -1,4 +1,5 @@
-import React, { useMemo, memo } from 'react';
+import StaffCancelBookingDialog from '../../components/BookingPolicy/StaffCancelBookingDialog';
+import React, { useState, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -151,8 +152,9 @@ export default function BarberDashboard() {
     updateBooking(bookingId, { status: 'completed' });
   };
 
+  const [cancellingBooking, setCancellingBooking] = useState(null);
   const handleCancel = (bookingId) => {
-    cancelBooking(bookingId);
+    setCancellingBooking(todayBookings.find(booking => booking.id === bookingId) || null);
   };
 
   // NOW we can have early returns - all hooks have been called above
@@ -374,6 +376,8 @@ export default function BarberDashboard() {
           </div>
         </div>
       </div>
+      {cancellingBooking && <StaffCancelBookingDialog booking={cancellingBooking}
+        onClose={() => setCancellingBooking(null)} onConfirm={(booking, reason) => cancelBooking(booking.id, reason)} />}
     </div>
   );
 }

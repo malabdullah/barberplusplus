@@ -11,6 +11,7 @@ import {
   Save,
   RefreshCw,
 } from 'lucide-react';
+import BookingPolicySettings from '../../components/BookingPolicy/BookingPolicySettings';
 import { adminService } from '../../services';
 import { useApp } from '../../context/AppContext';
 import './AdminPages.css';
@@ -167,6 +168,7 @@ export default function GlobalSettings() {
         </div>
       </div>
 
+      <BookingPolicySettings />
       <div className="admin-settings-grid">
         {/* Business Defaults Section */}
         <SettingsSection
@@ -224,23 +226,6 @@ export default function GlobalSettings() {
             </div>
           </SettingsItem>
 
-          <SettingsItem
-            label={t('admin.globalSettings.businessDefaults.cancellationPolicy')}
-            description={t('admin.globalSettings.businessDefaults.cancellationPolicyDesc')}
-          >
-            <div className="admin-number-input-wrapper">
-              <input
-                type="number"
-                min="0"
-                max="72"
-                value={settings.cancellation_policy_hours ?? 24}
-                onChange={(e) => handleSettingChange('cancellation_policy_hours', parseInt(e.target.value) || 0)}
-                className="admin-number-input"
-                disabled={saving.cancellation_policy_hours}
-              />
-              <span className="admin-input-suffix">{t('common.hours')}</span>
-            </div>
-          </SettingsItem>
         </SettingsSection>
 
         {/* Booking Rules Section */}

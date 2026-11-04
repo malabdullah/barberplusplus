@@ -57,7 +57,7 @@ select throws_ok($$select public.customer_account_api('reschedule-booking',curre
 select throws_ok($$select public.customer_account_api('cancel-booking',current_setting('appointments.other')::jsonb || current_setting('appointments.target')::jsonb)$$,
   'P0001','BOOKING_NOT_MANAGEABLE','cannot cancel another customer’s appointment');
 select throws_ok($$select public.customer_account_api('cancel-booking',current_setting('appointments.owner')::jsonb || current_setting('appointments.target')::jsonb || '{"booking_id":"dc090000-0000-4000-8000-000000000603"}')$$,
-  'P0001','BOOKING_NOT_MANAGEABLE','appointment start is the cancellation cutoff');
+  'P0001','BOOKING_CUTOFF_PASSED','the cancellation cutoff is enforced');
 select throws_ok($$select public.customer_account_api('reschedule-booking',current_setting('appointments.owner')::jsonb || current_setting('appointments.target')::jsonb || '{"time":"12:00"}')$$,
   'P0001','SLOT_UNAVAILABLE','occupied slot rejected');
 select is((select time from public.bookings where id='dc090000-0000-4000-8000-000000000601'),'10:00'::time,'failed move retains the original booking');

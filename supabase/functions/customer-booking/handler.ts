@@ -132,6 +132,12 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         }
         if (typeof body.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)
           || (body.notes !== undefined && (typeof body.notes !== 'string' || body.notes.length > 500))) return reply(400, { error: 'INVALID_REQUEST' });
+        if (body.bookingPolicy !== undefined) {
+          const policy = body.bookingPolicy as Body | null;
+          const validMinutes = (value: unknown) => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 525600;
+          if (!policy || !validMinutes(policy.cancel_minutes) || !validMinutes(policy.reschedule_minutes)) return reply(400, { error: 'INVALID_REQUEST' });
+          data.booking_policy = { cancel_minutes: policy.cancel_minutes, reschedule_minutes: policy.reschedule_minutes };
+        }
         Object.assign(data, { id: proof.id, name: proof.name, phone: proof.phone, country_code: proof.country_code, time: body.time, notes: body.notes || '', ...(proof.user_id ? { account_user_id: proof.user_id, session_id: proof.session_id } : {}) });
       }
       let result;
@@ -153,6 +159,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       return reply(200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
+      if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (/PHONE_IN_USE/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });
       if (/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/.test(message)) return reply(400, { error: message.match(/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/)![0] });

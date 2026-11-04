@@ -371,9 +371,14 @@ CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p
       select jsonb_agg(item || jsonb_build_object(
         'location_url',br.location_url, 'shop_address',br.address,
         'cancellation_cutoff', case when item->>'status' in ('confirmed','pending')
-          then ((item->>'date')::date + (item->>'time')::time) at time zone 'Asia/Kuwait' end
+          then ((b.date+b.time) at time zone 'Asia/Kuwait')-make_interval(mins=>b.cancel_notice_minutes) end,
+        'reschedule_cutoff', case when item->>'status' in ('confirmed','pending')
+          then ((b.date+b.time) at time zone 'Asia/Kuwait')-make_interval(mins=>b.reschedule_notice_minutes) end,
+        'staff_cancellation', case when item->>'status'='cancelled' and b.staff_cancellation is not null
+          then b.staff_cancellation - 'user_id' end
       ) order by ordinal)
       from jsonb_array_elements(private.customer_booking_ratings_api(p_action,p_data)) with ordinality as history(item,ordinal)
+      join public.bookings b on b.id=(item->>'id')::uuid
       left join public.branches br on br.id=(item->>'branch_id')::uuid
     ),'[]'::jsonb)
     when p_action='rate-booking' then private.customer_booking_ratings_api(p_action,p_data)
@@ -503,7 +508,8 @@ begin
     end if;
     if p_action in ('slots','appointment-slots') then
       return jsonb_build_object('slots', v_slots, 'duration', v_duration, 'price', v_price,
-        'today', v_today, 'last_date', v_today + v_barber.max_booking_days);
+        'today', v_today, 'last_date', v_today + v_barber.max_booking_days,
+        'booking_policy',public.shop_booking_policy(v_branch.id));
     end if;
     v_time := (p_data ->> 'time')::time;
     if v_time is null or not v_slots ? to_char(v_date + v_time, 'HH24:MI') then
@@ -523,6 +529,9 @@ begin
       duration, price, status, notes, added_by_type)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
       v_duration, v_price, 'confirmed', nullif(trim(p_data ->> 'notes'), ''), 'customer') returning * into v_booking;
+    if p_data ? 'booking_policy' and p_data->'booking_policy' is distinct from jsonb_build_object(
+      'cancel_minutes',v_booking.cancel_notice_minutes,'reschedule_minutes',v_booking.reschedule_notice_minutes
+    ) then raise exception 'BOOKING_POLICY_CHANGED'; end if;
   end if;
   if p_action = 'book' and nullif(p_data->>'account_user_id','') is not null then
     perform private.record_customer_booking_owner(v_booking.id, (p_data->>'account_user_id')::uuid, (p_data->>'session_id')::uuid);
@@ -897,6 +906,48 @@ $$;
 ALTER FUNCTION "public"."is_manager"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb" DEFAULT NULL::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  cancel_value integer;
+  reschedule_value integer;
+  staff_role text;
+begin
+  select u.raw_app_meta_data->>'role' into staff_role from auth.users u
+    where u.id=auth.uid() and u.deleted_at is null and (u.banned_until is null or u.banned_until<=now());
+  if staff_role is distinct from 'admin' and (staff_role is distinct from 'manager' or p_branch is null or not exists(
+    select 1 from public.get_user_branch_ids() shop(id) where shop.id=p_branch
+  )) then raise exception 'BOOKING_POLICY_FORBIDDEN' using errcode='42501'; end if;
+  if p_changes is null then return private.booking_policy(p_branch); end if;
+  if jsonb_typeof(p_changes) is distinct from 'object'
+    or (p_changes->>'cancel_minutes' is not null and p_changes->>'cancel_minutes' !~ '^[0-9]{1,6}$')
+    or (p_changes->>'reschedule_minutes' is not null and p_changes->>'reschedule_minutes' !~ '^[0-9]{1,6}$')
+  then raise exception 'INVALID_BOOKING_POLICY'; end if;
+  cancel_value := (p_changes->>'cancel_minutes')::integer;
+  reschedule_value := (p_changes->>'reschedule_minutes')::integer;
+  if cancel_value>525600 or reschedule_value>525600 then raise exception 'INVALID_BOOKING_POLICY'; end if;
+  if p_branch is null then
+    if cancel_value is null or reschedule_value is null then raise exception 'INVALID_BOOKING_POLICY'; end if;
+    insert into public.admin_settings(setting_key,setting_value,description,category,updated_by) values
+      ('customer_cancel_notice_minutes',to_jsonb(cancel_value),'Default customer cancellation notice in minutes','booking_rules',auth.uid()),
+      ('customer_reschedule_notice_minutes',to_jsonb(reschedule_value),'Default customer rescheduling notice in minutes','booking_rules',auth.uid())
+    on conflict (setting_key) do update set setting_value=excluded.setting_value,updated_by=excluded.updated_by,updated_at=now();
+  else
+    if jsonb_typeof(p_changes->'barber_can_cancel') is distinct from 'boolean' then raise exception 'INVALID_BOOKING_POLICY'; end if;
+    insert into private.shop_booking_policies(branch_id,cancel_minutes,reschedule_minutes,barber_can_cancel)
+    values(p_branch,cancel_value,reschedule_value,(p_changes->>'barber_can_cancel')::boolean)
+    on conflict(branch_id) do update set cancel_minutes=excluded.cancel_minutes,reschedule_minutes=excluded.reschedule_minutes,barber_can_cancel=excluded.barber_can_cancel;
+  end if;
+  return private.booking_policy(p_branch);
+end
+$$;
+
+
+ALTER FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -936,6 +987,19 @@ begin
 end $$;
 
 ALTER FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select jsonb_build_object('cancel_minutes',p->'cancel_minutes','reschedule_minutes',p->'reschedule_minutes')
+  from (select private.booking_policy(p_branch) p) policy
+  where exists(select 1 from public.branches where id=p_branch and status='active')
+$$;
+
+
+ALTER FUNCTION "public"."shop_booking_policy"("uuid") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1195,8 +1259,13 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "modified_by_type" "text",
     "modified_by_user_id" "uuid",
     "customer_id" "uuid",
+    "cancel_notice_minutes" integer DEFAULT 0 NOT NULL,
+    "reschedule_notice_minutes" integer DEFAULT 0 NOT NULL,
+    "staff_cancellation" "jsonb",
     CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
+    CONSTRAINT "bookings_cancel_notice_minutes_check" CHECK ((("cancel_notice_minutes" >= 0) AND ("cancel_notice_minutes" <= 525600))),
     CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
+    CONSTRAINT "bookings_reschedule_notice_minutes_check" CHECK ((("reschedule_notice_minutes" >= 0) AND ("reschedule_notice_minutes" <= 525600))),
     CONSTRAINT "bookings_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'confirmed'::"text", 'completed'::"text", 'cancelled'::"text", 'no_show'::"text"])))
 );
 
@@ -1902,6 +1971,9 @@ CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDAT
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
+
+CREATE OR REPLACE TRIGGER "guard_booking_policy" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_policy"();
+
 
 CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR UPDATE OF "barber_id", "date", "time", "duration", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_schedule"();
 
@@ -2824,6 +2896,10 @@ GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") TO "authenticated";
+
+
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "service_role";
 
@@ -2831,6 +2907,12 @@ GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO
 
 REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
+
+REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "service_role";
+
 
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";

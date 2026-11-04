@@ -6,7 +6,7 @@ import { downloadBookingCalendar, getKuwaitDate, safeBookingUrl } from '../../ut
 import { appointmentDate } from '../../utils/customerRebooking';
 import { shopWording } from '../../utils/customerTerminology';
 
-const actionErrors = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
+const actionErrors = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
 
 export default function UpcomingBookingActions({ booking, onChange, onRefresh }) {
   const { t, i18n } = useTranslation();
@@ -32,8 +32,10 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
   const services = (booking.services || []).map(item => ({ name: (arabic && item.name_ar) || item.name }));
   const formatDate = value => new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Kuwait', dateStyle: 'medium', timeStyle: 'short' }).format(value);
   const appointment = tr('summary', { shop, barber, date: formatDate(appointmentDate(booking)) });
-  const managed = Boolean(booking.cancellation_cutoff) && ['pending', 'confirmed'].includes(booking.status);
   const cutoff = booking.cancellation_cutoff && new Date(booking.cancellation_cutoff);
+  const rescheduleCutoff = new Date(booking.reschedule_cutoff || booking.cancellation_cutoff);
+  const canCancel = cutoff && cutoff.getTime() > Date.now();
+  const canMove = cutoff && rescheduleCutoff.getTime() > Date.now();
   const errorCopy = failure => actionErrors.includes(failure.message) ? failure.message : 'UNAVAILABLE';
 
   useEffect(() => {
@@ -110,19 +112,24 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     id: booking.id, reference: booking.id, date: booking.date, time: booking.time.slice(0, 5),
     duration: booking.duration, services, branchName: shop, address: booking.shop_address, description: appointment,
   });
-  const unavailable = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CHANGED'].includes(error);
+  const unavailable = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED'].includes(error);
 
   return <div className="ca-upcoming-actions">
     {directions && <a className="cb-secondary" href={directions} target="_blank" rel="noreferrer">{tr('directions')}</a>}
-    {managed && <button className="cb-secondary" type="button" onClick={() => open('reschedule')}><RotateCcw size={17} aria-hidden="true" />{tr('reschedule')}</button>}
+    {canMove && <button className="cb-secondary" type="button" onClick={() => open('reschedule')}><RotateCcw size={17} aria-hidden="true" />{tr('reschedule')}</button>}
     <details className="ca-upcoming-more">
       <summary className="cb-secondary"><MoreHorizontal size={18} aria-hidden="true" />{tr('more')}</summary>
       <div className="ca-upcoming-menu">
         {booking.duration > 0 && <button type="button" onClick={calendar}><CalendarPlus size={17} aria-hidden="true" />{t('customerBooking.addCalendar')}</button>}
         <button type="button" onClick={share}><Share2 size={17} aria-hidden="true" />{tr('share')}</button>
-        {managed && <button type="button" className="ca-upcoming-danger" onClick={() => open('cancel')}>{tr('cancel')}</button>}
+        {canCancel && <button type="button" className="ca-upcoming-danger" onClick={() => open('cancel')}>{tr('cancel')}</button>}
       </div>
     </details>
+    {cutoff && <div className="ca-appointment-policy">
+      <p>{canCancel ? t('bookingPolicy.cancelBy', { date: formatDate(cutoff) }) : t('bookingPolicy.cancelClosed')}</p>
+      <p>{canMove ? t('bookingPolicy.rescheduleBy', { date: formatDate(rescheduleCutoff) }) : t('bookingPolicy.rescheduleClosed')}</p>
+      {(!canCancel || !canMove) && <p>{t('bookingPolicy.contactShop')}</p>}
+    </div>}
     {message && <p role="status">{message}</p>}
     <dialog ref={dialog} className="ca-appointment-dialog" aria-labelledby={id} onCancel={event => {
       event.preventDefault();

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import BookingPolicySettings from '../components/BookingPolicy/BookingPolicySettings';
 import BranchForm from '../components/Forms/BranchForm';
 import BackLink from '../components/UI/BackLink';
 import { getErrorMessage } from '../utils/errorMessages';
@@ -52,6 +53,7 @@ export default function EditBranch() {
         <p>{t('branches.updateDetails')} {branch.name}</p>
       </div>
 
+      <BookingPolicySettings key={branchId} branchId={branchId} />
       <div className="edit-branch-form-container animate-fade-in-up stagger-1">
         {errorMessage && <p className="error-banner" role="alert">{errorMessage}</p>}
         <BranchForm

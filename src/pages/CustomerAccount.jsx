@@ -49,7 +49,27 @@ export default function CustomerAccount() {
     if (!customer) return undefined;
     let active = true; setListLoading(true); setListError(false);
     customerAuthService.bookings().then(data => { if (active) setBookings(data); }).catch(() => { if (active) setListError(true); }).finally(() => { if (active) setListLoading(false); });
-    return () => { active = false; accountRequest.current++; };
+    let polling = false;
+    const refreshNotices = async () => {
+      if (polling || document.visibilityState !== 'visible') return;
+      polling = true;
+      try {
+        const latest = await customerAuthService.bookings();
+        if (!active) return;
+        // Merge only staff cancellations so background refreshes cannot undo a
+        // rating or a successful customer reschedule that just returned.
+        const notices = new Map(latest.filter(item => item.staff_cancellation).map(item => [item.id, item]));
+        setBookings(items => items.map(item => notices.get(item.id) || item));
+      } catch { /* The history view still works if a background refresh fails. */ }
+      finally { polling = false; }
+    };
+    const timer = window.setInterval(refreshNotices, 30000);
+    window.addEventListener('focus', refreshNotices);
+    return () => {
+      active = false; accountRequest.current++;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshNotices);
+    };
   }, [customer?.id, retry]);
   const edit = () => {
     setForm({ name: customer.name, email: customer.email || '', countryCode: customer.countryCode || '+965', phone: customer.phone || '' });
@@ -127,6 +147,11 @@ export default function CustomerAccount() {
             <button type="button" aria-pressed={!showPast} onClick={() => setShowPast(false)}>{tr('account.upcoming')}</button>
             <button type="button" aria-pressed={showPast} onClick={() => setShowPast(true)}>{tr('account.pastAppointments')}</button>
           </div>
+          {!showPast && bookings.filter(item => item.staff_cancellation && appointmentDate(item).getTime() > now - 86400000).map(item =>
+            <div className="ca-staff-cancellation" role="status" key={item.id}>
+              <p>{t('bookingPolicy.shopCancelled', { shop: shopWording((arabic && item.shop_name_ar) || item.shop_name), date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(appointmentDate(item)) })}</p>
+              <p>{t('bookingPolicy.customerReason', { reason: item.staff_cancellation.reason })}</p>
+            </div>)}
           {appointmentMessage && <p className="ca-profile-saved" role="status">{appointmentMessage}</p>}
           {listLoading ? <p className="ca-appointments-state ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{tr('loading')}</p> : listError ? <div className="cb-alert" role="alert">{tr('bookingsError')}<button type="button" onClick={() => setRetry(value => value + 1)}>{tr('retry')}</button></div> : !appointments.length ? <div className="ca-appointments-empty"><CalendarDays size={32} aria-hidden="true" /><h3>{tr(showPast ? 'account.noPastTitle' : 'account.noAppointmentsTitle')}</h3><p>{tr(showPast ? 'account.noPastDescription' : 'noAppointments')}</p><Link className="cb-text-button" to="/book">{tr('account.findShop')}<ChevronRight size={18} aria-hidden="true" /></Link></div> : <div className="ca-booking-list">{appointments.map(booking => {
             const date = appointmentDate(booking);
@@ -138,6 +163,7 @@ export default function CustomerAccount() {
                 <p>{arabic && booking.barber_name_ar || booking.barber_name}</p><p>{(booking.services || []).map(item => arabic && item.name_ar || item.name).join(arabic ? '، ' : ', ')}</p>
                 <div className="ca-booking-meta"><time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(date)}</time><strong>{new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>
                 {!showPast && <UpcomingBookingActions booking={booking} onChange={updateAppointment} onRefresh={() => setRetry(value => value + 1)} />}
+                {showPast && booking.staff_cancellation && <p>{t('bookingPolicy.customerReason', { reason: booking.staff_cancellation.reason })}</p>}
                 {canRate && <BookingRating bookingId={booking.id} shopRating={booking.shop_rating} barberRating={booking.barber_rating} onSaved={updateRating} />}
                 {showPast && <div className="ca-rebook-action"><button type="button" className="cb-secondary" disabled={busy || Boolean(rebookingId)} onClick={() => repeatBooking(booking)}>{rebookingId === booking.id ? <Loader2 className="cb-spinner" size={17} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}{tr('account.bookAgain')}</button>{rebookErrorId === booking.id && <p role="alert" className="cb-alert">{tr('account.rebookError')}</p>}</div>}
               </div>
