@@ -17,7 +17,7 @@ import BookingImage from '../components/Customer/BookingImage';
 import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
-import { addBookingDays, bookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
+import { addBookingDays, downloadBookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
 import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
@@ -279,10 +279,7 @@ export default function CustomerBooking() {
   const panelIndex = PANELS.indexOf(panel);
   const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
   const downloadCalendar = () => {
-    const url = URL.createObjectURL(new Blob([bookingCalendar(receipt)], { type: 'text/calendar;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url; link.download = `barber-${receipt.reference}.ics`; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBookingCalendar(receipt);
   };
   const renderSummary = (data = null) => <dl className="cb-review-list">
     <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => editSection('shop')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>

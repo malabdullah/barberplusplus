@@ -30,10 +30,19 @@ export const bookingCalendar = booking => {
   const start = new Date(`${booking.date}T${booking.time}:00+03:00`);
   const end = new Date(start.getTime() + booking.duration * 60000);
   const stamp = date => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const escape = text => String(text || '').replaceAll('\\', '\\\\').replaceAll('\n', '\\n').replaceAll(',', '\\,').replaceAll(';', '\\;');
+  const escape = text => String(text || '').replaceAll('\\', '\\\\').replace(/\r\n?|\n/g, '\\n').replaceAll(',', '\\,').replaceAll(';', '\\;');
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Barber++//Customer booking//EN', 'BEGIN:VEVENT',
     `UID:${booking.id}@barber.test`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
     `SUMMARY:${escape(booking.services.map(service => service.name).join(', '))}`,
     `LOCATION:${escape([booking.branchName, booking.address].filter(Boolean).join(', '))}`,
-    `DESCRIPTION:${escape(`Booking reference: ${booking.reference}`)}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
+    `DESCRIPTION:${escape(booking.description || `Booking reference: ${booking.reference}`)}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 };
+
+export function downloadBookingCalendar(booking) {
+  const url = URL.createObjectURL(new Blob([bookingCalendar(booking)], { type: 'text/calendar;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `barber-${booking.reference}.ics`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

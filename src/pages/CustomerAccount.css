@@ -92,3 +92,20 @@
 .ca-rating .cb-secondary { min-height: 44px; padding: 10px 16px; font-size: 14px; }
 .ca-booking-copy .ca-rating-message { margin: 0; color: var(--booking-link); }
 .ca-booking-copy .ca-rating-message[role='alert'] { color: var(--danger); }
+
+.ca-upcoming-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; margin-block-start: 12px; }
+.ca-upcoming-actions .cb-secondary { min-height: 44px; padding: 8px 12px; font-size: 14px; }
+.ca-upcoming-more { min-inline-size: 0; }
+.ca-upcoming-more summary { list-style: none; cursor: pointer; }
+.ca-upcoming-more summary::-webkit-details-marker { display: none; }
+.ca-upcoming-menu { display: grid; padding: 4px; margin-block-start: 6px; background: var(--booking-subtle); border: 1px solid var(--booking-divider); border-radius: 8px; }
+.ca-upcoming-menu button { display: flex; gap: 8px; align-items: center; min-height: 44px; padding: 8px 10px; background: transparent; border: 0; color: var(--booking-text); text-align: start; }
+.ca-upcoming-menu button:hover { background: var(--booking-selection); }
+.ca-upcoming-menu .ca-upcoming-danger { border-block-start: 1px solid var(--booking-divider); color: var(--status-error); }
+.ca-appointment-dialog { margin: auto; padding: 24px; width: min(500px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid var(--booking-divider); border-radius: 16px; background: var(--booking-surface); color: var(--booking-text); }
+.ca-appointment-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.ca-appointment-dialog p { margin-block: 12px; }
+.ca-appointment-dialog .cb-time-options { margin-block: 16px; }
+.ca-appointment-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 20px; }
+.ca-appointment-dialog-actions .ca-upcoming-danger { color: var(--status-error); border-color: currentColor; }
+.ca-appointment-date-input { min-inline-size: 0; max-inline-size: 100%; -webkit-appearance: none; font-size: 16px; }

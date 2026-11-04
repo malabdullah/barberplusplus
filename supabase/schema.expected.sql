@@ -366,8 +366,18 @@ CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p
     LANGUAGE "sql"
     SET "search_path" TO ''
     AS $$
-  select case when p_action in ('bookings', 'rate-booking')
-    then private.customer_booking_ratings_api(p_action,p_data)
+  select case
+    when p_action='bookings' then coalesce((
+      select jsonb_agg(item || jsonb_build_object(
+        'location_url',br.location_url, 'shop_address',br.address,
+        'cancellation_cutoff', case when item->>'status' in ('confirmed','pending')
+          then ((item->>'date')::date + (item->>'time')::time) at time zone 'Asia/Kuwait' end
+      ) order by ordinal)
+      from jsonb_array_elements(private.customer_booking_ratings_api(p_action,p_data)) with ordinality as history(item,ordinal)
+      left join public.branches br on br.id=(item->>'branch_id')::uuid
+    ),'[]'::jsonb)
+    when p_action='rate-booking' then private.customer_booking_ratings_api(p_action,p_data)
+    when p_action in ('appointment-slots','reschedule-booking','cancel-booking') then private.customer_appointment_api(p_action,p_data)
     else private.customer_account_api(p_action,p_data)
   end;
 $$;
@@ -403,7 +413,7 @@ declare
   v_code text;
   v_name text;
 begin
-  if p_action not in ('slots', 'book') or p_action is null then
+  if p_action not in ('slots', 'book', 'appointment-slots') or p_action is null then
     raise exception 'INVALID_REQUEST';
   end if;
   if p_action = 'book' then
@@ -447,6 +457,14 @@ begin
     if v_count <> cardinality(v_services) or v_duration not between 5 and 480 or v_price < 0 then
       raise exception 'INVALID_SELECTION';
     end if;
+    -- Only the authenticated appointment manager supplies this internal action.
+    if p_action='appointment-slots' then
+      v_duration := (p_data->>'booked_duration')::integer;
+      v_price := (p_data->>'booked_price')::numeric;
+      if v_duration is null or v_duration not between 5 and 480 then
+        raise exception 'INVALID_SELECTION';
+      end if;
+    end if;
     v_date := (p_data ->> 'date')::date;
     if v_date is null or v_date < v_today or v_date > v_today + v_barber.max_booking_days then
       raise exception 'INVALID_DATE';
@@ -470,6 +488,7 @@ begin
           and not exists (
             select 1 from public.bookings b where b.barber_id = v_barber.id and b.date = v_date
               and b.status not in ('cancelled','no_show')
+              and (p_action<>'appointment-slots' or b.id is distinct from (p_data->>'exclude_booking_id')::uuid)
               and tsrange(b.date + b.time, b.date + b.time + b.duration * interval '1 minute', '[)')
                 && tsrange(s, s + v_duration * interval '1 minute', '[)')
           )
@@ -482,7 +501,7 @@ begin
           );
       end if;
     end if;
-    if p_action = 'slots' then
+    if p_action in ('slots','appointment-slots') then
       return jsonb_build_object('slots', v_slots, 'duration', v_duration, 'price', v_price,
         'today', v_today, 'last_date', v_today + v_barber.max_booking_days);
     end if;
