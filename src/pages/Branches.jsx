@@ -119,6 +119,7 @@ export default function Branches() {
   const { t } = useTranslation();
   const { branches, barbers, services, deleteBranch } = useApp();
   const [deletingBranch, setDeletingBranch] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
 
   // Pre-compute counts per branch to avoid O(n*m) filtering in render loop
   const barberCountByBranch = useMemo(() => {
@@ -141,15 +142,20 @@ export default function Branches() {
     setDeletingBranch(branch);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (deletingBranch) {
-      deleteBranch(deletingBranch.id);
-      setDeletingBranch(null);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deletingBranch) return;
+    setDeleteError('');
+    try {
+      await deleteBranch(deletingBranch.id);
+    } catch (error) {
+      setDeleteError(t(error.message === 'BOOKING_DELETE_FORBIDDEN'
+        ? 'bookings.historyPreventsRemoval' : 'common.error'));
     }
-  }, [deletingBranch, deleteBranch]);
+  }, [deletingBranch, deleteBranch, t]);
 
   return (
     <div className="branches-page">
+      {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('branches.yourBranches')}</h2>

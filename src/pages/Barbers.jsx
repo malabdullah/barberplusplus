@@ -223,12 +223,15 @@ export default function Barbers() {
     setDeletingBarber(barber);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (deletingBarber) {
-      deleteBarber(deletingBarber.id);
-      setDeletingBarber(null);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deletingBarber) return;
+    try {
+      await deleteBarber(deletingBarber.id);
+    } catch (error) {
+      setToast({ type: 'error', message: t(error.message === 'BOOKING_DELETE_FORBIDDEN'
+        ? 'bookings.historyPreventsRemoval' : 'common.error') });
     }
-  }, [deletingBarber, deleteBarber]);
+  }, [deletingBarber, deleteBarber, t]);
 
   const handleResendInvite = useCallback(async (barberId) => {
     try {
@@ -244,7 +247,7 @@ export default function Barbers() {
     <div className="barbers-page">
       {/* Toast Notification */}
       {toast && (
-        <div className={`barbers-toast ${toast.type}`}>
+        <div className={`barbers-toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
           {toast.type === 'success' ? (
             <CheckCircle size={18} strokeWidth={1.5} />
           ) : (
