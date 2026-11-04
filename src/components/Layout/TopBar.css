@@ -399,6 +399,9 @@
 
   .topbar-menu-btn {
     display: flex;
+    flex: none;
+    width: 44px;
+    height: 44px;
   }
 
   .topbar-search {
@@ -410,12 +413,12 @@
   .topbar {
     padding: 0 var(--space-md);
     height: var(--topbar-height);
+    column-gap: var(--space-xs);
   }
 
   .topbar-left {
+    flex: none;
     gap: var(--space-sm);
-    min-width: 0;
-    flex: 1;
   }
 
   .topbar-title {
@@ -431,15 +434,34 @@
   }
 
   .topbar-right {
+    min-width: 0;
     gap: var(--space-xs);
   }
 
+  .topbar-branch-selector,
+  .topbar-branch-info {
+    min-width: 0;
+  }
+
   .topbar-branch-btn {
+    max-width: 100%;
     padding: var(--space-xs) var(--space-sm);
     min-height: 40px;
   }
 
+  .topbar-branch-btn > svg {
+    flex: none;
+  }
+
+  .topbar-branch-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .topbar-branch-name {
+    min-width: 0;
     max-width: 80px;
     font-size: 0.8125rem;
   }
@@ -502,6 +524,11 @@
   .topbar-title {
     max-width: 120px;
     font-size: 1rem;
+  }
+
+  .topbar-branch-btn {
+    padding-inline: var(--space-xs);
+    gap: var(--space-xs);
   }
 
   .topbar-branch-name {
