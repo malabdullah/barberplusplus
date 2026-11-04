@@ -61,6 +61,7 @@ const TopBar = memo(function TopBar({
 
   // Get the current branch based on role
   const currentBranch = showBranchSelector ? selectedBranch : barberBranch;
+  const branchButtonLabel = currentBranch?.name || t('branches.selectBranch');
 
   // Filter notifications based on user preferences
   const visibleNotifications = useMemo(() => {
@@ -173,11 +174,14 @@ const TopBar = memo(function TopBar({
           <div className="topbar-branch-selector">
             <button
               className="topbar-branch-btn"
+              aria-label={branchButtonLabel}
+              aria-expanded={branchDropdownOpen}
+              title={branchButtonLabel}
               onClick={handleBranchDropdownToggle}
             >
               <Building2 size={18} strokeWidth={1.5} />
               <span className="topbar-branch-name">
-                {currentBranch?.name || t('branches.selectBranch')}
+                {branchButtonLabel}
               </span>
               <ChevronDown
                 size={16}
