@@ -35,6 +35,7 @@ import StaffCancelBookingDialog from '../components/BookingPolicy/StaffCancelBoo
 import BookingForm from '../components/Forms/BookingForm';
 import ModifyServicesSection from '../components/Bookings/ModifyServicesSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses';
+import { appointmentDate } from '../utils/customerRebooking';
 import { getAddedByConfig } from '../constants/addedByTypes';
 import './Bookings.css';
 
@@ -238,7 +239,8 @@ const BookingDetails = memo(function BookingDetails({
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
           {BOOKING_STATUSES.map((status) => (
-            <option key={status} value={status}>
+            <option key={status} value={status}
+              disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
               {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
@@ -569,9 +571,10 @@ export default function Bookings() {
                 try {
                   await updateBooking(id, { status });
                   setSelectedBooking(null);
-                } catch {
+                } catch (error) {
                   setSelectedBooking(null);
-                  setStatusError(t('common.error'));
+                  setStatusError(t(error.message === 'BOOKING_NO_SHOW_BEFORE_START'
+                    ? 'bookings.noShowBeforeStart' : 'common.error'));
                 }
               }}
               services={branchServices}

@@ -421,6 +421,7 @@
     "noShow": "لم يحضر",
     "inProgress": "قيد التنفيذ",
     "changeStatus": "تغيير الحالة",
+    "noShowBeforeStart": "يمكنك تسجيل عدم الحضور بعد حلول وقت بدء الموعد.",
     "cancelBooking": "إلغاء الحجز",
     "confirmCancel": "هل أنت متأكد من إلغاء هذا الحجز؟",
     "selectBarber": "اختر الحلاق",

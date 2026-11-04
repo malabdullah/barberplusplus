@@ -496,6 +496,7 @@
     "noShow": "No Show",
     "inProgress": "In Progress",
     "changeStatus": "Change Status",
+    "noShowBeforeStart": "You can mark this appointment as a no-show once its scheduled start time has passed.",
     "cancelBooking": "Cancel Booking",
     "confirmCancel": "Are you sure you want to cancel this booking?",
     "selectBarber": "Select Barber",

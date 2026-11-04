@@ -1,7 +1,8 @@
 import { getBarberServices, getKuwaitDate } from './customerBooking';
 
 export function appointmentDate(booking) {
-  return new Date(`${booking.date}T${booking.time.slice(0, 5)}:00+03:00`);
+  const time = booking.time.length === 5 ? `${booking.time}:00` : booking.time;
+  return new Date(`${booking.date}T${time}+03:00`);
 }
 
 export function isPastAppointment(booking, now = Date.now()) {

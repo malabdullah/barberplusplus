@@ -1972,6 +1972,9 @@ CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDAT
 
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 
+CREATE OR REPLACE TRIGGER "guard_booking_history" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_history"();
+
+
 CREATE OR REPLACE TRIGGER "guard_booking_policy" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_policy"();
 
 
@@ -2468,10 +2471,6 @@ CREATE POLICY "Internal trigger reads reminder identifiers" ON "public"."booking
 
 
 CREATE POLICY "Managers can delete barbers in own branches" ON "public"."barbers" FOR DELETE USING (("branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")));
-
-
-
-CREATE POLICY "Managers can delete bookings in own branches" ON "public"."bookings" FOR DELETE USING (("branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")));
 
 
 

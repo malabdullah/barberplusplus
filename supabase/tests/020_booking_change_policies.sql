@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
-select plan(17);
+select plan(27);
 
 insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
 ('dc090000-0000-4000-8000-000000000101','appointment-owner@example.test',now(),'{"role":"customer"}'),
@@ -91,6 +91,19 @@ select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-00000000
 select throws_ok($$update public.bookings set status='cancelled',staff_cancellation='{"reason":"Unavailable"}'
   where id='dc090000-0000-4000-8000-000000000601'$$,
   '42501','STAFF_CANCELLATION_NOT_ALLOWED','barber cancellation is disabled by default for the shop');
+select throws_ok($$update public.bookings set status='no_show'
+  where id='dc090000-0000-4000-8000-000000000601'$$,
+  'P0001','BOOKING_NO_SHOW_BEFORE_START','barber cannot free a future slot through no-show');
+select throws_ok($$update public.bookings set status='no_show',date=date-3
+  where id='dc090000-0000-4000-8000-000000000601'$$,
+  'P0001','BOOKING_NO_SHOW_BEFORE_START','backdating and marking no-show in the same request fails');
+select throws_ok($$update public.bookings set date=date-3
+  where id='dc090000-0000-4000-8000-000000000601'$$,
+  'P0001','BOOKING_CANNOT_BE_BACKDATED','a separate request cannot backdate a future booking either');
+select lives_ok($$update public.bookings set status='no_show'
+  where id='dc090000-0000-4000-8000-000000000603'$$,'barber can record no-show after the start');
+select is((select status from public.bookings where id='dc090000-0000-4000-8000-000000000603'),
+  'no_show','past no-show is persisted');
 reset role;
 update private.shop_booking_policies set barber_can_cancel=true where branch_id='dc090000-0000-4000-8000-000000000301';
 set local role authenticated;
@@ -104,6 +117,18 @@ select ok((select modified_by_type='barber' and staff_cancellation->>'actor'='ba
   where id='dc090000-0000-4000-8000-000000000601'),'server records actual actor and ignores spoofed metadata');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+with deleted as (
+  delete from public.bookings where id='dc090000-0000-4000-8000-000000000605' returning id
+)
+select is((select count(*) from deleted),0::bigint,'manager cannot delete a booking directly');
+select throws_ok($$delete from public.barbers where id='dc090000-0000-4000-8000-000000000401'$$,
+  '42501','BOOKING_DELETE_FORBIDDEN','manager cannot erase bookings through a barber');
+select throws_ok($$delete from public.branches where id='dc090000-0000-4000-8000-000000000301'$$,
+  '42501','BOOKING_DELETE_FORBIDDEN','manager cannot erase bookings through a shop');
+select throws_ok($$insert into public.bookings(id,branch_id,barber_id,date,time,duration,status)
+  values('dc090000-0000-4000-8000-000000000606','dc090000-0000-4000-8000-000000000301',
+    'dc090000-0000-4000-8000-000000000401',current_date+2,'10:00',15,'no_show')$$,
+  'P0001','BOOKING_NO_SHOW_BEFORE_START','staff cannot create a future no-show directly');
 select lives_ok($$update public.bookings set status='cancelled',staff_cancellation='{"reason":"Shop emergency"}'
   where id='dc090000-0000-4000-8000-000000000605'$$,'manager may cancel inside the customer notice window');
 reset role;
@@ -117,6 +142,10 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000104","role":"authenticated","app_metadata":{"role":"admin"}}',true);
 select lives_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":90,"reschedule_minutes":150}')$$,
   'admin can update both defaults together');
+with deleted as (
+  delete from public.bookings where id='dc090000-0000-4000-8000-000000000602' returning id
+)
+select is((select count(*) from deleted),1::bigint,'admin retains explicit booking deletion');
 reset role;
 select * from finish();
 rollback;
