@@ -81,6 +81,7 @@ export default function CustomerBooking() {
   const [phoneConfig, setPhoneConfig] = useState(null);
   const [accountPhoneCheck, setAccountPhoneCheck] = useState(null);
   const [phoneSession, setPhoneSession] = useState(null);
+  const [phoneChallenge, setPhoneChallenge] = useState(null);
   const [phoneCode, setPhoneCode] = useState('');
   const [resendIn, setResendIn] = useState(0);
   const captchaRef = useRef(null);
@@ -291,9 +292,19 @@ export default function CustomerBooking() {
   }, [activePhoneSession]);
   const sendPhoneCode = async config => {
     if (!captchaRef.current) throw new Error('PHONE_UNAVAILABLE');
-    const session = config.testPhones
-      ? await customerBookingService.startTestPhone(fullPhone)
-      : await (await import('../services/checkoutPhone.service')).sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en');
+    let session;
+    if (config.testPhones) {
+      session = await customerBookingService.startTestPhone(fullPhone);
+    } else {
+      const challenge = new AbortController();
+      setPhoneChallenge(challenge);
+      try {
+        const { sendCheckoutPhoneCode } = await import('../services/checkoutPhone.service');
+        session = await sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en', challenge.signal);
+      } finally {
+        setPhoneChallenge(null);
+      }
+    }
     setPhoneCode('');
     setPhoneSession({ session, phone: fullPhone, account: customer?.id, resendAt: Date.now() + 30_000 });
   };
@@ -301,7 +312,7 @@ export default function CustomerBooking() {
     if (busy || resendIn || !phoneConfig || !validGuestDetails()) return;
     setBusy(true); setError('');
     try { await sendPhoneCode(phoneConfig); }
-    catch (failure) { setError(failure.message); }
+    catch (failure) { if (failure.message !== 'PHONE_CANCELLED') setError(failure.message); }
     finally { setBusy(false); }
   };
   const confirmBooking = async event => {
@@ -340,6 +351,7 @@ export default function CustomerBooking() {
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
+      if (failure.message === 'PHONE_CANCELLED') return;
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
       if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
@@ -489,6 +501,8 @@ export default function CustomerBooking() {
                       </div>
                     </div>}
                   </fieldset>
+                  {phoneChallenge && <button type="button" className="cb-secondary"
+                    onClick={() => phoneChallenge.abort()}>{tr('phoneVerification.cancel')}</button>}
                 </form>}
                 {bookingPolicy && time && <div className="cb-account-choice">
                   <h3>{t('bookingPolicy.checkoutTitle')}</h3>
