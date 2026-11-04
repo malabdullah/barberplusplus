@@ -17,7 +17,8 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [date, setDate] = useState(getKuwaitDate);
+  const bookedTime = booking.time.slice(0, 5);
+  const [date, setDate] = useState(booking.date);
   const [time, setTime] = useState('');
   const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -56,19 +57,25 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
   }, [action, booking.id, date, reload]);
 
   function open(next) {
-    setError(''); setMessage(''); setDate(getKuwaitDate()); setTime(''); setAvailability(null);
+    setError(''); setMessage(''); setDate(booking.date); setTime(bookedTime); setAvailability(null);
     setLoading(next === 'reschedule');
     setAction(next);
   }
 
   function changeDate(event) {
-    setDate(event.target.value); setTime(''); setError(''); setAvailability(null);
-    setLoading(Boolean(event.target.value));
+    const nextDate = event.target.value;
+    setDate(nextDate); setTime(nextDate === booking.date ? bookedTime : ''); setError(''); setAvailability(null);
+    setLoading(Boolean(nextDate));
   }
+
+  const currentDate = date === booking.date;
+  const alternatives = (availability?.slots || []).filter(slot => !currentDate || slot !== bookedTime);
+  const slots = currentDate ? [...alternatives, bookedTime].sort() : alternatives;
+  const canReschedule = !loading && alternatives.includes(time);
 
   async function save(event) {
     event.preventDefault();
-    if (submitting.current || (action === 'reschedule' && (!time || loading))) return;
+    if (submitting.current || action === 'share' || (action === 'reschedule' && !canReschedule)) return;
     submitting.current = true;
     setBusy(true); setError('');
     try {
@@ -103,7 +110,6 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     id: booking.id, reference: booking.id, date: booking.date, time: booking.time.slice(0, 5),
     duration: booking.duration, services, branchName: shop, address: booking.shop_address, description: appointment,
   });
-  const slots = availability?.slots.filter(slot => date !== booking.date || slot !== booking.time.slice(0, 5)) || [];
   const unavailable = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CHANGED'].includes(error);
 
   return <div className="ca-upcoming-actions">
@@ -133,18 +139,25 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
           <label className="cb-field-label" htmlFor={`${id}-date`}>{tr('newDate')}</label>
           <input className="cb-input ca-appointment-date-input" id={`${id}-date`} type="date" value={date} min={getKuwaitDate()} max={availability?.last_date} onChange={changeDate} disabled={busy || unavailable} required />
           {loading && <p role="status">{t('customerAuth.loading')}</p>}
-          {!loading && availability && (slots.length ? <fieldset className="cb-time-options" disabled={busy}>
+          {!!slots.length && <fieldset className="cb-time-options" disabled={busy}>
             <legend className="cb-field-label">{tr('newTime')}</legend>
-            {slots.map(slot => <label className={time === slot ? 'selected' : ''} key={slot}><input type="radio" name="new-time" checked={time === slot} onChange={() => setTime(slot)} />{
-              new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Kuwait', timeStyle: 'short' }).format(appointmentDate({date,time:slot}))
-            }</label>)}
-          </fieldset> : <p>{tr('noTimes')}</p>)}
+            {slots.map(slot => {
+              const isCurrent = currentDate && slot === bookedTime;
+              const className = [time === slot ? 'selected' : '', isCurrent ? 'ca-current-time' : ''].filter(Boolean).join(' ');
+              return <label className={className} key={slot}>
+                <input type="radio" name="new-time" checked={time === slot} onChange={() => setTime(slot)} />
+                <span>{new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Kuwait', timeStyle: 'short' }).format(appointmentDate({ date, time: slot }))}</span>
+                {isCurrent && <small>{tr('currentTime')}</small>}
+              </label>;
+            })}
+          </fieldset>}
+          {!loading && availability && !alternatives.length && <p>{tr('noTimes')}</p>}
         </>}
         {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
         <div className="ca-appointment-dialog-actions">
           <button className="cb-secondary" type="button" disabled={busy} onClick={() => setAction('')}>{tr(action === 'cancel' ? 'keep' : 'close')}</button>
           {unavailable ? <button className="cb-secondary" type="button" onClick={onRefresh}>{tr('refresh')}</button>
-            : action !== 'share' && <button type="submit" className={action === 'cancel' ? 'cb-secondary ca-upcoming-danger' : 'cb-primary'} disabled={busy || (action === 'reschedule' && (!time || loading))}>
+            : action !== 'share' && <button type="submit" className={action === 'cancel' ? 'cb-secondary ca-upcoming-danger' : 'cb-primary'} disabled={busy || (action === 'reschedule' && !canReschedule)}>
               {tr(action === 'cancel' ? 'cancel' : 'saveTime')}
             </button>}
         </div>

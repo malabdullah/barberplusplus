@@ -106,6 +106,8 @@
 .ca-appointment-dialog::backdrop { background: rgb(0 0 0 / 65%); }
 .ca-appointment-dialog p { margin-block: 12px; }
 .ca-appointment-dialog .cb-time-options { margin-block: 16px; }
+.ca-appointment-dialog .ca-current-time { flex-direction: column; gap: 2px; text-align: center; }
+.ca-current-time small { color: var(--booking-muted); }
 .ca-appointment-dialog-actions { position: sticky; inset-block-end: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 20px; padding-block: 10px; background: var(--booking-surface); border-block-start: 1px solid var(--booking-divider); z-index: 2; }
 .ca-appointment-dialog-actions .ca-upcoming-danger { color: var(--status-error); border-color: currentColor; }
 .ca-appointment-date-input { min-inline-size: 0; max-inline-size: 100%; -webkit-appearance: none; font-size: 16px; }

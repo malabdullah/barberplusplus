@@ -1824,6 +1824,7 @@
       "rescheduleInfo": "Your current appointment stays booked until the new time is confirmed.",
       "newDate": "New date",
       "newTime": "Available times",
+      "currentTime": "Current time",
       "noTimes": "No other times available on this date.",
       "keep": "Keep appointment",
       "close": "Close",
