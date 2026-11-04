@@ -179,8 +179,10 @@ repository's local settings must never replace the hosted origins or hook.
 
 The hosted website uses the separate Google project **Barber Plus Plus Phone
 Test** (Identity Platform on Spark). Phone is the only provider used by this
-integration. The project's empty SMS region allowlist and fictional phone
-fixtures keep real SMS out of Test. Find the fixture numbers and codes in that
+integration. Google needs Kuwait on its region allowlist even for fictional
+Kuwait numbers. The Test gateway only forwards phone challenges for the
+configured synthetic numbers, uses the server-side project key and stays on
+Spark without a billing account. Find the fixture numbers and codes in that
 project's Authentication → Sign-in method → Phone settings. The Test site only
 offers the configured fixture numbers; do not enter a real number.
 

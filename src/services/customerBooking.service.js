@@ -50,6 +50,7 @@ export const customerBookingService = {
   },
   claim: claimToken => request('claim-booking', { claimToken }),
   phoneConfig: async () => (await request('phone-config')).phone,
+  startTestPhone: async phone => (await request('phone-start', { phone })).session,
   confirmPhone: data => request('phone-confirm', data),
   accountProof: () => request('account-proof'),
   getSlots: data => request('slots', data),

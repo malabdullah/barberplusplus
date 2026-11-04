@@ -13,6 +13,7 @@ type Dependencies = {
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
   customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
   phone?: GooglePhoneConfig;
+  startTestPhone?: (phone: string) => Promise<string>;
   confirmPhone?: (session: string, code: string, phone: string) => Promise<boolean>;
   accountPhone?: (customerId: string, country: string, phone: string, verified: boolean) => Promise<boolean>;
   claim?: (data: Body) => Promise<unknown>;
@@ -82,7 +83,20 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       const readAccount = () => token && deps.customer ? deps.customer(token) : null;
       const isAccountPhoneVerified = async (account: NonNullable<Awaited<ReturnType<typeof readAccount>>>) =>
         Boolean(account.customerId && await deps.accountPhone?.(account.customerId, account.countryCode, account.phone, false));
-      if (body.action === 'phone-config') return reply(200, { phone: phoneConfig || null });
+      if (body.action === 'phone-config') {
+        const config = phoneConfig?.testPhones
+          ? { projectId: phoneConfig.projectId, testPhones: phoneConfig.testPhones }
+          : phoneConfig;
+        return reply(200, { phone: config || null });
+      }
+      if (body.action === 'phone-start') {
+        if (deps.environment !== 'cloud-test' || !phoneConfig?.testPhones || !deps.startTestPhone) {
+          return reply(404, { error: 'NOT_AVAILABLE' });
+        }
+        const number = typeof body.phone === 'string' ? body.phone : '';
+        if (!phoneConfig.testPhones.includes(number)) return reply(400, { error: 'PHONE_TEST_NUMBER' });
+        return reply(200, { session: await deps.startTestPhone(number) });
+      }
       if (body.action === 'phone-confirm') {
         if (!phoneConfig || !deps.confirmPhone) return reply(404, { error: 'NOT_AVAILABLE' });
         const account = await readAccount();

@@ -275,8 +275,9 @@ export default function CustomerBooking() {
   }, [activePhoneSession]);
   const sendPhoneCode = async config => {
     if (!captchaRef.current) throw new Error('PHONE_UNAVAILABLE');
-    const { sendCheckoutPhoneCode } = await import('../services/checkoutPhone.service');
-    const session = await sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en');
+    const session = config.testPhones
+      ? await customerBookingService.startTestPhone(fullPhone)
+      : await (await import('../services/checkoutPhone.service')).sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en');
     setPhoneCode('');
     setPhoneSession({ session, phone: fullPhone, account: customer?.id, resendAt: Date.now() + 30_000 });
   };

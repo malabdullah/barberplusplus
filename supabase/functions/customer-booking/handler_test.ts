@@ -156,6 +156,7 @@ Deno.test('hosted website requires Google proof while gated legacy native Test c
   const handler = make({
     environment: 'cloud-test', appUrl, publicUrl: 'https://' + ref + '.supabase.co', cloudTestProjectRef: ref, cloudAccessKey,
     phone: { projectId: 'google-test', apiKey: 'public-key', appId: 'web', testPhones: ['+96550000099'] },
+    startTestPhone: async (phone: string) => { assert(phone === '+96550000099'); return 'challenge'; },
     confirmPhone: async (session: string, code: string, phone: string) => session === 'challenge' && code === '123456' && phone === '+96550000099',
     booking: async (_: string, data: Record<string, unknown>) => { bookings.push(data.id); return { id: data.id }; },
   });
@@ -164,6 +165,13 @@ Deno.test('hosted website requires Google proof while gated legacy native Test c
     headers: { Origin: appUrl, ...(gate ? { 'x-cloud-test-key': cloudAccessKey } : {}), ...(web ? { 'x-barber-test-web': '1' } : {}) },
     body: JSON.stringify(body),
   }));
+  const config = await (await call({ action: 'phone-config' })).json();
+  assert(config.phone.testPhones.length === 1 && !('apiKey' in config.phone));
+  assert((await call({ action: 'phone-start', phone: '+96550000100' })).status === 400);
+  assert((await call({ action: 'phone-start', phone: '+96550000099' }, true, false)).status === 403);
+  assert((await call({ action: 'phone-start', phone: '+96550000099' }, false)).status === 404);
+  const session = await (await call({ action: 'phone-start', phone: '+96550000099' })).json();
+  assert(session.session === 'challenge');
   const legacy = await (await call({ action: 'guest-proof', ...details }, false)).json();
   assert(typeof legacy.verification === 'string');
   assert((await call({ action: 'guest-proof', ...details })).status === 428);

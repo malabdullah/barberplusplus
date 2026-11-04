@@ -2,7 +2,7 @@ import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
 import { customerIdentity } from '../_shared/customer-session.ts';
 import { createCustomerBookingHandler } from './handler.ts';
-import { confirmGooglePhone } from './google-phone.ts';
+import { confirmGooglePhone, startGoogleTestPhone } from './google-phone.ts';
 import { bookingMonth } from './statistics.ts';
 
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -26,6 +26,7 @@ Deno.serve(createCustomerBookingHandler({
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
   phone,
+  startTestPhone: number => phone && cloudTest ? startGoogleTestPhone(phone, number) : Promise.reject(Error('PHONE_UNAVAILABLE')),
   confirmPhone: (session, code, number) => phone ? confirmGooglePhone(phone, session, code, number) : Promise.resolve(false),
   accountPhone: async (customerId, country, number, verified) => {
     const result = await admin.rpc('customer_checkout_phone', { p_customer: customerId, p_country: country, p_phone: number, p_verified: verified });
