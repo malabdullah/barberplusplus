@@ -597,12 +597,27 @@ ALTER FUNCTION "public"."customer_catalog_ratings"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $_$
+    AS $$
+declare
+  contact public.customers%rowtype;
 begin
-  delete from private.customer_phone_verifications where customer_id = new.id;
-  return null;
+  select * into contact from public.customers where id = p_customer for update;
+  if not found then return false; end if;
+  if not p_verified then
+    return contact.phone is not distinct from p_phone and contact.country_code is not distinct from p_country
+      and exists (select 1 from private.customer_phone_verifications where customer_id = p_customer);
+  end if;
+  if nullif(contact.phone, '') is null then
+    update public.customers set phone = p_phone, country_code = p_country, updated_at = now()
+      where id = p_customer;
+  elsif contact.phone is distinct from p_phone or contact.country_code is distinct from p_country then
+    return false;
+  end if;
+  insert into private.customer_phone_verifications(customer_id) values (p_customer)
+    on conflict (customer_id) do update set verified_at = excluded.verified_at;
+  return true;
 end;
-$_$;
+$$;
 
 
 ALTER FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) OWNER TO "postgres";
@@ -1975,6 +1990,9 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
+
+
+CREATE OR REPLACE TRIGGER "clear_customer_phone_verification" AFTER UPDATE ON "public"."customers" FOR EACH ROW WHEN (((("old"."phone")::"text" IS DISTINCT FROM ("new"."phone")::"text") OR (("old"."country_code")::"text" IS DISTINCT FROM ("new"."country_code")::"text"))) EXECUTE FUNCTION "private"."clear_customer_phone_verification"();
 
 
 CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();

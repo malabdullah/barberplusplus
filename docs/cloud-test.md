@@ -180,9 +180,9 @@ repository's local settings must never replace the hosted origins or hook.
 The hosted website uses the separate Google project **Barber Plus Plus Phone
 Test** (Identity Platform on Spark). Phone is the only provider used by this
 integration. Google needs Kuwait on its region allowlist even for fictional
-Kuwait numbers. The Test gateway only forwards phone challenges for the
-configured synthetic numbers, uses the server-side project key and stays on
-Spark without a billing account. Find the fixture numbers and codes in that
+Kuwait numbers. The Edge Function only requests Google challenges for the configured synthetic
+numbers and keeps the API key on the server. The project stays on Spark without
+a billing account. Find the fixture numbers and codes in that
 project's Authentication → Sign-in method → Phone settings. The Test site only
 offers the configured fixture numbers; do not enter a real number.
 
