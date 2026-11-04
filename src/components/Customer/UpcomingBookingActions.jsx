@@ -129,31 +129,33 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
       if (!busy) setAction('');
     }}>
       {action && <form onSubmit={save}>
-        <h3 id={id}>{tr(action === 'cancel' ? 'cancelTitle' : action === 'share' ? 'share' : 'reschedule')}</h3>
-        <p>{appointment}</p>
-        {action === 'cancel' && <p>{tr('cutoff', { date: formatDate(cutoff) })}</p>}
-        {action === 'share' && <textarea className="cb-input" aria-label={tr('share')} value={appointment} readOnly onFocus={event => event.target.select()} />}
-        {action === 'reschedule' && <>
-          {!!services.length && <p>{services.map(service => service.name).join(arabic ? '، ' : ', ')}</p>}
-          <p>{tr('rescheduleInfo')}</p>
-          <label className="cb-field-label" htmlFor={`${id}-date`}>{tr('newDate')}</label>
-          <input className="cb-input ca-appointment-date-input" id={`${id}-date`} type="date" value={date} min={getKuwaitDate()} max={availability?.last_date} onChange={changeDate} disabled={busy || unavailable} required />
-          {loading && <p role="status">{t('customerAuth.loading')}</p>}
-          {!!slots.length && <fieldset className="cb-time-options" disabled={busy}>
-            <legend className="cb-field-label">{tr('newTime')}</legend>
-            {slots.map(slot => {
-              const isCurrent = currentDate && slot === bookedTime;
-              const className = [time === slot ? 'selected' : '', isCurrent ? 'ca-current-time' : ''].filter(Boolean).join(' ');
-              return <label className={className} key={slot}>
-                <input type="radio" name="new-time" checked={time === slot} onChange={() => setTime(slot)} />
-                <span>{new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Kuwait', timeStyle: 'short' }).format(appointmentDate({ date, time: slot }))}</span>
-                {isCurrent && <small>{tr('currentTime')}</small>}
-              </label>;
-            })}
-          </fieldset>}
-          {!loading && availability && !alternatives.length && <p>{tr('noTimes')}</p>}
-        </>}
-        {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
+        <div className="ca-appointment-dialog-body">
+          <h3 id={id}>{tr(action === 'cancel' ? 'cancelTitle' : action === 'share' ? 'share' : 'reschedule')}</h3>
+          <p>{appointment}</p>
+          {action === 'cancel' && <p>{tr('cutoff', { date: formatDate(cutoff) })}</p>}
+          {action === 'share' && <textarea className="cb-input" aria-label={tr('share')} value={appointment} readOnly onFocus={event => event.target.select()} />}
+          {action === 'reschedule' && <>
+            {!!services.length && <p>{services.map(service => service.name).join(arabic ? '، ' : ', ')}</p>}
+            <p>{tr('rescheduleInfo')}</p>
+            <label className="cb-field-label" htmlFor={`${id}-date`}>{tr('newDate')}</label>
+            <input className="cb-input ca-appointment-date-input" id={`${id}-date`} type="date" value={date} min={getKuwaitDate()} max={availability?.last_date} onChange={changeDate} disabled={busy || unavailable} required />
+            {loading && <p role="status">{t('customerAuth.loading')}</p>}
+            {!!slots.length && <fieldset className="cb-time-options" disabled={busy}>
+              <legend className="cb-field-label">{tr('newTime')}</legend>
+              {slots.map(slot => {
+                const isCurrent = currentDate && slot === bookedTime;
+                const className = [time === slot ? 'selected' : '', isCurrent ? 'ca-current-time' : ''].filter(Boolean).join(' ');
+                return <label className={className} key={slot}>
+                  <input type="radio" name="new-time" checked={time === slot} onChange={() => setTime(slot)} />
+                  <span>{new Intl.DateTimeFormat(locale, { timeZone: 'Asia/Kuwait', timeStyle: 'short' }).format(appointmentDate({ date, time: slot }))}</span>
+                  {isCurrent && <small>{tr('currentTime')}</small>}
+                </label>;
+              })}
+            </fieldset>}
+            {!loading && availability && !alternatives.length && <p>{tr('noTimes')}</p>}
+          </>}
+          {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
+        </div>
         <div className="ca-appointment-dialog-actions">
           <button className="cb-secondary" type="button" disabled={busy} onClick={() => setAction('')}>{tr(action === 'cancel' ? 'keep' : 'close')}</button>
           {unavailable ? <button className="cb-secondary" type="button" onClick={onRefresh}>{tr('refresh')}</button>
