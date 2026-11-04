@@ -909,7 +909,7 @@ ALTER FUNCTION "public"."is_manager"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb" DEFAULT NULL::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare
   cancel_value integer;
   reschedule_value integer;
@@ -942,10 +942,10 @@ begin
   end if;
   return private.booking_policy(p_branch);
 end
-$$;
+$_$;
 
 
-ALTER FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") OWNER TO "postgres";
+ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
@@ -998,7 +998,7 @@ CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RET
 $$;
 
 
-ALTER FUNCTION "public"."shop_booking_policy"("uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
@@ -2895,8 +2895,8 @@ GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."manage_booking_policy"("uuid", "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") TO "authenticated";
 
 
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
@@ -2907,10 +2907,10 @@ GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO
 REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
 
-REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."shop_booking_policy"("uuid") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
 
 
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
