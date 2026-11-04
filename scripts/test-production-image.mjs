@@ -27,6 +27,10 @@ try {
   const route = await fetch(`${base}/dashboard/bookings`);
   assert.ok(route.ok); assert.match(await route.text(), /<html/);
   assert.match(route.headers.get('content-security-policy'), /https:\/\/backend.example.test/);
+  const csp = route.headers.get('content-security-policy');
+  assert.match(csp, /script-src [^;]*https:\/\/www\.google\.com\/recaptcha\//);
+  assert.match(csp, /connect-src [^;]*https:\/\/identitytoolkit\.googleapis\.com/);
+  assert.match(csp, /frame-src [^;]*https:\/\/www\.google\.com\/recaptcha\//);
   assert.match(route.headers.get('x-robots-tag'), /index, follow/);
   const response = await fetch(`${base}/runtime-config.js`);
   assert.equal(response.headers.get('cache-control'), 'no-store');

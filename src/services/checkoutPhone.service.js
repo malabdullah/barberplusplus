@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { initializeAuth, inMemoryPersistence, PhoneAuthProvider, RecaptchaVerifier } from 'firebase/auth';
+import { initializeApp } from '@firebase/app';
+import { initializeAuth, inMemoryPersistence, PhoneAuthProvider, RecaptchaVerifier } from '@firebase/auth';
 
 let auth;
 export async function sendCheckoutPhoneCode(config, phone, container, language) {
