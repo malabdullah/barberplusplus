@@ -594,6 +594,20 @@ $$;
 ALTER FUNCTION "public"."customer_catalog_ratings"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+begin
+  delete from private.customer_phone_verifications where customer_id = new.id;
+  return null;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -2814,6 +2828,10 @@ GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "j
 
 REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) TO "service_role";
+
 
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";

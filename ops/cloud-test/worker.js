@@ -56,6 +56,7 @@ export default {
       if (!functions.has(name) || !['GET', 'POST', 'OPTIONS'].includes(request.method)
         || name === 'get-kuwait-governorates' && request.method !== 'GET') return new Response('Not found', {status:404});
       const headers = new Headers({'apikey':env.SUPABASE_PUBLISHABLE_KEY,'x-cloud-test-key':env.CLOUD_TEST_ACCESS_KEY,'Origin':env.APP_URL});
+      if (name === 'customer-booking') headers.set('x-barber-test-web', '1');
       for (const field of ['authorization', 'content-type']) {
         const value = request.headers.get(field);
         if (value && !(field === 'authorization' && value.startsWith('Basic '))) headers.set(field, value);
@@ -83,7 +84,7 @@ export default {
     result.headers.set('Referrer-Policy', 'no-referrer');
     result.headers.set('X-Frame-Options', 'DENY');
     result.headers.set('Cache-Control', 'private, no-store');
-    result.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: ${env.SUPABASE_URL}; connect-src 'self' ${env.SUPABASE_URL} ${env.SUPABASE_URL.replace('https:', 'wss:')}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
+    result.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: ${env.SUPABASE_URL}; connect-src 'self' https://identitytoolkit.googleapis.com ${env.SUPABASE_URL} ${env.SUPABASE_URL.replace('https:', 'wss:')}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
     return result;
   },
 };

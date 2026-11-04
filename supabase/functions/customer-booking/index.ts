@@ -2,10 +2,21 @@ import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
 import { customerIdentity } from '../_shared/customer-session.ts';
 import { createCustomerBookingHandler } from './handler.ts';
+import { confirmGooglePhone } from './google-phone.ts';
 import { bookingMonth } from './statistics.ts';
 
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: { persistSession: false, autoRefreshToken: false } });
+const projectId = Deno.env.get('CHECKOUT_GOOGLE_PROJECT') || '';
+const apiKey = Deno.env.get('CHECKOUT_GOOGLE_API_KEY') || '';
+const appId = Deno.env.get('CHECKOUT_GOOGLE_APP_ID') || '';
+const testPhones = (Deno.env.get('CHECKOUT_GOOGLE_TEST_PHONES') || '').split(',').filter(value => /^\+[1-9]\d{7,14}$/.test(value));
+const cloudTest = Deno.env.get('APP_ENV') === 'cloud-test';
+const enabled = Deno.env.get('CHECKOUT_GOOGLE_PHONE_ENABLED') === 'true';
+const phone = enabled && /^[a-z][a-z0-9-]{4,29}$/.test(projectId) && apiKey && appId && (!cloudTest || testPhones.length)
+  ? { projectId, apiKey, appId, ...(cloudTest ? { testPhones } : {}) } : undefined;
+if (enabled && !phone) throw Error('Checkout phone verification is enabled but not configured');
+
 Deno.serve(createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
   productionEnabled: Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED') === 'true',
@@ -14,6 +25,13 @@ Deno.serve(createCustomerBookingHandler({
   appUrl: Deno.env.get('APP_URL') || '',
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
+  phone,
+  confirmPhone: (session, code, number) => phone ? confirmGooglePhone(phone, session, code, number) : Promise.resolve(false),
+  accountPhone: async (customerId, country, number, verified) => {
+    const result = await admin.rpc('customer_checkout_phone', { p_customer: customerId, p_country: country, p_phone: number, p_verified: verified });
+    if (result.error) throw Error(result.error.message);
+    return result.data === true;
+  },
   statistics: async () => {
     const month = bookingMonth();
     // Return counts only; no staff contacts, customer identities or booking rows.
