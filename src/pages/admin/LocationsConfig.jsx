@@ -1,3 +1,4 @@
+import { AdminPagedList } from './AdminPagination';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -312,36 +313,40 @@ export default function LocationsConfig() {
                       {t('admin.locationsConfig.noAreas')}
                     </div>
                   ) : (
-                    <div className="areas-list">
-                      {gov.areas.map((area) => (
-                        <div key={area.id} className="area-item">
-                          <div className="area-info">
-                            <span className="area-name">
-                              {isRTL ? area.nameAr : area.nameEn}
-                            </span>
-                            <span className="area-secondary">
-                              {isRTL ? area.nameEn : area.nameAr}
-                            </span>
-                          </div>
-                          <div className="area-actions">
-                            <button
-                              className="admin-action-btn"
-                              onClick={() => openEditArea(gov, area)}
-                              title={t('common.edit')}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              className="admin-action-btn danger"
-                              onClick={() => setDeleteConfirm({ open: true, type: 'area', item: area })}
-                              title={t('common.delete')}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                    <AdminPagedList items={gov.areas}>
+                      {(pageAreas) => (
+                        <div className="areas-list">
+                          {pageAreas.map((area) => (
+                            <div key={area.id} className="area-item">
+                              <div className="area-info">
+                                <span className="area-name">
+                                  {isRTL ? area.nameAr : area.nameEn}
+                                </span>
+                                <span className="area-secondary">
+                                  {isRTL ? area.nameEn : area.nameAr}
+                                </span>
+                              </div>
+                              <div className="area-actions">
+                                <button
+                                  className="admin-action-btn"
+                                  onClick={() => openEditArea(gov, area)}
+                                  title={t('common.edit')}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  className="admin-action-btn danger"
+                                  onClick={() => setDeleteConfirm({ open: true, type: 'area', item: area })}
+                                  title={t('common.delete')}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </AdminPagedList>
                   )}
                 </div>
               )}

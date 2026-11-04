@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   UserCheck,
@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import Modal from '../../components/UI/Modal';
 import BranchManagerTransfer from './BranchManagerTransfer';
+import AdminPagination, { ADMIN_PAGE_SIZE } from './AdminPagination';
 import './AdminPages.css';
 
 export default function BarbersList() {
@@ -25,6 +26,10 @@ export default function BarbersList() {
   const [barbers, setBarbers] = useState([]);
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [refresh, setRefresh] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [managerFilter, setManagerFilter] = useState('all');
@@ -32,54 +37,55 @@ export default function BarbersList() {
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferNotice, setTransferNotice] = useState(null);
 
-  // Load data
   useEffect(() => {
-    loadData();
-  }, []);
+    let current = true;
+    adminService.getManagerDirectory()
+      .then((directory) => {
+        if (current) setManagers(directory);
+      })
+      .catch((error) => {
+        if (current) console.error('Error loading manager filter:', error);
+      });
+    return () => { current = false; };
+  }, [refresh]);
 
-  const loadData = async () => {
+  useEffect(() => {
+    let current = true;
     setLoading(true);
-    try {
-      const [barbersResult, managersResult] = await Promise.all([
-        adminService.getAllBarbers({ limit: 1000 }),
-        adminService.getAllManagers({}),
-      ]);
-      setBarbers(barbersResult.barbers || []);
-      setManagers(managersResult.managers || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoadFailed(false);
 
-  // Filter barbers
-  const filteredBarbers = useMemo(() => {
-    let result = barbers;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await adminService.getAllBarbers({
+          page,
+          limit: ADMIN_PAGE_SIZE,
+          search: searchQuery,
+          status: statusFilter,
+          managerId: managerFilter === 'all' ? null : managerFilter,
+        });
+        if (!current) return;
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(b =>
-        b.name?.toLowerCase().includes(query) ||
-        b.email?.toLowerCase().includes(query)
-      );
-    }
+        const lastPage = Math.max(1, Math.ceil(result.total / ADMIN_PAGE_SIZE));
+        if (page > lastPage) {
+          setPage(lastPage);
+          return;
+        }
+        setBarbers(result.barbers);
+        setTotal(result.total);
+        setLoading(false);
+      } catch (error) {
+        if (!current) return;
+        console.error('Error loading barbers:', error);
+        setLoadFailed(true);
+        setLoading(false);
+      }
+    }, searchQuery ? 200 : 0);
 
-    // Status filter
-    if (statusFilter === 'active') {
-      result = result.filter(b => b.status === 'active');
-    } else if (statusFilter === 'inactive') {
-      result = result.filter(b => b.status !== 'active');
-    }
-
-    // Manager filter
-    if (managerFilter !== 'all') {
-      result = result.filter(b => b.managerId === managerFilter);
-    }
-
-    return result;
-  }, [barbers, searchQuery, statusFilter, managerFilter]);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [page, refresh, searchQuery, statusFilter, managerFilter]);
 
   // View barber details
   const handleViewDetails = useCallback((barber) => {
@@ -93,7 +99,7 @@ export default function BarbersList() {
   const handleTransferred = (review) => {
     setTransferNotice(review);
     setSelectedBarber(null);
-    void loadData();
+    setRefresh(value => value + 1);
   };
 
   // Format date
@@ -142,13 +148,13 @@ export default function BarbersList() {
             type="text"
             placeholder={t('admin.users.searchBarbers')}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
           />
         </div>
         <div className="admin-filters">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           >
             <option value="all">{t('common.all')}</option>
             <option value="active">{t('common.active')}</option>
@@ -156,7 +162,7 @@ export default function BarbersList() {
           </select>
           <select
             value={managerFilter}
-            onChange={(e) => setManagerFilter(e.target.value)}
+            onChange={(e) => { setManagerFilter(e.target.value); setPage(1); }}
           >
             <option value="all">{t('admin.users.allManagers')}</option>
             {managers.map((manager) => (
@@ -167,7 +173,7 @@ export default function BarbersList() {
           </select>
         </div>
         <div className="admin-count">
-          {filteredBarbers.length} {filteredBarbers.length === 1 ? t('common.barber') : t('admin.users.barbers')}
+          {total} {total === 1 ? t('common.barber') : t('admin.users.barbers')}
         </div>
       </div>
 
@@ -177,7 +183,9 @@ export default function BarbersList() {
           <Loader2 size={32} className="spinning" />
           <p>{t('common.loading')}</p>
         </div>
-      ) : filteredBarbers.length > 0 ? (
+      ) : loadFailed ? (
+        <div className="admin-empty" role="alert">{t('admin.audit.pagination.loadError')}</div>
+      ) : barbers.length > 0 ? (
         <div className="admin-table-container">
           <table className="admin-table">
             <thead>
@@ -193,7 +201,7 @@ export default function BarbersList() {
               </tr>
             </thead>
             <tbody>
-              {filteredBarbers.map((barber) => (
+              {barbers.map((barber) => (
                 <tr key={barber.id}>
                   <td>
                     <div className="admin-user-cell">
@@ -255,6 +263,10 @@ export default function BarbersList() {
           <h3>{searchQuery ? t('admin.users.noBarbersFound') : t('admin.users.noBarbers')}</h3>
           <p>{searchQuery ? t('admin.users.adjustSearch') : t('admin.users.noBarbersDesc')}</p>
         </div>
+      )}
+
+      {!loadFailed && (
+        <AdminPagination page={Math.min(page, Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE)))} total={total} onPageChange={setPage} busy={loading} />
       )}
 
       {/* Barber Details Modal */}

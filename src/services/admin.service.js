@@ -67,6 +67,19 @@ const getPreviousPeriod = (period) => {
   };
 };
 
+// Read compact directories in batches so the API row cap cannot truncate them.
+const readAdminDirectory = async (query) => {
+  const batchSize = 250;
+  const rows = [];
+  for (let offset = 0; ; offset += batchSize) {
+    const { data, error } = await query().range(offset, offset + batchSize - 1);
+    if (offset && error?.code === 'PGRST103') return rows;
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < batchSize) return rows;
+  }
+};
+
 export const adminService = {
   // ===========================
   // PLATFORM METRICS
@@ -141,23 +154,19 @@ export const adminService = {
   // USER MANAGEMENT
   // ===========================
 
+  getManagerDirectory: () => readAdminDirectory(() =>
+    supabase.rpc('get_managers').select('id, name').order('name').order('id')
+  ),
+
   /**
-   * Get all managers with their branch counts and details
+   * Get managers with their branch counts and details
    */
   getAllManagers: async ({ page = 1, limit = 25, search = '', status = 'all' } = {}) => {
     try {
-      // Get managers using SECURITY DEFINER function (can access auth.users)
-      const { data: managersData, error: managersError } = await supabase
-        .rpc('get_managers');
-
-      if (managersError) throw managersError;
-
-      // Get all branches for branch counts
-      const { data: branches, error: branchesError } = await supabase
-        .from('branches')
-        .select('id, manager_id, name, status');
-
-      if (branchesError) throw branchesError;
+      const [managersData, branches] = await Promise.all([
+        readAdminDirectory(() => supabase.rpc('get_managers').order('id')),
+        readAdminDirectory(() => supabase.from('branches').select('id, manager_id, name, status').order('id')),
+      ]);
 
       // Group branches by manager_id
       const branchMap = {};
@@ -203,17 +212,13 @@ export const adminService = {
       }
 
       // Sort by created date (newest first)
-      managers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      managers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt) || a.id.localeCompare(b.id));
 
       // Calculate total before pagination
       const total = managers.length;
 
-      // Apply pagination
-      const from = (page - 1) * limit;
-      managers = managers.slice(from, from + limit);
-
       return {
-        managers,
+        managers: limit === null ? managers : managers.slice((page - 1) * limit, page * limit),
         total,
         page,
         limit,
@@ -237,15 +242,16 @@ export const adminService = {
       const managerData = managerArr?.[0] || null;
 
       // Get branches for this manager
-      const { data: branches, error: branchesError } = await supabase
+      const branches = await readAdminDirectory(() => supabase
         .from('branches')
         .select(`
           id, name, name_ar, address, city, governorate_id, area_id,
           phone, email, status, created_at, image_url
         `)
-        .eq('manager_id', managerId);
-
-      if (branchesError) throw branchesError;
+        .eq('manager_id', managerId)
+        .order('name')
+        .order('id')
+      );
 
       // Build manager object from view data
       const manager = managerData ? {
@@ -323,58 +329,40 @@ export const adminService = {
    */
   getAllBarbers: async ({ page = 1, limit = 25, search = '', branchId = null, status = 'all', managerId = null } = {}) => {
     try {
-      // Get managers using SECURITY DEFINER function for name lookups
-      const { data: managersData } = await supabase
-        .rpc('get_managers');
-
-      const managerNameMap = {};
-      managersData?.forEach(m => {
-        managerNameMap[m.id] = m.name;
-      });
-
       let query = supabase
         .from('barbers')
-        .select(`
-          *,
-          branches:branch_id (
-            id,
-            name,
-            manager_id
-          )
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false });
+        .select(`*, branches:branch_id${managerId ? '!inner' : ''}(id, name, manager_id)`, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .order('id');
 
-      // Apply search filter (escape wildcards to prevent enumeration attacks)
       if (search) {
-        const escapedSearch = escapeLikeWildcards(search);
-        query = query.or(`name.ilike.%${escapedSearch}%,email.ilike.%${escapedSearch}%`);
+        // Escape LIKE wildcards, then quote the value for the PostgREST OR expression.
+        const pattern = `%${escapeLikeWildcards(search).replace(/\*/g, '\\*')}%`;
+        const quoted = `"${pattern.replace(/["\\]/g, '\\$&')}"`;
+        query = query.or(`name.ilike.${quoted},email.ilike.${quoted}`);
       }
 
-      // Apply branch filter
-      if (branchId) {
-        query = query.eq('branch_id', branchId);
-      }
+      if (branchId) query = query.eq('branch_id', branchId);
+      if (managerId) query = query.eq('branches.manager_id', managerId);
 
-      // Apply status filter
       if (status === 'active') {
         query = query.eq('status', 'active');
       } else if (status === 'inactive') {
-        query = query.eq('status', 'inactive');
+        query = query.or('status.neq.active,status.is.null');
       }
 
-      // Apply pagination
       const from = (page - 1) * limit;
-      const to = from + limit - 1;
-      query = query.range(from, to);
-
-      let { data, count, error } = await query;
-
+      const { data, count, error } = await query.range(from, from + limit - 1);
+      if (error?.code === 'PGRST103' && page > 1) {
+        return adminService.getAllBarbers({ limit, search, branchId, status, managerId });
+      }
       if (error) throw error;
 
-      // Filter by managerId in memory (since it's in the joined table)
-      if (managerId && data) {
-        data = data.filter(barber => barber.branches?.manager_id === managerId);
-        count = data.length;
+      const managerIds = [...new Set((data || []).map(barber => barber.branches?.manager_id).filter(Boolean))];
+      const managerNameMap = new Map();
+      if (managerIds.length) {
+        const { data: managers } = await supabase.rpc('get_managers').select('id, name').in('id', managerIds);
+        managers?.forEach(manager => managerNameMap.set(manager.id, manager.name));
       }
 
       return {
@@ -392,7 +380,7 @@ export const adminService = {
           branchId: barber.branch_id,
           branchName: barber.branches?.name,
           managerId: barber.branches?.manager_id,
-          managerName: managerNameMap[barber.branches?.manager_id] || 'Unknown',
+          managerName: managerNameMap.get(barber.branches?.manager_id) || 'Unknown',
           inviteStatus: barber.invite_status,
           createdAt: barber.created_at,
         })) || [],
@@ -1172,12 +1160,12 @@ export const adminService = {
    */
   getNotificationTemplates: async () => {
     try {
-      const { data, error } = await supabase
+      const data = await readAdminDirectory(() => supabase
         .from('notification_templates')
         .select('*')
-        .order('template_key');
-
-      if (error) throw error;
+        .order('template_key')
+        .order('id')
+      );
 
       return data?.map(template => ({
         id: template.id,

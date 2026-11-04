@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
+import { AdminPagedList } from './AdminPagination';
 import './AdminPages.css';
 
 export default function ManagersList() {
@@ -24,6 +25,7 @@ export default function ManagersList() {
   // State
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedManager, setSelectedManager] = useState(null);
@@ -40,10 +42,11 @@ export default function ManagersList() {
   const loadManagers = async () => {
     setLoading(true);
     try {
-      const result = await adminService.getAllManagers({});
+      const result = await adminService.getAllManagers({ limit: null });
       setManagers(result.managers || []);
     } catch (error) {
       console.error('Error loading managers:', error);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -169,76 +172,82 @@ export default function ManagersList() {
           <Loader2 size={32} className="spinning" />
           <p>{t('common.loading')}</p>
         </div>
+      ) : loadFailed ? (
+        <div className="admin-empty" role="alert">{t('admin.audit.pagination.loadError')}</div>
       ) : filteredManagers.length > 0 ? (
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.email')}</th>
-                <th>{t('common.phone')}</th>
-                <th>{t('admin.users.branches')}</th>
-                <th>{t('common.status')}</th>
-                <th>{t('common.date')}</th>
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredManagers.map((manager) => (
-                <tr key={manager.id}>
-                  <td>
-                    <div className="admin-user-cell">
-                      <div className="admin-user-avatar">
-                        {manager.name?.charAt(0) || '?'}
-                      </div>
-                      <span>{manager.name || t('common.unknown')}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="admin-cell-secondary">{manager.email || '-'}</span>
-                  </td>
-                  <td>
-                    <span className="admin-cell-secondary">{manager.phone || '-'}</span>
-                  </td>
-                  <td>
-                    <span className="admin-badge">{manager.branchCount}</span>
-                  </td>
-                  <td>
-                    <span className={`status-badge ${manager.isActive ? 'active' : 'inactive'}`}>
-                      {manager.isActive ? t('common.active') : t('common.inactive')}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="admin-cell-secondary">{formatDate(manager.createdAt)}</span>
-                  </td>
-                  <td>
-                    <div className="admin-actions">
-                      <button
-                        className="admin-action-btn"
-                        onClick={() => handleViewDetails(manager)}
-                        title={t('common.view')}
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        className={`admin-action-btn ${manager.isActive ? 'danger' : 'success'}`}
-                        onClick={() => handleToggleClick(manager)}
-                        disabled={togglingId === manager.id}
-                        title={manager.isActive ? t('admin.users.disable') : t('admin.users.enable')}
-                      >
-                        {togglingId === manager.id ? (
-                          <Loader2 size={16} className="spinning" />
-                        ) : (
-                          <Power size={16} />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AdminPagedList key={JSON.stringify([searchQuery, statusFilter])} items={filteredManagers}>
+          {(pageManagers) => (
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>{t('common.name')}</th>
+                    <th>{t('common.email')}</th>
+                    <th>{t('common.phone')}</th>
+                    <th>{t('admin.users.branches')}</th>
+                    <th>{t('common.status')}</th>
+                    <th>{t('common.date')}</th>
+                    <th>{t('common.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageManagers.map((manager) => (
+                    <tr key={manager.id}>
+                      <td>
+                        <div className="admin-user-cell">
+                          <div className="admin-user-avatar">
+                            {manager.name?.charAt(0) || '?'}
+                          </div>
+                          <span>{manager.name || t('common.unknown')}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="admin-cell-secondary">{manager.email || '-'}</span>
+                      </td>
+                      <td>
+                        <span className="admin-cell-secondary">{manager.phone || '-'}</span>
+                      </td>
+                      <td>
+                        <span className="admin-badge">{manager.branchCount}</span>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${manager.isActive ? 'active' : 'inactive'}`}>
+                          {manager.isActive ? t('common.active') : t('common.inactive')}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="admin-cell-secondary">{formatDate(manager.createdAt)}</span>
+                      </td>
+                      <td>
+                        <div className="admin-actions">
+                          <button
+                            className="admin-action-btn"
+                            onClick={() => handleViewDetails(manager)}
+                            title={t('common.view')}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            className={`admin-action-btn ${manager.isActive ? 'danger' : 'success'}`}
+                            onClick={() => handleToggleClick(manager)}
+                            disabled={togglingId === manager.id}
+                            title={manager.isActive ? t('admin.users.disable') : t('admin.users.enable')}
+                          >
+                            {togglingId === manager.id ? (
+                              <Loader2 size={16} className="spinning" />
+                            ) : (
+                              <Power size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </AdminPagedList>
       ) : (
         <div className="admin-empty">
           <div className="admin-empty-icon">
@@ -285,21 +294,25 @@ export default function ManagersList() {
                 {t('admin.users.branches')} ({managerDetails.branches?.length || 0})
               </h4>
               {managerDetails.branches?.length > 0 ? (
-                <div className="admin-branches-list">
-                  {managerDetails.branches.map((branch) => (
-                    <div key={branch.id} className="admin-branch-item">
-                      <div className="admin-branch-info">
-                        <span className="admin-branch-name">{branch.name}</span>
-                        <span className="admin-branch-address">
-                          {[branch.area, branch.governorate, branch.city].filter(Boolean).join(', ')}
-                        </span>
-                      </div>
-                      <span className={`status-badge small ${branch.isActive ? 'active' : 'inactive'}`}>
-                        {branch.isActive ? t('common.active') : t('common.inactive')}
-                      </span>
+                <AdminPagedList key={managerDetails.manager.id} items={managerDetails.branches}>
+                  {(pageBranches) => (
+                    <div className="admin-branches-list">
+                      {pageBranches.map((branch) => (
+                        <div key={branch.id} className="admin-branch-item">
+                          <div className="admin-branch-info">
+                            <span className="admin-branch-name">{branch.name}</span>
+                            <span className="admin-branch-address">
+                              {[branch.area, branch.governorate, branch.city].filter(Boolean).join(', ')}
+                            </span>
+                          </div>
+                          <span className={`status-badge small ${branch.isActive ? 'active' : 'inactive'}`}>
+                            {branch.isActive ? t('common.active') : t('common.inactive')}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </AdminPagedList>
               ) : (
                 <p className="admin-no-data">{t('admin.users.noBranches')}</p>
               )}

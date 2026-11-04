@@ -1,3 +1,4 @@
+import { AdminPagedList } from './AdminPagination';
 import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
@@ -270,58 +271,62 @@ export default function NotificationTemplates() {
       </div>
 
       {/* Templates Grid */}
-      <div className="templates-grid">
-        {filteredTemplates.length === 0 ? (
-          <div className="admin-empty">
-            <div className="admin-empty-icon">
-              <Bell size={32} />
-            </div>
-            <h3>{t('admin.notificationTemplates.noTemplates')}</h3>
-          </div>
-        ) : (
-          filteredTemplates.map((template) => {
-            const type = getTemplateType(template.templateKey);
-            return (
-              <div key={template.id} className="template-card">
-                <div className="template-header">
-                  <div
-                    className="template-type-badge"
-                    style={{ backgroundColor: `${type.color}20`, color: type.color }}
-                  >
-                    {isRTL ? type.labelAr : type.label}
-                  </div>
-                  <button
-                    className={`template-active-toggle ${template.isActive ? 'active' : ''}`}
-                    onClick={() => handleToggleActive(template)}
-                    title={template.isActive ? t('admin.notificationTemplates.active') : t('admin.notificationTemplates.inactive')}
-                  >
-                    {template.isActive ? <Check size={14} /> : <X size={14} />}
-                  </button>
+      <AdminPagedList key={searchQuery} items={filteredTemplates}>
+        {(pageTemplates) => (
+          <div className="templates-grid">
+            {filteredTemplates.length === 0 ? (
+              <div className="admin-empty">
+                <div className="admin-empty-icon">
+                  <Bell size={32} />
                 </div>
-                <div className="template-content">
-                  <h3>{isRTL ? (template.titleAr || template.titleEn) : template.titleEn}</h3>
-                  <p className="template-key">{template.templateKey}</p>
-                  <p className="template-preview">
-                    {isRTL
-                      ? (template.messageAr || template.messageEn)?.substring(0, 80)
-                      : template.messageEn?.substring(0, 80)}
-                    {((isRTL ? template.messageAr : template.messageEn)?.length || 0) > 80 && '...'}
-                  </p>
-                </div>
-                <div className="template-footer">
-                  <button
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => openEditModal(template)}
-                  >
-                    <Edit2 size={14} />
-                    {t('common.edit')}
-                  </button>
-                </div>
+                <h3>{t('admin.notificationTemplates.noTemplates')}</h3>
               </div>
-            );
-          })
+            ) : (
+              pageTemplates.map((template) => {
+                const type = getTemplateType(template.templateKey);
+                return (
+                  <div key={template.id} className="template-card">
+                    <div className="template-header">
+                      <div
+                        className="template-type-badge"
+                        style={{ backgroundColor: `${type.color}20`, color: type.color }}
+                      >
+                        {isRTL ? type.labelAr : type.label}
+                      </div>
+                      <button
+                        className={`template-active-toggle ${template.isActive ? 'active' : ''}`}
+                        onClick={() => handleToggleActive(template)}
+                        title={template.isActive ? t('admin.notificationTemplates.active') : t('admin.notificationTemplates.inactive')}
+                      >
+                        {template.isActive ? <Check size={14} /> : <X size={14} />}
+                      </button>
+                    </div>
+                    <div className="template-content">
+                      <h3>{isRTL ? (template.titleAr || template.titleEn) : template.titleEn}</h3>
+                      <p className="template-key">{template.templateKey}</p>
+                      <p className="template-preview">
+                        {isRTL
+                          ? (template.messageAr || template.messageEn)?.substring(0, 80)
+                          : template.messageEn?.substring(0, 80)}
+                        {((isRTL ? template.messageAr : template.messageEn)?.length || 0) > 80 && '...'}
+                      </p>
+                    </div>
+                    <div className="template-footer">
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => openEditModal(template)}
+                      >
+                        <Edit2 size={14} />
+                        {t('common.edit')}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         )}
-      </div>
+      </AdminPagedList>
 
       {/* Edit Modal */}
       <Modal
