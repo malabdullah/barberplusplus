@@ -5,7 +5,7 @@
   left: var(--sidebar-width);
   right: 0;
   height: var(--topbar-height);
-  background: rgba(13, 11, 9, 0.85);
+  background: var(--topbar-background);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(212, 168, 83, 0.08);

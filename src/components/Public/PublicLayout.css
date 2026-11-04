@@ -1,4 +1,4 @@
-.public-site { min-height: calc(100dvh - var(--environment-banner-height, 0px)); display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); --public-header-height: 80px; --border-color: var(--accent-border); --booking-surface: var(--bg-primary); --booking-subtle: var(--bg-secondary); --booking-text: var(--text-primary); color-scheme: dark; }
+.public-site { min-height: calc(100dvh - var(--environment-banner-height, 0px)); display: flex; flex-direction: column; background: var(--bg-primary); color: var(--text-primary); --public-header-height: 80px; --border-color: var(--surface-divider); --booking-surface: var(--bg-primary); --booking-subtle: var(--bg-secondary); --booking-text: var(--text-primary); color-scheme: dark; }
 .public-content { flex: 1; min-width: 0; }
 .public-content:focus { outline: none; }
 .public-skip { position: fixed; top: -100px; inset-inline-start: 16px; z-index: 10000; background: var(--accent-primary); color: #151A20; padding: 12px 20px; border-radius: 8px; }

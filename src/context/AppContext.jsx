@@ -997,7 +997,7 @@ export function AppProvider({ children }) {
     }
   }, [bookings, barbers, user, userRole]);
 
-  const cancelBooking = useCallback(async (bookingId) => {
+  const cancelBooking = useCallback(async (bookingId, reason) => {
     const oldBooking = bookings.find(b => b.id === bookingId);
     if (!oldBooking) return;
 
@@ -1009,6 +1009,7 @@ export function AppProvider({ children }) {
 
     try {
       const cancelled = await bookingsService.cancel(bookingId, {
+        reason,
         modifiedByType: userRole,
         modifiedByUserId: user?.id,
       });

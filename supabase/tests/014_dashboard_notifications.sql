@@ -42,7 +42,7 @@ set local role authenticated;
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005'),0::bigint,'other manager sees no alerts');
 reset role;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
-update public.bookings set status='cancelled' where id='aa021100-0000-4000-8000-000000000005';
+update public.bookings set status='cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id='aa021100-0000-4000-8000-000000000005';
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005' and type='booking_cancelled'),1::bigint,'manager cancellation alerts current barber, no self alert');
 select set_config('request.jwt.claims','{}',true);
 update public.user_notification_preferences set booking_updates=false where user_id='00000000-0000-4000-8000-000000000002';

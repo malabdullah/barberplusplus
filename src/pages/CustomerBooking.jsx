@@ -17,12 +17,12 @@ import BookingImage from '../components/Customer/BookingImage';
 import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
-import { addBookingDays, bookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
+import { addBookingDays, downloadBookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
 import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'PHONE_IN_USE'];
+const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -72,6 +72,7 @@ export default function CustomerBooking() {
   const [date, setDate] = useState(draft?.date || getKuwaitDate());
   const [time, setTime] = useState(draft?.time || '');
   const [slots, setSlots] = useState([]);
+  const [bookingPolicy, setBookingPolicy] = useState(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
@@ -229,9 +230,9 @@ export default function CustomerBooking() {
   useEffect(() => {
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
-    setSlotsLoading(true); setSlots([]); setSlotError(false);
+    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
-      .then(result => { if (active) { setSlots(result.slots); setTime(current => result.slots.includes(current) ? current : ''); if (time && !result.slots.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+      .then(result => { if (active) { setSlots(result.slots); setBookingPolicy(result.booking_policy || null); setTime(current => result.slots.includes(current) ? current : ''); if (time && !result.slots.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active) return;
         setError(failure.message);
@@ -262,12 +263,13 @@ export default function CustomerBooking() {
       // Preserve the same signed booking ID across uncertain network retries.
       const proof = verification || (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
       setVerification(proof);
-      const result = await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes });
+      const result = await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes, bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
+      if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
       if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection();
       if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); if (customer) await refresh(); }
     } finally { setBusy(false); }
@@ -279,10 +281,7 @@ export default function CustomerBooking() {
   const panelIndex = PANELS.indexOf(panel);
   const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
   const downloadCalendar = () => {
-    const url = URL.createObjectURL(new Blob([bookingCalendar(receipt)], { type: 'text/calendar;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url; link.download = `barber-${receipt.reference}.ics`; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBookingCalendar(receipt);
   };
   const renderSummary = (data = null) => <dl className="cb-review-list">
     <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => editSection('shop')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>
@@ -291,6 +290,14 @@ export default function CustomerBooking() {
     <div><dt>{tr('steps.time')}</dt><dd>{dateLabel(data?.date || date)}<br />{timeLabel(data?.time || time)} · {tr('minutes', { count: data?.duration || duration })}{!data && <button type="button" onClick={() => editSection('time')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.time')}`}>{tr('edit')}</button>}</dd></div>
     <div className="cb-total"><dt>{tr('total')}</dt><dd>{money(data?.price ?? price)}</dd></div>
   </dl>;
+
+  const policyDeadline = (minutes, action) => {
+    const start = new Date(`${date}T${time}:00+03:00`);
+    const deadline = new Date(start.getTime() - minutes * 60000);
+    if (deadline <= new Date()) return t(`bookingPolicy.${action}Closed`);
+    const label = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuwait' }).format(deadline);
+    return t(`bookingPolicy.${action}By`, { date: label });
+  };
 
   const bookingError = error && <div className="cb-alert" role="alert"><span>{errorText(error)}</span>{(catalogError || slotError) && <button type="button" disabled={busy} onClick={() => { setError(''); if (catalogError) setReload(value => value + 1); else setSlotRetry(value => value + 1); }}>{tr('retry')}</button>}</div>;
 
@@ -370,6 +377,12 @@ export default function CustomerBooking() {
                     </>}
                   </fieldset>
                 </form>}
+                {bookingPolicy && time && <div className="cb-account-choice">
+                  <h3>{t('bookingPolicy.checkoutTitle')}</h3>
+                  <p>{policyDeadline(bookingPolicy.cancel_minutes, 'cancel')}</p>
+                  <p>{policyDeadline(bookingPolicy.reschedule_minutes, 'reschedule')}</p>
+                  <p>{t('customerAuth.account.timezone')}</p>
+                </div>}
                 <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
               </>}
           </BookingSection>

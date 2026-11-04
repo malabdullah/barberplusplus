@@ -105,6 +105,20 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(action!=='favourites-list' && (!['shop','barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId))))return reply(400,{error:'INVALID_REQUEST'});
         return reply(200,{favourites:await deps.rpc(action,{...identity,kind:body.kind,target_id:body.targetId})});
       }
+      if (['appointment-slots', 'reschedule-booking', 'cancel-booking'].includes(action)) {
+        const identity = await deps.identity(req.headers.get('authorization')?.replace(/^Bearer /i, '') || '');
+        if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });
+        const { bookingId, date, time, expectedDate, expectedTime } = body;
+        const validDate = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+        const validTime = (value: unknown) => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+        if (typeof bookingId !== 'string' || !uuid.test(bookingId)
+          || (action !== 'cancel-booking' && !validDate(date))
+          || (action !== 'appointment-slots' && (!validDate(expectedDate) || !validTime(expectedTime)))
+          || (action === 'reschedule-booking' && !validTime(time))) return reply(400, { error: 'INVALID_REQUEST' });
+        return reply(200, await deps.rpc(action, {
+          ...identity, booking_id: bookingId, date, time, expected_date: expectedDate, expected_time: expectedTime,
+        }));
+      }
       if (action === 'rate-booking') {
         const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
         const identity = await deps.identity(token);
@@ -186,6 +200,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       return reply(200,{session:result.session,profile:await deps.rpc('profile',result.identity)});
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
+      if (['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'SLOT_UNAVAILABLE', 'INVALID_SELECTION'].includes(message)) return reply(409, { error: message });
+      if (['INVALID_REQUEST', 'INVALID_DATE'].includes(message)) return reply(400, { error: message });
       if (message === 'BOOKING_NOT_RATEABLE') return reply(409, { error: message });
       if (message === 'INVALID_RATING') return reply(400, { error: message });
       if(/FAVOURITE_UNAVAILABLE/.test(message))return reply(409,{error:'FAVOURITE_UNAVAILABLE'});

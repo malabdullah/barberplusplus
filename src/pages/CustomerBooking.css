@@ -62,7 +62,7 @@
 .cb-primary:hover:not(:disabled) { background: #c5973e; }
 .cb-primary:active:not(:disabled) { background: #b68a35; }
 .cb-primary:disabled { background: #f0f2f5; border-color: #e3e7ed; color: var(--booking-muted); }
-.cb-secondary { background: var(--booking-surface); border-color: var(--booking-control); }
+.cb-secondary { background: var(--booking-surface); border-color: var(--booking-control); color: var(--booking-text); }
 .cb-actions .cb-primary { margin-inline-start: auto; min-width: 235px; }
 .cb-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; background: transparent; border: 0; color: var(--booking-link); padding: 8px 0; }
 .cb-next-hint { color: var(--booking-muted); margin: 10px 0 0; font-size: 14px; text-align: end; }

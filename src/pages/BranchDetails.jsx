@@ -30,6 +30,7 @@ export default function BranchDetails() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const branch = branches.find(b => b.id === branchId);
   const branchBarbers = barbers.filter(b => b.branchId === branchId);
@@ -52,9 +53,15 @@ export default function BranchDetails() {
     setIsEditOpen(false);
   };
 
-  const handleDelete = () => {
-    deleteBranch(branchId);
-    navigate('/dashboard/branches');
+  const handleDelete = async () => {
+    setDeleteError('');
+    try {
+      await deleteBranch(branchId);
+      navigate('/dashboard/branches');
+    } catch (error) {
+      setDeleteError(t(error.message === 'BOOKING_DELETE_FORBIDDEN'
+        ? 'bookings.historyPreventsRemoval' : 'common.error'));
+    }
   };
 
   const formatHours = (hours) => {
@@ -68,6 +75,7 @@ export default function BranchDetails() {
 
   return (
     <div className="branch-details-page">
+      {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       {/* Back Button */}
       <BackLink to="/dashboard/branches" label={t('branches.backToBranches')} className="animate-fade-in" />
 

@@ -199,7 +199,7 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   cancel: async (id, options = {}) => {
-    const updateData = { status: 'cancelled' };
+    const updateData = { status: 'cancelled', staff_cancellation: { reason: options.reason } };
     if (options.modifiedByType) updateData.modified_by_type = options.modifiedByType;
     if (options.modifiedByUserId) updateData.modified_by_user_id = options.modifiedByUserId;
 
@@ -207,7 +207,7 @@ export const bookingsService = {
       .from('bookings')
       .update(updateData)
       .eq('id', id)
-      .select()
+      .select('*, customer:customers(id, name, country_code, phone)')
       .single();
     if (error) throw error;
     return toFrontend(data);

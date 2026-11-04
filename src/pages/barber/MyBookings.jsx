@@ -34,10 +34,11 @@ import {
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import Modal from '../../components/UI/Modal';
-import ConfirmDialog from '../../components/UI/ConfirmDialog';
+import StaffCancelBookingDialog from '../../components/BookingPolicy/StaffCancelBookingDialog';
 import BookingForm from '../../components/Forms/BookingForm';
 import ModifyServicesSection from '../../components/Bookings/ModifyServicesSection';
-import { BOOKING_STATUSES, getStatusConfig } from '../../constants/bookingStatuses';
+import { BOOKING_STATUSES } from '../../constants/bookingStatuses';
+import { appointmentDate } from '../../utils/customerRebooking';
 import { getAddedByConfig } from '../../constants/addedByTypes';
 import './MyBookings.css';
 
@@ -258,12 +259,13 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
         <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select
           className="status-change-select"
-          value={booking.status}
+          value={booking.status?.replace('_', '-')}
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
           {BOOKING_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {getStatusConfig(status).label}
+            <option key={status} value={status}
+              disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
+              {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
         </select>
@@ -290,6 +292,7 @@ export default function MyBookings() {
   const [editingBooking, setEditingBooking] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancellingBooking, setCancellingBooking] = useState(null);
+  const [statusError, setStatusError] = useState('');
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -444,13 +447,7 @@ export default function MyBookings() {
     setSelectedBooking(null);
   };
 
-  const handleCancelConfirm = () => {
-    if (cancellingBooking) {
-      cancelBooking(cancellingBooking.id);
-      setCancellingBooking(null);
-      setSelectedBooking(null);
-    }
-  };
+
 
   if (!currentBarber) return null;
 
@@ -617,6 +614,8 @@ export default function MyBookings() {
         />
       </Modal>
 
+      {statusError && <p className="error-banner" role="alert">{statusError}</p>}
+
       {/* Booking Details Sidebar */}
       {selectedBooking && (
         <div className="booking-sidebar-overlay" onClick={() => setSelectedBooking(null)}>
@@ -624,8 +623,17 @@ export default function MyBookings() {
             <BookingDetails
               booking={selectedBooking}
               onClose={() => setSelectedBooking(null)}
-              onStatusChange={(id, status) => {
-                updateBooking(id, { status });
+              onStatusChange={async (id, status) => {
+                setStatusError('');
+                if (status === 'cancelled') {
+                  setCancellingBooking(selectedBooking); setSelectedBooking(null); return;
+                }
+                try {
+                  await updateBooking(id, { status });
+                } catch (error) {
+                  setStatusError(t(error.message === 'BOOKING_NO_SHOW_BEFORE_START'
+                    ? 'bookings.noShowBeforeStart' : 'common.error'));
+                }
                 setSelectedBooking(null);
               }}
               services={barberServices}
@@ -649,16 +657,8 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* Cancel Confirmation */}
-      <ConfirmDialog
-        isOpen={!!cancellingBooking}
-        onClose={() => setCancellingBooking(null)}
-        onConfirm={handleCancelConfirm}
-        title={t('bookings.cancelBooking')}
-        message={t('bookings.cancelConfirmMessage', { name: cancellingBooking?.customerName })}
-        confirmText={t('bookings.cancelBooking')}
-        variant="danger"
-      />
+      {cancellingBooking && <StaffCancelBookingDialog booking={cancellingBooking}
+        onClose={() => setCancellingBooking(null)} onConfirm={(booking, reason) => cancelBooking(booking.id, reason)} />}
     </div>
   );
 }

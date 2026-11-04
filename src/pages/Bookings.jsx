@@ -31,10 +31,11 @@ import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../context/AppContext';
 import { getKuwaitDate } from '../utils/customerBooking';
 import Modal from '../components/UI/Modal';
-import ConfirmDialog from '../components/UI/ConfirmDialog';
+import StaffCancelBookingDialog from '../components/BookingPolicy/StaffCancelBookingDialog';
 import BookingForm from '../components/Forms/BookingForm';
 import ModifyServicesSection from '../components/Bookings/ModifyServicesSection';
 import { BOOKING_STATUSES, getStatusConfig } from '../constants/bookingStatuses';
+import { appointmentDate } from '../utils/customerRebooking';
 import { getAddedByConfig } from '../constants/addedByTypes';
 import './Bookings.css';
 
@@ -238,7 +239,8 @@ const BookingDetails = memo(function BookingDetails({
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
           {BOOKING_STATUSES.map((status) => (
-            <option key={status} value={status}>
+            <option key={status} value={status}
+              disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
               {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
@@ -363,13 +365,7 @@ export default function Bookings() {
     setSelectedBooking(null);
   };
 
-  const handleCancelConfirm = () => {
-    if (cancellingBooking) {
-      cancelBooking(cancellingBooking.id);
-      setCancellingBooking(null);
-      setSelectedBooking(null);
-    }
-  };
+
 
   return (
     <div className="bookings-page manager-bookings-page">
@@ -568,13 +564,17 @@ export default function Bookings() {
                 setIsFormOpen(true);
               }}
               onStatusChange={async (id, status) => {
+                if (status === 'cancelled') {
+                  setCancellingBooking(selectedBooking); setSelectedBooking(null); return;
+                }
                 setStatusError('');
                 try {
                   await updateBooking(id, { status });
                   setSelectedBooking(null);
-                } catch {
+                } catch (error) {
                   setSelectedBooking(null);
-                  setStatusError(t('common.error'));
+                  setStatusError(t(error.message === 'BOOKING_NO_SHOW_BEFORE_START'
+                    ? 'bookings.noShowBeforeStart' : 'common.error'));
                 }
               }}
               services={branchServices}
@@ -601,16 +601,8 @@ export default function Bookings() {
         </div>
       )}
 
-      {/* Cancel Confirmation */}
-      <ConfirmDialog
-        isOpen={!!cancellingBooking}
-        onClose={() => setCancellingBooking(null)}
-        onConfirm={handleCancelConfirm}
-        title={t('bookings.cancelBooking')}
-        message={t('bookings.cancelConfirmMessage', { name: cancellingBooking?.customerName })}
-        confirmText={t('bookings.cancelBooking')}
-        variant="danger"
-      />
+      {cancellingBooking && <StaffCancelBookingDialog booking={cancellingBooking}
+        onClose={() => setCancellingBooking(null)} onConfirm={(booking, reason) => cancelBooking(booking.id, reason)} />}
     </div>
   );
 }

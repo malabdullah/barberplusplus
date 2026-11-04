@@ -4,12 +4,14 @@
    ================================ */
 
 :root {
-  /* Core Colors - Warm Dark Theme */
-  --bg-primary: #0D0B09;
-  --bg-secondary: #161311;
-  --bg-tertiary: #1E1A17;
-  --bg-elevated: #252119;
-  --bg-hover: #2D2820;
+  /* Core Colors - Charcoal Dark Theme */
+  --bg-primary: #141414;
+  --bg-secondary: #222222;
+  --bg-tertiary: #222222;
+  --bg-elevated: #222222;
+  --bg-hover: #2C2C2C;
+  --surface-divider: #3D3D3D;
+  --topbar-background: color-mix(in srgb, var(--bg-primary) 85%, transparent);
 
   /* Accent Colors - Amber/Copper */
   --accent-primary: #D4A853;
@@ -19,10 +21,10 @@
   --accent-border: rgba(212, 168, 83, 0.3);
 
   /* Text Colors */
-  --text-primary: #F5F0E8;
-  --text-secondary: #A8A095;
-  --text-tertiary: #6B655C;
-  --text-inverse: #0D0B09;
+  --text-primary: #F6F6F6;
+  --text-secondary: #B9B9B9;
+  --text-tertiary: #898989;
+  --text-inverse: #141414;
 
   /* Status Colors */
   --status-success: #5BA858;
@@ -87,6 +89,8 @@
   --bg-tertiary: #EDE9E3;
   --bg-elevated: #FFFFFF;
   --bg-hover: #E8E4DD;
+  --surface-divider: var(--accent-border);
+  --topbar-background: rgba(13, 11, 9, 0.85);
 
   /* Text Colors */
   --text-primary: #2D2A26;
@@ -756,12 +760,12 @@ a:active {
 
 /* Customer pages share the public site's selected theme. */
 [data-theme='dark'] {
-  --booking-surface: #0D0B09;
-  --booking-subtle: #1F1C18;
-  --booking-text: #F5F0E8;
-  --booking-muted: #B8AEA0;
-  --booking-selection: #292115;
-  --booking-link: #D4A853;
-  --booking-divider: #39332B;
-  --booking-control: #857869;
+  --booking-surface: var(--bg-primary);
+  --booking-subtle: var(--bg-secondary);
+  --booking-text: var(--text-primary);
+  --booking-muted: var(--text-secondary);
+  --booking-selection: #352D1E;
+  --booking-link: var(--accent-primary);
+  --booking-divider: var(--surface-divider);
+  --booking-control: #898989;
 }

@@ -35,19 +35,21 @@ values ('61000000-0000-4000-8000-000000000001', now() + interval '1 day');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}', true);
 select lives_ok($$update public.bookings set notes = 'synthetic modification' where id = '61000000-0000-4000-8000-000000000001'$$, 'manager modifies own booking');
-select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000001'$$, 'manager cancels own booking');
-select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000001'$$, 'repeat cancellation is harmless');
+select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000001'$$, 'manager cancels own booking');
+select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000001'$$, 'repeat cancellation is harmless');
 select throws_ok($$insert into public.bookings (branch_id, barber_id, date, time, status)
   values ('10000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002', current_date + 4, '12:30', 'confirmed')$$, '42501');
 reset role;
 select ok(not exists (select 1 from pg_trigger where tgrelid = 'public.bookings'::regclass and tgname = 'cancel_reminder_on_booking_cancel'), 'reminder cancellation trigger is absent');
 select is((select status from public.booking_reminders where booking_id = '61000000-0000-4000-8000-000000000001'), 'pending', 'an existing historical reminder is not modified by cancellation');
 
+insert into private.shop_booking_policies(branch_id,barber_can_cancel) values('10000000-0000-4000-8000-000000000001',true);
+
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"}}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status)
   values ('61000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 4, '12:30', 'confirmed')$$, 'barber creates an authorized branch booking');
-select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000002'$$, 'barber cancels own booking');
+select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000002'$$, 'barber cancels own booking');
 select throws_ok('select * from public.booking_reminders', '42501');
 reset role;
 
@@ -55,14 +57,14 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"}}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status)
   values ('61000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 5, '12:30', 'confirmed')$$, 'trusted agent retains existing booking authorization');
-select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000003'$$, 'trusted agent cancels booking');
+select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000003'$$, 'trusted agent cancels booking');
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"}}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status)
   values ('61000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 6, '12:30', 'confirmed')$$, 'admin retains existing booking authorization');
-select lives_ok($$update public.bookings set status = 'cancelled' where id = '61000000-0000-4000-8000-000000000004'$$, 'admin cancels booking');
+select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000004'$$, 'admin cancels booking');
 reset role;
 select is((select count(*) from public.booking_reminders where booking_id::text like '61000000-%'), 1::bigint, 'only the explicitly inserted historical reminder exists');
 

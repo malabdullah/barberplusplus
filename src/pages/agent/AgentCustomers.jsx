@@ -1,3 +1,5 @@
+import StaffCancelBookingDialog from '../../components/BookingPolicy/StaffCancelBookingDialog';
+import { bookingsService } from '../../services/bookings.service';
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -64,7 +66,6 @@ export default function AgentCustomers() {
   const [formLoading, setFormLoading] = useState(false);
 
   // Booking management states
-  const [showCancelBookingConfirm, setShowCancelBookingConfirm] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState(null);
 
   // Load all barbers for preferred barber selector
@@ -212,24 +213,12 @@ export default function AgentCustomers() {
   // Cancel booking - show confirmation
   const handleCancelBooking = (booking) => {
     setBookingToCancel(booking);
-    setShowCancelBookingConfirm(true);
   };
 
   // Confirm cancel booking
-  const handleConfirmCancelBooking = async () => {
-    if (!bookingToCancel) return;
-    try {
-      await agentService.updateBooking(bookingToCancel.id, { status: 'cancelled' }, user?.id);
-      // Update booking in list
-      setCustomerBookings(prev => prev.map(b =>
-        b.id === bookingToCancel.id ? { ...b, status: 'cancelled' } : b
-      ));
-      setShowCancelBookingConfirm(false);
-      setBookingToCancel(null);
-    } catch (error) {
-      console.error('Error cancelling booking:', error);
-      alert(t('common.error'));
-    }
+  const handleConfirmCancelBooking = async (booking, reason) => {
+    await bookingsService.cancel(booking.id, { reason });
+    setCustomerBookings(previous => previous.map(item => item.id === booking.id ? { ...item, status: 'cancelled' } : item));
   };
 
   return (
@@ -536,23 +525,8 @@ export default function AgentCustomers() {
         type="danger"
       />
 
-      {/* Cancel Booking Confirmation */}
-      <ConfirmDialog
-        isOpen={showCancelBookingConfirm}
-        onClose={() => {
-          setShowCancelBookingConfirm(false);
-          setBookingToCancel(null);
-        }}
-        onConfirm={handleConfirmCancelBooking}
-        title={t('agent.customers.cancelBookingTitle')}
-        message={t('agent.customers.cancelBookingMessage', {
-          date: bookingToCancel ? format(parseISO(bookingToCancel.date), 'dd MMM yyyy', { locale: dateLocale }) : '',
-          time: bookingToCancel?.time || '',
-        })}
-        confirmText={t('common.cancel')}
-        cancelText={t('common.back')}
-        type="danger"
-      />
+      {bookingToCancel && <StaffCancelBookingDialog booking={bookingToCancel}
+        onClose={() => setBookingToCancel(null)} onConfirm={handleConfirmCancelBooking} />}
     </div>
   );
 }

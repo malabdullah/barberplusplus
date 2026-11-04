@@ -135,6 +135,13 @@ export const customerAuthService = {
     if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) await this.changeEmail(data.email.trim());
     return (await request('update-profile', { ...data, email: auth.user.email || '' }, true)).profile;
   },
+  appointmentSlots: (bookingId, date) => request('appointment-slots', { bookingId, date }, true),
+  rescheduleBooking: (booking, date, time) => request('reschedule-booking', {
+    bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5), date, time,
+  }, true),
+  cancelBooking: booking => request('cancel-booking', {
+    bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5),
+  }, true),
   async bookings() { return (await request('bookings', {}, true)).bookings; },
   async rateBooking(bookingId, shopRating, barberRating) {
     return request('rate-booking', { bookingId, shopRating, barberRating }, true);

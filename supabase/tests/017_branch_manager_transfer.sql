@@ -59,7 +59,7 @@ select set_config('request.jwt.claims','{"sub":"dc010000-0000-4000-8000-00000000
 set local role authenticated;
 select results_eq(current_setting('test.transfer_review'),$$values ('{"branchName":"Transfer Branch","incomingName":"Incoming Barber","outgoingName":"Outgoing Manager","outgoingUpcoming":1,"currentlyBookable":true,"remainingBranches":1}'::jsonb)$$,'preview explains exactly which branch and appointments are affected');
 select throws_ok(current_setting('test.transfer_apply'),'P0001','TRANSFER_UPCOMING_APPOINTMENTS','upcoming outgoing appointments block transfer');
-update public.bookings set status='cancelled' where id='dc010000-0000-4000-8000-000000000402';
+update public.bookings set status='cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id='dc010000-0000-4000-8000-000000000402';
 select lives_ok(current_setting('test.transfer_apply'),'admin transfers after appointments are resolved');
 select throws_ok(current_setting('test.transfer_apply'),'P0001','TRANSFER_STALE','replayed transfer cannot overwrite an assignment');
 reset role;
