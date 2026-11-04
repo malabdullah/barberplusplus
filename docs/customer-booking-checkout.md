@@ -1,6 +1,7 @@
 # Customer booking checkout
 
-Implemented for hosted Test only. Production release requires owner acceptance.
+Verified on hosted Test. The owner accepted the visible browser demonstration
+and approved production publication on 2026-11-02.
 
 Unsigned-in customers choose **Sign in** or **Continue as guest** after selecting
 city, shop, barber, services, date and time. Signed-in customers use their saved
@@ -48,7 +49,8 @@ Read that chat before sending the handoff. Share the final commit, API contract,
 receipt expiry and ownership checks, preserve-on-sign-in behavior, final explicit
 confirmation, and guest receipt save UX. Record the sent handoff here.
 
-Handoff status: **pending owner acceptance and production publication**.
+Handoff status: **owner acceptance received; production verification and the iOS
+notification must be recorded in the operator release receipt**.
 
 ## Repeat hosted verification
 
