@@ -2709,6 +2709,8 @@
     "packageJson": {
       "dependencies": [
         "npm:@eslint/js@10.0.1",
+        "npm:@firebase/app@0.16.5",
+        "npm:@firebase/auth@1.13.9",
         "npm:@playwright/test@1.62.1",
         "npm:@supabase/supabase-js@^2.89.0",
         "npm:@testing-library/jest-dom@6.8.0",

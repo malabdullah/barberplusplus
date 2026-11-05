@@ -174,3 +174,30 @@ through the Management API: the pinned CLI's `config push` does not synchronize
 this field. For config pushes, run the CLI from `.cloud-test` with global
 `--workdir` before the subcommand and inspect its diff before approving; the
 repository's local settings must never replace the hosted origins or hook.
+
+### Checkout phone verification
+
+The hosted website uses the separate Google project **Barber Plus Plus Phone
+Test** (Identity Platform on Spark). Phone is the only provider used by this
+integration. Google needs Kuwait on its region allowlist even for fictional
+Kuwait numbers. The Edge Function only requests Google challenges for the configured synthetic
+numbers and keeps the API key on the server. The project stays on Spark without
+a billing account. Find the fixture numbers and codes in that
+project's Authentication → Sign-in method → Phone settings. The Test site only
+offers the configured fixture numbers; do not enter a real number.
+
+Enable the pilot with the Test project's Edge Function environment settings
+`CHECKOUT_GOOGLE_PHONE_ENABLED`, `CHECKOUT_GOOGLE_PROJECT`,
+`CHECKOUT_GOOGLE_API_KEY`, `CHECKOUT_GOOGLE_APP_ID` and
+`CHECKOUT_GOOGLE_TEST_PHONES` (comma-separated fictional E.164 numbers). The
+gated Worker stamps Test website requests. Existing native Test clients and
+production continue to use their current flow. Google checks the code; Supabase
+still owns Barber++ sessions, customer data and bookings. Checkout only stores
+the verification marker on the canonical customer; an actual number change
+invalidates it. A guest code verifies only that checkout.
+
+Production activation is a separate release: configure a dedicated production
+Google project, real SMS and abuse limits, the production host and reCAPTCHA
+content security policy, and review web/native enforcement together before
+enabling the server switch. Keep the fictional verification settings out of
+production.
