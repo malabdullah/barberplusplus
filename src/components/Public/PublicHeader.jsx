@@ -18,7 +18,7 @@ const workspaces = { admin: '/admin', manager: '/dashboard', barber: '/barber', 
 export default function PublicHeader() {
   const { t } = useTranslation();
   const { isAuthenticated, userRole } = useApp();
-  const { customer } = useCustomerAuth();
+  const { customer, loading: customerLoading } = useCustomerAuth();
   const { busy } = usePublicNavigation();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,6 +27,7 @@ export default function PublicHeader() {
   const dropdownButtons = useRef({});
   const mobileButton = useRef(null);
   const workspace = isAuthenticated && workspaces[userRole];
+  const showShopLinks = !workspace && !customer && !customerLoading;
   const returnTo = location.pathname === '/book' || location.state?.returnTo === '/book' ? '/book' : '/customer/account';
 
   useEffect(() => { setMobileOpen(false); setOpenDropdown(null); }, [location.key]);
@@ -56,8 +57,8 @@ export default function PublicHeader() {
     <NavigationLink to="/customer/account#appointments">{t('publicNav.myAppointments')}</NavigationLink>
   </> : <NavigationLink to="/customer/sign-in" state={{ returnTo }} aria-current={location.pathname === '/customer/sign-in' ? 'page' : undefined}>{t('publicNav.customerSignIn')}</NavigationLink>;
   const shopLinks = <>
-    <NavigationLink to={workspace || '/login'}>{t(workspace ? 'publicNav.workspace' : 'publicNav.teamSignIn')}</NavigationLink>
-    {!workspace && <NavigationLink to="/signup">{t('publicNav.registerShop')}</NavigationLink>}
+    <NavigationLink to="/login">{t('publicNav.teamSignIn')}</NavigationLink>
+    <NavigationLink to="/signup">{t('publicNav.registerShop')}</NavigationLink>
   </>;
   const bookLink = <NavigationLink to="/book" className="public-book-link" aria-current={location.pathname === '/book' ? 'page' : undefined}>{t('publicNav.book')}</NavigationLink>;
   const dropdown = (id, label, content) => <div className="public-nav-disclosure" ref={element => { dropdownRefs.current[id] = element; }} onBlur={event => {
@@ -74,7 +75,7 @@ export default function PublicHeader() {
       <NavigationLink to="/" className="public-brand" aria-label={t('common.brandHome')}><BrandLogo decorative size="compact" symbolOnSmallScreens /></NavigationLink>
       <nav className="public-desktop-nav" aria-label={t('publicNav.navigation')}>
         {customerFeaturesEnabled && <>{bookLink}{customer ? dropdown('account', t('publicNav.myAccount'), customerLinks) : customerLinks}</>}
-        {dropdown('shops', t('publicNav.shops'), shopLinks)}
+        {showShopLinks && dropdown('shops', t('publicNav.shops'), shopLinks)}
       </nav>
       <div className="public-header-actions">
         <AccountModeSwitch personal disabled={busy} />
@@ -89,9 +90,9 @@ export default function PublicHeader() {
           {customerFeaturesEnabled && <div className="public-mobile-group" role="group" aria-labelledby="public-customers-label">
             <h2 id="public-customers-label">{t('publicNav.customers')}</h2>{bookLink}{customerLinks}
           </div>}
-          <div className="public-mobile-group" role="group" aria-labelledby="public-shops-label">
+          {showShopLinks && <div className="public-mobile-group" role="group" aria-labelledby="public-shops-label">
             <h2 id="public-shops-label">{t('publicNav.shops')}</h2>{shopLinks}
-          </div>
+          </div>}
         </nav>
       </div>
     </div>
