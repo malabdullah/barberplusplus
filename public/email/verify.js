@@ -9,6 +9,12 @@ try {
 const ar = language === 'ar';
 document.documentElement.lang = language;
 document.documentElement.dir = ar ? 'rtl' : 'ltr';
+if (window.__BARBER_CONFIG__?.environment === 'cloud-test') {
+  const banner = document.querySelector('#test-banner');
+  banner.hidden = false;
+  document.querySelector('#test-label').textContent = ar ? 'بيئة اختبار — بيانات تجريبية' : 'TEST — SYNTHETIC DATA';
+  document.querySelector('#test-inbox').textContent = ar ? 'بريد الاختبار' : 'TEST EMAIL INBOX';
+}
 const heading = document.querySelector('h1');
 const message = document.querySelector('#message');
 const button = document.querySelector('#continue');
@@ -26,7 +32,7 @@ function showLink() {
   if (result) {
     const reset = result.type === 'recovery';
     heading.textContent = reset ? (ar ? 'إعادة تعيين كلمة المرور' : 'Reset your password') : (ar ? 'تأكيد بريدك الإلكتروني' : 'Confirm your email');
-    message.textContent = ar ? 'اضغط على متابعة لإكمال طلبك بأمان في Barber++.' : 'Continue to securely complete your request with Barber++.';
+    message.textContent = ar ? 'اضغط على متابعة لإكمال طلبك بأمان في \u2066Barber++\u2069.' : 'Continue to securely complete your request with Barber++.';
     button.textContent = ar ? 'متابعة' : 'Continue';
     button.hidden = false;
     button.onclick = () => {
