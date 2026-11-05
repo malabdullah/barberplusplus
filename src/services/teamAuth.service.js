@@ -54,7 +54,7 @@ export const teamAuthService = {
       const result = await teamOAuthSupabase.auth.exchangeCodeForSession(callback.searchParams.get('code'));
       if (result.error || !result.data.session) throw new Error('SOCIAL_FAILED');
       const { data, error } = await teamOAuthSupabase.auth.getUser();
-      if (error || !data.user?.email_confirmed_at || data.user.app_metadata?.role !== 'manager' || !data.user.identities?.some(identity => identity.provider === pending.provider) || pending.linking && data.user.id !== pending.managerId) {
+      if (error || !data.user?.email_confirmed_at || !(pending.linking ? data.user.app_metadata?.role === 'manager' : ['manager', 'barber'].includes(data.user.app_metadata?.role)) || !data.user.identities?.some(identity => identity.provider === pending.provider) || pending.linking && data.user.id !== pending.managerId) {
         // The callback must never promote a customer or replace another manager.
         await teamOAuthSupabase.auth.signOut({ scope: 'local' });
         throw new Error('MANAGER_REQUIRED');
@@ -65,7 +65,7 @@ export const teamAuthService = {
       }
       const accepted = await supabase.auth.setSession(result.data.session);
       if (accepted.error) throw new Error('SOCIAL_FAILED');
-      return pending.linking ? '/dashboard/settings?connected=1' : '/dashboard';
+      return pending.linking ? '/dashboard/settings?connected=1' : staffDestination(data.user.app_metadata.role);
     } catch (failure) {
       failure.linking = pending?.linking === true;
       throw failure;

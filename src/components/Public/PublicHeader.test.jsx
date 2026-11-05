@@ -49,18 +49,20 @@ describe('simple public navigation', () => {
   it.each([['admin','/admin'],['manager','/dashboard'],['agent','/agent'],['barber','/barber']])('takes signed-in %s back to the correct workspace', (role, path) => {
     state.isAuthenticated = true; state.userRole = role;
     mount();
-    const shops = openShops();
-    expect(within(shops).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', path);
-    expect(within(shops).queryByRole('link', { name: 'Register your shop' })).not.toBeInTheDocument();
-    expect(header().getByRole('link', { name: 'Customer sign in' })).toBeInTheDocument();
+    expect(header().getByRole('link', { name: 'Work mode' })).toHaveAttribute('href', path);
+    expect(header().queryByRole('link', { name: 'Open workspace' })).not.toBeInTheDocument();
+    expect(header().queryByRole('button', { name: 'Shops', exact: true })).not.toBeInTheDocument();
+    fireEvent.click(header().getByRole('button', { name: 'Open menu' }));
+    expect(header().queryByRole('group', { name: 'Shops' })).not.toBeInTheDocument();
+    expect(within(header().getByRole('group', { name: 'Customers' })).getByRole('link', { name: 'Customer sign in' })).toBeInTheDocument();
   });
-  it('keeps customer and staff destinations available when both sessions are present', () => {
+  it('keeps personal and work destinations available for the same staff account', () => {
     state.customer = { name: 'Customer' }; state.isAuthenticated = true; state.userRole = 'manager'; mount();
     fireEvent.click(header().getByRole('button', { name: 'My account', exact: true }));
     expect(within(header().getByRole('group', { name: 'My account' })).getByRole('link', { name: 'My appointments' })).toHaveAttribute('href', '/customer/account#appointments');
-    const shops = openShops();
-    expect(header().queryByRole('group', { name: 'My account' })).not.toBeInTheDocument();
-    expect(within(shops).getByRole('link', { name: 'Open workspace' })).toHaveAttribute('href', '/dashboard');
+    expect(within(header().getByRole('group', { name: 'My account' })).getByRole('link', { name: 'Work mode' })).toHaveAttribute('href', '/dashboard');
+    expect(header().queryByRole('link', { name: 'Open workspace' })).not.toBeInTheDocument();
+    expect(header().queryByRole('button', { name: 'Shops', exact: true })).not.toBeInTheDocument();
   });
   it('closes disclosures with Escape and restores focus', () => {
     mount('/customer/sign-in');

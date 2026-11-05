@@ -200,6 +200,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       return reply(200,{session:result.session,profile:await deps.rpc('profile',result.identity)});
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
+      if (message === 'SELF_BOOKING_NOT_ALLOWED') return reply(409, { error: message });
       if (['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'SLOT_UNAVAILABLE', 'INVALID_SELECTION'].includes(message)) return reply(409, { error: message });
       if (['INVALID_REQUEST', 'INVALID_DATE'].includes(message)) return reply(400, { error: message });
       if (message === 'BOOKING_NOT_RATEABLE') return reply(409, { error: message });

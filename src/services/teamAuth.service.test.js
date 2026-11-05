@@ -20,7 +20,7 @@ it('starts manager OAuth with an isolated PKCE callback and accepts only the ver
   expect(main.setSession).toHaveBeenCalledWith({ access_token: 'verified-manager' });
   expect(sessionStorage.getItem('barber-team-oauth-pending')).toBeNull();
 });
-it.each(['customer', 'admin', 'agent', 'barber', undefined])('rejects the %s role without installing a staff session or changing any role', async role => {
+it.each(['customer', 'admin', 'agent', undefined])('rejects the %s role without installing a staff session or changing any role', async role => {
   await teamAuthService.startSocial('google'); oauth.getUser.mockResolvedValue({ data: { user: { ...manager, app_metadata: { role } } } });
   await expect(teamAuthService.finishSocial(`${window.location.origin}/team/auth-callback?code=auth-code`)).rejects.toThrow('MANAGER_REQUIRED');
   expect(main.setSession).not.toHaveBeenCalled(); expect(oauth.signOut).toHaveBeenCalledWith({ scope: 'local' });
@@ -55,4 +55,11 @@ it('preserves manager-link intent on an expired callback so recovery returns to 
   const pending = JSON.parse(sessionStorage.getItem('barber-team-oauth-pending')); pending.startedAt -= 6 * 60000; sessionStorage.setItem('barber-team-oauth-pending', JSON.stringify(pending));
   await expect(teamAuthService.finishSocial(`${window.location.origin}/team/auth-callback?error=access_denied&error_code=bad_oauth_state`)).rejects.toMatchObject({ message: 'SOCIAL_FAILED', linking: true });
   expect(main.setSession).not.toHaveBeenCalled(); expect(oauth.exchangeCodeForSession).not.toHaveBeenCalled();
+});
+
+it('accepts an existing linked barber identity without granting manager permissions', async () => {
+  await teamAuthService.startSocial('google');
+  oauth.getUser.mockResolvedValue({data:{user:{...manager,id:'barber-id',app_metadata:{role:'barber'}}}});
+  expect(await teamAuthService.finishSocial(`${window.location.origin}/team/auth-callback?code=barber-code`)).toBe('/barber');
+  expect(main.setSession).toHaveBeenCalledWith({access_token:'verified-manager'});
 });

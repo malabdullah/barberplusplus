@@ -647,6 +647,20 @@ ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "j
 
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1 from auth.sessions s join auth.users u on u.id=s.user_id
+    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
+      and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
+      and (u.banned_until is null or u.banned_until<=now())
+  )
+$$;
+
+ALTER FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") OWNER TO "postgres";
+
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -2032,9 +2046,15 @@ CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbe
 
 CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 
+CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
+
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 
 
+
+CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "phone", "country_code", "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
+
+CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "name", "phone", "country_code", "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
 
 CREATE OR REPLACE TRIGGER "trigger_detect_suspicious_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."detect_suspicious_booking_activity"();
 
@@ -2856,6 +2876,9 @@ GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_a
 
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") TO "service_role";
 
 
 

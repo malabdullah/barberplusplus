@@ -23,7 +23,7 @@ export default function Login() {
       const role = await login(formData.email.trim(), formData.password);
       if (role) navigate(staffDestination(role), { replace: true });
       else { setError(t('auth.invalidCredentials')); setIsLoading(false); }
-    } catch (failure) { logErrorSafely(failure, 'Login.handleSubmit'); setError(getErrorMessage(failure, t('auth.invalidCredentials'))); setIsLoading(false); }
+    } catch (failure) { if (failure.message === 'CUSTOMER_ACCOUNT') { navigate('/customer/account', { replace: true }); return; } logErrorSafely(failure, 'Login.handleSubmit'); setError(getErrorMessage(failure, t('auth.invalidCredentials'))); setIsLoading(false); }
   };
   return <CustomerAuthLayout accountType="team" title={t('publicNav.teamSignIn')} intro={t('teamAuth.intro')}>
     <CustomerSocialButtons authService={teamAuthService} disabled={isLoading} hint={t('teamAuth.socialHint')} />
