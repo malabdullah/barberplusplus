@@ -2,7 +2,7 @@ import { verificationUrl } from './verification-url.js';
 
 let language = 'en';
 try {
-  language = (localStorage.getItem('i18nextLng') || navigator.language).startsWith('ar') ? 'ar' : 'en';
+  language = (localStorage.getItem('barber-language') || navigator.language).startsWith('ar') ? 'ar' : 'en';
   const theme = localStorage.getItem('barber-theme');
   if (['light', 'dark'].includes(theme)) document.documentElement.dataset.theme = theme;
 } catch { /* Private browsing may disable storage. */ }
@@ -17,6 +17,7 @@ function showLink() {
   button.hidden = true;
   button.disabled = false;
   button.onclick = null;
+  message.removeAttribute('role');
   let result;
   try { result = verificationUrl(window.location.href, window.__BARBER_CONFIG__ || {}); } catch { /* Show a safe retry without displaying the token. */ }
   window.history.replaceState(null, '', window.location.pathname);

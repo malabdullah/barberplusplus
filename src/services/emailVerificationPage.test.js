@@ -1,6 +1,7 @@
 import { test, expect, vi } from 'vitest';
 
 test('reopening the complete link in the same tab activates it and scrubs the fragment', async () => {
+  localStorage.setItem('barber-language', 'ar');
   document.body.innerHTML = '<h1></h1><p id="message"></p><button id="continue" hidden></button><a id="back"></a>';
   window.history.replaceState(null, '', '/email/verify.html');
   window.__BARBER_CONFIG__ = { appUrl: window.location.origin, supabaseUrl: 'https://backend.example.test' };
@@ -10,12 +11,13 @@ test('reopening the complete link in the same tab activates it and scrubs the fr
     return { url: 'https://backend.example.test/auth/v1/verify', type: 'recovery', customer: true };
   } }));
   await import('../../public/email/verify.js');
-  expect(document.querySelector('h1').textContent).toBe('This link is incomplete');
+  expect(document.querySelector('h1').textContent).toBe('رابط غير صالح');
   window.history.replaceState(null, '', '/email/verify.html#token_hash=test');
   window.dispatchEvent(new HashChangeEvent('hashchange'));
-  expect(document.querySelector('h1').textContent).toBe('Reset your password');
+  expect(document.querySelector('h1').textContent).toBe('إعادة تعيين كلمة المرور');
   expect(document.querySelector('#continue').hidden).toBe(false);
   expect(document.querySelector('#back').getAttribute('href')).toBe('/customer/sign-in');
+  expect(document.documentElement.dir).toBe('rtl');
   expect(window.location.hash).toBe('');
   expect(document.body.textContent).not.toContain('token_hash');
 });
