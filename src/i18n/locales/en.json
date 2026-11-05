@@ -2053,6 +2053,8 @@
     }
   },
   "accountMode": {
+    "noOtherBarbers": "No other barbers available",
+    "chooseOtherShop": "You cannot book yourself. Choose another shop to book an appointment.",
     "toCustomer": "Customer mode",
     "toWork": "Work mode",
     "legacyNotice": "Barber++ now uses one signed-in account for customer and work modes. Your existing work account is active. To use your other customer account, sign out first. Its bookings and favourites are still saved.",
