@@ -1613,6 +1613,7 @@
       "verifyAndBook": "Verify and book"
     },
     "errors": {
+      "SELF_BOOKING_NOT_ALLOWED": "You cannot book an appointment with yourself. Choose another barber.",
       "PHONE_CHANGED": "Your phone number needs to be verified again. Review the number and try again.",
       "PHONE_UNAVAILABLE": "We couldn’t send or check your code right now. Try again in a moment.",
       "PHONE_RATE_LIMIT": "Too many verification attempts. Wait a few minutes and try again.",
@@ -1686,11 +1687,11 @@
     "eyebrow": "Shop team account",
     "backHome": "Back to home",
     "intro": "Sign in to manage your shop and your working day.",
-    "socialHint": "Google and Apple are for existing shop managers. Team members can sign in with email.",
+    "socialHint": "Use the Google or Apple identity linked to your manager or barber account, or sign in with email.",
     "callbackTitle": "Signing you in",
     "backLogin": "Back to team sign in",
     "failed": "We couldn’t complete sign-in. Try again, or use your email and password.",
-    "managerRequired": "This Google or Apple account is not connected to an existing shop manager. Sign in with your manager email and password, then connect it in Settings.",
+    "managerRequired": "This Google or Apple identity has no manager or barber access. Use your team email and password, or continue in customer mode.",
     "connectTitle": "Google & Apple sign-in",
     "connectDescription": "Connect a sign-in method to your existing manager account.",
     "connectIntro": "Continue with Google or Apple below to connect it. You’ll keep the same shops and access. An identity already used by another account cannot be connected here.",
@@ -1997,5 +1998,15 @@
       "FAVOURITES_LIMIT": "You’ve reached the limit of 500 favourites. Remove one before adding another.",
       "UNAVAILABLE": "We couldn’t update your favourites. Please try again."
     }
+  },
+  "accountMode": {
+    "noOtherBarbers": "No other barbers available",
+    "chooseOtherShop": "You cannot book yourself. Choose another shop to book an appointment.",
+    "toCustomer": "Customer mode",
+    "toWork": "Work mode",
+    "legacyNotice": "Barber++ now uses one signed-in account for customer and work modes. Your existing work account is active. To use your other customer account, sign out first. Its bookings and favourites are still saved.",
+    "loadFailed": "We could not load your personal account. Retry before continuing.",
+    "selfBooking": "You cannot book an appointment with yourself. Choose another barber.",
+    "personalHint": "Your personal bookings use the same account. Your shop role and work access stay the same."
   }
 }

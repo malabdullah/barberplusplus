@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { useApp } from '../../context/AppContext';
 import { notificationPreferencesService } from '../../services';
+import AccountModeSwitch from '../UI/AccountModeSwitch';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
 import './TopBar.css';
@@ -156,7 +157,7 @@ const TopBar = memo(function TopBar({
         </button>
 
         <Link to="/" className="topbar-icon-btn" aria-label={t('publicNav.website')} title={t('publicNav.website')}><Home size={20} strokeWidth={1.5} /></Link>
-        {customerFeaturesEnabled && <Link to="/book" className="topbar-website-book">{t('publicNav.book')}</Link>}
+        {['manager', 'barber'].includes(userRole) ? <AccountModeSwitch /> : customerFeaturesEnabled && <Link to="/book" className="topbar-website-book">{t('publicNav.book')}</Link>}
         {showSearch && <div className="topbar-search">
           <Search size={18} strokeWidth={1.5} />
           <input

@@ -20,7 +20,7 @@ import './CustomerAccount.css';
 export default function CustomerAccount() {
   const { t, i18n } = useTranslation();
   const tr = key => t(`customerAuth.${key}`);
-  const { customer, loading, logout, updateProfile } = useCustomerAuth();
+  const { customer, loading, error: accountError, refresh, logout, updateProfile } = useCustomerAuth();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [appointmentMessage, setAppointmentMessage] = useState('');
@@ -46,7 +46,8 @@ export default function CustomerAccount() {
   useEffect(() => {
     accountRequest.current++;
     setBookings([]); setAppointmentMessage(''); setRebookingId(''); setRebookErrorId('');
-    if (!customer) return undefined;
+    if (accountError) return <p className="cb-alert" role="alert">{t('accountMode.loadFailed')} <button type="button" onClick={refresh}>{t('common.retry')}</button></p>;
+  if (!customer) return undefined;
     let active = true; setListLoading(true); setListError(false);
     customerAuthService.bookings().then(data => { if (active) setBookings(data); }).catch(() => { if (active) setListError(true); }).finally(() => { if (active) setListLoading(false); });
     let polling = false;

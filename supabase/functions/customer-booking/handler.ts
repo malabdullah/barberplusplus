@@ -221,6 +221,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       return reply(200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
+      if (/SELF_BOOKING_NOT_ALLOWED/.test(message)) return reply(409, { error: 'SELF_BOOKING_NOT_ALLOWED' });
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });

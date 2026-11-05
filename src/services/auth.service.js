@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+import { appConfig } from '../lib/runtimeConfig';
 import { supabase } from '../lib/supabase';
 import {
   authRateLimiter,
@@ -7,6 +9,9 @@ import {
   validateRedirectUrl,
 } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
+
+// Email links must also work on a different browser/device.
+const mailClient = () => createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit' } });
 
 export const authService = {
   /**
@@ -37,9 +42,10 @@ export const authService = {
 
     // SECURITY: Validate role - don't default to 'manager'
     const roleValidation = validateUserRole(data.user?.app_metadata?.role);
+    if (data.user?.app_metadata?.role === 'customer') throw new Error('CUSTOMER_ACCOUNT');
     if (!roleValidation.valid) {
       // Sign out user with invalid role
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       throw new Error('Account has invalid role configuration. Please contact support.');
     }
 
@@ -58,7 +64,7 @@ export const authService = {
       return { success: false, error: `Too many signup attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await mailClient().auth.signUp({
       email: userData.email,
       password: userData.password,
       options: {
@@ -82,7 +88,7 @@ export const authService = {
    * Sign out current user
    */
   logout: async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
   },
 
@@ -101,7 +107,7 @@ export const authService = {
     // SECURITY: Validate redirect URL
     const safeRedirectUrl = validateRedirectUrl(`${window.location.origin}/reset-password`);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await mailClient().auth.resetPasswordForEmail(email, {
       redirectTo: safeRedirectUrl,
     });
 

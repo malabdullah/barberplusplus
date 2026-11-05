@@ -22,7 +22,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'];
+const ERROR_CODES = ['SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -44,7 +44,8 @@ function favouritesFirst(options, favourites, kind) {
 
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
-  const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
+  const { customer, refresh, updateProfile, loading: accountPending, error: accountError } = useCustomerAuth();
+  const accountLoading = accountPending || accountError;
   const { items: favourites } = useCustomerFavourites();
   const location = useLocation();
   const navigate = useNavigate();
@@ -101,9 +102,11 @@ export default function CustomerBooking() {
   const cityGroups = useMemo(() => bookingCityGroups(catalog.branches), [catalog.branches]);
   const governorateName = group => group.key === 'other' ? tr('otherLocations') : tr(`governorates.${group.key}`, { defaultValue: isArabic && group.nameAr ? group.nameAr : group.name });
   const branch = catalog.branches.find(item => item.id === branchId);
-  const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
+  const bookableBarbers = catalog.barbers.filter(item => !customer?.ownBarberIds?.includes(item.id));
+  const barber = bookableBarbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
   const branches = useMemo(() => favouritesFirst(searchBranches(catalog.branches, city, query), favourites, 'shop'), [catalog.branches, city, query, favourites]);
-  const eligibleBarbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const ownShopProfile = catalog.barbers.some(item => item.branchId === branchId && customer?.ownBarberIds?.includes(item.id));
+  const eligibleBarbers = bookableBarbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
   const barbers = favouritesFirst(eligibleBarbers, favourites, 'barber');
   const services = getBarberServices(catalog, branchId, barberId);
   const selectedServices = services.filter(item => serviceIds.includes(item.id));
@@ -260,6 +263,11 @@ export default function CustomerBooking() {
     return !Object.keys(errors).length;
   };
   const fullPhone = details.countryCode + details.phone.replace(/[\s()-]/g, '');
+  useEffect(() => {
+    if (!customer?.ownBarberIds?.includes(barberId)) return;
+    setBarberId(''); setServiceIds([]); setTime(''); setPanel('barber'); setError('SELF_BOOKING_NOT_ALLOWED');
+  }, [customer?.id, customer?.ownBarberIds?.join(','), barberId]);
+
   const activePhoneSession = phoneSession?.phone === fullPhone && phoneSession?.account === customer?.id ? phoneSession : null;
   useEffect(() => {
     let active = true;
@@ -416,6 +424,7 @@ export default function CustomerBooking() {
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
         <p className="cb-intro">{receipt ? tr('successIntro') : tr(draft?.rebooking ? 'rebooking.intro' : 'onePage.intro')}</p>
+        {accountError && <p className="cb-alert" role="alert">{t('accountMode.loadFailed')} <button type="button" className="cb-text-button" onClick={refresh}>{t('common.retry')}</button></p>}
         {!receipt && ['shopUnavailable', 'barberUnavailable'].includes(rebookNotice) && <p className="cb-alert" role="status">{tr(`rebooking.${rebookNotice}`)}</p>}
         {catalogError && bookingError}
         {catalogLoading ? <div className="cb-loading" role="status"><Loader2 size={22} className="cb-spinner" />{tr('loading')}</div> : receipt ? <div className="cb-success">
@@ -449,7 +458,7 @@ export default function CustomerBooking() {
           </BookingSection>
           <BookingSection feedback={panel === 'barber' && !catalogError ? bookingError : null} id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber'} onEdit={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('services')} disabled={busy}>
               <fieldset className="cb-options"><legend className="sr-only">{tr('titles.barber')}</legend>{barbers.map(item => <div key={item.id} className="cf-select-row"><label className={`cb-option ${barberId === item.id ? 'selected' : ''}`}><input type="radio" name="barber" checked={barberId === item.id} onClick={() => { if (barberId === item.id) openPanel('services'); }} onChange={() => selectBarber(item.id)} /><BookingImage src={item.avatarUrl} name={name(item)} person /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('servicesCount', { count: getBarberServices(catalog, branchId, item.id).length })}</span><CatalogRating rating={item.rating} /></span><span className="cb-radio" aria-hidden="true">{barberId === item.id && <Check size={17} />}</span></label><FavouriteButton kind="barber" targetId={item.id} name={name(item)} disabled={busy} /></div>)}</fieldset>
-              {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{tr('noBarbers')}</h2><p>{tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
+              {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{ownShopProfile ? t('accountMode.noOtherBarbers') : tr('noBarbers')}</h2><p>{ownShopProfile ? t('accountMode.chooseOtherShop') : tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
           </BookingSection>
           <BookingSection feedback={panel === 'services' && !catalogError ? bookingError : null} id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' && Boolean(barber)} onEdit={() => openPanel('services')} editLabel={tr('edit')} disabled={busy}>
                 <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>

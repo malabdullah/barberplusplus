@@ -670,3 +670,14 @@ button.topbar-notification-item:hover {
 .topbar-website-book { color: var(--text-secondary); font-size: 14px; white-space: nowrap; text-decoration: none; min-height: 44px; display: flex; align-items: center; }
 .topbar-website-book:hover { color: var(--accent-primary); }
 @media (max-width: 1100px) { .topbar-website-book { display: none; } }
+
+@media (max-width: 640px) {
+  .topbar-left > .account-mode-switch { display: none; }
+}
+
+/* Keep the mobile navigation visible against the dark topbar in either theme. */
+.topbar-menu-btn {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-border);
+}

@@ -53,7 +53,7 @@ it('rejects conflicting email callback types', async () => {
 it('rejects expired links and staff sessions', async () => {
   auth.verifyOtp.mockResolvedValue({ error: new Error('expired'), data: {} });
   await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback?type=signup&token_hash=expired')).rejects.toThrow('INVALID_CODE');
-  auth.verifyOtp.mockResolvedValue({ data: { user: { app_metadata: { role: 'manager' }, email_confirmed_at: 'confirmed' } } });
+  auth.verifyOtp.mockResolvedValue({ data: { user: { app_metadata: { role: 'admin' }, email_confirmed_at: 'confirmed' } } });
   await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback?type=signup&token_hash=staff')).rejects.toThrow('INVALID_CODE');
   expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
 });
