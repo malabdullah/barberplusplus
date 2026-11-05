@@ -1,6 +1,7 @@
 map $uri $barber_cache_control {
   default "no-cache";
   /runtime-config.js "no-store";
+  ~^/email/ "no-store";
   ~^/assets/ "public, max-age=31536000, immutable";
 }
 
