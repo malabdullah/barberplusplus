@@ -1,3 +1,4 @@
+import { customerCapable } from '../lib/accountSession';
 import { rememberBookingReturn } from '../utils/customerBookingDraft';
 import { createClient } from '@supabase/supabase-js';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
@@ -32,9 +33,12 @@ async function clearCustomerSession() {
   if (error.name !== 'AuthSessionMissingError') throw new Error('UNAVAILABLE');
   // The gateway has already revoked this session. Auth JS treats the resulting
   // session_not_found response as an error before clearing its persisted token.
-  // Clear only the isolated customer keys; staff sessions remain untouched.
+  // Both modes share these keys; signing out ends the one active account.
   localStorage.removeItem(CUSTOMER_AUTH_STORAGE_KEY);
   localStorage.removeItem(`${CUSTOMER_AUTH_STORAGE_KEY}-code-verifier`);
+  localStorage.removeItem(`${CUSTOMER_AUTH_STORAGE_KEY}-user`);
+  // With storage empty the public SDK emits SIGNED_OUT to both contexts/tabs.
+  await customerSupabase.auth.signOut({ scope: 'local' });
 }
 const OAUTH_RETURN_KEY = 'barber-customer-oauth-return';
 let callbackExchange;
@@ -80,7 +84,15 @@ export const customerAuthService = {
     if (error) throw new Error('SIGN_IN_REQUIRED');
     return result.profile;
   },
-  async getProfile() { return await customerToken() ? (await request('profile', {}, true)).profile : null; },
+  async getProfile() {
+    if (!customerSupabase) return null;
+    const { data, error } = await customerSupabase.auth.getSession();
+    if (error) throw new Error('AUTH_REQUIRED');
+    if (!data.session || !customerCapable(data.session.user.app_metadata?.role)) return null;
+    const profile = (await request('profile', {}, true)).profile;
+    if (profile?.needsName) return null;
+    return profile;
+  },
   async login({ email, password }) { return acceptSession(await request('email-login', { email, password })); },
   requestSignup: ({ name, email, password, returnTo }) => request('email-signup', { name, email, password, returnTo }),
   resendConfirmation: ({ email, returnTo }) => request('email-resend', { email, returnTo }),
@@ -89,7 +101,7 @@ export const customerAuthService = {
     if (!['signup', 'recovery'].includes(purpose) || !/^\d{6,10}$/.test(code)) throw new Error('INVALID_CODE');
     const result = await customerSupabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code, type: purpose === 'recovery' ? 'recovery' : 'email' });
     if (result.error) throw new Error(result.error.status === 429 ? 'RATE_LIMITED' : result.error.status >= 500 ? 'UNAVAILABLE' : 'INVALID_CODE');
-    if (result.data.user?.app_metadata?.role !== 'customer' || !result.data.user?.email_confirmed_at || !result.data.session) {
+    if (!customerCapable(result.data.user?.app_metadata?.role) || !result.data.user?.email_confirmed_at || !result.data.session) {
       await customerSupabase.auth.signOut({ scope: 'local' });
       throw new Error('INVALID_CODE');
     }
@@ -113,7 +125,7 @@ export const customerAuthService = {
     } else if (token && ['signup', 'magiclink', 'recovery', 'email_change'].includes(type)) result = await customerSupabase.auth.verifyOtp({ type, token_hash: token });
     else if (code) result = await customerSupabase.auth.exchangeCodeForSession(code);
     else throw new Error('INVALID_CODE');
-    if (result.error || result.data.user?.app_metadata?.role !== 'customer' || !result.data.user?.email_confirmed_at) {
+    if (result.error || !customerCapable(result.data.user?.app_metadata?.role) || !result.data.user?.email_confirmed_at) {
       await customerSupabase.auth.signOut({ scope: 'local' });
       throw new Error('INVALID_CODE');
     }
@@ -131,7 +143,7 @@ export const customerAuthService = {
   },
   async updateProfile(data) {
     const { data: auth, error } = await customerSupabase.auth.getUser();
-    if (error || auth.user?.app_metadata?.role !== 'customer') throw new Error('AUTH_REQUIRED');
+    if (error || !customerCapable(auth.user?.app_metadata?.role)) throw new Error('AUTH_REQUIRED');
     if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) await this.changeEmail(data.email.trim());
     return (await request('update-profile', { ...data, email: auth.user.email || '' }, true)).profile;
   },
@@ -147,7 +159,7 @@ export const customerAuthService = {
     return request('rate-booking', { bookingId, shopRating, barberRating }, true);
   },
   async logout() {
-    try { await request('logout', {}, true); } catch (error) { if (error.message !== 'AUTH_REQUIRED') throw error; }
+    // Auth revokes the session and broadcasts SIGNED_OUT for both modes.
     await clearCustomerSession();
   },
   subscribe(callback) { return customerSupabase?.auth.onAuthStateChange(callback).data.subscription; },

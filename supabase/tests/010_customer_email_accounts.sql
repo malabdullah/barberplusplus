@@ -11,7 +11,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) select ('99999999-00
 select set_config('email.one','{"user_id":"99999999-0000-4000-8000-000000000101","session_id":"99999999-0000-4000-8000-000000000301","name":"Customer One"}',true);
 select set_config('email.two','{"user_id":"99999999-0000-4000-8000-000000000102","session_id":"99999999-0000-4000-8000-000000000302","name":"Customer Two"}',true);
 select throws_ok($$select public.customer_account_api('email-ensure','{"user_id":"99999999-0000-4000-8000-000000000103","session_id":"99999999-0000-4000-8000-000000000303","name":"Unconfirmed"}')$$,'P0001','AUTH_REQUIRED','unconfirmed email cannot create profile');
-select throws_ok($$select public.customer_account_api('email-ensure','{"user_id":"99999999-0000-4000-8000-000000000104","session_id":"99999999-0000-4000-8000-000000000304","name":"Manager"}')$$,'P0001','AUTH_REQUIRED','staff session cannot create customer profile');
+select lives_ok($$select public.customer_account_api('email-ensure','{"user_id":"99999999-0000-4000-8000-000000000104","session_id":"99999999-0000-4000-8000-000000000304","name":"Manager"}')$$,'manager creates a personal profile with the same login and unchanged work role');
 select is(public.customer_account_api('email-ensure',current_setting('email.one')::jsonb)->>'email','email-one@customer.test','confirmed customer creates profile using trusted email');
 select is(public.customer_account_api('profile',current_setting('email.one')::jsonb)->>'phone',null,'phone is optional before booking');
 select ok((select customer_id is not null from private.customer_accounts where user_id='99999999-0000-4000-8000-000000000101'),'signup creates a canonical customer without claiming a guest record');

@@ -53,6 +53,7 @@ import AgentBookings from './pages/agent/AgentBookings';
 import AgentNewBooking from './pages/agent/AgentNewBooking';
 import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
+import AccountSessionNotice from './components/UI/AccountSessionNotice';
 import EnvironmentBanner from './components/EnvironmentBanner';
 import { customerFeaturesEnabled } from './lib/runtimeConfig';
 import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
@@ -279,6 +280,7 @@ export default function App() {
   return (
     <>
       <EnvironmentBanner />
+      <AccountSessionNotice />
       <AppProvider>
         <CustomerAuthProvider><CustomerFavouritesProvider><AppRoutes /></CustomerFavouritesProvider></CustomerAuthProvider>
       </AppProvider>
