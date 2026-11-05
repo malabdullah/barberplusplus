@@ -146,3 +146,74 @@ Deno.test('guest receipt claims require a successful booking, signed receipt and
   try { assert((await handler(authorized({ action: 'claim-booking', claimToken: receipt.claimToken }))).status === 403); } finally { Date.now = now; }
   assert(claims === 1);
 });
+
+Deno.test('hosted website requires Google proof while gated legacy native Test calls still work', async () => {
+  const appUrl = 'https://app.example.test';
+  const ref = 'abcdefghijklmnopqrst';
+  const cloudAccessKey = 'test-gateway-secret-with-enough-characters';
+  const details = { name: 'Guest Customer', phone: '50000099', countryCode: '+965' };
+  const bookings: unknown[] = [];
+  const handler = make({
+    environment: 'cloud-test', appUrl, publicUrl: 'https://' + ref + '.supabase.co', cloudTestProjectRef: ref, cloudAccessKey,
+    phone: { projectId: 'google-test', apiKey: 'public-key', appId: 'web', testPhones: ['+96550000099'] },
+    startTestPhone: async (phone: string) => { assert(phone === '+96550000099'); return 'challenge'; },
+    confirmPhone: async (session: string, code: string, phone: string) => session === 'challenge' && code === '123456' && phone === '+96550000099',
+    booking: async (_: string, data: Record<string, unknown>) => { bookings.push(data.id); return { id: data.id }; },
+  });
+  const call = (body: unknown, web = true, gate = true) => handler(new Request(appUrl, {
+    method: 'POST',
+    headers: { Origin: appUrl, ...(gate ? { 'x-cloud-test-key': cloudAccessKey } : {}), ...(web ? { 'x-barber-test-web': '1' } : {}) },
+    body: JSON.stringify(body),
+  }));
+  const config = await (await call({ action: 'phone-config' })).json();
+  assert(config.phone.testPhones.length === 1 && !('apiKey' in config.phone));
+  assert((await call({ action: 'phone-start', phone: '+96550000100' })).status === 400);
+  assert((await call({ action: 'phone-start', phone: '+96550000099' }, true, false)).status === 403);
+  assert((await call({ action: 'phone-start', phone: '+96550000099' }, false)).status === 404);
+  const session = await (await call({ action: 'phone-start', phone: '+96550000099' })).json();
+  assert(session.session === 'challenge');
+  const legacy = await (await call({ action: 'guest-proof', ...details }, false)).json();
+  assert(typeof legacy.verification === 'string');
+  assert((await call({ action: 'guest-proof', ...details })).status === 428);
+  assert((await call({ action: 'book', ...selection, verification: legacy.verification })).status === 428);
+  const confirm = { action: 'phone-confirm', ...details, session: 'challenge', code: '123456' };
+  assert((await call(confirm, true, false)).status === 403);
+  assert((await call({ ...confirm, code: '654321' })).status === 400);
+  assert((await call({ ...confirm, phone: '50000100' })).status === 400);
+  for (let i = 0; i < 2; i++) {
+    const proof = await (await call(confirm)).json();
+    const result = await call({ action: 'book', ...selection, verification: proof.verification });
+    assert(result.status === 200);
+  }
+  assert(bookings.length === 2 && bookings[0] === bookings[1]);
+});
+
+Deno.test('checkout persists only verified account numbers and rejects stale proofs', async () => {
+  let phone = '';
+  let verified = false;
+  const handler = make({
+    phone: { projectId: 'google-test', apiKey: 'public-key', appId: 'web' },
+    customer: async () => ({ id: 'account', customerId: 'canonical', session_id: 'session', name: 'Account Customer', phone, countryCode: '+965' }),
+    confirmPhone: async () => true,
+    accountPhone: async (id: string, country: string, number: string, mark: boolean) => {
+      assert(id === 'canonical' && country === '+965');
+      if (mark) { phone = number; verified = true; }
+      return verified && number === phone;
+    },
+  });
+  const call = (body: unknown) => {
+    const req = request(body);
+    req.headers.set('Authorization', 'Bearer session');
+    return handler(req);
+  };
+  assert((await call({ action: 'account-proof' })).status === 428);
+  const confirm = { action: 'phone-confirm', phone: '50000099', countryCode: '+965', session: 'session-info', code: '123456' };
+  assert((await call(confirm)).status === 200);
+  const proof = await (await call({ action: 'account-proof' })).json();
+  assert((await call({ action: 'book', ...selection, verification: proof.verification })).status === 200);
+  phone = '50000100'; verified = false;
+  assert((await call({ action: 'book', ...selection, verification: proof.verification })).status === 428);
+  assert((await call(confirm)).status === 409);
+  phone = '50000099';
+  assert((await call({ action: 'account-proof' })).status === 428);
+});

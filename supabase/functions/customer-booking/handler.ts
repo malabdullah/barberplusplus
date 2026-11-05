@@ -1,4 +1,5 @@
 import { customerRuntime } from '../_shared/customer-runtime.ts';
+import type { GooglePhoneConfig } from './google-phone.ts';
 type Body = Record<string, unknown>;
 type Dependencies = {
   environment: string;
@@ -10,11 +11,15 @@ type Dependencies = {
   secret: string;
   catalog: () => Promise<unknown>;
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
-  customer?: (token: string) => Promise<{id: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
+  customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
+  phone?: GooglePhoneConfig;
+  startTestPhone?: (phone: string) => Promise<string>;
+  confirmPhone?: (session: string, code: string, phone: string) => Promise<boolean>;
+  accountPhone?: (customerId: string, country: string, phone: string, verified: boolean) => Promise<boolean>;
   claim?: (data: Body) => Promise<unknown>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
-type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string };
+type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean };
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
@@ -25,6 +30,15 @@ export function createCustomerBookingHandler(deps: Dependencies) {
   const runtime = customerRuntime(deps);
   const enabled = runtime.enabled;
   const key = enabled ? crypto.subtle.importKey('raw', encoder.encode(`customer-booking-test-v1:${deps.secret}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']) : null;
+  // Reusing a Google challenge can only retry the same booking ID, even
+  // if the provider accepts a second confirmation of that challenge.
+  const challengeBookingId = async (session: string) => {
+    const bytes = new Uint8Array(await crypto.subtle.sign('HMAC', await key!, encoder.encode('phone-checkout:' + session)));
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    const hex = Array.from(bytes.slice(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');
+    return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+  };
   const sign = async (proof: Proof) => {
     const payload = encode(encoder.encode(JSON.stringify(proof)));
     const signature = await crypto.subtle.sign('HMAC', await key!, encoder.encode(payload));
@@ -41,6 +55,9 @@ export function createCustomerBookingHandler(deps: Dependencies) {
   };
   return async (req: Request): Promise<Response> => {
     const origin = req.headers.get('origin');
+    // The authenticated Test Worker sets this header itself; direct native Test
+    // traffic and environments without explicit phone settings stay compatible.
+    const phoneConfig = deps.environment === 'cloud-test' && req.headers.get('x-barber-test-web') !== '1' ? undefined : deps.phone;
     const originAllowed = await runtime.allows(req);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
@@ -62,27 +79,68 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
+      const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+      const readAccount = () => token && deps.customer ? deps.customer(token) : null;
+      const isAccountPhoneVerified = async (account: NonNullable<Awaited<ReturnType<typeof readAccount>>>) =>
+        Boolean(account.customerId && await deps.accountPhone?.(account.customerId, account.countryCode, account.phone, false));
+      if (body.action === 'phone-config') {
+        const config = phoneConfig?.testPhones
+          ? { projectId: phoneConfig.projectId, testPhones: phoneConfig.testPhones }
+          : phoneConfig;
+        return reply(200, { phone: config || null });
+      }
+      if (body.action === 'phone-start') {
+        if (deps.environment !== 'cloud-test' || !phoneConfig?.testPhones || !deps.startTestPhone) {
+          return reply(404, { error: 'NOT_AVAILABLE' });
+        }
+        const number = typeof body.phone === 'string' ? body.phone : '';
+        if (!phoneConfig.testPhones.includes(number)) return reply(400, { error: 'PHONE_TEST_NUMBER' });
+        return reply(200, { session: await deps.startTestPhone(number) });
+      }
+      if (body.action === 'phone-confirm') {
+        if (!phoneConfig || !deps.confirmPhone) return reply(404, { error: 'NOT_AVAILABLE' });
+        const account = await readAccount();
+        if (token && !account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
+        const name = account?.name || (typeof body.name === 'string' ? body.name.trim() : '');
+        const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
+        const country = typeof body.countryCode === 'string' ? body.countryCode : '';
+        if (name.length < 2 || name.length > 120 || !patterns[country]?.test(phone)) return reply(400, { error: 'INVALID_DETAILS' });
+        if (account?.phone && (account.phone !== phone || account.countryCode !== country)) return reply(409, { error: 'PHONE_CHANGED' });
+        if (typeof body.session !== 'string' || body.session.length < 1 || body.session.length > 4096
+            || typeof body.code !== 'string' || !/^\d{6}$/.test(body.code)) return reply(400, { error: 'INVALID_CODE' });
+        if (!await deps.confirmPhone(body.session, body.code, country + phone)) return reply(400, { error: 'INVALID_CODE' });
+        if (account && (!account.customerId || !await deps.accountPhone?.(account.customerId, country, phone, true))) {
+          return reply(409, { error: 'PHONE_CHANGED' });
+        }
+        return reply(200, { verification: await sign({
+          purpose: 'verified', id: await challengeBookingId(body.session), name, phone, country_code: country,
+          phone_verified: true, expires: Date.now() + 10 * 60_000,
+          ...(account ? { user_id: account.id, session_id: account.session_id } : {}),
+        }) });
+      }
       if (body.action === 'claim-booking') {
         const proof = await verify(body.claimToken, 'receipt');
         if (!proof || proof.user_id) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
-        const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
-        const account = token && deps.customer ? await deps.customer(token) : null;
+        const account = await readAccount();
         if (!account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
         if (account.phone !== proof.phone || account.countryCode !== proof.country_code) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        if (phoneConfig && (!proof.phone_verified || !account.customerId)) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
         if (!deps.claim) throw Error('Claim unavailable');
         try { await deps.claim({ booking_id: proof.id, account_user_id: account.id, session_id: account.session_id }); }
         catch (error) {
           if (error instanceof Error && /INVALID_REQUEST|AUTH_REQUIRED/.test(error.message)) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
           throw error;
         }
+        // A signed receipt from this checkout already proves phone possession.
+        if (phoneConfig && account.customerId) await deps.accountPhone?.(account.customerId, proof.country_code, proof.phone, true);
         return reply(200, { saved: true });
       }
       if (body.action === 'account-proof') {
-        const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
-        const account = token && deps.customer ? await deps.customer(token) : null;
+        const account = await readAccount();
         if (!account) return reply(401, {error:'VERIFICATION_REQUIRED'});
+        if (phoneConfig && (!account.phone || !await isAccountPhoneVerified(account))) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (!account.phone || !patterns[account.countryCode]?.test(account.phone)) return reply(400, {error:'INVALID_DETAILS'});
-        return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
+        return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,phone_verified:Boolean(phoneConfig),name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
       }
       if (body.action === 'catalog') return reply(200, await deps.catalog());
       if (body.action === 'statistics') {
@@ -93,6 +151,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, counts);
       }
       if (body.action === 'guest-proof') {
+        if (phoneConfig) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
         const countryCode = typeof body.countryCode === 'string' ? body.countryCode : '';
@@ -125,10 +184,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (body.action === 'book') {
         const proof = await verify(body.verification, 'verified');
         if (!proof) return reply(401, { error: 'VERIFICATION_REQUIRED' });
+        if (phoneConfig && !proof.phone_verified) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (proof.user_id) {
-          const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
-          const account = token && deps.customer ? await deps.customer(token) : null;
+          const account = await readAccount();
           if (!account || account.id !== proof.user_id || account.session_id !== proof.session_id) return reply(401, {error:'VERIFICATION_REQUIRED'});
+          if (phoneConfig && (account.phone !== proof.phone || account.countryCode !== proof.country_code || !await isAccountPhoneVerified(account))) {
+            return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
+          }
         }
         if (typeof body.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)
           || (body.notes !== undefined && (typeof body.notes !== 'string' || body.notes.length > 500))) return reply(400, { error: 'INVALID_REQUEST' });
@@ -160,6 +222,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
+      if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
+      if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
       if (/PHONE_IN_USE/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });
       if (/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/.test(message)) return reply(400, { error: message.match(/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/)![0] });

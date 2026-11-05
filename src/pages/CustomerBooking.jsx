@@ -22,7 +22,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE'];
+const ERROR_CODES = ['INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -78,6 +78,14 @@ export default function CustomerBooking() {
   const [slotError, setSlotError] = useState(false);
   const [details, setDetails] = useState(() => ({ name: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
+  const [phoneConfig, setPhoneConfig] = useState(null);
+  const [accountPhoneCheck, setAccountPhoneCheck] = useState(null);
+  const [phoneSession, setPhoneSession] = useState(null);
+  const [phoneChallenge, setPhoneChallenge] = useState(null);
+  const [phoneCode, setPhoneCode] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const captchaRef = useRef(null);
+  const phoneCodeRef = useRef(null);
   const [receipt, setReceipt] = useState(() => (location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft) ? null : readBookingReceipt());
   const [guest, setGuest] = useState(draft?.guest === true);
   const [claimBusy, setClaimBusy] = useState(false);
@@ -251,33 +259,129 @@ export default function CustomerBooking() {
     if (Object.keys(errors).length) setTimeout(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus(), 0);
     return !Object.keys(errors).length;
   };
+  const fullPhone = details.countryCode + details.phone.replace(/[\s()-]/g, '');
+  const activePhoneSession = phoneSession?.phone === fullPhone && phoneSession?.account === customer?.id ? phoneSession : null;
+  useEffect(() => {
+    let active = true;
+    customerBookingService.phoneConfig().then(config => { if (active) setPhoneConfig(config); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const accountPhoneKey = phoneConfig && customer?.phone
+    ? [customer.id, customer.countryCode, customer.phone].join(':')
+    : null;
+  useEffect(() => {
+    if (!accountPhoneKey || panel !== 'details' || receipt) return;
+    let active = true;
+    const finish = required => {
+      if (active) setAccountPhoneCheck({ key: accountPhoneKey, required });
+    };
+    customerBookingService.accountProof().then(
+      () => finish(false),
+      failure => finish(failure.message === 'PHONE_VERIFICATION_REQUIRED'),
+    );
+    return () => { active = false; };
+  }, [accountPhoneKey, panel, receipt]);
+  useEffect(() => {
+    if (!activePhoneSession) return;
+    // The send request disables the fieldset. Move focus once it is enabled.
+    const focus = requestAnimationFrame(() => phoneCodeRef.current?.focus());
+    const tick = () => setResendIn(Math.max(0, Math.ceil((activePhoneSession.resendAt - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => { cancelAnimationFrame(focus); clearInterval(timer); };
+  }, [activePhoneSession]);
+  const sendPhoneCode = async config => {
+    if (!captchaRef.current) throw new Error('PHONE_UNAVAILABLE');
+    let session;
+    if (config.testPhones) {
+      session = await customerBookingService.startTestPhone(fullPhone);
+    } else {
+      const challenge = new AbortController();
+      setPhoneChallenge(challenge);
+      try {
+        const { sendCheckoutPhoneCode } = await import('../services/checkoutPhone.service');
+        session = await sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en', challenge.signal);
+      } finally {
+        setPhoneChallenge(null);
+      }
+    }
+    setPhoneCode('');
+    setPhoneSession({ session, phone: fullPhone, account: customer?.id, resendAt: Date.now() + 30_000 });
+  };
+  const resendPhoneCode = async () => {
+    if (busy || resendIn || !phoneConfig || !validGuestDetails()) return;
+    setBusy(true); setError('');
+    try { await sendPhoneCode(phoneConfig); }
+    catch (failure) { if (failure.message !== 'PHONE_CANCELLED') setError(failure.message); }
+    finally { setBusy(false); }
+  };
   const confirmBooking = async event => {
     event.preventDefault();
     if (busy || !appointmentReady || panel !== 'details' || accountLoading || (!customer && !guest)) return;
     if (!validGuestDetails()) return;
     setBusy(true); setError('');
     try {
-      if (customer && !customer.phone) {
+      const config = phoneConfig || (customer && !customer.phone ? await customerBookingService.phoneConfig() : null);
+      if (!config && customer && !customer.phone) {
         await updateProfile({ name: customer.name, email: customer.email, countryCode: details.countryCode, phone: details.phone });
       }
       // Preserve the same signed booking ID across uncertain network retries.
-      const proof = verification || (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
+      let proof = verification;
+      if (!proof && activePhoneSession) {
+        if (!/^\d{6}$/.test(phoneCode)) throw new Error('INVALID_CODE');
+        proof = (await customerBookingService.confirmPhone({ ...details, session: activePhoneSession.session, code: phoneCode })).verification;
+        setPhoneCode('');
+        setPhoneSession(null);
+      }
+      if (!proof) {
+        try {
+          proof = (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
+        } catch (failure) {
+          if (failure.message !== 'PHONE_VERIFICATION_REQUIRED') throw failure;
+          const settings = config || await customerBookingService.phoneConfig();
+          if (!settings) throw new Error('PHONE_UNAVAILABLE', { cause: failure });
+          setPhoneConfig(settings);
+          if (accountPhoneKey) setAccountPhoneCheck({ key: accountPhoneKey, required: true });
+          await sendPhoneCode(settings);
+          return;
+        }
+      }
       setVerification(proof);
       const result = await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes, bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
+      if (failure.message === 'PHONE_CANCELLED') return;
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
       if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
       if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection();
+      if (failure.message === 'PHONE_VERIFICATION_REQUIRED' || failure.message === 'PHONE_CHANGED') {
+        setVerification(''); setPhoneSession(null); setPhoneCode('');
+        setError('PHONE_CHANGED');
+        if (customer) await refresh();
+      }
       if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); if (customer) await refresh(); }
     } finally { setBusy(false); }
   };
   const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError);
   const finalDetails = panel === 'details';
   const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
-  const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : panel === 'time' ? tr('continue.details') : tr('confirm');
+  const phoneCheckPending = accountPhoneKey && accountPhoneCheck?.key !== accountPhoneKey;
+  const showPhoneVerification = phoneConfig && !verification
+    && (activePhoneSession || !accountPhoneKey || (!phoneCheckPending && accountPhoneCheck?.required));
+  const inlinePhoneError = showPhoneVerification
+    && ['INVALID_CODE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'].includes(error);
+  const testNumber = phoneConfig?.testPhones?.[0];
+  const hasUnsupportedSavedNumber = testNumber && customer?.phone && !phoneConfig.testPhones.includes(fullPhone);
+  const nextLabel = panel === 'city' ? tr('continue.branch') : panel === 'shop' ? tr('continue.barber') : panel === 'barber' ? tr('continue.services') : panel === 'services' ? tr('guided.nextTime') : tr('continue.details');
+  const bookingSubmit = (label, disabled = false) => (
+    <button id="booking-next" type="submit" form="booking-confirm-form" className="cb-primary"
+      disabled={!canContinue || busy || catalogError || disabled}>
+      {busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : label}
+      {!busy && <ArrowRight size={20} className="cb-directional" />}
+    </button>
+  );
   const panelIndex = PANELS.indexOf(panel);
   const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
   const downloadCalendar = () => {
@@ -356,7 +460,7 @@ export default function CustomerBooking() {
                 {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('details'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
                 {checkingAvailability && !slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
           </BookingSection>
-          <BookingSection feedback={panel === 'details' && !catalogError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
+          <BookingSection feedback={panel === 'details' && !catalogError && !inlinePhoneError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
               {time && date && <>
                 {!customer && !accountLoading && <section className="cb-account-choice" aria-labelledby="booking-account-choice-title">
                   <h3 id="booking-account-choice-title">{tr('accountChoice.title')}</h3><p>{tr('accountChoice.hint')}</p>
@@ -368,14 +472,37 @@ export default function CustomerBooking() {
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
                       <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
-                      {!customer.phone && <><label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}</>}
+                      {!customer.phone && <><label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}</>}
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
                     </> : <>
                       <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
-                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
+                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
                     </>}
+                    <div ref={captchaRef} />
+                    {showPhoneVerification && <div className="cb-account-choice">
+                      <h3>{tr('phoneVerification.title')}</h3>
+                      <p>{activePhoneSession
+                        ? tr('phoneVerification.sent', { phone: '\u2066' + fullPhone + '\u2069' })
+                        : tr('phoneVerification.hint')}</p>
+                      {testNumber && <p>{tr(hasUnsupportedSavedNumber ? 'phoneVerification.testSavedNumber' : 'phoneVerification.testHint', {
+                        phone: '\u2066' + testNumber + '\u2069',
+                      })}</p>}
+                      {activePhoneSession && <>
+                        <label className="cb-field-label" htmlFor="booking-phone-code">{tr('phoneVerification.code')}</label>
+                        <input ref={phoneCodeRef} id="booking-phone-code" className="cb-input" dir="ltr" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={phoneCode} onChange={event => setPhoneCode(event.target.value.replace(/[^0-9]/g, ''))} />
+                      </>}
+                      {inlinePhoneError && bookingError}
+                      <div className="cb-account-choice-actions cb-phone-verification-actions">
+                        {bookingSubmit(tr(activePhoneSession ? 'phoneVerification.verifyAndBook' : 'phoneVerification.send'),
+                          Boolean(hasUnsupportedSavedNumber || (activePhoneSession && phoneCode.length !== 6)))}
+                        {activePhoneSession && <button className="cb-secondary" type="button" disabled={resendIn > 0}
+                          onClick={resendPhoneCode}>{resendIn > 0 ? tr('phoneVerification.wait', { count: resendIn }) : tr('phoneVerification.resend')}</button>}
+                      </div>
+                    </div>}
                   </fieldset>
+                  {phoneChallenge && <button type="button" className="cb-secondary"
+                    onClick={() => phoneChallenge.abort()}>{tr('phoneVerification.cancel')}</button>}
                 </form>}
                 {bookingPolicy && time && <div className="cb-account-choice">
                   <h3>{t('bookingPolicy.checkoutTitle')}</h3>
@@ -387,10 +514,13 @@ export default function CustomerBooking() {
               </>}
           </BookingSection>
         </>}
-        {!catalogLoading && !receipt && (!finalDetails || customer || guest) && <footer className="cb-actions">
+        {!catalogLoading && !receipt && (!finalDetails || ((customer || guest) && !showPhoneVerification)) && <footer className="cb-actions">
           <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
-            <button id="booking-next" type={finalDetails ? 'submit' : 'button'} form={finalDetails ? 'booking-confirm-form' : undefined} className="cb-primary" disabled={!canContinue || busy || catalogError} onClick={!finalDetails ? () => openPanel(PANELS[panelIndex + 1]) : undefined}>{busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : nextLabel}{!busy && <ArrowRight size={20} className="cb-directional" />}</button>
+            {finalDetails
+              ? bookingSubmit(tr(phoneCheckPending ? 'phoneVerification.checking' : 'confirm'), Boolean(phoneCheckPending))
+              : <button id="booking-next" type="button" className="cb-primary" disabled={!canContinue || busy || catalogError}
+                onClick={() => openPanel(PANELS[panelIndex + 1])}>{nextLabel}<ArrowRight size={20} className="cb-directional" /></button>}
           </div>
         </footer>}
       </main>

@@ -192,6 +192,7 @@
 .cb-account-choice p { margin: 0 0 16px; color: var(--booking-muted); overflow-wrap: anywhere; }
 .cb-account-choice p[role='status'] { display: flex; align-items: center; gap: 10px; }
 .cb-account-choice-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.cb-phone-verification-actions { margin-block-start: 16px; }
 .cb-account-choice .cb-secondary { color: var(--booking-text); }
 .cb-account-choice .cb-helper { margin: 16px 0 0; }
 @media (max-width: 767px) { .cb-account-choice-actions { flex-direction: column; } .cb-account-choice-actions > * { width: 100%; } }

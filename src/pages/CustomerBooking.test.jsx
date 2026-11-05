@@ -17,7 +17,7 @@ vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: 
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
+vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), phoneConfig: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
 const catalog = {
   branches: [{ id: 'branch', name: 'Seafront shop', city: 'Kuwait City', address: 'Waterfront' }, { id: 'other', name: 'Salmiya shop', city: 'Salmiya' }],
   barbers: [{ id: 'omar', branchId: 'branch', name: 'Omar', serviceIds: ['hair', 'wash'], maxBookingDays: 30 }, { id: 'ali', branchId: 'branch', name: 'Ali', serviceIds: ['beard'], maxBookingDays: 30 }],
@@ -33,6 +33,7 @@ beforeEach(async () => {
   customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   customerBookingService.getCatalog.mockResolvedValue(catalog);
+  customerBookingService.phoneConfig.mockResolvedValue(null);
   customerBookingService.accountProof.mockResolvedValue({ verification: 'account-proof' });
   customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00', '10:30'] });
   customerBookingService.guestProof.mockResolvedValue({ verification: 'verified' });

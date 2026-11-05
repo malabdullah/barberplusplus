@@ -1,0 +1,20 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path = extensions, public, pg_catalog;
+select plan(9);
+insert into public.customers(id,name,country_code,created_by_type)
+values ('dc100000-0000-4000-8000-000000000101','Phone verification fixture','+965','customer');
+select ok(not has_function_privilege('anon','public.customer_checkout_phone(uuid,text,text,boolean)','execute'),'guest cannot mark a phone verified directly');
+select ok(not has_function_privilege('authenticated','public.customer_checkout_phone(uuid,text,text,boolean)','execute'),'account cannot mark a phone verified directly');
+select ok(not public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993134',false),'new contact is not verified');
+select ok(public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993134',true),'provider proof can set a missing number');
+select ok(public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993134',false),'same number stays verified');
+select ok(not public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993135',true),'cannot overwrite an existing number with an old challenge');
+update public.customers set name='Name changed' where id='dc100000-0000-4000-8000-000000000101';
+select ok(public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993134',false),'unrelated changes preserve verification');
+update public.customers set phone='58993135' where id='dc100000-0000-4000-8000-000000000101';
+select ok(not public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993135',false),'changing number clears verification');
+update public.customers set phone='58993134' where id='dc100000-0000-4000-8000-000000000101';
+select ok(not public.customer_checkout_phone('dc100000-0000-4000-8000-000000000101','+965','58993134',false),'changing back does not restore old verification');
+select * from finish();
+rollback;

@@ -39,6 +39,8 @@
     "test:cloud-checkout": "node ops/cloud-test/checkout-fixtures.mjs && playwright test --config playwright.cloud-test.config.js booking-checkout.spec.js"
   },
   "dependencies": {
+    "@firebase/app": "0.16.5",
+    "@firebase/auth": "1.13.9",
     "@supabase/supabase-js": "^2.89.0",
     "date-fns": "^2.30.0",
     "dompurify": "3.4.17",
