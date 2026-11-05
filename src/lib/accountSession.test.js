@@ -24,3 +24,17 @@ it('does not create work access for a customer or enroll protected admin/agent i
   expect(customerCapable('admin')).toBe(false);
   expect(customerCapable('agent')).toBe(false);
 });
+
+it('preserves an in-flight first customer sign-in without an existing session', () => {
+  localStorage.setItem(`${LEGACY_CUSTOMER_KEY}-code-verifier`, 'pending-verifier');
+  migrateAccountSession(localStorage, 'shared');
+  expect(localStorage.getItem('shared-code-verifier')).toBe('pending-verifier');
+  expect(localStorage.getItem(`${LEGACY_CUSTOMER_KEY}-code-verifier`)).toBeNull();
+  expect(localStorage.getItem('shared')).toBeNull();
+});
+it('keeps the current shared sign-in verifier when an older redirect also exists', () => {
+  localStorage.setItem(`${LEGACY_CUSTOMER_KEY}-code-verifier`, 'older-verifier');
+  localStorage.setItem('shared-code-verifier', 'current-verifier');
+  migrateAccountSession(localStorage, 'shared');
+  expect(localStorage.getItem('shared-code-verifier')).toBe('current-verifier');
+});
