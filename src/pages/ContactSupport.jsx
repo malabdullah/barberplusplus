@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './CustomerAuth.css';
 
-const supportEmail = 'alabdullah.cs@gmail.com';
+const supportEmail = 'support@barberplusplus.com';
 
 export default function ContactSupport() {
   const { t } = useTranslation();
