@@ -38,7 +38,7 @@ A personal booking in another shop grants no work access to that shop.
 
 ## Validation
 
-- `npm run check`: lint, Functions type checks, 94 Functions tests, 161 application
+- `npm run check`: lint, Functions type checks, 94 Functions tests, 162 application
   tests, 61 operational tests, migration/domain checks and production build.
 - Hosted Test pgTAP suites 006–023, with 37 new assertions covering shared identity,
   contact synchronisation, uniqueness, SMS markers, self-booking, ownership,
