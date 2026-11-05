@@ -1,4 +1,4 @@
-{{ $web := or (eq .RedirectTo .SiteURL) (eq .RedirectTo (print .SiteURL "/")) (eq .RedirectTo (print .SiteURL "/reset-password")) (eq .RedirectTo (print .SiteURL "/customer/email-callback")) (eq .RedirectTo (print .SiteURL "/customer/email-callback?next=book")) (eq .RedirectTo (print .SiteURL "/customer/email-callback?next=account")) }}
+{{ $web := or (eq .RedirectTo .SiteURL) (eq .RedirectTo (print .SiteURL "/")) (eq .RedirectTo (print .SiteURL "/reset-password")) (eq .RedirectTo (print .SiteURL "/accept-invite")) (eq .RedirectTo (print .SiteURL "/customer/email-callback")) (eq .RedirectTo (print .SiteURL "/customer/email-callback?next=book")) (eq .RedirectTo (print .SiteURL "/customer/email-callback?next=account")) }}
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You are invited to Barber++ | Barber++</title></head>
 <body style="margin:0;background:#faf8f4;color:#292723;font-family:Arial,sans-serif;line-height:1.6">

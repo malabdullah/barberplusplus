@@ -25,6 +25,7 @@ test('preserves staff password recovery and all supported authentication types',
     assert.equal(result.customer, false);
     assert.equal(new URL(result.url).searchParams.get('type'), type);
   }
+  assert.equal(new URL(verificationUrl(link('invite', `${appUrl}/accept-invite`), config).url).searchParams.get('redirect_to'), `${appUrl}/accept-invite`);
 });
 test('rejects forged destinations, unsafe protocols and unknown return parameters', () => {
   for (const target of ['https://evil.example/reset-password', `https://attacker@${new URL(appUrl).host}/reset-password`, `${appUrl}/customer/email-callback?next=https://evil.example`, `${appUrl}/reset-password?redirect=https://evil.example`, `${appUrl}/untrusted`, `${appUrl}/reset-password#secret`, 'javascript:alert(1)']) {
