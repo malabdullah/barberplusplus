@@ -1,5 +1,5 @@
 const types = new Set(['signup', 'recovery', 'magiclink', 'invite', 'email_change']);
-const paths = new Set(['/', '/customer/email-callback', '/reset-password']);
+const paths = new Set(['/', '/customer/email-callback', '/reset-password', '/accept-invite']);
 
 // Fragments keep one-time credentials out of web-server logs and referrers.
 export function verificationUrl(input, config) {

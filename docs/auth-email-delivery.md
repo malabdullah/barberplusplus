@@ -12,7 +12,7 @@ placement remains the recipient provider's decision.
 confirmation, recovery, email changes, magic links and invitations. The existing
 website callbacks use `/email/verify.html` as a same-origin entry page. A user's
 explicit Continue click opens the original Supabase verification endpoint, which
-then returns to the existing customer/staff callback. Simply fetching the email
+then returns to the existing customer/staff callback, including `/accept-invite`. Simply fetching the email
 link does not consume its token. Unknown callbacks, including native app deep
 links, retain Supabase's original `ConfirmationURL` and behavior.
 
