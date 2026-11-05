@@ -3,6 +3,8 @@
 :root[data-theme=dark] { --bg:#141414; --fg:#f7f3eb; --muted:#bdb7ac; --line:#464139; --panel:#1c1b19; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.6; }
+#test-banner { padding:8px 20px; background:#8b4b08; color:#fff; text-align:center; font-size:14px; font-weight:600; }
+#test-inbox { color:inherit; margin-inline-start:16px; text-underline-offset:3px; }
 header { padding:24px max(24px,calc((100vw - 1120px)/2)); border-bottom:1px solid var(--line); }
 header a { display:inline-block; }
 header img { display:block; width:180px; height:auto; }
