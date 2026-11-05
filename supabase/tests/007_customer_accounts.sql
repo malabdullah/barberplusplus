@@ -16,7 +16,7 @@ insert into auth.users(id,email,raw_app_meta_data) values('00000000-0000-4000-80
 select is((select raw_app_meta_data->>'role' from auth.users where id='00000000-0000-4000-8000-000000000082'),'manager','existing business email signup is unchanged');
 select is(public.customer_account_api('limit',jsonb_build_object('key',repeat('a',64),'max',1)),'true'::jsonb,'first limited action is accepted');
 select is(public.customer_account_api('limit',jsonb_build_object('key',repeat('a',64),'max',1)),'false'::jsonb,'server rate limit persists across calls');
-select throws_ok($$select public.customer_account_api('link','{"user_id":"00000000-0000-4000-8000-000000000082","name":"Forged","country_code":"+965","phone":"59999881","phone_e164":"+96559999881"}')$$,'P0001','ACCOUNT_UNAVAILABLE','staff identities cannot be linked as customers');
+select throws_ok($$select public.customer_account_api('link','{"user_id":"00000000-0000-4000-8000-000000000082","name":"Forged","country_code":"+965","phone":"59999881","phone_e164":"+96559999881"}')$$,'P0001','AUTH_REQUIRED','legacy phone registration cannot create a duplicate staff account');
 select lives_ok($$select public.customer_account_api('link','{"user_id":"00000000-0000-4000-8000-000000000081","name":"Customer Test","country_code":"+965","phone":"59999881","phone_e164":"+96559999881"}')$$,'verified phone customer links without email');
 select is((select email from private.customer_account_profiles where user_id='00000000-0000-4000-8000-000000000081'),null,'email remains optional');
 select throws_ok($$select public.customer_account_api('profile','{"user_id":"00000000-0000-4000-8000-000000000081","session_id":"00000000-0000-4000-8000-000000000099"}')$$,'P0001','AUTH_REQUIRED','profile requires live session');

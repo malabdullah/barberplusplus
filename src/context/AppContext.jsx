@@ -180,6 +180,10 @@ export function AppProvider({ children }) {
             setUser(session.user);
             setUserRole(roleValidation.role);
             setIsAuthenticated(true);
+          } else if (session.user.app_metadata?.role === 'customer') {
+            setUser(null);
+            setUserRole(null);
+            setIsAuthenticated(false);
           } else {
             // Invalid or missing role - reject authentication
             logger.error('Invalid user role:', roleValidation.error);
@@ -199,7 +203,7 @@ export function AppProvider({ children }) {
 
     // Safely subscribe to auth changes
     try {
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
         updateAdminAssurance(session);
         // SECURITY: Handle token refresh failure (session expiration)
         if (event === 'TOKEN_REFRESHED' && !session) {
@@ -228,10 +232,14 @@ export function AppProvider({ children }) {
             setUserRole(roleValidation.role);
             setIsAuthenticated(true);
             setSessionExpired(false);
+          } else if (session.user.app_metadata?.role === 'customer') {
+            setUser(null);
+            setUserRole(null);
+            setIsAuthenticated(false);
           } else {
             // Invalid or missing role - reject authentication
             logger.error('Invalid user role:', roleValidation.error);
-            await supabase.auth.signOut();
+            setTimeout(() => { void supabase.auth.signOut({ scope: 'local' }); }, 0);
             setUser(null);
             setUserRole(null);
             setIsAuthenticated(false);

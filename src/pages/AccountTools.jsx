@@ -52,7 +52,7 @@ export default function AccountTools({ view, customer = false }) {
     setError(false);
     const load = async () => {
       const result = activity
-        ? await client.rpc('account_activity', { p_before: cursor })
+        ? await client.rpc(customer ? 'customer_activity' : 'account_activity', { p_before: cursor })
         : await client.rpc('account_sessions');
       if (!active) return;
       if (result.error) setError(true);

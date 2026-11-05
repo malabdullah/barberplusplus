@@ -31,7 +31,7 @@ Deno.serve(createCustomerAuthHandler({
     const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await client.auth.signInWithPassword({phone,password});
     if(error || !data.session){ console.warn('Customer sign-in rejected', error?.code || 'missing_session'); return null; }
-    if(data.user.app_metadata.role!=='customer'){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
+    if(!['customer','manager','barber'].includes(data.user.app_metadata.role)){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)}};
   },
   emailSignup:async(name,email,password,returnTo)=>{
@@ -68,13 +68,13 @@ Deno.serve(createCustomerAuthHandler({
     const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await client.auth.signInWithPassword({email,password});
     if(error || !data.session)return null;
-    if(data.user.app_metadata.role!=='customer' || !data.user.email_confirmed_at){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
+    if(!['customer','manager','barber'].includes(data.user.app_metadata.role) || !data.user.email_confirmed_at){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     const name=typeof data.user.user_metadata?.name==='string'?data.user.user_metadata.name:'';
     return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name};
   },
   emailName:async(token)=>{
     const {data,error}=await admin.auth.getUser(token);
-    if(error || data.user?.app_metadata.role!=='customer' || !data.user.email_confirmed_at)throw Error('AUTH_REQUIRED');
+    if(error || !['customer','manager','barber'].includes(String(data.user?.app_metadata.role)) || !data.user.email_confirmed_at)throw Error('AUTH_REQUIRED');
     const name=data.user.user_metadata?.name || data.user.user_metadata?.full_name;
     return typeof name==='string'?name.slice(0,120):'';
   },
@@ -84,10 +84,10 @@ Deno.serve(createCustomerAuthHandler({
     const session_id=sessionId(token);
     if(error || !data.user || !session_id)return null;
     const role=data.user.app_metadata.role;
-    if(['admin','manager','barber','agent'].includes(String(role)))throw Error('STAFF_ACCOUNT');
-    if(role!=='customer' || !data.user.identities?.some(item=>['google','apple'].includes(item.provider)))return null;
+    if(['admin','agent'].includes(String(role)))throw Error('STAFF_ACCOUNT');
+    if(!['customer','manager','barber'].includes(String(role)) || !data.user.identities?.some(item=>['google','apple'].includes(item.provider)))return null;
     const name=data.user.user_metadata?.name || data.user.user_metadata?.full_name;
     return {user_id:data.user.id,session_id,name:typeof name==='string' ? name.slice(0,120) : ''};
   },
-  resetPassword:async(id,password)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || data.user.app_metadata.role!=='customer')throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password});if(result.error)throw Error('UNAVAILABLE');},
+  resetPassword:async(id,password)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || !['customer','manager','barber'].includes(data.user.app_metadata.role))throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password});if(result.error)throw Error('UNAVAILABLE');},
 }));

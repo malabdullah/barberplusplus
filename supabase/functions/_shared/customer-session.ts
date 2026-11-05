@@ -21,7 +21,7 @@ type IdentityClient = {
 export async function customerIdentity(admin: IdentityClient, token: string) {
   const { data, error } = await admin.auth.getUser(token);
   const id = sessionId(token);
-  if (error || data.user?.app_metadata.role !== 'customer' || !id) return null;
+  if (error || !data.user || !['customer', 'manager', 'barber'].includes(String(data.user?.app_metadata.role)) || !id) return null;
   const live = await admin.rpc('customer_session_is_live', { p_user: data.user.id, p_session: id });
   if (live.error || live.data !== true) return null;
   return { user_id: data.user.id, session_id: id };

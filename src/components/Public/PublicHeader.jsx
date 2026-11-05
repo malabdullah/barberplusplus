@@ -5,6 +5,8 @@ import { ChevronDown, Menu, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
+import AccountModeSwitch from '../UI/AccountModeSwitch';
+import { workDestination } from '../../lib/accountSession';
 import BrandLogo from '../UI/BrandLogo';
 import LanguageSelector from '../UI/LanguageSelector';
 import ThemeSelector from '../UI/ThemeSelector';
@@ -48,6 +50,7 @@ export default function PublicHeader() {
   }, []);
 
   const customerLinks = customer ? <>
+    {workDestination(userRole) && <NavigationLink to={workDestination(userRole)}>{t('accountMode.toWork')}</NavigationLink>}
     <NavigationLink to="/customer/account">{t('publicNav.myAccount')}</NavigationLink>
     <NavigationLink to="/customer/favourites">{t('customerFavourites.title')}</NavigationLink>
     <NavigationLink to="/customer/account#appointments">{t('publicNav.myAppointments')}</NavigationLink>
@@ -74,6 +77,7 @@ export default function PublicHeader() {
         {dropdown('shops', t('publicNav.shops'), shopLinks)}
       </nav>
       <div className="public-header-actions">
+        <AccountModeSwitch personal disabled={busy} />
         <LanguageSelector disabled={busy} />
         <ThemeSelector disabled={busy} />
         <button type="button" ref={mobileButton} className="public-mobile-toggle" aria-expanded={mobileOpen} aria-controls="public-mobile-links" aria-label={t(mobileOpen ? 'publicNav.closeMenu' : 'publicNav.openMenu')} onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>

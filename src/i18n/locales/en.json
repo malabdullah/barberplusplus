@@ -1664,6 +1664,7 @@
       "verifyAndBook": "Verify and book"
     },
     "errors": {
+      "SELF_BOOKING_NOT_ALLOWED": "You cannot book an appointment with yourself. Choose another barber.",
       "PHONE_CHANGED": "Your phone number needs to be verified again. Review the number and try again.",
       "PHONE_UNAVAILABLE": "We couldn’t send or check your code right now. Try again in a moment.",
       "PHONE_RATE_LIMIT": "Too many verification attempts. Wait a few minutes and try again.",
@@ -2050,5 +2051,13 @@
       "FAVOURITES_LIMIT": "You’ve reached the limit of 500 favourites. Remove one before adding another.",
       "UNAVAILABLE": "We couldn’t update your favourites. Please try again."
     }
+  },
+  "accountMode": {
+    "toCustomer": "Customer mode",
+    "toWork": "Work mode",
+    "legacyNotice": "Barber++ now uses one signed-in account for customer and work modes. Your existing work account is active. To use your other customer account, sign out first. Its bookings and favourites are still saved.",
+    "loadFailed": "We could not load your personal account. Retry before continuing.",
+    "selfBooking": "You cannot book an appointment with yourself. Choose another barber.",
+    "personalHint": "Your personal bookings use the same account. Your shop role and work access stay the same."
   }
 }

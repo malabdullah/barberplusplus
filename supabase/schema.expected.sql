@@ -512,6 +512,30 @@ $$;
 ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_activity"("p_before" bigint DEFAULT NULL::bigint) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare viewer uuid:=auth.uid(); account_user uuid;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select a.user_id into account_user from private.customer_accounts a
+    where a.user_id=viewer or a.user_id=(select account_user_id from private.customer_social_identities where user_id=viewer);
+  return (select coalesce(jsonb_agg(jsonb_build_object(
+    'id',e.id,'happened_at',e.happened_at,'kind',e.kind,'shop',br.name,'shop_ar',br.name_ar,
+    'reference',upper(left(replace(e.booking_id::text,'-',''),10)),
+    'actor_role',coalesce(e.actor_role,'customer'),'by_you',coalesce(e.actor_user_id=viewer,false)
+      or (e.kind='booking_created' and e.actor_role='customer')
+  ) order by e.id desc),'[]'::jsonb) from (
+    select x.* from private.account_activity x join private.customer_booking_owners o on o.booking_id=x.booking_id
+    where o.account_user_id=account_user and (p_before is null or x.id<p_before) order by x.id desc limit 25
+  ) e left join public.branches br on br.id=e.branch_id);
+end;
+$$;
+
+ALTER FUNCTION "public"."customer_activity"("p_before" bigint) OWNER TO "postgres";
+
 CREATE OR REPLACE FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -774,9 +798,10 @@ CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", 
     AS $$
   select exists (
     select 1 from auth.sessions s join auth.users u on u.id=s.user_id
-    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role'='customer'
+    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
       and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
       and (u.banned_until is null or u.banned_until<=now())
+      and not exists(select 1 from private.account_revoked_sessions r where r.session_id=s.id)
   )
 $$;
 
@@ -2259,6 +2284,12 @@ CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."servi
 
 
 
+CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
+
+CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "phone", "country_code", "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
+
+CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "name", "phone", "country_code", "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
+
 CREATE OR REPLACE TRIGGER "trigger_detect_suspicious_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."detect_suspicious_booking_activity"();
 
 
@@ -3094,6 +3125,9 @@ GRANT ALL ON FUNCTION "public"."create_booking_reminder"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_booking_reminder"() TO "service_role";
 
 
+
+REVOKE ALL ON FUNCTION "public"."customer_activity"("p_before" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_activity"("p_before" bigint) TO "authenticated";
 
 REVOKE ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") TO "service_role";

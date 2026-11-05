@@ -1,3 +1,4 @@
+import AccountModeSwitch from '../UI/AccountModeSwitch';
 import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
@@ -125,6 +126,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
+        <AccountModeSwitch full />
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = item.exact

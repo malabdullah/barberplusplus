@@ -44,7 +44,8 @@ function favouritesFirst(options, favourites, kind) {
 
 export default function CustomerBooking() {
   const { t, i18n } = useTranslation();
-  const { customer, refresh, updateProfile, loading: accountLoading } = useCustomerAuth();
+  const { customer, refresh, updateProfile, loading: accountPending, error: accountError } = useCustomerAuth();
+  const accountLoading = accountPending || accountError;
   const { items: favourites } = useCustomerFavourites();
   const location = useLocation();
   const navigate = useNavigate();
@@ -101,9 +102,10 @@ export default function CustomerBooking() {
   const cityGroups = useMemo(() => bookingCityGroups(catalog.branches), [catalog.branches]);
   const governorateName = group => group.key === 'other' ? tr('otherLocations') : tr(`governorates.${group.key}`, { defaultValue: isArabic && group.nameAr ? group.nameAr : group.name });
   const branch = catalog.branches.find(item => item.id === branchId);
-  const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
+  const bookableBarbers = catalog.barbers.filter(item => !customer?.ownBarberIds?.includes(item.id));
+  const barber = bookableBarbers.find(item => item.id === barberId && item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length);
   const branches = useMemo(() => favouritesFirst(searchBranches(catalog.branches, city, query), favourites, 'shop'), [catalog.branches, city, query, favourites]);
-  const eligibleBarbers = catalog.barbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
+  const eligibleBarbers = bookableBarbers.filter(item => item.branchId === branchId && getBarberServices(catalog, branchId, item.id).length > 0);
   const barbers = favouritesFirst(eligibleBarbers, favourites, 'barber');
   const services = getBarberServices(catalog, branchId, barberId);
   const selectedServices = services.filter(item => serviceIds.includes(item.id));
@@ -260,6 +262,11 @@ export default function CustomerBooking() {
     return !Object.keys(errors).length;
   };
   const fullPhone = details.countryCode + details.phone.replace(/[\s()-]/g, '');
+  useEffect(() => {
+    if (!customer?.ownBarberIds?.includes(barberId)) return;
+    setBarberId(''); setServiceIds([]); setTime(''); setPanel('barber'); setError('SELF_BOOKING_NOT_ALLOWED');
+  }, [customer?.id, customer?.ownBarberIds?.join(','), barberId]);
+
   const activePhoneSession = phoneSession?.phone === fullPhone && phoneSession?.account === customer?.id ? phoneSession : null;
   useEffect(() => {
     let active = true;
@@ -416,6 +423,7 @@ export default function CustomerBooking() {
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
         <p className="cb-intro">{receipt ? tr('successIntro') : tr(draft?.rebooking ? 'rebooking.intro' : 'onePage.intro')}</p>
+        {accountError && <p className="cb-alert" role="alert">{t('accountMode.loadFailed')} <button type="button" className="cb-text-button" onClick={refresh}>{t('common.retry')}</button></p>}
         {!receipt && ['shopUnavailable', 'barberUnavailable'].includes(rebookNotice) && <p className="cb-alert" role="status">{tr(`rebooking.${rebookNotice}`)}</p>}
         {catalogError && bookingError}
         {catalogLoading ? <div className="cb-loading" role="status"><Loader2 size={22} className="cb-spinner" />{tr('loading')}</div> : receipt ? <div className="cb-success">

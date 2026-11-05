@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { appConfig, customerFeaturesEnabled } from './runtimeConfig';
-// Customer and staff sessions can coexist without changing each other's roles.
-export const CUSTOMER_AUTH_STORAGE_KEY = 'barber-customer-auth';
-export const customerSupabase = customerFeaturesEnabled ? createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, {
-  auth: { storageKey: CUSTOMER_AUTH_STORAGE_KEY, flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-}) : null;
+import { supabase, ACCOUNT_AUTH_STORAGE_KEY } from './supabase';
+import { customerFeaturesEnabled } from './runtimeConfig';
+// Both interfaces use one Auth session. A mode never changes the trusted role.
+export const CUSTOMER_AUTH_STORAGE_KEY = ACCOUNT_AUTH_STORAGE_KEY;
+export const customerSupabase = customerFeaturesEnabled ? supabase : null;

@@ -1,3 +1,4 @@
+import AccountModeSwitch from '../UI/AccountModeSwitch';
 import BrandLogo from '../UI/BrandLogo';
 import React from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
@@ -77,6 +78,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
+        <AccountModeSwitch full />
         {navItems.filter(item => !item.chairOnly || managerChair).map((item, index) => {
           const Icon = item.icon;
           const isActive = item.exact
