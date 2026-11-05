@@ -674,3 +674,10 @@ button.topbar-notification-item:hover {
 @media (max-width: 640px) {
   .topbar-left > .account-mode-switch { display: none; }
 }
+
+/* Keep the mobile navigation visible against the dark topbar in either theme. */
+.topbar-menu-btn {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-border);
+}

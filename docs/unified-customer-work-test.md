@@ -47,6 +47,12 @@ A personal booking in another shop grants no work access to that shop.
   customer persona while continuing to reject forged/legacy registration.
 - Live Test Functions accept both synthetic staff logins for customer APIs without
   changing their roles. Separate-session logout and work access were checked.
+- Hosted checkout for manager and barber passed configured Google fictional-code
+  verification (wrong-code denial included), personal booking, idempotent retry,
+  reschedule and cancellation. Temporary fixture contact changes were restored.
+- Disposable manager/customer accounts passed confirmation and password recovery;
+  old sessions were denied and Auth role/canonical customer ID were preserved.
+- English/Arabic customer/work navigation was verified on the hosted website.
 - Protected admin Auth-row fingerprints match the pre-change snapshot.
 
 Production, main and native iOS code are unchanged. This feature is awaiting
