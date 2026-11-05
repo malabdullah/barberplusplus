@@ -30,15 +30,18 @@ function StarRating({ name, label, score, onChange, disabled }) {
   );
 }
 
-export default function BookingRating({ bookingId, shopRating, barberRating, onSaved }) {
+export default function BookingRating({ bookingId, shopRating, barberRating, review, onSaved }) {
   const { t } = useTranslation();
   const [shopChoice, setShopChoice] = useState(null);
   const [barberChoice, setBarberChoice] = useState(null);
+  const [reviewDraft, setReviewDraft] = useState(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
   const shopScore = shopChoice ?? shopRating;
   const barberScore = barberChoice ?? barberRating;
-  const canSave = shopScore && barberScore && (shopScore !== shopRating || barberScore !== barberRating);
+  const reviewText = reviewDraft ?? review ?? '';
+  const canSave = shopScore && barberScore && (shopScore !== shopRating || barberScore !== barberRating ||
+    reviewText.trim() !== (review ?? ''));
 
   const save = async event => {
     event.preventDefault();
@@ -46,10 +49,11 @@ export default function BookingRating({ bookingId, shopRating, barberRating, onS
     setPending(true);
     setMessage('');
     try {
-      const saved = await customerAuthService.rateBooking(bookingId, shopScore, barberScore);
+      const saved = await customerAuthService.rateBooking(bookingId, shopScore, barberScore, reviewText.trim());
       onSaved(bookingId, saved);
       setShopChoice(null);
       setBarberChoice(null);
+      setReviewDraft(null);
       setMessage('saved');
     } catch (error) {
       setMessage(error.message === 'BOOKING_NOT_RATEABLE' ? 'unavailable' : 'error');
@@ -64,6 +68,13 @@ export default function BookingRating({ bookingId, shopRating, barberRating, onS
         score={shopScore} disabled={pending} onChange={value => { setShopChoice(value); setMessage(''); }} />
       <StarRating name={`barber-rating-${bookingId}`} label={t('customerAuth.rating.barber')}
         score={barberScore} disabled={pending} onChange={value => { setBarberChoice(value); setMessage(''); }} />
+      <label className="ca-rating-review">
+        {t('customerAuth.rating.reviewLabel')}
+        <textarea className="form-input" rows={3} maxLength={1000} value={reviewText} disabled={pending}
+          onChange={event => { setReviewDraft(event.target.value); setMessage(''); }}
+          aria-describedby={'review-visibility-' + bookingId} />
+        <small id={'review-visibility-' + bookingId}>{t('customerAuth.rating.reviewVisibility')}</small>
+      </label>
       <button type="submit" className="cb-secondary" disabled={pending || !canSave}>
         {t(pending ? 'customerAuth.rating.saving' : 'customerAuth.rating.save')}
       </button>

@@ -937,7 +937,56 @@
     "passwordSpecial": "Password must contain a special character",
     "passwordsMismatch": "Passwords do not match"
   },
+  "accountTools": {
+    "activity": "Account activity",
+    "activityHint": "See recent booking and shop changes available to your account.",
+    "sessionsHint": "See the browsers and devices signed in to your account.",
+    "unknownDevice": "Unknown device",
+    "currentDevice": "Current session",
+    "lastRefresh": "Last session refresh",
+    "endSession": "Sign out device",
+    "endSessionPrompt": "Sign this device out of your account? Your current session will stay open.",
+    "revokeFailed": "Could not sign out that device. Try again.",
+    "loadFailed": "Could not load this information.",
+    "loadMore": "Load more",
+    "noActivity": "No recorded activity yet.",
+    "noSessions": "No active sessions found.",
+    "you": "You",
+    "events": {
+      "booking_created": "Booking created",
+      "booking_rescheduled": "Booking rescheduled",
+      "booking_status_changed": "Booking status changed",
+      "shop_hours_changed": "Shop hours changed",
+      "barber_schedule_changed": "Barber schedule changed",
+      "booking_deadlines_changed": "Platform booking deadlines changed"
+    },
+    "actors": {
+      "admin": "Admin",
+      "manager": "Shop manager",
+      "barber": "Barber",
+      "agent": "Booking agent",
+      "whatsapp_agent": "Booking agent",
+      "customer": "Customer",
+      "unknown": "Actor unavailable"
+    }
+  },
+  "privateReviews": {
+    "title": "Customer reviews",
+    "description": "Private written feedback from completed appointments.",
+    "scores": "Shop {{shop}}/5 · Barber {{barber}}/5",
+    "empty": "No written reviews yet."
+  },
+  "support": {
+    "description": "Email Barber++ support for help with your account, appointments, or shop.",
+    "customers": "Customers can ask for help with bookings or account access.",
+    "barbers": "Barbers can report scheduling or profile issues.",
+    "managers": "Managers can ask about shop settings or team access.",
+    "whatToInclude": "Include the booking reference or shop name if it helps explain the issue. Keep passwords and verification codes private.",
+    "email": "Email support"
+  },
   "mfa": {
+    "adminSetup": "Set up an authenticator app to access the admin dashboard.",
+    "setupFailed": "Could not load or set up two-factor authentication. Try again.",
     "setupTitle": "Two-Factor Authentication",
     "setupDescription": "Add an extra layer of security to your account by enabling two-factor authentication with an authenticator app.",
     "enabled": "Two-Factor Authentication Enabled",
@@ -1728,6 +1777,8 @@
   },
   "customerAuth": {
     "rating": {
+      "reviewLabel": "Written review (optional)",
+      "reviewVisibility": "Your shop managers, your barber, and Barber++ admins can read this review.",
       "shop": "Rate the shop",
       "barber": "Rate the barber",
       "score_one": "{{count}} star",

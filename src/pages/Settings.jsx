@@ -289,6 +289,15 @@ export default function Settings() {
           )}
         </SettingsSection>
 
+        {['admin','manager','barber'].includes(userRole) && (
+          <SettingsSection icon={FileText} title={t('privateReviews.title')} description={t('privateReviews.description')}>
+            <button className="settings-link-btn" onClick={() => navigate('../reviews')}>
+              {t('privateReviews.title')}
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          </SettingsSection>
+        )}
+
         {/* Appearance Section */}
         <SettingsSection
           icon={Palette}
@@ -329,12 +338,14 @@ export default function Settings() {
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
-          <button className="settings-link-btn">
-            {t('settings.twoFactor')}
-            <ChevronRight size={16} strokeWidth={1.5} />
-          </button>
+          {userRole === 'admin' && (
+            <button className="settings-link-btn" onClick={() => navigate('/mfa-setup')}>
+              {t('settings.twoFactor')}
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          )}
 
-          <button className="settings-link-btn">
+          <button className="settings-link-btn" onClick={() => navigate('../sessions')}>
             {t('settings.activeSessions')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
@@ -357,18 +368,8 @@ export default function Settings() {
           title={t('settings.helpSupport')}
           description={t('settings.helpDescription')}
         >
-          <button className="settings-link-btn">
-            {t('settings.helpCenter')}
-            <ChevronRight size={16} strokeWidth={1.5} />
-          </button>
-
-          <button className="settings-link-btn">
+          <button className="settings-link-btn" onClick={() => navigate('/support')}>
             {t('settings.contactSupport')}
-            <ChevronRight size={16} strokeWidth={1.5} />
-          </button>
-
-          <button className="settings-link-btn">
-            {t('settings.featureRequests')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
         </SettingsSection>
@@ -381,7 +382,7 @@ export default function Settings() {
         >
           <button
             className="settings-link-btn"
-            onClick={() => navigate(userRole === 'manager' ? '/logs' : '/barber/logs')}
+            onClick={() => navigate(userRole === 'admin' ? '/admin/audit/activity' : '../activity')}
           >
             {t('settings.viewActivity')}
             <ChevronRight size={16} strokeWidth={1.5} />

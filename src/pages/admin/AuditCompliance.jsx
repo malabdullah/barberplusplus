@@ -10,6 +10,12 @@ export default function AuditCompliance() {
   const sections = [
     {
       icon: Activity,
+      title: t('accountTools.activity'),
+      description: t('accountTools.activityHint'),
+      path: '/admin/activity',
+    },
+    {
+      icon: Activity,
       title: t('admin.audit.activity'),
       description: t('admin.audit.activityDesc'),
       path: '/admin/audit/activity',

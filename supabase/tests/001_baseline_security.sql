@@ -255,7 +255,7 @@ select throws_ok('select * from public.booking_reminders', '42501');
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"},"user_metadata":{}}',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"},"user_metadata":{}}',
   true
 );
 select is(

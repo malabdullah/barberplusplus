@@ -23,6 +23,127 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE OR REPLACE FUNCTION "public"."account_activity"("p_before" bigint DEFAULT NULL::bigint) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+  customer_account uuid;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer;
+  if viewer_role='customer' then
+    select coalesce((select account_user_id from private.customer_social_identities where user_id=viewer), viewer)
+      into customer_account;
+  end if;
+
+  return (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'id',e.id,'happened_at',e.happened_at,'kind',e.kind,
+      'shop',b.name,'shop_ar',b.name_ar,
+      'reference',upper(left(replace(e.booking_id::text,'-',''),10)),
+      'actor_role',coalesce(e.actor_role,case when e.kind='booking_created' and own.booking_id is not null then 'customer' end),
+      'actor_name',case when e.actor_user_id=viewer then null
+        when viewer_role in ('admin','manager') and e.actor_role in ('admin','manager','barber','agent','whatsapp_agent')
+        then left(u.raw_user_meta_data->>'name',120) end,
+      'by_you',coalesce(e.actor_user_id=viewer,false) or (viewer_role='customer' and e.kind='booking_created' and
+        e.actor_role is null and own.account_user_id=customer_account)
+    ) order by e.id desc), '[]'::jsonb)
+    from (
+      select a.* from private.account_activity a
+      where (p_before is null or a.id<p_before) and (
+        viewer_role='admin' or
+        (viewer_role='manager' and a.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and a.barber_id in (
+          select x.id from public.barbers x where x.user_id=viewer and x.status='active'
+        )) or
+        (viewer_role='agent' and a.actor_user_id=viewer) or
+        (viewer_role='customer' and a.booking_id in (
+          select o.booking_id from private.customer_booking_owners o where o.account_user_id=customer_account
+        ))
+      )
+      order by a.id desc limit 25
+    ) e
+    left join public.branches b on b.id=e.branch_id
+    left join private.customer_booking_owners own on own.booking_id=e.booking_id
+    left join auth.users u on u.id=e.actor_user_id
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."account_activity"("p_before" bigint) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."account_realtime_not_revoked"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select not exists (
+    select 1 from private.account_revoked_sessions
+    where session_id=nullif(auth.jwt()->>'session_id','')::uuid
+  );
+$$;
+
+
+ALTER FUNCTION "public"."account_realtime_not_revoked"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."account_sessions"("p_revoke" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  current_session uuid;
+  viewer uuid := auth.uid();
+  account_user uuid;
+  allowed_users uuid[] := array[auth.uid()];
+begin
+  perform public.enforce_account_session();
+  current_session := private.current_account_session();
+  if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+
+  if exists (select 1 from auth.users where id=viewer and raw_app_meta_data->>'role'='customer') then
+    select coalesce((select account_user_id from private.customer_social_identities where user_id=viewer),viewer)
+      into account_user;
+    select array_agg(id) into allowed_users
+    from auth.users u where u.raw_app_meta_data->>'role'='customer'
+      and (u.id=account_user or exists (
+        select 1 from private.customer_social_identities i where i.user_id=u.id and i.account_user_id=account_user
+      ));
+  end if;
+
+  if p_revoke is not null then
+    if p_revoke=current_session then raise exception 'USE_SIGN_OUT_FOR_CURRENT_SESSION'; end if;
+    with ended as (
+      update auth.sessions set not_after=now()
+      where id=p_revoke and user_id=any(allowed_users) and (not_after is null or not_after>now())
+      returning id,user_id
+    )
+    insert into private.account_revoked_sessions(session_id,user_id)
+    select id,user_id from ended
+    on conflict (session_id) do nothing;
+  end if;
+
+  return (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'id',s.id,'device',left(coalesce(s.user_agent,''),256),
+      'created_at',s.created_at,'last_active_at',coalesce(s.refreshed_at,s.created_at),
+      'current',s.id=current_session
+    ) order by (s.id=current_session) desc, coalesce(s.refreshed_at,s.created_at) desc, s.id), '[]'::jsonb)
+    from auth.sessions s
+    where s.user_id=any(allowed_users) and (s.not_after is null or s.not_after>now())
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."account_sessions"("p_revoke" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean DEFAULT NULL::boolean) RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -647,6 +768,22 @@ ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "j
 
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1 from auth.sessions s join auth.users u on u.id=s.user_id
+    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role'='customer'
+      and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
+      and (u.banned_until is null or u.banned_until<=now())
+  )
+$$;
+
+
+ALTER FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -777,6 +914,32 @@ $$;
 
 
 ALTER FUNCTION "public"."detect_suspicious_login_activity"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_account_session"() RETURNS "void"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  current_session uuid;
+begin
+  if auth.jwt()->>'role' is distinct from 'authenticated' then return; end if;
+  current_session := private.current_account_session();
+  if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  if exists (
+    select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role'='admin'
+  ) and (auth.jwt()->>'aal' is distinct from 'aal2' or not exists (
+    select 1 from auth.sessions s
+    join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
+    where s.id=current_session and s.aal='aal2' and f.status='verified' and f.factor_type='totp'
+  )) then
+    raise exception 'ADMIN_MFA_REQUIRED' using errcode='42501';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_account_session"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."finish_admin_password_reset"("p_guard" "uuid", "p_actor" "uuid", "p_target" "uuid") RETURNS boolean
@@ -1028,6 +1191,54 @@ $$;
 
 
 ALTER FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."shop_reviews"("p_page" integer DEFAULT 1) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer;
+  if viewer_role not in ('admin','manager','barber') or viewer_role is null then
+    raise exception 'REVIEWS_FORBIDDEN' using errcode='42501';
+  end if;
+  if p_page is null or p_page<1 or p_page>1000000 then raise exception 'INVALID_PAGE'; end if;
+
+  return (
+    with accessible as (
+      select v.booking_id,v.body,v.updated_at,r.shop_rating,r.barber_rating,
+        b.branch_id,b.barber_id,b.customer_id
+      from private.customer_booking_reviews v
+      join private.customer_booking_ratings r on r.booking_id=v.booking_id
+      join public.bookings b on b.id=v.booking_id
+      where b.status='completed' and (
+        viewer_role='admin' or
+        (viewer_role='manager' and b.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and b.barber_id in (select id from public.barbers where user_id=viewer and status='active'))
+      )
+    ), page as (
+      select * from accessible order by updated_at desc,booking_id limit 25 offset (p_page-1)*25
+    )
+    select jsonb_build_object('total',(select count(*) from accessible),'rows',
+      coalesce((select jsonb_agg(jsonb_build_object(
+        'id',p.booking_id,'review',p.body,'updated_at',p.updated_at,
+        'shop_rating',p.shop_rating,'barber_rating',p.barber_rating,
+        'shop',br.name,'shop_ar',br.name_ar,'barber',ba.name,'barber_ar',ba.name_ar,
+        'reference',upper(left(replace(p.booking_id::text,'-',''),10))
+      ) order by p.updated_at desc,p.booking_id)
+      from page p join public.branches br on br.id=p.branch_id join public.barbers ba on ba.id=p.barber_id),'[]'::jsonb)
+    )
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."shop_reviews"("p_page" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
@@ -1995,6 +2206,18 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 CREATE OR REPLACE TRIGGER "clear_customer_phone_verification" AFTER UPDATE ON "public"."customers" FOR EACH ROW WHEN (((("old"."phone")::"text" IS DISTINCT FROM ("new"."phone")::"text") OR (("old"."country_code")::"text" IS DISTINCT FROM ("new"."country_code")::"text"))) EXECUTE FUNCTION "private"."clear_customer_phone_verification"();
 
 
+CREATE OR REPLACE TRIGGER "capture_barber_schedule_activity" AFTER UPDATE OF "availability", "time_offs", "vacations" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+
+
+CREATE OR REPLACE TRIGGER "capture_booking_activity" AFTER INSERT OR UPDATE OF "date", "time", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+
+
+CREATE OR REPLACE TRIGGER "capture_deadline_activity" AFTER INSERT OR UPDATE OF "setting_value" ON "public"."admin_settings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+
+
+CREATE OR REPLACE TRIGGER "capture_shop_hours_activity" AFTER UPDATE OF "working_hours" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+
+
 CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();
 
 
@@ -2204,6 +2427,18 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."whatsapp_conversations"("id") ON DELETE CASCADE;
 
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
 
 
 CREATE POLICY "Admins delete all notifications" ON "public"."notifications" FOR DELETE USING ("public"."is_admin"());
@@ -2488,6 +2723,18 @@ CREATE POLICY "Barbers view own logs" ON "public"."logs" FOR SELECT TO "authenti
 
 
 
+
+
+CREATE POLICY "Ended sessions cannot read realtime" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "account_realtime_not_revoked"() AS "account_realtime_not_revoked"));
+
+
+CREATE POLICY "Ended sessions cannot read realtime" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "account_realtime_not_revoked"() AS "account_realtime_not_revoked"));
+
+
+CREATE POLICY "Ended sessions cannot read realtime" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "account_realtime_not_revoked"() AS "account_realtime_not_revoked"));
+
+
+CREATE POLICY "Ended sessions cannot read realtime" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "account_realtime_not_revoked"() AS "account_realtime_not_revoked"));
 
 
 CREATE POLICY "Internal trigger cancels reminders" ON "public"."booking_reminders" FOR UPDATE TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1)) WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
@@ -2777,6 +3024,21 @@ GRANT USAGE ON SCHEMA "public" TO "barber_reminder_writer";
 
 
 
+REVOKE ALL ON FUNCTION "public"."account_activity"("p_before" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_activity"("p_before" bigint) TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."account_realtime_not_revoked"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_realtime_not_revoked"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."account_sessions"("p_revoke" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_sessions"("p_revoke" "uuid") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) TO "authenticated";
 
@@ -2860,6 +3122,11 @@ GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_d
 
 
 
+REVOKE ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."detect_suspicious_booking_activity"() TO "anon";
 GRANT ALL ON FUNCTION "public"."detect_suspicious_booking_activity"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."detect_suspicious_booking_activity"() TO "service_role";
@@ -2869,6 +3136,13 @@ GRANT ALL ON FUNCTION "public"."detect_suspicious_booking_activity"() TO "servic
 GRANT ALL ON FUNCTION "public"."detect_suspicious_login_activity"() TO "anon";
 GRANT ALL ON FUNCTION "public"."detect_suspicious_login_activity"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."detect_suspicious_login_activity"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."enforce_account_session"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "service_role";
 
 
 
@@ -2947,6 +3221,11 @@ REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PU
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
+
+
+REVOKE ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) TO "authenticated";
+
 
 
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";

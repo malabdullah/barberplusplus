@@ -139,7 +139,7 @@ select ok((select item->'staff_cancellation'->>'reason'='Shop emergency' and not
   where item->>'id'='dc090000-0000-4000-8000-000000000605'),'the customer receives the reason without the staff account ID');
 reset role;
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000104","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000104","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select lives_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":90,"reschedule_minutes":150}')$$,
   'admin can update both defaults together');
 with deleted as (

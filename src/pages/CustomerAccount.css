@@ -116,3 +116,18 @@
 .ca-appointment-policy { flex-basis: 100%; }
 .ca-booking-copy .ca-appointment-policy p { font-size: 13px; color: var(--booking-muted); }
 .ca-staff-cancellation { padding: 12px; margin-block: 12px; border: 1px solid var(--booking-divider); border-radius: 8px; background: var(--booking-subtle); overflow-wrap: anywhere; }
+
+.ca-rating-review {
+  display: grid;
+  gap: var(--space-xs);
+  grid-column: 1 / -1;
+}
+
+.ca-rating-review textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.ca-rating-review small {
+  color: var(--text-secondary);
+}

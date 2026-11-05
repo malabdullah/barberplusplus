@@ -123,12 +123,16 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
         const identity = await deps.identity(token);
         if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });
-        const { bookingId, shopRating, barberRating } = body;
+        const { bookingId, shopRating, barberRating, review } = body;
         if (typeof bookingId !== 'string' || !uuid.test(bookingId) ||
-          !validRating(shopRating) || !validRating(barberRating)) {
+          !validRating(shopRating) || !validRating(barberRating) ||
+          (review !== undefined && review !== null && (typeof review !== 'string' || Array.from(review.trim()).length > 1000))) {
           return reply(400, { error: 'INVALID_RATING' });
         }
-        return reply(200, await deps.rpc(action, { ...identity, booking_id: bookingId, shop_rating: shopRating, barber_rating: barberRating }));
+        return reply(200, await deps.rpc(action, {
+          ...identity, booking_id: bookingId, shop_rating: shopRating, barber_rating: barberRating,
+          ...(review !== undefined ? { review: typeof review === 'string' ? review.trim() : null } : {}),
+        }));
       }
       if(['profile','update-profile','bookings','logout'].includes(action)) {
         const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';

@@ -139,7 +139,11 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button></div>
+          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button>
+            <Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link>
+            <Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link>
+            <Link to="/support">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link>
+          </div>
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">
           <header className="ca-appointments-heading"><h2 id="appointments">{tr('myAppointments')}</h2><p>{tr('account.appointmentsIntro')}</p></header>
@@ -164,7 +168,7 @@ export default function CustomerAccount() {
                 <div className="ca-booking-meta"><time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(date)}</time><strong>{new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>
                 {!showPast && <UpcomingBookingActions booking={booking} onChange={updateAppointment} onRefresh={() => setRetry(value => value + 1)} />}
                 {showPast && booking.staff_cancellation && <p>{t('bookingPolicy.customerReason', { reason: booking.staff_cancellation.reason })}</p>}
-                {canRate && <BookingRating bookingId={booking.id} shopRating={booking.shop_rating} barberRating={booking.barber_rating} onSaved={updateRating} />}
+                {canRate && <BookingRating bookingId={booking.id} shopRating={booking.shop_rating} barberRating={booking.barber_rating} review={booking.review} onSaved={updateRating} />}
                 {showPast && <div className="ca-rebook-action"><button type="button" className="cb-secondary" disabled={busy || Boolean(rebookingId)} onClick={() => repeatBooking(booking)}>{rebookingId === booking.id ? <Loader2 className="cb-spinner" size={17} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}{tr('account.bookAgain')}</button>{rebookErrorId === booking.id && <p role="alert" className="cb-alert">{tr('account.rebookError')}</p>}</div>}
               </div>
             </article>;

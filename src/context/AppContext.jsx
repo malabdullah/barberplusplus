@@ -33,6 +33,19 @@ export function AppProvider({ children }) {
   const [bookings, setBookings] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminVerified, setAdminVerified] = useState(false);
+
+  const updateAdminAssurance = useCallback(session => {
+    let aal;
+    try {
+      const claims = session?.access_token.split('.')[1];
+      if (claims) aal = JSON.parse(atob(claims.replace(/-/g, '+').replace(/_/g, '/'))).aal;
+    } catch {
+      // Unreadable claims leave the admin route locked.
+    }
+    setAdminVerified(aal === 'aal2');
+  }, []);
+  const hasStaffAccess = isAuthenticated && (userRole !== 'admin' || adminVerified);
   const [loading, setLoading] = useState(true);
   const [barberProfile, setBarberProfile] = useState(null);
   const [barberProfileLoading, setBarberProfileLoading] = useState(false);
@@ -159,6 +172,7 @@ export function AppProvider({ children }) {
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        updateAdminAssurance(session);
         if (session?.user) {
           // SECURITY: Validate role instead of defaulting to 'manager'
           const roleValidation = validateUserRole(session.user.app_metadata?.role);
@@ -186,6 +200,7 @@ export function AppProvider({ children }) {
     // Safely subscribe to auth changes
     try {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        updateAdminAssurance(session);
         // SECURITY: Handle token refresh failure (session expiration)
         if (event === 'TOKEN_REFRESHED' && !session) {
           // Token refresh failed - session expired
@@ -251,7 +266,7 @@ export function AppProvider({ children }) {
     return () => {
       if (subscription) subscription.unsubscribe();
     };
-  }, []);
+  }, [updateAdminAssurance]);
 
   // Get current branch (memoized)
   const selectedBranch = useMemo(() =>
@@ -369,10 +384,10 @@ export function AppProvider({ children }) {
     };
 
     // Wait for both authentication AND role to be determined before loading data
-    if (isAuthenticated && userRole) {
+    if (hasStaffAccess && userRole) {
       loadData();
     }
-  }, [isAuthenticated, userRole]);
+  }, [hasStaffAccess, userRole]);
 
   // Load barber profile when user is a barber
   useEffect(() => {
@@ -444,7 +459,7 @@ export function AppProvider({ children }) {
   notificationSession.current = user?.id;
 
   const reloadNotifications = useCallback(async () => {
-    if (!isAuthenticated || !user?.id) return;
+    if (!hasStaffAccess || !user?.id) return;
     const request = ++notificationRequest.current;
     const userId = user.id;
     try {
@@ -463,7 +478,7 @@ export function AppProvider({ children }) {
     } finally {
       if (request === notificationRequest.current) setNotificationsLoading(false);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [hasStaffAccess, user?.id]);
   notificationRefresh.current = reloadNotifications;
 
   const loadMoreNotifications = useCallback(async () => {
@@ -478,7 +493,7 @@ export function AppProvider({ children }) {
     setNotifications([]);
     setUnreadCount(0);
     setToastNotification(null);
-    if (!isAuthenticated || !user?.id) return;
+    if (!hasStaffAccess || !user?.id) return;
     let active = true;
     let refreshTimer;
     const refresh = () => {
@@ -521,7 +536,7 @@ export function AppProvider({ children }) {
       document.removeEventListener('visibilitychange', visibleRefresh);
       supabase.removeChannel(channel);
     };
-  }, [isAuthenticated, user?.id, userRole]);
+  }, [hasStaffAccess, user?.id, userRole]);
 
   // A transferred shop is no longer visible to its former manager through
   // RLS, so a subscription to that row cannot reliably report the change.
@@ -1187,7 +1202,7 @@ export function AppProvider({ children }) {
         setUser(result.user);
         setUserRole(result.role);
         setIsAuthenticated(true);
-        loggingService.logAuth('login', result.user.id, result.role, true);
+        if (result.role !== 'admin') loggingService.logAuth('login', result.user.id, result.role, true);
         // Branch will be set by the barberProfile loading effect
         return result.role; // Return role for redirect logic
       }
@@ -1340,6 +1355,7 @@ export function AppProvider({ children }) {
     branchBookings,
     metrics,
     isAuthenticated,
+    adminVerified,
     loading,
     theme,
     language,
@@ -1400,7 +1416,7 @@ export function AppProvider({ children }) {
     user, userRole, isAdmin, isAgent, manager,
     branches, barbers, services, bookings,
     selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
-    metrics, isAuthenticated, loading, theme, language,
+    metrics, isAuthenticated, adminVerified, loading, theme, language,
     // Barber state
     managerChair, createManagerChair,
     currentBarber, barberBookings, barberMetrics, barberServices, barberBranch,

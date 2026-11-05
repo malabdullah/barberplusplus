@@ -51,11 +51,11 @@ select throws_ok(current_setting('test.transfer_review'),'42501','TRANSFER_FORBI
 select throws_ok($$update public.barbers set manager_chair=true where id='dc010000-0000-4000-8000-000000000301'$$,
 'P0001','CHAIR_ASSIGNMENT_FIXED','managers cannot bypass the transfer guard');
 reset role;
-select set_config('request.jwt.claims','{"sub":"dc010000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc010000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 set local role authenticated;
 select throws_ok(current_setting('test.transfer_review'),'42501','TRANSFER_FORBIDDEN','stale admin token denied');
 reset role;
-select set_config('request.jwt.claims','{"sub":"dc010000-0000-4000-8000-000000000001","session_id":"dc010000-0000-4000-8000-000000000011","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc010000-0000-4000-8000-000000000001","session_id":"dc010000-0000-4000-8000-000000000011","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 set local role authenticated;
 select results_eq(current_setting('test.transfer_review'),$$values ('{"branchName":"Transfer Branch","incomingName":"Incoming Barber","outgoingName":"Outgoing Manager","outgoingUpcoming":1,"currentlyBookable":true,"remainingBranches":1}'::jsonb)$$,'preview explains exactly which branch and appointments are affected');
 select throws_ok(current_setting('test.transfer_apply'),'P0001','TRANSFER_UPCOMING_APPOINTMENTS','upcoming outgoing appointments block transfer');

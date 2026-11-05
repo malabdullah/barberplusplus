@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { verifyLocalAdmin } from './fixtures/admin-mfa';
 
 const password = 'LocalOnly123!';
 
@@ -11,7 +12,8 @@ async function login(page, email, expectedPath) {
 }
 
 test('administrator reaches only the administrator workspace', async ({ page }) => {
-  await login(page, 'admin@barber.test', '/admin');
+  await login(page, 'admin@barber.test', '/mfa-setup');
+  await verifyLocalAdmin(page);
   await expect(page.locator('a[href*="whatsapp"]')).toHaveCount(0);
   await page.goto('/admin/whatsapp');
   await expect(page).toHaveURL(/\/admin\/?$/);

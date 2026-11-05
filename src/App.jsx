@@ -14,6 +14,9 @@ import ChangePassword from './pages/ChangePassword';
 import AdminPasswordReset from './pages/admin/AdminPasswordReset';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
+import AccountTools from './pages/AccountTools';
+import ShopReviews from './pages/ShopReviews';
+import ContactSupport from './pages/ContactSupport';
 import Dashboard from './pages/Dashboard';
 import Branches from './pages/Branches';
 import AddBranch from './pages/AddBranch';
@@ -68,8 +71,8 @@ const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
-function ProtectedRoute({ children, allowedRole }) {
-  const { isAuthenticated, userRole, loading } = useApp();
+function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
+  const { isAuthenticated, userRole, loading, adminVerified } = useApp();
 
   // Show loading while auth state is being determined
   if (loading) {
@@ -103,6 +106,9 @@ function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
 
+  if (userRole === 'admin' && requireAdminMfa && !adminVerified) {
+    return <Navigate to="/mfa-setup" replace />;
+  }
   return children;
 }
 
@@ -146,6 +152,9 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
+      <Route path="/support" element={<ContactSupport />} />
+      {customerFeaturesEnabled && <Route path="/customer/sessions" element={<AccountTools key="customer-sessions" view="sessions" customer />} />}
+      {customerFeaturesEnabled && <Route path="/customer/activity" element={<AccountTools key="customer-activity" view="activity" customer />} />}
       <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
       <Route
@@ -176,7 +185,7 @@ function AppRoutes() {
       />
       <Route
         path="/mfa-setup"
-        element={<MFASetup />}
+        element={<ProtectedRoute allowedRole="admin" requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
       />
 
       </Route>
@@ -206,6 +215,9 @@ function AppRoutes() {
         <Route path="logs" element={<Logs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools key="staff-sessions" view="sessions" />} />
+        <Route path="activity" element={<AccountTools key="staff-activity" view="activity" />} />
+        <Route path="reviews" element={<ShopReviews />} />
       </Route>
 
       {/* Barber Routes */}
@@ -224,6 +236,9 @@ function AppRoutes() {
         <Route path="logs" element={<MyLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools key="staff-sessions" view="sessions" />} />
+        <Route path="activity" element={<AccountTools key="staff-activity" view="activity" />} />
+        <Route path="reviews" element={<ShopReviews />} />
       </Route>
 
       {/* Admin Routes */}
@@ -250,6 +265,9 @@ function AppRoutes() {
         <Route path="audit/security" element={<SecurityEvents />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools key="staff-sessions" view="sessions" />} />
+        <Route path="activity" element={<AccountTools key="staff-activity" view="activity" />} />
+        <Route path="reviews" element={<ShopReviews />} />
       </Route>
 
       {/* Agent Routes */}
@@ -268,6 +286,8 @@ function AppRoutes() {
         <Route path="customers" element={<AgentCustomers />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools key="staff-sessions" view="sessions" />} />
+        <Route path="activity" element={<AccountTools key="staff-activity" view="activity" />} />
       </Route>
 
       <Route path="*" element={<Navigate to={getDefaultRoute()} replace />} />

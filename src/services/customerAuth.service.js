@@ -143,8 +143,8 @@ export const customerAuthService = {
     bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5),
   }, true),
   async bookings() { return (await request('bookings', {}, true)).bookings; },
-  async rateBooking(bookingId, shopRating, barberRating) {
-    return request('rate-booking', { bookingId, shopRating, barberRating }, true);
+  async rateBooking(bookingId, shopRating, barberRating, review) {
+    return request('rate-booking', { bookingId, shopRating, barberRating, review }, true);
   },
   async logout() {
     try { await request('logout', {}, true); } catch (error) { if (error.message !== 'AUTH_REQUIRED') throw error; }
