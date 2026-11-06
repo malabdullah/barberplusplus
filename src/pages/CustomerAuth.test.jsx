@@ -85,3 +85,4 @@ it('returns password recovery to customer sign in', () => {
   mount('forgot-password');
   expect(screen.getByRole('link', { name: en.customerAuth.backToSignIn })).toHaveAttribute('href', '/customer/sign-in');
 });
+vi.mock('../services/registration.service',()=>({registrationService:{correct:vi.fn()}}));

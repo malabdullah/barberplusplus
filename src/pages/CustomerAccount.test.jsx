@@ -29,20 +29,24 @@ it('keeps profile edits local until save, discards cancelled edits and validates
   expect(screen.queryByDisplayValue('Unsaved name')).not.toBeInTheDocument(); expect(auth.updateProfile).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
   expect(screen.getByLabelText('Your name')).toHaveValue('Test Customer');
-  fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'invalid-email' } });
+  expect(screen.getByLabelText('Email address')).toHaveAttribute('readonly');
+  expect(screen.getByText(en.accountEmail.adminOnly)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Your name'), { target: { value: '' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.INVALID_DETAILS);
   expect(auth.updateProfile).not.toHaveBeenCalled();
 });
-it('preserves the edit form on failure and explains pending email confirmation after a successful save', async () => {
+it('preserves editable details on failure while keeping the account email unchanged', async () => {
   auth.updateProfile.mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce({});
   mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
-  fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'updated@example.test' } });
+  fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Updated Customer' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.UNAVAILABLE);
-  expect(screen.getByLabelText('Email address')).toHaveValue('updated@example.test');
+  expect(screen.getByLabelText('Email address')).toHaveValue('customer@example.test');
+  expect(screen.getByLabelText('Your name')).toHaveValue('Updated Customer');
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-  expect(await screen.findByText(en.customerAuth.email.changeSent)).toBeInTheDocument();
+  expect(await screen.findByText(en.customerAuth.profileSaved)).toBeInTheDocument();
+  expect(auth.updateProfile).toHaveBeenLastCalledWith(expect.objectContaining({email:'customer@example.test',name:'Updated Customer'}));
 });
 it('renders time values with seconds as Kuwait time and preserves status, services and currency in Arabic', async () => {
   customerAuthService.bookings.mockResolvedValue([{ id: 'booking', date: '2026-11-02', time: '09:30:00', price: 5, status: 'no_show', shop_name: 'Test Shop', shop_name_ar: 'صالون الاختبار', barber_name: 'Test Barber', barber_name_ar: 'حلاق الاختبار', services: [{ name: 'Haircut', name_ar: 'قص شعر' }] }]);

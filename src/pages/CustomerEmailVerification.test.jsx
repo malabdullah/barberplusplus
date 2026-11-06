@@ -47,3 +47,4 @@ it('can request a new code after opening the verification page without a pending
   expect(await screen.findByText(en.customerAuth.email.resent)).toBeInTheDocument();
   expect(JSON.parse(sessionStorage.getItem('barber-customer-email-pending')).email).toBe('test@example.test');
 });
+vi.mock('../services/registration.service',()=>({registrationService:{correct:vi.fn()}}));

@@ -81,6 +81,25 @@ Deno.serve(createCustomerAuthHandler({
     return typeof name==='string'?name.slice(0,120):'';
   },
   identity:token=>customerIdentity(admin,token),
+  emailManagement:{
+    correct:async(input)=>{
+      const {data,error}=await admin.rpc('correct_registration_email',{p_email:input.email,p_new_email:input.newEmail,p_password:input.password,p_audience:input.audience});
+      if(error)throw Error(error.message);
+      return data;
+    },
+    deliver:async(email,audience,returnTo)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const callback=new URL('/customer/email-callback',appUrl);callback.searchParams.set('next',audience==='team'?'work':returnTo==='/book'?'book':'account');
+      const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:callback.href}});
+      if(error)throw Error('UNAVAILABLE');
+    },
+    admin:async(token,action,data)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
+      const result=await client.rpc('admin_account_email',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+  },
   registration:{
     signup:async(input)=>{
       const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});

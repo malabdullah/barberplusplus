@@ -280,7 +280,9 @@
     "resendFailed": "Failed to resend. Try again later.",
     "checkSpamFolder": "Check your spam folder if you don't see the email.",
     "sending": "Sending...",
-    "repeatPassword": "Repeat password"
+    "repeatPassword": "Repeat password",
+    "registrationCorrected": "Your email was corrected. Verify the new address using the latest email.",
+    "registrationCorrectionDeliveryFailed": "Your email was corrected, but the verification email could not be sent. Please use Resend."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2121,6 +2123,38 @@
       "PASSWORD_UPDATE_UNCERTAIN": "We could not confirm the result. Sign in again with your new password. If it does not work, use Forgot password. Do not keep retrying this update.",
       "RATE_LIMITED": "Too many attempts. Please wait before trying again.",
       "INVALID_INVITE": "This invitation is invalid, expired or has already been used."
+    }
+  },
+  "accountEmail": {
+    "adminOnly": "Only an administrator can change your email. Contact support for help.",
+    "correct": "Correct email address",
+    "correctionHint": "Entered the wrong email? Enter the correct address and your registration password. This is available only before verification.",
+    "newEmail": "New email address",
+    "registrationPassword": "Registration password",
+    "correcting": "Correcting email…",
+    "saveCorrection": "Correct and send verification",
+    "corrected": "Your email was corrected. Verify the new address using the latest email.",
+    "deliveryFailed": "Your email was corrected, but the verification email could not be sent. Please use Resend.",
+    "title": "Account email addresses",
+    "description": "Only administrators can change account emails. Changes are recorded and sign the affected account out.",
+    "account": "Account",
+    "currentEmail": "Current email",
+    "confirmEmail": "Confirm new email address",
+    "reason": "Reason for changing the email",
+    "acknowledge": "I have confirmed this address with the user. I understand that their current sessions will end and Google/Apple identities will remain linked.",
+    "changed": "Email updated. The user must sign in again.",
+    "errors": {
+      "EMAIL_IN_USE": "This email is already associated with another account or sign-in method.",
+      "REGISTRATION_CANNOT_CORRECT": "This registration cannot be corrected. Check the registration password. If the email is already verified, contact an administrator.",
+      "RATE_LIMITED": "Too many attempts. Please wait before trying again.",
+      "INVALID_DETAILS": "Check the email addresses, password, and required fields.",
+      "UNAVAILABLE": "We could not complete this request. Please check the address and try again.",
+      "EMAIL_UNCHANGED": "Enter a different email address.",
+      "EMAIL_CHANGED_REFRESH": "This account changed. Refresh the page and try again.",
+      "FORBIDDEN": "Only an administrator can perform this action.",
+      "ADMIN_MFA_REQUIRED": "Complete admin two-factor authentication to continue.",
+      "AUTH_REQUIRED": "Sign in again to continue.",
+      "SESSION_ENDED": "Your session ended. Please sign in again."
     }
   }
 }

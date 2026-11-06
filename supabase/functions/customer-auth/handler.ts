@@ -2,6 +2,7 @@ import { customerPushAction } from './push.ts';
 import { customerPasswordAction, type PasswordDependencies } from './password.ts';
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 import { managerRegistrationAction, type RegistrationDependencies } from './registration.ts';
+import { emailManagementAction, type EmailManagementDependencies } from './email-management.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Dependencies = {
@@ -21,6 +22,7 @@ type Dependencies = {
   resetPassword: (id: string, password: string, guardId?: string) => Promise<void>;
   passwords?: PasswordDependencies;
   registration?: RegistrationDependencies;
+  emailManagement?: EmailManagementDependencies;
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,6 +55,12 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       let body: Data;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return reply(400,{error:'INVALID_REQUEST'});}
       if(!body || typeof body!=='object' || Array.isArray(body)) return reply(400,{error:'INVALID_REQUEST'});
       const action=String(body.action);
+      if (['correct-registration-email','admin-email-list','admin-email-change'].includes(action)) {
+        if (!deps.emailManagement) return reply(404,{error:'NOT_AVAILABLE'});
+        const result=await emailManagementAction({action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',secret:deps.secret,appUrl:deps.appUrl,deps:deps.emailManagement,
+          limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max}))});
+        return reply(result.status,result.body);
+      }
       if (action.startsWith('manager-')) {
         if (!deps.registration) return reply(404, { error: 'NOT_AVAILABLE' });
         const result = await managerRegistrationAction({ action, body, ip: req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local', secret: deps.secret, appUrl: deps.appUrl,
@@ -165,6 +173,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(action==='profile')return reply(200,{profile});
         if(action==='logout')return reply(200,await deps.rpc('logout',identity));
         if(action==='bookings')return reply(200,{bookings:await deps.rpc('bookings',identity)});
+        if (typeof body.email==='string' && body.email.trim().toLowerCase()!==String((profile as Data)?.email || '').toLowerCase()) return reply(403,{error:'EMAIL_ADMIN_ONLY'});
         const details=contact(body);if(!details)return reply(400,{error:'INVALID_DETAILS'});
         let phoneDetails={};
         if ('phone' in body) {
