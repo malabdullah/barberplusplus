@@ -186,9 +186,10 @@ export default function Settings() {
                 type="email"
                 name="email"
                 value={profile.email}
-                onChange={handleProfileChange}
+                readOnly
                 className="form-input"
               />
+              <p className="form-help">{t('accountEmail.adminOnly')}</p>
             </div>
 
             <div className="form-group">

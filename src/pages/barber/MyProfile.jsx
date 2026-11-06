@@ -251,11 +251,12 @@ export default function MyProfile({ chair = false }) {
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                readOnly
                 className={`form-input ${errors.email ? 'error' : ''}`}
                 placeholder="barber@example.com"
               />
               {errors.email && <span className="form-error">{errors.email}</span>}
+              <p className="form-help">{t('accountEmail.adminOnly')}</p>
             </div>
 
             <div className="form-group">

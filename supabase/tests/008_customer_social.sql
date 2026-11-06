@@ -40,7 +40,7 @@ select public.customer_account_api('issue',jsonb_build_object('id','88888888-000
 select set_config('test.new_payload',public.customer_account_api('consume',current_setting('test.new_social')::jsonb||'{"id":"88888888-0000-4000-8000-000000000402","purpose":"social","code_hash":"correct"}')::text,true);
 select is(public.customer_account_api('social-link',current_setting('test.new_social')::jsonb||current_setting('test.new_payload')::jsonb)->>'phone','59999712','new social customer gets verified phone');
 select is(public.customer_account_api('profile',current_setting('test.new_social')::jsonb)->>'email',null,'provider email is not imported into contact profile');
-select is(public.customer_account_api('update-profile',current_setting('test.new_social')::jsonb||'{"name":"New Social Customer","email":"later@customer.test"}')->>'email','later@customer.test','email can be added later in profile');
+select is(public.customer_account_api('update-profile',current_setting('test.new_social')::jsonb||'{"name":"New Social Customer","email":"later@customer.test"}')->>'email','fresh@oauth.test','profile edits retain the trusted Auth email instead of a supplied address');
 -- Phone recovery revokes both original and linked provider sessions.
 select public.customer_account_api('issue','{"id":"88888888-0000-4000-8000-000000000403","purpose":"recovery","phone_e164":"+96559999711","code_hash":"reset","payload":{}}');
 select public.customer_account_api('consume','{"id":"88888888-0000-4000-8000-000000000403","purpose":"recovery","code_hash":"reset"}');

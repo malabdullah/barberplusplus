@@ -1,17 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
-import { appConfig } from '../lib/runtimeConfig';
+import { customerAuthService } from './customerAuth.service';
+import { registrationService } from './registration.service';
 import { supabase } from '../lib/supabase';
 import {
   authRateLimiter,
   signupRateLimiter,
   passwordResetRateLimiter,
   validateUserRole,
-  validateRedirectUrl,
 } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
-
-// Email links must also work on a different browser/device.
-const mailClient = () => createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit' } });
 
 export const authService = {
   /**
@@ -58,30 +54,21 @@ export const authService = {
    * @returns {Promise<{success: boolean, user?: object, error?: string}>}
    */
   signup: async (userData) => {
+    const email = userData.email.trim().toLowerCase();
     // SECURITY: Rate limiting to prevent abuse
-    const rateLimitCheck = signupRateLimiter.check(userData.email.toLowerCase());
+    const rateLimitCheck = signupRateLimiter.check(email);
     if (!rateLimitCheck.allowed) {
       return { success: false, error: `Too many signup attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
-    const { data, error } = await mailClient().auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        data: { name: userData.name, phone: userData.phone }
-      }
-    });
-
-    if (error) {
-      // Map Supabase error to user-friendly message
-      if (/Database error saving new user/i.test(error.message)) return { success: false, error: 'PHONE_REGISTRATION_CONFLICT' };
-      const friendlyError = getErrorMessage(error, 'Registration failed. Please try again.');
-      return { success: false, error: friendlyError };
+    try {
+      const result = await registrationService.signup({ name: userData.name, email, phone: userData.phone, password: userData.password });
+      signupRateLimiter.reset(email);
+      return result;
+    } catch (failure) {
+      const code = ['SIGNUP_EMAIL_EXISTS', 'PHONE_REGISTRATION_CONFLICT', 'INVALID_PHONE', 'INVALID_DETAILS', 'WEAK_PASSWORD', 'RATE_LIMITED'].includes(failure.message) ? failure.message : 'REGISTRATION_FAILED';
+      return { success: false, error: code };
     }
-
-    // Reset rate limit on success
-    signupRateLimiter.reset(userData.email.toLowerCase());
-    return { success: true, user: data.user };
   },
 
   /**
@@ -104,12 +91,9 @@ export const authService = {
       return { success: false, error: `Too many reset attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
-    // SECURITY: Validate redirect URL
-    const safeRedirectUrl = validateRedirectUrl(`${window.location.origin}/reset-password`);
-
-    const { error } = await mailClient().auth.resetPasswordForEmail(email, {
-      redirectTo: safeRedirectUrl,
-    });
+    let error;
+    try { await customerAuthService.requestRecovery({ email, audience: 'work' }); }
+    catch (failure) { error = failure; }
 
     if (error) {
       // Map Supabase error to user-friendly message

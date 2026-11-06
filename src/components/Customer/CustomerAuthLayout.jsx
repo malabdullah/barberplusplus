@@ -7,12 +7,12 @@ import { ArrowLeft } from 'lucide-react';
 import '../../pages/CustomerBooking.css';
 import '../../pages/CustomerAuth.css';
 
-export default function CustomerAuthLayout({ title, intro, children, returnTo = '/customer/account', backToBooking = false, accountType = 'customer' }) {
+export default function CustomerAuthLayout({ title, intro, children, returnTo = '/customer/account', backToBooking = false, accountType = 'customer', backTo, backLabel }) {
   const { t, i18n } = useTranslation();
   useEffect(() => { document.title = `${title} | Barber++`; }, [title]);
   return <div className="customer-booking ca-page ca-auth" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
     <main className="ca-main">
-      <Link className="cb-text-button ca-back" onClick={() => { if (backToBooking) clearFavouriteIntent(); }} to={accountType === 'team' ? '/' : backToBooking ? '/book' : customerAuthPath('/customer/sign-in', returnTo)} state={{ returnTo }}><ArrowLeft size={18} aria-hidden="true" />{accountType === 'team' ? t('teamAuth.backHome') : t(`customerAuth.${backToBooking ? 'backToBooking' : 'backToSignIn'}`)}</Link>
+      <Link className="cb-text-button ca-back" onClick={() => { if (backToBooking) clearFavouriteIntent(); }} to={backTo || (accountType === 'team' ? '/' : backToBooking ? '/book' : customerAuthPath('/customer/sign-in', returnTo))} state={{ returnTo }}><ArrowLeft size={18} aria-hidden="true" />{backLabel || (accountType === 'team' ? t('teamAuth.backHome') : t(`customerAuth.${backToBooking ? 'backToBooking' : 'backToSignIn'}`))}</Link>
       <section className="ca-panel" aria-labelledby="customer-auth-title">
         <header className="ca-heading"><p className="ca-eyebrow">{t(accountType === 'team' ? 'teamAuth.eyebrow' : 'customerAuth.customerAccount')}</p><h1 id="customer-auth-title">{title}</h1>{intro && <p className="cb-intro">{intro}</p>}</header>
         {children}

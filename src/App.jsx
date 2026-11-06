@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
@@ -12,6 +12,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
 import AdminPasswordReset from './pages/admin/AdminPasswordReset';
+import AccountEmails from './pages/admin/AccountEmails';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
 import Dashboard from './pages/Dashboard';
@@ -63,14 +64,15 @@ const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerifi
 const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
 const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
 const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
+const CustomerPassword = lazy(() => import('./pages/CustomerPassword'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
-function ProtectedRoute({ children, allowedRole }) {
-  const { isAuthenticated, userRole, loading } = useApp();
+function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
+  const { isAuthenticated, userRole, loading, adminVerified } = useApp();
 
   // Show loading while auth state is being determined
   if (loading) {
@@ -104,11 +106,13 @@ function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
 
+  if (userRole === 'admin' && requireAdminMfa && !adminVerified) return <Navigate to="/mfa-setup" replace />;
   return children;
 }
 
 function AppRoutes() {
   const { isAuthenticated, userRole, loading } = useApp();
+  const location = useLocation();
 
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/';
@@ -122,7 +126,10 @@ function AppRoutes() {
   };
 
   // Show loading while auth state is being determined
-  if (loading) {
+  // Email verification establishes a staff session before its callback settles.
+  // Keep that public callback mounted while staff data loads: its one-time URL
+  // has already been cleared, so remounting would report a false expired link.
+  if (loading && location.pathname !== '/customer/email-callback') {
     return (
       <div style={{
         display: 'flex',
@@ -141,6 +148,7 @@ function AppRoutes() {
     <Routes>
       <Route element={<PublicLayout />}>
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
+      {customerFeaturesEnabled && <Route path="/customer/password" element={<Suspense fallback={null}><CustomerPassword /></Suspense>} />}
       {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
       {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}
@@ -177,7 +185,7 @@ function AppRoutes() {
       />
       <Route
         path="/mfa-setup"
-        element={<MFASetup />}
+        element={<ProtectedRoute allowedRole="admin" requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
       />
 
       </Route>
@@ -239,6 +247,7 @@ function AppRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="users/passwords" element={<AdminPasswordReset />} />
+        <Route path="users/emails" element={<AccountEmails />} />
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
         <Route path="analytics" element={<PlatformAnalytics />} />

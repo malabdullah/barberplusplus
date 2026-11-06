@@ -1,6 +1,7 @@
 import { customerCapable } from '../lib/accountSession';
+import { passwordProof, rememberPasswordProof, forgetPasswordProof } from '../lib/customerPasswordProof';
+import { nativeEmailReturn } from '../lib/nativeEmailReturn';
 import { rememberBookingReturn } from '../utils/customerBookingDraft';
-import { createClient } from '@supabase/supabase-js';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
 import { functionFetch } from '../lib/functionFetch';
 import { customerSupabase, CUSTOMER_AUTH_STORAGE_KEY } from '../lib/customerSupabase';
@@ -14,11 +15,19 @@ async function request(action, data = {}, authenticated = false) {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
   const token = authenticated ? await customerToken() : '';
   if (authenticated && !token) throw new Error('AUTH_REQUIRED');
-  const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
-    method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
-  });
-  const result = await response.json();
+  let response; let result;
+  try {
+    response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
+      method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
+    });
+    result = await response.json();
+  } catch (error) {
+    // A transport timeout may occur after the server committed the password.
+    // Do not present a retryable form for an unknown credential-write outcome.
+    if (['password-change', 'email-reset'].includes(action)) throw new Error('PASSWORD_UPDATE_UNCERTAIN', { cause: error });
+    throw error;
+  }
   if (!response.ok) throw new Error(result.error || 'UNAVAILABLE');
   return result;
 }
@@ -27,10 +36,10 @@ async function acceptSession(result) {
   if (error) throw new Error('SIGN_IN_REQUIRED');
   return result.profile;
 }
-async function clearCustomerSession() {
+async function clearCustomerSession(alreadyRevoked = false) {
   const { error } = await customerSupabase.auth.signOut({ scope: 'local' });
   if (!error) return;
-  if (error.name !== 'AuthSessionMissingError') throw new Error('UNAVAILABLE');
+  if (!alreadyRevoked && error.name !== 'AuthSessionMissingError') throw new Error('UNAVAILABLE');
   // The gateway has already revoked this session. Auth JS treats the resulting
   // session_not_found response as an error before clearing its persisted token.
   // Both modes share these keys; signing out ends the one active account.
@@ -96,9 +105,38 @@ export const customerAuthService = {
   async login({ email, password }) { return acceptSession(await request('email-login', { email, password })); },
   requestSignup: ({ name, email, password, returnTo }) => request('email-signup', { name, email, password, returnTo }),
   resendConfirmation: ({ email, returnTo }) => request('email-resend', { email, returnTo }),
-  requestRecovery: ({ email, returnTo }) => request('email-recovery', { email, returnTo }),
-  async verifyEmailCode({ email, code, purpose }) {
+  requestRecovery: ({ email, returnTo, audience }) => request('email-recovery', { email, returnTo, ...(audience === 'work' ? { audience } : {}) }),
+  passwordStatus: () => request('password-status', {}, true),
+  async nativeRecoveryDelivery(input) {
+    const url = new URL(input); const hash = new URLSearchParams(url.hash.slice(1));
+    const result = await request('password-native-delivery', { requestId: url.searchParams.get('request_id'), nativeState: url.searchParams.get('state'), tokenHash: hash.get('token_hash') || url.searchParams.get('token_hash') });
+    return nativeEmailReturn(input, appConfig, result.deliveryToken);
+  },
+  setupPassword: ({ audience, returnTo } = {}) => request('password-setup-request', { ...(audience === 'work' ? { audience } : {}), ...(returnTo === '/book' ? { returnTo } : {}) }, true),
+  async changePassword({ currentPassword, password, confirmPassword }) {
+    try { await request('password-change', { currentPassword, password, confirmPassword }, true); }
+    catch (error) { if (error.message === 'PASSWORD_UPDATE_UNCERTAIN') { forgetPasswordProof(); await clearCustomerSession(true).catch(() => {}); } throw error; }
+    forgetPasswordProof(); await clearCustomerSession(true);
+  },
+  async verifyRecovery({ requestId, code, tokenHash, signInPath }) {
+    const result = await request('password-recovery-verify', { requestId, ...(tokenHash ? { tokenHash } : { code }) });
+    if (!result.session || (!customerCapable(result.session.user?.app_metadata?.role) && !result.legacyRecovery)) throw new Error('INVALID_CODE');
+    const { error } = await customerSupabase.auth.setSession(result.session);
+    if (error) throw new Error('INVALID_CODE');
+    rememberPasswordProof(result, signInPath);
+    return result;
+  },
+  async verifyInvite(tokenHash) {
+    const result = await request('password-invite-verify', { tokenHash });
+    if (result.session?.user?.app_metadata?.role !== 'barber') throw new Error('INVALID_CODE');
+    const { error } = await customerSupabase.auth.setSession(result.session);
+    if (error) throw new Error('INVALID_CODE');
+    rememberPasswordProof(result, '/login');
+    return result;
+  },
+  async verifyEmailCode({ email, code, purpose, requestId, signInPath }) {
     if (!['signup', 'recovery'].includes(purpose) || !/^\d{6,10}$/.test(code)) throw new Error('INVALID_CODE');
+    if (purpose === 'recovery') return this.verifyRecovery({ requestId, code, signInPath });
     const result = await customerSupabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code, type: purpose === 'recovery' ? 'recovery' : 'email' });
     if (result.error) throw new Error(result.error.status === 429 ? 'RATE_LIMITED' : result.error.status >= 500 ? 'UNAVAILABLE' : 'INVALID_CODE');
     if (!customerCapable(result.data.user?.app_metadata?.role) || !result.data.user?.email_confirmed_at || !result.data.session) {
@@ -106,17 +144,29 @@ export const customerAuthService = {
       throw new Error('INVALID_CODE');
     }
   },
-  async resetPassword({ password }) { await request('email-reset', { password }, true); await clearCustomerSession(); },
+  async resetPassword({ password, confirmPassword }) {
+    const proof = passwordProof();
+    if (!proof) throw new Error('PASSWORD_PROOF_REQUIRED');
+    try { await request('email-reset', { password, confirmPassword, proof: proof.proof }, true); }
+    catch (error) { if (error.message === 'PASSWORD_UPDATE_UNCERTAIN') { forgetPasswordProof(); await clearCustomerSession(true).catch(() => {}); } throw error; }
+    forgetPasswordProof(); await clearCustomerSession(true);
+  },
   async ensureEmailProfile(name = '') { return (await request('email-ensure', { name }, true)).profile; },
   async finishEmail(url) {
     const callback = new URL(url);
     let type = callback.searchParams.get('type');
-    const token = callback.searchParams.get('token_hash');
-    const code = callback.searchParams.get('code');
     const fragment = new URLSearchParams(callback.hash.slice(1));
+    type ||= fragment.get('type');
+    const token = callback.searchParams.get('token_hash') || fragment.get('token_hash');
+    const code = callback.searchParams.get('code');
     // Remove one-time credentials and provider error details before rendering links.
     window.history.replaceState(null, '', callback.pathname);
     if (callback.searchParams.has('error') || fragment.has('error')) throw new Error('INVALID_CODE');
+    if (type === 'recovery') {
+      if (!token || !callback.searchParams.get('request_id')) throw new Error('PASSWORD_PROOF_REQUIRED');
+      const result = await this.verifyRecovery({ requestId: callback.searchParams.get('request_id'), tokenHash: token, signInPath: callback.searchParams.get('next') === 'work' ? '/login' : '/customer/sign-in' });
+      return { recovery: true, legacyRecovery: result.legacyRecovery === true, returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account' };
+    }
     let result;
     if (fragment.has('access_token') && fragment.has('refresh_token') && ['signup', 'magiclink', 'recovery', 'email_change'].includes(fragment.get('type'))) {
       if (type && type !== fragment.get('type')) throw new Error('INVALID_CODE');
@@ -131,20 +181,11 @@ export const customerAuthService = {
     }
     return { recovery: type === 'recovery', returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account' };
   },
-  async changeEmail(email) {
-    const { data, error: sessionError } = await customerSupabase.auth.getSession();
-    if (sessionError || !data.session) throw new Error('AUTH_REQUIRED');
-    // Each confirmation link must work independently, including on another device.
-    const client = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit' } });
-    const { error: setError } = await client.auth.setSession(data.session);
-    if (setError) throw new Error('AUTH_REQUIRED');
-    const { error } = await client.auth.updateUser({ email }, { emailRedirectTo: `${window.location.origin}/customer/email-callback` });
-    if (error) throw new Error('UNAVAILABLE');
-  },
+  changeEmail() { return Promise.reject(new Error('EMAIL_ADMIN_ONLY')); },
   async updateProfile(data) {
     const { data: auth, error } = await customerSupabase.auth.getUser();
     if (error || !customerCapable(auth.user?.app_metadata?.role)) throw new Error('AUTH_REQUIRED');
-    if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) await this.changeEmail(data.email.trim());
+    if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) throw new Error('EMAIL_ADMIN_ONLY');
     return (await request('update-profile', { ...data, email: auth.user.email || '' }, true)).profile;
   },
   appointmentSlots: (bookingId, date) => request('appointment-slots', { bookingId, date }, true),

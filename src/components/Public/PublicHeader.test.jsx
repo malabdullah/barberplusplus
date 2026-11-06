@@ -9,13 +9,14 @@ import ar from '../../i18n/locales/ar.json';
 import PublicLayout from './PublicLayout';
 import { usePublicNavigationBusy } from './PublicNavigationContext';
 
-const state = vi.hoisted(() => ({ isAuthenticated: false, userRole: null, customer: null }));
+const state = vi.hoisted(() => ({ isAuthenticated: false, userRole: null, customer: null, logout: vi.fn() }));
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({ ...state, language: 'en', theme: 'dark', setLanguage: vi.fn(), setTheme: vi.fn() }) }));
-vi.mock('../../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: state.customer }) }));
+vi.mock('../../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: state.customer, logout: state.logout }) }));
 vi.mock('../../lib/runtimeConfig', () => ({ customerFeaturesEnabled: true }));
 let i18n;
 beforeEach(async () => {
   state.isAuthenticated = false; state.userRole = null; state.customer = null;
+  state.logout.mockReset().mockResolvedValue(undefined);
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   vi.stubGlobal('matchMedia', () => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   i18n = i18next.createInstance();
@@ -34,6 +35,33 @@ const header = () => within(screen.getByRole('banner'));
 function openShops() { fireEvent.click(header().getByRole('button', { name: 'Shops', exact: true })); return header().getByRole('group', { name: 'Shops' }); }
 
 describe('simple public navigation', () => {
+  it('signs out from the mobile menu once and returns to booking', async () => {
+    let finish;
+    state.customer = { name: 'Customer' };
+    state.logout.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    mount('/customer/account');
+    fireEvent.click(header().getByRole('button', { name: 'Open menu' }));
+    const signOut = header().getByRole('button', { name: 'Sign out' });
+    fireEvent.click(signOut); fireEvent.click(signOut);
+    expect(state.logout).toHaveBeenCalledTimes(1);
+    expect(header().getByRole('button', { name: 'Signing out…' })).toBeDisabled();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    finish();
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/book'));
+    expect(header().getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
+  });
+  it('keeps a failed sign-out in place and permits a retry from the desktop account menu', async () => {
+    state.customer = { name: 'Customer' };
+    state.logout.mockRejectedValueOnce(new Error('UNAVAILABLE'));
+    mount('/customer/account');
+    fireEvent.click(header().getByRole('button', { name: 'My account', exact: true }));
+    fireEvent.click(header().getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(header().getByRole('alert')).toHaveTextContent(en.customerAuth.errors.UNAVAILABLE));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/customer/account');
+    fireEvent.click(header().getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/book'));
+    expect(state.logout).toHaveBeenCalledTimes(2);
+  });
   it('keeps customer actions direct and shop actions grouped, preserving the booking return', () => {
     mount('/book');
     expect(header().queryByRole('link', { name: 'Home', exact: true })).not.toBeInTheDocument();

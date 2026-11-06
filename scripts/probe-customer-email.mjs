@@ -21,11 +21,11 @@ async function call(action,data={},token='',fn='customer-auth') {
 }
 async function message(subject) {
  const response=await fetch('http://127.0.0.1:55324/api/v1/messages');const inbox=await response.json();
- const found=inbox.messages.find(item=>item.Subject===subject && item.To.some(recipient=>recipient.Address===email) && !messageIds.includes(item.ID));
+ const found=inbox.messages.find(item=>(subject==='Reset your Barber++ password'?/reset.*password/i.test(item.Subject):item.Subject===subject) && item.To.some(recipient=>recipient.Address===email) && !messageIds.includes(item.ID));
  assert.ok(found,'local confirmation message is delivered');messageIds.push(found.ID);
  const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${found.ID}`)).json();
- const match=detail.Text.match(/http:\/\/localhost:5173\/customer\/email-callback\?[^\s]+/);assert.ok(match,'customer email callback link exists');
- const url=new URL(match[0]);return {type:url.searchParams.get('type'),token_hash:url.searchParams.get('token_hash')};
+ const match=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(match,'customer email callback link exists');
+ const url=new URL(match[0].replaceAll('&amp;','&'));return {type:url.searchParams.get('type'),token_hash:url.searchParams.get('token_hash') || url.searchParams.get('token')};
 }
 try {
  const signup=await call('email-signup',{name:'Email Probe Customer',email,password:'Short12!',returnTo:'/book'});assert.equal(signup.status,200,JSON.stringify(signup.data));
@@ -51,28 +51,33 @@ try {
  const booking=await call('book',{...selection,time:slots.data.slots[0],verification:proof.data.verification},token,'customer-booking');if(booking.data.id)createdBookings.push(booking.data.id);assert.equal(booking.status,200,JSON.stringify(booking.data));
  const mine=await call('bookings',{},token);assert.equal(mine.status,200);assert.ok(mine.data.bookings.some(item=>item.id===booking.data.id));
  const recovery=await call('email-recovery',{email,returnTo:'/book'});assert.equal(recovery.status,200,JSON.stringify(recovery.data));
- const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await client.auth.verifyOtp(resetLink);assert.ifError(recovered.error);
- const reset=await call('email-reset',{password:'Newpass1!'},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));
+ const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await call('password-recovery-verify',{requestId:recovery.data.requestId,tokenHash:resetLink.token_hash});assert.equal(recovered.status,200,JSON.stringify(recovered.data));
+ const reset=await call('email-reset',{password:'Newpass1!',confirmPassword:'Newpass1!',proof:recovered.data.proof},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));
  assert.equal((await call('profile',{},token)).status,401,'reset revokes old access session');
  assert.equal((await call('email-login',{email,password:'Short12!'})).status,401);
  const login=await call('email-login',{email,password:'Newpass1!'});assert.equal(login.status,200,JSON.stringify(login.data));assert.equal(login.data.profile.phone,phone);
  const setSession=await client.auth.setSession(login.data.session);assert.ifError(setSession.error);
  const changer=createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
  assert.ifError((await changer.auth.setSession(login.data.session)).error);
- const update=await changer.auth.updateUser({email:changedEmail},{emailRedirectTo:'http://localhost:5173/customer/email-callback'});assert.ifError(update.error);
- const pending=await client.auth.getUser();assert.equal(pending.data.user.email,email,'email remains unchanged before confirmation');
+ const update=await changer.auth.updateUser({email:changedEmail},{emailRedirectTo:'http://localhost:5173/customer/email-callback'});
+ assert.ok(update.error,'verified customers cannot request email changes directly');
+ const unchanged=await client.auth.getUser();assert.equal(unchanged.data.user.email,email,'blocked self-service change preserves the primary email');
  const inbox=await(await fetch('http://127.0.0.1:55324/api/v1/messages')).json();
  const messages=inbox.messages.filter(item=>item.To.some(recipient=>[email,changedEmail].includes(recipient.Address)) && !messageIds.includes(item.ID));
- assert.equal(messages.length,2,'both addresses receive change confirmation');
- for(const item of messages){
-  messageIds.push(item.ID);const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${item.ID}`)).json();
-  const match=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(match,'confirmation link exists');
-  const response=await fetch(match[0],{redirect:'manual'});const location=response.headers.get('location');assert.ok(location,'confirmation redirects to app');
-  const redirect=new URL(location);assert.equal(redirect.pathname,'/customer/email-callback');
-  if(redirect.searchParams.has('code')){const result=await client.auth.exchangeCodeForSession(redirect.searchParams.get('code'));assert.ifError(result.error);}
-  else if(redirect.hash){const fragment=new URLSearchParams(redirect.hash.slice(1));if(fragment.has('error'))assert.equal(fragment.get('error_code'),'otp_expired');if(fragment.has('access_token')){const result=await client.auth.setSession({access_token:fragment.get('access_token'),refresh_token:fragment.get('refresh_token')});assert.ifError(result.error);}}
+ // Pinned GoTrue sends email before persisting email_change. The database guard
+ // rolls that transaction back; any already-delivered links must be unusable.
+ assert.equal(sql(`select count(*) from auth.users where email='${email}' and coalesce(email_change,'')='' and coalesce(email_change_token_new,'')='' and coalesce(email_change_token_current,'')=''`),'1','blocked update leaves no pending email change');
+ for(const item of messages) {
+  messageIds.push(item.ID);
+  const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${item.ID}`)).json();
+  const href=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(href);
+  const callback=new URL(href[0].replaceAll('&amp;','&'));
+  if(callback.searchParams.get('type')==='email_change') {
+   const result=await changer.auth.verifyOtp({type:'email_change',token_hash:callback.searchParams.get('token_hash') || callback.searchParams.get('token')});
+   assert.ok(result.error,'a blocked email-change link cannot change the account');
+  }
  }
- const updated=await client.auth.getUser();assert.equal(updated.data.user.email,changedEmail,'email changes after confirmation');
+ assert.equal((await client.auth.getUser()).data.user.email,email,'rejected links preserve the primary email');
  console.log('CUSTOMER_EMAIL_PASS: local email confirmation, role isolation, phone-optional profile, required phone, owned booking history, email recovery and session revocation');
 } finally {
  await client.auth.signOut({scope:'local'}).catch(()=>{});

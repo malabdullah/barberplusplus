@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { verifyLocalAdmin } from './fixtures/admin-mfa';
 
 async function chooseTheme(page, theme) {
   if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.preferences-selector').nth(1).locator('button').first().click();
@@ -11,12 +12,13 @@ for (const [role, home] of roles) {
   test(`${role} navigation across responsive, language and theme states`, async ({ page }) => {
     test.setTimeout(180000);
     // Development-only fixtures. Live staging tests use protected VPS fixtures.
-    const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:4173');
+    const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:5173');
     expect(['localhost', '127.0.0.1', '::1']).toContain(base.hostname);
     await page.goto('/login');
     await page.getByLabel('Email address', { exact: true }).fill(`${role}@barber.test`);
     await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
     await page.locator('button[type="submit"]').click();
+    if (role === 'admin') await verifyLocalAdmin(page);
     await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));
     const original = await page.evaluate(() => ({ language: localStorage.getItem('barber-language') || 'en', theme: localStorage.getItem('barber-theme') || 'dark' }));
     try {

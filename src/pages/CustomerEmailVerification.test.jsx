@@ -34,9 +34,9 @@ it('keeps an incorrect-code error on the form, then confirms a valid code and of
   expect(screen.getByRole('link', { name: en.customerAuth.resumeBooking })).toHaveAttribute('href', '/book');
 });
 it('accepts pasted Arabic digits and routes a recovery code to password reset', async () => {
-  mount('recovery'); verify('١٢٣٤٥٦');
+  mount('recovery', { email: 'test@example.test', purpose: 'recovery', requestId: 'bound-request' }); verify('١٢٣٤٥٦');
   await screen.findByRole('heading', { name: 'Choose a new password' });
-  expect(customerAuthService.verifyEmailCode).toHaveBeenCalledWith({ email: 'test@example.test', code: '123456', purpose: 'recovery' });
+  expect(customerAuthService.verifyEmailCode).toHaveBeenCalledWith({ email: 'test@example.test', code: '123456', purpose: 'recovery', requestId: 'bound-request' });
   expect(customerAuthService.ensureEmailProfile).not.toHaveBeenCalled();
 });
 it('can request a new code after opening the verification page without a pending signup', async () => {
@@ -47,3 +47,4 @@ it('can request a new code after opening the verification page without a pending
   expect(await screen.findByText(en.customerAuth.email.resent)).toBeInTheDocument();
   expect(JSON.parse(sessionStorage.getItem('barber-customer-email-pending')).email).toBe('test@example.test');
 });
+vi.mock('../services/registration.service',()=>({registrationService:{correct:vi.fn()}}));

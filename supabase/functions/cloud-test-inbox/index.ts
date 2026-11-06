@@ -19,10 +19,9 @@ Deno.serve(withCloudTestGateway(async req => {
       const email = payload.email_data;
       for (const key of ['token_hash','token_hash_new']) {
         if (!email[key]) continue;
-        const verify = new URL(`${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`);
-        verify.searchParams.set('token',email[key]);verify.searchParams.set('type',email.email_action_type);
+        const verify = new URL('/email/verify.html', appUrl);
         const redirect = email.redirect_to || appUrl;
-        verify.searchParams.set('redirect_to',redirect.startsWith(`${appUrl}/`) || redirect === appUrl ? redirect : appUrl);
+        verify.hash = new URLSearchParams({token_hash:email[key],type:email.email_action_type,redirect_to:redirect.startsWith(`${appUrl}/`) || redirect === appUrl ? redirect : appUrl}).toString();
         links.push({label:key === 'token_hash_new' ? 'Confirm current email / تأكيد البريد الحالي' : 'Open link / فتح الرابط',url:verify.href});
       }
     }

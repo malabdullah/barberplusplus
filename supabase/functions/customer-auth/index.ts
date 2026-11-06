@@ -4,6 +4,8 @@ import { createCustomerAuthHandler } from './handler.ts';
 import { sendTestEmail } from './test-mail.ts';
 import { createCustomerEmailDelivery } from './email-delivery.ts';
 import { customerIdentity, sessionId } from '../_shared/customer-session.ts';
+import { passwordCapableRoles } from './password.ts';
+import { registrationUser } from './registration.ts';
 const url=Deno.env.get('SUPABASE_URL') || '';
 const environment=Deno.env.get('APP_ENV') || '';
 const appUrl=Deno.env.get('APP_URL') || '';
@@ -11,7 +13,7 @@ const appUrl=Deno.env.get('APP_URL') || '';
 const useAuthMail=environment==='production' || environment==='cloud-test';
 const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
 const emailClient=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
-const deliverEmail=createCustomerEmailDelivery(emailClient.auth,appUrl);
+const deliverEmail=createCustomerEmailDelivery(emailClient.auth,appUrl,environment);
 Deno.serve(createCustomerAuthHandler({
   environment,appUrl,publicUrl:Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
@@ -79,6 +81,92 @@ Deno.serve(createCustomerAuthHandler({
     return typeof name==='string'?name.slice(0,120):'';
   },
   identity:token=>customerIdentity(admin,token),
+  emailManagement:{
+    correct:async(input)=>{
+      const {data,error}=await admin.rpc('correct_registration_email',{p_email:input.email,p_new_email:input.newEmail,p_password:input.password,p_audience:input.audience});
+      if(error)throw Error(error.message);
+      return data;
+    },
+    deliver:async(email,audience,returnTo)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const callback=new URL('/customer/email-callback',appUrl);callback.searchParams.set('next',audience==='team'?'work':returnTo==='/book'?'book':'account');
+      const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:callback.href}});
+      if(error)throw Error('UNAVAILABLE');
+    },
+    admin:async(token,action,data)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
+      const result=await client.rpc('admin_account_email',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+  },
+  registration:{
+    signup:async(input)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const {data,error}=await client.auth.signUp({email:input.email,password:input.password,options:{data:{name:input.name,phone:input.phone},emailRedirectTo:new URL('/customer/email-callback?next=work',appUrl).href}});
+      if(error) {
+        if(['user_already_exists','email_exists'].includes(String(error.code)) || /user already registered/i.test(error.message)) throw Error('SIGNUP_EMAIL_EXISTS');
+        if(error.status===429) throw Error('RATE_LIMITED');
+        if(/Database error saving new user/i.test(error.message)) throw Error('PHONE_REGISTRATION_CONFLICT');
+        throw Error('UNAVAILABLE');
+      }
+      if(data.session) await client.auth.signOut({scope:'local'});
+      return registrationUser(data.user);
+    },
+    user:async(id)=>{
+      const {data,error}=await admin.auth.admin.getUserById(id);
+      if(error?.status===404) return null;
+      if(error || !data.user) throw Error('UNAVAILABLE');
+      if(data.user.app_metadata?.role!=='manager') return null;
+      return {id:data.user.id,email:(data.user.email || '').trim().toLowerCase(),verified:Boolean(data.user.email_confirmed_at)};
+    },
+    resend:async(email)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:new URL('/customer/email-callback?next=work',appUrl).href}});
+      if(error) throw Error(error.status===429?'RATE_LIMITED':'UNAVAILABLE');
+    },
+  },
+  passwords:{
+    rpc:async(action,data)=>{
+      const result=await admin.rpc('customer_password_api',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+    reauthenticate:async(id,password)=>{
+      const {data,error}=await admin.auth.admin.getUserById(id);
+      if(error || !data.user || !passwordCapableRoles.has(String(data.user.app_metadata.role)))return null;
+      const user=data.user;
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
+      const result=user.email ? await client.auth.signInWithPassword({email:user.email,password})
+        : await client.auth.signInWithPassword({phone:user.phone || '',password});
+      if(result.error || !result.data.session)return null;
+      if(result.data.user.id!==id){await admin.auth.admin.signOut(result.data.session.access_token,'local');return null;}
+      return {sessionId:sessionId(result.data.session.access_token),token:result.data.session.access_token};
+    },
+    discardReauthentication:async(token)=>{await admin.auth.admin.signOut(token,'local');},
+    sendRecovery:async(email,callback)=>{
+      const result=await emailClient.auth.resetPasswordForEmail(email,{redirectTo:callback});
+      if(result.error)throw Error(result.error.status===429?'RATE_LIMITED':'UNAVAILABLE');
+    },
+    verifyRecovery:async(params)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
+      const result=params.tokenHash
+        ? await client.auth.verifyOtp({type:params.type,token_hash:params.tokenHash})
+        : await client.auth.verifyOtp({type:'recovery',email:params.email || '',token:params.code || ''});
+      if(result.error || !result.data.session)return null;
+      return result.data.session;
+    },
+    writePassword:async(id,password,operation)=>{
+      const current=await admin.auth.admin.getUserById(id);
+      if(current.error || !current.data.user || !passwordCapableRoles.has(String(current.data.user.app_metadata.role)))return {ok:false,definitive:true};
+      const user=current.data.user;
+      const result=await admin.auth.admin.updateUserById(id,{
+        password,app_metadata:{barber_password_operation:operation},
+        ...(user.email && user.email_confirmed_at && !user.identities?.some(identity=>identity.provider==='email') ? {email:user.email,email_confirm:true} : {}),
+      });
+      return {ok:!result.error,definitive:!result.error || (result.error.name!=='AuthRetryableFetchError' && Boolean(result.error.status)),code:result.error?.code};
+    },
+  },
   socialIdentity:async(token)=>{
     const {data,error}=await admin.auth.getUser(token);
     const session_id=sessionId(token);
@@ -89,5 +177,5 @@ Deno.serve(createCustomerAuthHandler({
     const name=data.user.user_metadata?.name || data.user.user_metadata?.full_name;
     return {user_id:data.user.id,session_id,name:typeof name==='string' ? name.slice(0,120) : ''};
   },
-  resetPassword:async(id,password)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || !['customer','manager','barber'].includes(data.user.app_metadata.role))throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password});if(result.error)throw Error('UNAVAILABLE');},
+  resetPassword:async(id,password,guardId)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || !['customer','manager','barber'].includes(data.user.app_metadata.role))throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password,app_metadata:{barber_password_operation:guardId}});if(result.error)throw Error('UNAVAILABLE');},
 }));
