@@ -11,6 +11,7 @@ import { usePublicNavigationBusy } from '../components/Public/PublicNavigationCo
 import './Signup.css';
 import { registrationService } from '../services/registration.service';
 import { pendingRegistration, rememberRegistration, forgetRegistration } from '../lib/pendingRegistration';
+import RegistrationEmailCorrection from '../components/Customer/RegistrationEmailCorrection';
 
 export default function Signup() {
   const { t } = useTranslation();
@@ -32,13 +33,14 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [registration, setRegistration] = useState(pendingRegistration);
   const [verificationBusy, setVerificationBusy] = useState('');
+  const [correctionBusy, setCorrectionBusy] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
   const [verificationError, setVerificationError] = useState('');
   const [verified, setVerified] = useState(false);
   const [clock, setClock] = useState(Date.now);
   const verificationPending = useRef(false);
   const cooldown = Math.max(0, Math.ceil(((registration?.resendAt || 0) - clock) / 1000));
-  usePublicNavigationBusy(isLoading || Boolean(verificationBusy));
+  usePublicNavigationBusy(isLoading || Boolean(verificationBusy) || correctionBusy);
   useEffect(() => {
     if (!registration?.confirmationRequired || verified) return undefined;
     const timer = window.setInterval(() => setClock(Date.now()), 1000);
@@ -47,7 +49,7 @@ export default function Signup() {
   useEffect(() => { if (error || emailAlreadyLinked) errorRef.current?.focus(); }, [error, emailAlreadyLinked]);
 
   const verificationAction = async action => {
-    if (!registration?.receipt || verificationError === 'registrationExpired' || verificationPending.current || action === 'resend' && cooldown > 0) return;
+    if (!registration?.receipt || correctionBusy || verificationError === 'registrationExpired' || verificationPending.current || action === 'resend' && cooldown > 0) return;
     verificationPending.current = true; setVerificationBusy(action); setVerificationMessage(''); setVerificationError('');
     try {
       const result = await registrationService[action](registration.receipt);
@@ -196,13 +198,16 @@ export default function Signup() {
         </div>
 
         {/* Signup Form */}
-        {registration ? <div className="signup-verification" aria-busy={Boolean(verificationBusy)}>
+        {registration ? <div className="signup-verification" aria-busy={Boolean(verificationBusy) || correctionBusy}>
           {registration.email && <p className="signup-verification-email"><bdi>{registration.email}</bdi></p>}
           {verificationMessage && !verified && <p className="signup-verification-status" role="status">{t(`auth.${verificationMessage}`)}</p>}
           {verificationError && <p className="login-error signup-error" role="alert">{t(`auth.${verificationError}`)}</p>}
           {registration.confirmationRequired && !verified && <>
-            <button type="button" className="login-submit" disabled={Boolean(verificationBusy) || verificationError === 'registrationExpired'} onClick={() => verificationAction('status')}>{t(verificationBusy === 'status' ? 'auth.registrationChecking' : 'auth.registrationCheck')}</button>
-            <button type="button" className="signup-resend" disabled={Boolean(verificationBusy) || cooldown > 0 || verificationError === 'registrationExpired'} onClick={() => verificationAction('resend')}>{t(verificationBusy === 'resend' ? 'auth.registrationResending' : cooldown ? 'auth.registrationResendIn' : 'auth.registrationResend', { seconds: cooldown })}</button>
+            <button type="button" className="login-submit" disabled={Boolean(verificationBusy) || correctionBusy || verificationError === 'registrationExpired'} onClick={() => verificationAction('status')}>{t(verificationBusy === 'status' ? 'auth.registrationChecking' : 'auth.registrationCheck')}</button>
+            <button type="button" className="signup-resend" disabled={Boolean(verificationBusy) || correctionBusy || cooldown > 0 || verificationError === 'registrationExpired'} onClick={() => verificationAction('resend')}>{t(verificationBusy === 'resend' ? 'auth.registrationResending' : cooldown ? 'auth.registrationResendIn' : 'auth.registrationResend', { seconds: cooldown })}</button>
+            <RegistrationEmailCorrection email={registration.email} audience="team" disabled={Boolean(verificationBusy)} onBusy={setCorrectionBusy} onCorrected={result => {
+              const pending={...registration,...result}; setRegistration(pending); rememberRegistration(pending); setClock(Date.now()); setVerificationError(''); setVerificationMessage(result.delivered?'registrationCorrected':'registrationCorrectionDeliveryFailed');
+            }} />
           </>}
           <Link className={verified || !registration.confirmationRequired ? 'login-submit' : 'signup-sign-in'} to="/login" onClick={event => { if (verificationBusy) event.preventDefault(); }} aria-disabled={Boolean(verificationBusy)}>{t('auth.signIn')}<ArrowRight size={18} aria-hidden="true" /></Link>
         </div> : <form className="login-form" onSubmit={handleSubmit}>

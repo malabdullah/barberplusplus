@@ -2,7 +2,6 @@ import { customerCapable } from '../lib/accountSession';
 import { passwordProof, rememberPasswordProof, forgetPasswordProof } from '../lib/customerPasswordProof';
 import { nativeEmailReturn } from '../lib/nativeEmailReturn';
 import { rememberBookingReturn } from '../utils/customerBookingDraft';
-import { createClient } from '@supabase/supabase-js';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
 import { functionFetch } from '../lib/functionFetch';
 import { customerSupabase, CUSTOMER_AUTH_STORAGE_KEY } from '../lib/customerSupabase';
@@ -182,20 +181,11 @@ export const customerAuthService = {
     }
     return { recovery: type === 'recovery', returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account' };
   },
-  async changeEmail(email) {
-    const { data, error: sessionError } = await customerSupabase.auth.getSession();
-    if (sessionError || !data.session) throw new Error('AUTH_REQUIRED');
-    // Each confirmation link must work independently, including on another device.
-    const client = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit' } });
-    const { error: setError } = await client.auth.setSession(data.session);
-    if (setError) throw new Error('AUTH_REQUIRED');
-    const { error } = await client.auth.updateUser({ email }, { emailRedirectTo: `${window.location.origin}/customer/email-callback` });
-    if (error) throw new Error('UNAVAILABLE');
-  },
+  changeEmail() { return Promise.reject(new Error('EMAIL_ADMIN_ONLY')); },
   async updateProfile(data) {
     const { data: auth, error } = await customerSupabase.auth.getUser();
     if (error || !customerCapable(auth.user?.app_metadata?.role)) throw new Error('AUTH_REQUIRED');
-    if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) await this.changeEmail(data.email.trim());
+    if (data.email && data.email.trim().toLowerCase() !== (auth.user.email || '').toLowerCase()) throw new Error('EMAIL_ADMIN_ONLY');
     return (await request('update-profile', { ...data, email: auth.user.email || '' }, true)).profile;
   },
   appointmentSlots: (bookingId, date) => request('appointment-slots', { bookingId, date }, true),

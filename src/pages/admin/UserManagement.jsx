@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, UserCheck, ArrowRight, KeyRound } from 'lucide-react';
+import { Users, UserCheck, ArrowRight, KeyRound, Mail } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import './AdminPages.css';
 
@@ -28,6 +28,7 @@ export default function UserManagement() {
   }, []);
 
   const sections = [
+    { icon: Mail, title:t('accountEmail.title'),description:t('accountEmail.description'),path:'/admin/users/emails',count:'-' },
     {
       icon: Users,
       title: t('admin.users.managers'),

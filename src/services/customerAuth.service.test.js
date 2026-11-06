@@ -13,6 +13,10 @@ beforeEach(() => {
   request.mockResolvedValue({ ok: true, json: async () => ({ external: { google: true, apple: false } }) });
 });
 afterEach(() => vi.unstubAllGlobals());
+it('rejects self-service email changes before sending an Auth update',async()=>{
+  await expect(customerAuthService.changeEmail('new@example.test')).rejects.toThrow('EMAIL_ADMIN_ONLY');
+  expect(auth.setSession).not.toHaveBeenCalled();expect(request).not.toHaveBeenCalled();
+});
 it('sends email signup through the customer gateway without a phone', async () => {
   await customerAuthService.requestSignup({ name: 'Customer', email: 'test@example.test', password: 'Short12!', returnTo: '/book' });
   expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: 'email-signup', name: 'Customer', email: 'test@example.test', password: 'Short12!', returnTo: '/book' });

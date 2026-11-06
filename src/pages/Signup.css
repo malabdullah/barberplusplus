@@ -51,3 +51,6 @@
 .signup-resend:disabled { opacity: .6; cursor: not-allowed; }
 .signup-sign-in { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; color: var(--text-primary); text-decoration: underline; }
 .signup-verification :is(button,a):focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.registration-email-correction { display: grid; gap: 12px; text-align: start; }
+.registration-email-correction .ca-profile-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.registration-email-correction input { box-sizing: border-box; width: 100%; min-width: 0; }

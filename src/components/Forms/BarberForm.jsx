@@ -183,11 +183,13 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? 'barber-email-error' : undefined}
             value={formData.email}
-            onChange={handleChange}
+            onChange={barber?.id ? undefined : handleChange}
+            readOnly={Boolean(barber?.id)}
             className={`form-input ${errors.email ? 'error' : ''}`}
             placeholder="barber@example.com"
           />
           {errors.email && <span className="form-error" id="barber-email-error">{errors.email}</span>}
+          {barber?.id && <p className="form-help">{t('accountEmail.adminOnly')}</p>}
         </div>
 
         <div className="form-group">

@@ -14,6 +14,13 @@ const cooldown = 60000;
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 const decode = (value: string) => Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), character => character.charCodeAt(0));
 
+export async function registrationReceipt(id: string, email: string, secret: string, appUrl: string, now = Date.now(), expiresAt = now + lifetime) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(`manager-registration-v1:${secret}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const payload = encode(new TextEncoder().encode(JSON.stringify({ id, email, expiresAt, issuedAt: now, audience: appUrl })));
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return { receipt: `${payload}.${encode(new Uint8Array(signature))}`, expiresAt, resendAt: now + cooldown };
+}
+
 // Supabase can return an obfuscated user for a confirmed linked email.
 export function registrationUser(user: { id?: string; email?: string; email_confirmed_at?: string; app_metadata?: Record<string, unknown>; identities?: unknown[] } | null): RegistrationUser {
   if (Array.isArray(user?.identities) && user.identities.length === 0) throw Error('SIGNUP_EMAIL_EXISTS');
@@ -28,11 +35,7 @@ export async function managerRegistrationAction(c: Context): Promise<{ status: n
   try {
     const now = c.now?.() ?? Date.now();
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(`manager-registration-v1:${c.secret}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
-    const issue = async (id: string, email: string, expiresAt = now + lifetime) => {
-      const payload = encode(new TextEncoder().encode(JSON.stringify({ id, email, expiresAt, issuedAt: now, audience: c.appUrl })));
-      const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-      return { receipt: `${payload}.${encode(new Uint8Array(signature))}`, expiresAt, resendAt: now + cooldown };
-    };
+    const issue = (id: string, email: string, expiresAt = now + lifetime) => registrationReceipt(id,email,c.secret,c.appUrl,now,expiresAt);
     const limited = async (value: string, max: number) => {
       if (!await c.limit(`registration:${value}`, max)) throw Error('RATE_LIMITED');
     };

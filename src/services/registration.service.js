@@ -14,4 +14,5 @@ export const registrationService = {
   signup: data => request('manager-signup', data),
   status: receipt => request('manager-registration-status', { receipt }),
   resend: receipt => request('manager-registration-resend', { receipt }),
+  correct: data => request('correct-registration-email', data),
 };

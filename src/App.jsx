@@ -12,6 +12,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
 import AdminPasswordReset from './pages/admin/AdminPasswordReset';
+import AccountEmails from './pages/admin/AccountEmails';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
 import Dashboard from './pages/Dashboard';
@@ -245,6 +246,7 @@ function AppRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="users/passwords" element={<AdminPasswordReset />} />
+        <Route path="users/emails" element={<AccountEmails />} />
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
         <Route path="analytics" element={<PlatformAnalytics />} />
