@@ -125,3 +125,11 @@ Deno.test('a verified staff session receives a specific error without creating a
  const response=await handler(req({action:'social-status'},undefined,'verified-staff-token'));
  assert(response.status===403 && (await response.json()).error==='STAFF_ACCOUNT');
 });
+
+Deno.test('preserved native push errors retain their public HTTP contract',async()=>{
+ for(const [code,status] of [['FORBIDDEN',403],['DEVICE_REQUIRED',409],['SUBSCRIPTION_LIMIT',409]] as const){
+  const handler=make({rpc:async(action:string)=>{if(action==='limit')return true;throw Error(code);}});
+  const response=await handler(req({action:'push-status',deviceId:'af220000-0000-4000-8000-000000000099',deviceSecret:'a'.repeat(64)}));
+  assert(response.status===status&&(await response.json()).error===code);
+ }
+});

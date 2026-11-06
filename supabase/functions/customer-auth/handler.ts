@@ -220,6 +220,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
       if (['INVALID_CODE','INVALID_DETAILS','INVALID_REQUEST','WEAK_PASSWORD','PASSWORD_MISMATCH','SAME_PASSWORD','CURRENT_PASSWORD_REQUIRED','PASSWORD_NOT_SET','PASSWORD_ALREADY_SET','NATIVE_CLIENT_UPDATE_REQUIRED'].includes(message)) return reply(400,{error:message});
+      if (message==='FORBIDDEN') return reply(403,{error:'FORBIDDEN'});
+      if (['DEVICE_REQUIRED','SUBSCRIPTION_LIMIT'].includes(message)) return reply(409,{error:message});
       if (message==='WRONG_CURRENT_PASSWORD') return reply(403,{error:message});
       if (message==='RATE_LIMITED') return reply(429,{error:message});
       if (message==='PASSWORD_PROOF_REQUIRED') return reply(403,{error:message});
