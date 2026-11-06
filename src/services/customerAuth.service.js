@@ -16,11 +16,19 @@ async function request(action, data = {}, authenticated = false) {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
   const token = authenticated ? await customerToken() : '';
   if (authenticated && !token) throw new Error('AUTH_REQUIRED');
-  const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
+  let response; let result;
+  try {
+    response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
     method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
-  });
-  const result = await response.json();
+    });
+    result = await response.json();
+  } catch (error) {
+    // A transport timeout may occur after the server committed the password.
+    // Do not present a retryable form for an unknown credential-write outcome.
+    if (['password-change', 'email-reset'].includes(action)) throw new Error('PASSWORD_UPDATE_UNCERTAIN', { cause: error });
+    throw error;
+  }
   if (!response.ok) throw new Error(result.error || 'UNAVAILABLE');
   return result;
 }

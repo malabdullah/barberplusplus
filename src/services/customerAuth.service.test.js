@@ -109,3 +109,11 @@ it('verifies recovery codes through the server with the issued request ID', asyn
   expect(auth.verifyOtp).not.toHaveBeenCalled();
   expect(auth.setSession).toHaveBeenCalledWith(session);
 });
+
+it('treats a lost credential-write response as uncertain and clears the local identity instead of retrying', async () => {
+  request.mockRejectedValue(new TypeError('Network request failed'));
+  auth.signOut.mockResolvedValue({ error: null });
+  await expect(customerAuthService.changePassword({ currentPassword: 'Current12!', password: 'Changed12!', confirmPassword: 'Changed12!' })).rejects.toThrow('PASSWORD_UPDATE_UNCERTAIN');
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+});
