@@ -2,6 +2,7 @@ import { withCloudTestGateway } from '../_shared/test-boundary.ts';
 import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { getAppUrl, getTrustedRole } from "../_shared/environment.ts";
+import { customerIdentity } from '../_shared/customer-session.ts';
 
 // SECURITY: Request size limit to prevent abuse
 const MAX_REQUEST_SIZE = 10 * 1024; // 10KB max for invite requests
@@ -65,6 +66,9 @@ Deno.serve(withCloudTestGateway(async (req: Request) => {
         JSON.stringify({ error: "Only managers can invite barbers" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+    if (!await customerIdentity(supabaseAdmin, authHeader.replace(/^Bearer /i, ''))) {
+      return new Response(JSON.stringify({ error: 'AUTH_REQUIRED' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const { barberId, email, name, branchId, isResend } = await req.json();

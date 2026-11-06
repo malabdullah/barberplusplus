@@ -483,11 +483,14 @@ $$;
 ALTER FUNCTION "public"."create_booking_reminder"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
-    LANGUAGE "sql"
+CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
     SET "search_path" TO ''
     AS $$
-  select case
+begin
+  if p_action='email-reset-guard' then raise exception 'PASSWORD_PROOF_REQUIRED'; end if;
+  return (
+select case
     when p_action='bookings' then coalesce((
       select jsonb_agg(item || jsonb_build_object(
         'location_url',br.location_url, 'shop_address',br.address,
@@ -505,7 +508,9 @@ CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p
     when p_action='rate-booking' then private.customer_booking_ratings_api(p_action,p_data)
     when p_action in ('appointment-slots','reschedule-booking','cancel-booking') then private.customer_appointment_api(p_action,p_data)
     else private.customer_account_api(p_action,p_data)
-  end;
+  end
+  );
+end;
 $$;
 
 
@@ -792,6 +797,167 @@ ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "j
 
 
 
+CREATE OR REPLACE FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  person auth.users%rowtype;
+  request private.customer_password_requests%rowtype;
+  proof private.customer_password_proofs%rowtype;
+  uid uuid:=nullif(p_data->>'user_id','')::uuid;
+  sid uuid:=nullif(p_data->>'session_id','')::uuid;
+  request_id uuid:=nullif(p_data->>'request_id','')::uuid;
+  candidate_email text;
+  candidate_purpose text;
+  reauth uuid;
+  delivery uuid;
+begin
+  if p_action in ('operation-result','abort') then
+    perform 1 from auth.users where id=uid for update;
+    select * into proof from private.customer_password_proofs where id=(p_data->>'operation')::uuid for update;
+    if proof.id is null or proof.user_id is distinct from uid or proof.session_id is distinct from sid then raise exception 'PASSWORD_PROOF_REQUIRED'; end if;
+    if p_action='abort' and proof.state='prepared' then
+      select * into person from auth.users where id=uid for update;
+      if proof.password_fingerprint<>md5(coalesce(person.encrypted_password,'')) then raise exception 'PASSWORD_UPDATE_UNCERTAIN'; end if;
+      delete from private.customer_password_reset_guards where id=proof.id and user_id=uid;
+      update private.customer_password_proofs set state='failed' where id=proof.id;
+    end if;
+    return jsonb_build_object('applied',proof.state='applied');
+  elsif p_action='invite-start' then
+    select * into person from auth.users where confirmation_token=p_data->>'token_hash'
+      and coalesce(confirmation_token,'')<>'' and invited_at is not null and email_confirmed_at is null
+      and raw_app_meta_data->>'role'='barber' and deleted_at is null and (banned_until is null or banned_until<=now()) for update;
+    if person.id is null or not exists(select 1 from public.barbers where user_id=person.id and invite_status in ('sent','pending')) then raise exception 'INVALID_CODE'; end if;
+    delete from private.customer_password_reset_guards g using private.customer_password_proofs p
+      where g.id=p.id and g.user_id=person.id and p.user_id=person.id and p.state='prepared' and p.expires_at<=now()
+        and p.password_fingerprint=md5(coalesce(person.encrypted_password,''));
+    if exists(select 1 from private.customer_password_reset_guards where user_id=person.id)
+      or exists(select 1 from private.admin_password_reset_guards where target_id=person.id) then raise exception 'PASSWORD_CHANGE_IN_PROGRESS'; end if;
+    request_id:=gen_random_uuid();
+    insert into private.customer_password_requests(id,user_id,email,purpose,client,token_hash,state,expires_at)
+      values(request_id,person.id,person.email,'invite','web',person.confirmation_token,'ready',now()+interval '1 minute');
+    insert into private.customer_password_proofs(id,user_id,purpose,account_role,account_email,password_fingerprint,state,expires_at)
+      values(request_id,person.id,'invite','barber',person.email,md5(coalesce(person.encrypted_password,'')),'prepared',now()+interval '1 minute');
+    insert into private.customer_password_reset_guards(id,user_id) values(request_id,person.id);
+    return jsonb_build_object('userId',person.id,'operation',request_id);
+  elsif p_action='invite-verified' then
+    select * into person from auth.users where id=uid for update;
+    if not public.customer_session_is_live(uid,sid) or person.raw_app_meta_data->>'role'<>'barber'
+      or person.invited_at is null or person.email_confirmed_at is null
+      or not exists(select 1 from public.barbers where user_id=uid and invite_status in ('sent','pending'))
+      or not exists(select 1 from auth.sessions s join auth.mfa_amr_claims a on a.session_id=s.id
+        where s.id=sid and s.created_at>now()-interval '1 minute' and a.authentication_method in ('otp','invite')) then raise exception 'INVALID_CODE'; end if;
+    insert into private.customer_password_proofs(user_id,session_id,purpose,account_role,account_email,password_fingerprint)
+      values(uid,sid,'invite','barber',person.email,md5(coalesce(person.encrypted_password,''))) returning * into proof;
+    return jsonb_build_object('proof',proof.id,'expiresIn',300);
+  elsif p_action='request-start' then
+    candidate_email:=lower(trim(p_data->>'email'));
+    candidate_purpose:='recovery';
+    if p_data->>'purpose'='set' then
+      select * into person from auth.users where id=uid;
+      if not public.customer_session_is_live(uid,sid) or person.email_confirmed_at is null then raise exception 'AUTH_REQUIRED'; end if;
+      if coalesce(person.encrypted_password,'')<>'' then raise exception 'PASSWORD_ALREADY_SET'; end if;
+      candidate_email:=lower(person.email);candidate_purpose:='set';
+    else
+      select * into person from auth.users where lower(email)=candidate_email and email_confirmed_at is not null
+        and deleted_at is null and (banned_until is null or banned_until<=now())
+        and (raw_app_meta_data->>'role' in ('customer','manager','barber')
+          or (p_data->>'audience'='work' and raw_app_meta_data->>'role' in ('admin','agent')));
+      if person.raw_app_meta_data->>'role' in ('admin','agent') then candidate_purpose:='legacy'; end if;
+    end if;
+    if request_id is null or coalesce(candidate_email,'')='' or p_data->>'client' not in ('web','ios') then raise exception 'INVALID_REQUEST'; end if;
+    if p_data->>'client'='ios' and coalesce(p_data->>'native_challenge','') !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'INVALID_REQUEST'; end if;
+    insert into private.customer_password_requests(id,user_id,email,purpose,client,native_state,native_challenge)
+      values(request_id,person.id,candidate_email,candidate_purpose,p_data->>'client',nullif(p_data->>'native_state','')::uuid,p_data->>'native_challenge');
+    return jsonb_build_object('requestId',request_id,'email',candidate_email,'deliver',person.id is not null);
+  elsif p_action='request-ready' then
+    select * into request from private.customer_password_requests where id=request_id for update;
+    if request.id is null or request.state<>'pending' then raise exception 'INVALID_CODE'; end if;
+    select * into person from auth.users where id=request.user_id;
+    update private.customer_password_requests set token_hash=nullif(person.recovery_token,''),state='ready' where id=request.id;
+    return jsonb_build_object('success',true);
+  elsif p_action='request-delivery' then
+    select * into request from private.customer_password_requests where id=request_id for update;
+    select * into person from auth.users where id=request.user_id;
+    if request.id is null or request.client<>'ios' or request.native_state is distinct from nullif(p_data->>'native_state','')::uuid
+      or request.state<>'ready' or request.expires_at<=now() or request.token_hash is null
+      or request.token_hash is distinct from p_data->>'token_hash' or request.token_hash is distinct from person.recovery_token then raise exception 'INVALID_CODE'; end if;
+    delivery:=gen_random_uuid();
+    update private.customer_password_requests set delivery_hash=encode(extensions.digest(delivery::text,'sha256'),'hex') where id=request.id;
+    return jsonb_build_object('deliveryToken',delivery);
+  elsif p_action in ('request-load','request-verified') then
+    select * into request from private.customer_password_requests where id=request_id for update;
+    if request.id is null or request.state<>'ready' or request.expires_at<=now() or request.user_id is null
+      or (request.client='ios' and (p_data->>'client' is distinct from 'ios'
+        or nullif(p_data->>'native_state','')::uuid is distinct from request.native_state
+        or p_data->>'native_challenge' is distinct from request.native_challenge)) then raise exception 'INVALID_CODE'; end if;
+    select * into person from auth.users where id=request.user_id for update;
+    if person.deleted_at is not null or person.banned_until>now() or person.email_confirmed_at is null
+      or lower(person.email) is distinct from request.email then raise exception 'INVALID_CODE'; end if;
+    if p_action='request-load' then
+      if request.token_hash is null or request.token_hash is distinct from person.recovery_token then raise exception 'INVALID_CODE'; end if;
+      if p_data ? 'delivery_token' and (request.client<>'ios' or request.delivery_hash is null
+        or request.delivery_hash is distinct from encode(extensions.digest(p_data->>'delivery_token','sha256'),'hex')) then raise exception 'INVALID_CODE'; end if;
+      return jsonb_build_object('userId',person.id,'email',request.email,'tokenHash',request.token_hash,'purpose',request.purpose);
+    end if;
+    if uid is distinct from person.id or not exists(select 1 from auth.sessions s join auth.mfa_amr_claims a on a.session_id=s.id
+      where s.id=sid and s.user_id=uid and s.created_at>=request.created_at-interval '5 seconds'
+        and s.created_at>now()-interval '1 minute' and a.authentication_method in ('otp','recovery')
+        and (s.not_after is null or s.not_after>now())) then raise exception 'INVALID_CODE'; end if;
+    update private.customer_password_requests set state='verified' where id=request.id;
+    if request.purpose='legacy' then return jsonb_build_object('legacyRecovery',true); end if;
+    if person.raw_app_meta_data->>'role' not in ('customer','manager','barber') then raise exception 'AUTH_REQUIRED'; end if;
+    if request.purpose='set' and coalesce(person.encrypted_password,'')<>'' then raise exception 'PASSWORD_ALREADY_SET'; end if;
+    insert into private.customer_password_proofs(user_id,session_id,purpose,account_role,account_email,password_fingerprint)
+      values(uid,sid,request.purpose,person.raw_app_meta_data->>'role',person.email,md5(coalesce(person.encrypted_password,''))) returning * into proof;
+    return jsonb_build_object('proof',proof.id,'expiresIn',300,'hasPassword',coalesce(person.encrypted_password,'')<>'');
+  end if;
+
+  select * into person from auth.users where id=uid for update;
+  if person.id is null or not public.customer_session_is_live(uid,sid) then raise exception 'AUTH_REQUIRED'; end if;
+  if p_action='status' then
+    return jsonb_build_object('hasPassword',coalesce(person.encrypted_password,'')<>'',
+      'providers',coalesce((select jsonb_agg(distinct provider) from auth.identities where user_id=uid),'[]'::jsonb),
+      'email',person.email,'canVerifyEmail',person.email_confirmed_at is not null and coalesce(person.email,'')<>'');
+  elsif p_action='current-begin' then
+    if coalesce(person.encrypted_password,'')='' then raise exception 'PASSWORD_NOT_SET'; end if;
+    reauth:=nullif(p_data->>'reauth_session_id','')::uuid;
+    if reauth is null or reauth=sid or not exists(select 1 from auth.sessions s join auth.mfa_amr_claims a on a.session_id=s.id
+      where s.id=reauth and s.user_id=uid and s.created_at>now()-interval '1 minute'
+        and a.authentication_method='password' and a.created_at>now()-interval '1 minute'
+        and (s.not_after is null or s.not_after>now())) then raise exception 'CURRENT_PASSWORD_REQUIRED'; end if;
+    delete from auth.sessions where id=reauth and user_id=uid;
+    insert into private.customer_password_proofs(user_id,session_id,purpose,account_role,account_email,password_fingerprint,state)
+      values(uid,sid,'current',person.raw_app_meta_data->>'role',person.email,md5(person.encrypted_password),'prepared') returning * into proof;
+  elsif p_action='prepare' then
+    select * into proof from private.customer_password_proofs where id=(p_data->>'proof')::uuid for update;
+    if proof.id is null or proof.user_id<>uid or proof.session_id is distinct from sid or proof.state<>'issued'
+      or proof.expires_at<=now() or proof.password_fingerprint<>md5(coalesce(person.encrypted_password,''))
+      or proof.account_role is distinct from person.raw_app_meta_data->>'role'
+      or proof.account_email is distinct from person.email then raise exception 'PASSWORD_PROOF_REQUIRED'; end if;
+    update private.customer_password_proofs set state='prepared' where id=proof.id;
+  else raise exception 'INVALID_REQUEST';
+  end if;
+  -- An expired operation cannot pass the deferred Auth barrier. With the user
+  -- locked, retire only its unchanged credential guard; never discard an
+  -- in-flight, unexpired operation after an ambiguous network response.
+  delete from private.customer_password_reset_guards g using private.customer_password_proofs p
+    where g.id=p.id and g.user_id=uid and p.user_id=uid and p.state='prepared'
+      and p.expires_at<=now() and p.password_fingerprint=md5(coalesce(person.encrypted_password,''));
+  update private.customer_password_proofs set state='failed' where user_id=uid and state='prepared' and expires_at<=now()
+    and password_fingerprint=md5(coalesce(person.encrypted_password,''));
+  if exists(select 1 from private.customer_password_reset_guards where user_id=uid)
+    or exists(select 1 from private.admin_password_reset_guards where target_id=uid) then raise exception 'PASSWORD_CHANGE_IN_PROGRESS'; end if;
+  insert into private.customer_password_reset_guards(id,user_id) values(proof.id,uid);
+  return jsonb_build_object('operation',proof.id);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -801,10 +967,8 @@ CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", 
     where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
       and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
       and (u.banned_until is null or u.banned_until<=now())
-      and not exists(select 1 from private.account_revoked_sessions r where r.session_id=s.id)
   )
 $$;
-
 
 ALTER FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") OWNER TO "postgres";
 
@@ -965,6 +1129,25 @@ $$;
 
 
 ALTER FUNCTION "public"."enforce_account_session"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_password_session"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if to_regprocedure('public.enforce_account_session()') is not null then
+    perform public.enforce_account_session();
+  end if;
+  if auth.jwt()->>'role'='authenticated' and auth.jwt()->'app_metadata'->>'role' in ('customer','manager','barber')
+    and not public.customer_session_is_live(auth.uid(),nullif(auth.jwt()->>'session_id','')::uuid) then
+    raise sqlstate 'PT401' using message='AUTH_REQUIRED';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_password_session"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."finish_admin_password_reset"("p_guard" "uuid", "p_actor" "uuid", "p_target" "uuid") RETURNS boolean
@@ -3156,6 +3339,10 @@ GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_d
 
 
 
+REVOKE ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+
+
 REVOKE ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") TO "service_role";
 
@@ -3178,6 +3365,12 @@ GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "service_role";
 
+
+
+REVOKE ALL ON FUNCTION "public"."enforce_password_session"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "service_role";
 
 
 REVOKE ALL ON FUNCTION "public"."finish_admin_password_reset"("p_guard" "uuid", "p_actor" "uuid", "p_target" "uuid") FROM PUBLIC;

@@ -5,7 +5,7 @@ type Dependencies = {
   list: (page: number) => Promise<{ users: User[]; hasMore: boolean }>;
   get: (id: string) => Promise<User | null>;
   begin: (adminId: string, targetId: string) => Promise<string | null>;
-  update: (id: string, password: string) => Promise<boolean>;
+  update: (id: string, password: string, guardId: string) => Promise<boolean>;
   complete: (guardId: string, adminId: string, targetId: string) => Promise<boolean>;
 };
 const allowedRoles = new Set(['manager', 'barber', 'agent', 'customer']);
@@ -44,7 +44,7 @@ export function createAdminPasswordResetHandler(deps: Dependencies) {
       if (!target || !allowedRoles.has(role(target))) return reply(403, {error:'Forbidden'});
       const guard = await deps.begin(caller.id, target.id);
       if (!guard) return reply(503, {error:'Reset unavailable'});
-      if (!(await deps.update(target.id, body.password))) return reply(503, {error:'Reset unavailable'});
+      if (!(await deps.update(target.id, body.password, guard))) return reply(503, {error:'Reset unavailable'});
       let auditComplete = false;
       try { auditComplete = await deps.complete(guard, caller.id, target.id); } catch { /* The password was already changed. */ }
       return reply(200, {success:true, auditComplete});

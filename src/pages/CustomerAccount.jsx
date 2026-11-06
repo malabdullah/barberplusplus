@@ -140,7 +140,7 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button>
+          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button>
             <Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link>
             <Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link>
             <Link to="/support">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link>

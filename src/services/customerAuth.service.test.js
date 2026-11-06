@@ -2,6 +2,7 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn(), setSession: vi.fn(), signOut: vi.fn() }));
 vi.mock('../lib/runtimeConfig', () => ({ isTest: true, customerFeaturesEnabled: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'test-public-key' } }));
 vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth }, CUSTOMER_AUTH_STORAGE_KEY: 'barber-customer-auth' }));
+import { rememberPasswordProof } from '../lib/customerPasswordProof';
 import { customerAuthService } from './customerAuth.service';
 const request = vi.fn();
 beforeEach(() => {
@@ -39,7 +40,7 @@ it('accepts an email change callback only after verifying the customer session',
   expect(await customerAuthService.finishEmail('http://localhost/customer/email-callback#access_token=customer-token&refresh_token=refresh-token&type=email_change')).toEqual({ recovery: false, returnTo: '/customer/account' });
   expect(auth.setSession).toHaveBeenCalledWith({ access_token: 'customer-token', refresh_token: 'refresh-token' });
 });
-it.each(['signup', 'magiclink', 'recovery'])('handles SMTP %s confirmation on a different browser without a PKCE verifier', async type => {
+it.each(['signup', 'magiclink'])('handles SMTP %s confirmation on a different browser without a PKCE verifier', async type => {
   auth.setSession.mockResolvedValue({ data: { user: { app_metadata: { role: 'customer' }, email_confirmed_at: 'confirmed' } } });
   window.history.replaceState({}, '', `/customer/email-callback?next=book#access_token=customer-token&refresh_token=refresh-token&type=${type}`);
   expect(await customerAuthService.finishEmail(window.location.href)).toEqual({ recovery: type === 'recovery', returnTo: '/book' });
@@ -62,7 +63,8 @@ it.each(['logout', 'resetPassword'])('clears only customer credentials after %s 
   localStorage.setItem('barber-customer-auth-code-verifier', 'customer-verifier');
   localStorage.setItem('staff-session', 'keep-staff-session');
   auth.signOut.mockResolvedValue({ error: { name: 'AuthSessionMissingError', status: 400 } });
-  await customerAuthService[action]({ password: 'ResetPass1!' });
+  rememberPasswordProof({ proof: 'af220000-0000-4000-8000-000000000004', expiresIn: 300 });
+  await customerAuthService[action]({ password: 'ResetPass1!', confirmPassword: 'ResetPass1!' });
   expect(localStorage.getItem('barber-customer-auth')).toBeNull();
   expect(localStorage.getItem('barber-customer-auth-code-verifier')).toBeNull();
   expect(localStorage.getItem('staff-session')).toBe('keep-staff-session');
@@ -74,7 +76,7 @@ it('does not hide unrelated Auth sign-out failures', async () => {
   expect(localStorage.getItem('barber-customer-auth')).toBe('customer-session');
 });
 
-it.each(['signup', 'recovery'])('verifies the emailed %s code using Supabase OTP', async purpose => {
+it.each(['signup'])('verifies the emailed %s code using Supabase OTP', async purpose => {
   auth.verifyOtp.mockResolvedValue({ data: { session: { access_token: 'customer-token' }, user: { app_metadata: { role: 'customer' }, email_confirmed_at: 'confirmed' } } });
   await customerAuthService.verifyEmailCode({ email: 'Customer@Example.test ', code: '123456', purpose });
   expect(auth.verifyOtp).toHaveBeenCalledWith({ email: 'customer@example.test', token: '123456', type: purpose === 'recovery' ? 'recovery' : 'email' });
@@ -92,4 +94,18 @@ it('removes callback credentials and handles Supabase expired-link errors', asyn
   await expect(customerAuthService.finishEmail(window.location.href)).rejects.toThrow('INVALID_CODE');
   expect(window.location.search).toBe('');
   await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback#error=access_denied&error_code=otp_expired')).rejects.toThrow('INVALID_CODE');
+});
+
+it('rejects a normal recovery session without a request-bound proof', async () => {
+  await expect(customerAuthService.finishEmail('http://localhost/customer/email-callback#access_token=token&refresh_token=refresh&type=recovery')).rejects.toThrow('PASSWORD_PROOF_REQUIRED');
+  expect(auth.setSession).not.toHaveBeenCalled();
+});
+it('verifies recovery codes through the server with the issued request ID', async () => {
+  const session = { access_token: 'recovery-token', refresh_token: 'recovery-refresh', user: { app_metadata: { role: 'customer' } } };
+  request.mockResolvedValue({ ok: true, json: async () => ({ session, proof: 'af220000-0000-4000-8000-000000000004', expiresIn: 300 }) });
+  auth.setSession.mockResolvedValue({ error: null });
+  await customerAuthService.verifyEmailCode({ email: 'ignored@example.test', code: '123456', purpose: 'recovery', requestId: 'issued-request' });
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: 'password-recovery-verify', requestId: 'issued-request', code: '123456' });
+  expect(auth.verifyOtp).not.toHaveBeenCalled();
+  expect(auth.setSession).toHaveBeenCalledWith(session);
 });

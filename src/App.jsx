@@ -66,6 +66,7 @@ const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerifi
 const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
 const CustomerEmailCallback = lazy(() => import('./pages/CustomerEmailCallback'));
 const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth'));
+const CustomerPassword = lazy(() => import('./pages/CustomerPassword'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
@@ -147,6 +148,7 @@ function AppRoutes() {
     <Routes>
       <Route element={<PublicLayout />}>
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
+      {customerFeaturesEnabled && <Route path="/customer/password" element={<Suspense fallback={null}><CustomerPassword /></Suspense>} />}
       {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}
       {customerFeaturesEnabled && ['/customer/auth-callback', '/customer/complete-profile'].map(path => <Route key={path} path={path} element={<Suspense fallback={null}><CustomerSocialAuth /></Suspense>} />)}
       {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}

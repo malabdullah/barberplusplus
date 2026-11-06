@@ -1,3 +1,5 @@
+import { customerPushAction } from './push.ts';
+import { customerPasswordAction, type PasswordDependencies } from './password.ts';
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
@@ -15,7 +17,8 @@ type Dependencies = {
   emailSignIn?: (email: string, password: string) => Promise<{ session: unknown; identity: Identity; name: string } | null>;
   emailName?: (token: string) => Promise<string>;
   socialIdentity?: (token: string) => Promise<(Identity & { name?: string }) | null>;
-  resetPassword: (id: string, password: string) => Promise<void>;
+  resetPassword: (id: string, password: string, guardId?: string) => Promise<void>;
+  passwords?: PasswordDependencies;
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +51,22 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       let body: Data;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return reply(400,{error:'INVALID_REQUEST'});}
       if(!body || typeof body!=='object' || Array.isArray(body)) return reply(400,{error:'INVALID_REQUEST'});
       const action=String(body.action);
+      if (action.startsWith('push-')) {
+        const ip=req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local';
+        if (!await deps.rpc('limit',{key:await hash(`push:${ip}`),max:100})) return reply(429,{error:'RATE_LIMITED'});
+        return reply(200,await customerPushAction(deps,req,body));
+      }
+      if (deps.passwords) {
+        const result = await customerPasswordAction({
+          action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',
+          ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',
+          environment:deps.environment,appUrl:deps.appUrl,identity:deps.identity,
+          limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max})),deps:deps.passwords,
+        });
+        if (result) return reply(result.status,result.body);
+      }
+      if (action==='email-reset' || action.startsWith('password-')) return reply(400,{error:'PASSWORD_PROOF_REQUIRED'});
+
       if (['email-signup','email-resend','email-recovery','email-login'].includes(action)) {
         const email=typeof body.email==='string' ? body.email.trim().toLowerCase() : '';
         if (email.length>254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return reply(400,{error:'INVALID_DETAILS'});
@@ -66,14 +85,16 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(name.length<2 || name.length>120)return reply(400,{error:'INVALID_DETAILS'});
           if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
-          await deps.emailSignup(name,email,body.password,body.returnTo==='/book'?'book':'account');
+          if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
+          await deps.emailSignup(name,email,body.password,body.client==='ios'?`native:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
         } else {
           if(!deps.emailLink)throw Error('UNAVAILABLE');
-          await deps.emailLink(email,action==='email-resend'?'confirm':'recovery',body.returnTo==='/book'?'book':'account');
+          if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
+          await deps.emailLink(email,action==='email-resend'?'confirm':'recovery',body.client==='ios'?`native:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
         }
         return reply(200,{success:true});
       }
-      if (['email-ensure','email-reset'].includes(action)) {
+      if (action==='email-ensure') {
         const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';
         const identity=await deps.identity(token);
         if(!identity)return reply(401,{error:'AUTH_REQUIRED'});
@@ -82,12 +103,6 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           const name=supplied || await deps.emailName?.(token) || '';
           return reply(200,{profile:await deps.rpc('email-ensure',{...identity,name})});
         }
-        if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
-        const guard=crypto.randomUUID();
-        await deps.rpc('email-reset-guard',{...identity,guard_id:guard});
-        await deps.resetPassword(identity.user_id,body.password);
-        await deps.rpc('finish-reset',{user_id:identity.user_id,guard_id:guard});
-        return reply(200,{success:true});
       }
       if (['social-code','social-complete'].includes(action)) return reply(404,{error:'NOT_AVAILABLE'});
       let social: (Identity & {name?: string}) | null = null;
@@ -190,7 +205,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       if(action==='reset-password') {
         // consume creates a role-change guard. Keep it on uncertain failure;
         // completion revokes sessions and releases it only after Auth succeeds.
-        await deps.resetPassword(String(payload.user_id),password);
+        await deps.resetPassword(String(payload.user_id),password,String(payload.guard_id));
         await deps.rpc('finish-reset',{user_id:payload.user_id,guard_id:payload.guard_id});
         return reply(200,{success:true});
       }
@@ -204,6 +219,12 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       return reply(200,{session:result.session,profile:await deps.rpc('profile',result.identity)});
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
+      if (['INVALID_CODE','INVALID_DETAILS','INVALID_REQUEST','WEAK_PASSWORD','PASSWORD_MISMATCH','SAME_PASSWORD','CURRENT_PASSWORD_REQUIRED','PASSWORD_NOT_SET','PASSWORD_ALREADY_SET','NATIVE_CLIENT_UPDATE_REQUIRED'].includes(message)) return reply(400,{error:message});
+      if (message==='WRONG_CURRENT_PASSWORD') return reply(403,{error:message});
+      if (message==='RATE_LIMITED') return reply(429,{error:message});
+      if (message==='PASSWORD_PROOF_REQUIRED') return reply(403,{error:message});
+      if (message==='PASSWORD_CHANGE_IN_PROGRESS') return reply(409,{error:message});
+      if (message==='PASSWORD_UPDATE_UNCERTAIN') return reply(503,{error:message});
       if (message === 'SELF_BOOKING_NOT_ALLOWED') return reply(409, { error: message });
       if (['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'SLOT_UNAVAILABLE', 'INVALID_SELECTION'].includes(message)) return reply(409, { error: message });
       if (['INVALID_REQUEST', 'INVALID_DATE'].includes(message)) return reply(400, { error: message });

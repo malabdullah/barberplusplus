@@ -26,7 +26,13 @@ Deno.serve(withCloudTestGateway(createAdminPasswordResetHandler({
     const {data,error} = await admin.rpc('begin_admin_password_reset', {p_actor:adminId,p_target:targetId});
     return !error && typeof data === 'string' ? data : null;
   },
-  update: async (id,password) => { const {error}=await admin.auth.admin.updateUserById(id,{password}); return !error; },
+  update: async (id,password,guardId) => {
+    const current=await admin.auth.admin.getUserById(id);
+    if(current.error || !current.data.user)return false;
+    const guarded=['customer','manager','barber'].includes(String(current.data.user.app_metadata.role));
+    const {error}=await admin.auth.admin.updateUserById(id,{password,...(guarded?{app_metadata:{barber_admin_password_operation:guardId}}:{})});
+    return !error;
+  },
   complete: async (guardId,adminId,targetId) => {
     const {data,error} = await admin.rpc('finish_admin_password_reset', {p_guard:guardId,p_actor:adminId,p_target:targetId});
     return !error && data === true;
