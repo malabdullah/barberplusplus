@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, CheckCircle2, ChevronRight, Loader2, LogOut, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, Loader2, Pencil, Plus, RotateCcw } from 'lucide-react';
 import UpcomingBookingActions from '../components/Customer/UpcomingBookingActions';
 import BookingRating from '../components/Customer/BookingRating';
+import CustomerSignOutButton from '../components/Customer/CustomerSignOutButton';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import { customerBookingService } from '../services/customerBooking.service';
@@ -140,10 +141,11 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button>
+          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link>
             <Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link>
             <Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link>
             <Link to="/support">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link>
+            <CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} />
           </div>
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">

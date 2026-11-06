@@ -19,6 +19,7 @@
 .public-dropdown-links { position: absolute; inset-inline-end: 0; top: calc(100% + 10px); width: max-content; min-width: 230px; max-width: calc(100vw - 32px); padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); box-shadow: 0 8px 24px #0002; }
 .public-dropdown-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; color: var(--text-primary); border-radius: 6px; }
 .public-dropdown-links a:hover { background: var(--bg-tertiary); }
+.public-sign-out-error { margin: 0; padding: 12px 24px; color: var(--text-primary); background: var(--bg-secondary); border-top: 1px solid var(--border-color); font-size: 14px; }
 .public-mobile-toggle { display: none; width: 44px; padding: 10px; }
 .public-mobile-menu, .public-mobile-links { display: none; }
 .public-header :where(a, button):focus-visible, .public-footer a:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
