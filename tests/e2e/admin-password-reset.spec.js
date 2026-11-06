@@ -40,5 +40,8 @@ test('non-admin users cannot open the admin reset page', async ({ page }) => {
   await page.goto('/dashboard/settings');
   await page.locator('.settings-link-btn').filter({hasText:/Change Password|تغيير كلمة المرور/i}).click();
   await expect(page).toHaveURL(/\/change-password$/);
-  await expect(page.locator('#own-password')).toBeVisible();
+  await expect(page.locator('#currentPassword')).toBeVisible();
+  await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'new-password');
+  await expect(page.locator('#confirmPassword')).toBeVisible();
+  await expect(page.locator('#own-password')).toHaveCount(0);
 });
