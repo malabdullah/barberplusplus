@@ -1,4 +1,5 @@
 begin;
+create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
 insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data) values
