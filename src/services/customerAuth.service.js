@@ -19,8 +19,8 @@ async function request(action, data = {}, authenticated = false) {
   let response; let result;
   try {
     response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-auth`, {
-    method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
+      method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(20000),
     });
     result = await response.json();
   } catch (error) {
@@ -113,7 +113,7 @@ export const customerAuthService = {
     const result = await request('password-native-delivery', { requestId: url.searchParams.get('request_id'), nativeState: url.searchParams.get('state'), tokenHash: hash.get('token_hash') || url.searchParams.get('token_hash') });
     return nativeEmailReturn(input, appConfig, result.deliveryToken);
   },
-  setupPassword: ({ audience } = {}) => request('password-setup-request', { ...(audience === 'work' ? { audience } : {}) }, true),
+  setupPassword: ({ audience, returnTo } = {}) => request('password-setup-request', { ...(audience === 'work' ? { audience } : {}), ...(returnTo === '/book' ? { returnTo } : {}) }, true),
   async changePassword({ currentPassword, password, confirmPassword }) {
     try { await request('password-change', { currentPassword, password, confirmPassword }, true); }
     catch (error) { if (error.message === 'PASSWORD_UPDATE_UNCERTAIN') { forgetPasswordProof(); await clearCustomerSession(true).catch(() => {}); } throw error; }

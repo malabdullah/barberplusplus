@@ -7,6 +7,7 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 import CustomerPassword from './CustomerPassword';
+import { rememberPasswordProof } from '../lib/customerPasswordProof';
 import { customerAuthService } from '../services/customerAuth.service';
 vi.mock('../services/customerAuth.service',()=>({customerAuthService:{passwordStatus:vi.fn(),changePassword:vi.fn(),resetPassword:vi.fn(),setupPassword:vi.fn()}}));
 let i18n;
@@ -37,4 +38,13 @@ it('keeps a wrong-current-password error on the current form',async()=>{
 it('renders the signed-in password fields in Arabic and RTL',async()=>{
  await i18n.changeLanguage('ar');customerAuthService.passwordStatus.mockResolvedValue({hasPassword:true});mount();
  expect((await screen.findByLabelText(ar.customerPassword.currentPassword)).closest('.customer-booking')).toHaveAttribute('dir','rtl');
+});
+
+it('returns a recovered customer to the original booking after a fresh sign-in',async()=>{
+ rememberPasswordProof({proof:'af220000-0000-4000-8000-000000000004',expiresIn:300});
+ render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[{pathname:'/customer/reset-password',state:{returnTo:'/book'}}]}><CustomerPassword mode="reset" /></MemoryRouter></I18nextProvider>);
+ fireEvent.change(screen.getByLabelText(en.customerAuth.newPassword),{target:{value:'Renewed12!'}});
+ fireEvent.change(screen.getByLabelText(en.customerAuth.confirmPassword),{target:{value:'Renewed12!'}});
+ fireEvent.click(screen.getByRole('button',{name:en.customerPassword.savePassword}));
+ expect(await screen.findByRole('link',{name:en.customerAuth.signIn})).toHaveAttribute('href','/customer/sign-in?next=book');
 });

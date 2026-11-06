@@ -37,7 +37,7 @@ export default function CustomerEmailVerification() {
     if (!validEmail()) { setError('INVALID_DETAILS'); return; }
     setBusy(true); setError(''); setNotice('');
     try {
-      const delivery = purpose === 'recovery' ? (pending?.setup ? await customerAuthService.setupPassword({ audience: pending?.audience }) : await customerAuthService.requestRecovery({ email, returnTo })) : await customerAuthService.resendConfirmation({ email, returnTo });
+      const delivery = purpose === 'recovery' ? (pending?.setup ? await customerAuthService.setupPassword({ audience: pending?.audience, returnTo }) : await customerAuthService.requestRecovery({ email, returnTo })) : await customerAuthService.resendConfirmation({ email, returnTo });
       setRequestId(delivery?.requestId || '');
       rememberEmail({ email, purpose, returnTo, requestId: delivery?.requestId, setup: pending?.setup, audience: pending?.audience }); setRetryAt(Date.now() + 60000); setNow(Date.now());
       setEditing(false); setCode(''); setNotice(tr('email.resent'));
