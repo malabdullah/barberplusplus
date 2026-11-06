@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']]) {
   test(`${role} Test banner leaves navigation and drawer controls unobscured`, async ({ page }) => {
     test.setTimeout(120000);
-    const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:4173');
+    const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:5173');
     expect(['localhost', '127.0.0.1', '::1']).toContain(base.hostname);
     const localApi = new URL('http://127.0.0.1:55321');
     const runtime = { environment: 'test', appUrl: base.origin,
