@@ -478,7 +478,9 @@
     "adjustSearch": "Try adjusting your search",
     "addFirstService": "Add First Service",
     "addNewService": "Add New Service",
-    "deleteService": "Delete Service"
+    "deleteService": "Delete Service",
+    "selectShopFirst": "Select a shop, or create one, before adding services.",
+    "saveFailed": "Could not save the service. Please try again."
   },
   "bookings": {
     "title": "Bookings",
