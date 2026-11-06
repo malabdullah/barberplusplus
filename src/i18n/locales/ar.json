@@ -125,6 +125,8 @@
     "myProfile": "ملفي الشخصي"
   },
   "auth": {
+    "registrationEmailLinked": "هذا البريد الإلكتروني مرتبط بحساب موجود بالفعل. استخدم Google أو Apple أو طريقة تسجيل الدخول الحالية بدلًا من إنشاء حساب جديد.",
+    "registrationExistingSignIn": "الانتقال إلى تسجيل دخول فريق الصالون",
     "registrationNextTitle": "أكمل إعداد حسابك",
     "registrationConfirmNext": "تحقق من بريدك الإلكتروني وأكّد حسابك، ثم سجّل الدخول. لديك حساب بالفعل؟ سجّل الدخول بحسابك الحالي.",
     "registrationSignInNext": "سجّل الدخول لمتابعة إعداد صالونك.",

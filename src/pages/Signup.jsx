@@ -1,5 +1,5 @@
 import BrandLogo from '../components/UI/BrandLogo';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone } from 'lucide-react';
@@ -25,14 +25,18 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [emailAlreadyLinked, setEmailAlreadyLinked] = useState(false);
+  const errorRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [registration, setRegistration] = useState(null);
   usePublicNavigationBusy(isLoading);
+  useEffect(() => { if (error || emailAlreadyLinked) errorRef.current?.focus(); }, [error, emailAlreadyLinked]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
+    setEmailAlreadyLinked(false);
   };
 
   const validateForm = () => {
@@ -87,6 +91,7 @@ export default function Signup() {
 
     setIsLoading(true);
     setError('');
+    setEmailAlreadyLinked(false);
 
     try {
       const result = await signup({
@@ -101,6 +106,11 @@ export default function Signup() {
         setFormData(previous => ({ ...previous, password: '', confirmPassword: '' }));
         setIsLoading(false);
       } else {
+        if (result.error === 'SIGNUP_EMAIL_EXISTS') {
+          setEmailAlreadyLinked(true);
+          setIsLoading(false);
+          return;
+        }
         // Use errorMessages utility to get user-friendly message
         const errorMessage = result.error 
           ? getErrorMessage(result.error, t('auth.registrationFailed'), t)
@@ -147,9 +157,10 @@ export default function Signup() {
 
         {/* Signup Form */}
         {registration ? <Link className="login-submit" to="/login">{t('auth.signIn')}<ArrowRight size={18} aria-hidden="true" /></Link> : <form className="login-form" onSubmit={handleSubmit}>
-          {error && (
-            <div className="login-error animate-fade-in">
-              {error}
+          {(error || emailAlreadyLinked) && (
+            <div ref={errorRef} className="login-error signup-error animate-fade-in" role="alert" tabIndex={-1}>
+              <p>{emailAlreadyLinked ? t('auth.registrationEmailLinked') : error}</p>
+              {emailAlreadyLinked && <Link to="/login">{t('auth.registrationExistingSignIn')}</Link>}
             </div>
           )}
 
