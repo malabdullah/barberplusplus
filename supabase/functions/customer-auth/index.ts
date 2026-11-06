@@ -5,6 +5,7 @@ import { sendTestEmail } from './test-mail.ts';
 import { createCustomerEmailDelivery } from './email-delivery.ts';
 import { customerIdentity, sessionId } from '../_shared/customer-session.ts';
 import { passwordCapableRoles } from './password.ts';
+import { registrationUser } from './registration.ts';
 const url=Deno.env.get('SUPABASE_URL') || '';
 const environment=Deno.env.get('APP_ENV') || '';
 const appUrl=Deno.env.get('APP_URL') || '';
@@ -80,6 +81,32 @@ Deno.serve(createCustomerAuthHandler({
     return typeof name==='string'?name.slice(0,120):'';
   },
   identity:token=>customerIdentity(admin,token),
+  registration:{
+    signup:async(input)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const {data,error}=await client.auth.signUp({email:input.email,password:input.password,options:{data:{name:input.name,phone:input.phone},emailRedirectTo:new URL('/customer/email-callback?next=work',appUrl).href}});
+      if(error) {
+        if(['user_already_exists','email_exists'].includes(String(error.code)) || /user already registered/i.test(error.message)) throw Error('SIGNUP_EMAIL_EXISTS');
+        if(error.status===429) throw Error('RATE_LIMITED');
+        if(/Database error saving new user/i.test(error.message)) throw Error('PHONE_REGISTRATION_CONFLICT');
+        throw Error('UNAVAILABLE');
+      }
+      if(data.session) await client.auth.signOut({scope:'local'});
+      return registrationUser(data.user);
+    },
+    user:async(id)=>{
+      const {data,error}=await admin.auth.admin.getUserById(id);
+      if(error?.status===404) return null;
+      if(error || !data.user) throw Error('UNAVAILABLE');
+      if(data.user.app_metadata?.role!=='manager') return null;
+      return {id:data.user.id,email:(data.user.email || '').trim().toLowerCase(),verified:Boolean(data.user.email_confirmed_at)};
+    },
+    resend:async(email)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
+      const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:new URL('/customer/email-callback?next=work',appUrl).href}});
+      if(error) throw Error(error.status===429?'RATE_LIMITED':'UNAVAILABLE');
+    },
+  },
   passwords:{
     rpc:async(action,data)=>{
       const result=await admin.rpc('customer_password_api',{p_action:action,p_data:data});

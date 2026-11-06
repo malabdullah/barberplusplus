@@ -1,6 +1,5 @@
 import { customerAuthService } from './customerAuth.service';
-import { createClient } from '@supabase/supabase-js';
-import { appConfig } from '../lib/runtimeConfig';
+import { registrationService } from './registration.service';
 import { supabase } from '../lib/supabase';
 import {
   authRateLimiter,
@@ -9,9 +8,6 @@ import {
   validateUserRole,
 } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
-
-// Email links must also work on a different browser/device.
-const mailClient = () => createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit' } });
 
 export const authService = {
   /**
@@ -65,30 +61,14 @@ export const authService = {
       return { success: false, error: `Too many signup attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
-    const { data, error } = await mailClient().auth.signUp({
-      email,
-      password: userData.password,
-      options: {
-        data: { name: userData.name, phone: userData.phone }
-      }
-    });
-
-    if (error) {
-      if (['user_already_exists', 'email_exists'].includes(error.code) || /user already registered/i.test(error.message)) return { success: false, error: 'SIGNUP_EMAIL_EXISTS' };
-      // Map Supabase error to user-friendly message
-      if (/Database error saving new user/i.test(error.message)) return { success: false, error: 'PHONE_REGISTRATION_CONFLICT' };
-      const friendlyError = getErrorMessage(error, 'Registration failed. Please try again.');
-      return { success: false, error: friendlyError };
+    try {
+      const result = await registrationService.signup({ name: userData.name, email, phone: userData.phone, password: userData.password });
+      signupRateLimiter.reset(email);
+      return result;
+    } catch (failure) {
+      const code = ['SIGNUP_EMAIL_EXISTS', 'PHONE_REGISTRATION_CONFLICT', 'INVALID_PHONE', 'INVALID_DETAILS', 'WEAK_PASSWORD', 'RATE_LIMITED'].includes(failure.message) ? failure.message : 'REGISTRATION_FAILED';
+      return { success: false, error: code };
     }
-
-    // Confirmed accounts (including linked OAuth emails) can return a fake user
-    // with no identities instead of an error. No new account or email is created.
-    if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) return { success: false, error: 'SIGNUP_EMAIL_EXISTS' };
-    if (!data.user?.id) return { success: false, error: 'REGISTRATION_FAILED' };
-
-    // Reset rate limit on success
-    signupRateLimiter.reset(email);
-    return { success: true, confirmationRequired: !data.session };
   },
 
   /**
