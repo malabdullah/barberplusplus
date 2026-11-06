@@ -45,7 +45,7 @@ jobs:
           # avoid the Azure mirror that can stall hosted-runner downloads.
           # Runner images can resolve Ubuntu through an indirect mirror list.
           # Rewrite that list too, otherwise APT still selects the Azure mirror.
-          for source in /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt; do
+          for source in /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors*.txt; do
             if [ -f "$source" ]; then
               sudo sed -i 's|https\?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$source"
             fi
