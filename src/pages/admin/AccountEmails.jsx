@@ -29,7 +29,7 @@ export default function AccountEmails() {
     }catch(failure){setError(errorText(failure.message));}finally{setBusy(false);}
   };
   return <div className="admin-page"><div className="admin-page-header"><Link className="admin-back-link" to="/admin/users">{t('admin.users.title')}</Link><h1>{tr('title')}</h1><p>{tr('description')}</p></div>
-    <form className="password-reset-form" onSubmit={submit}>
+    <form className="password-reset-form account-email-form" onSubmit={submit}>
       <label htmlFor="email-account">{tr('account')}</label><select id="email-account" className="form-input" value={selected} disabled={loading || busy} onChange={event=>{setSelected(event.target.value);setNewEmail('');setConfirmEmail('');setReason('');setAcknowledged(false);setSuccess('');setError('');}} required>
         <option value="">{t(loading?'common.loading':'admin.passwordReset.select')}</option>{users.map(user=><option key={user.id} value={user.id}>{user.email || user.name || user.id} ({user.role || '—'})</option>)}
       </select>
