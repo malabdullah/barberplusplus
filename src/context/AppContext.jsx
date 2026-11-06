@@ -683,7 +683,7 @@ export function AppProvider({ children }) {
       const { imageFile, ...data } = branchData;
 
       // Create branch first to get the ID
-      const newBranch = await branchesService.create({
+      let newBranch = await branchesService.create({
         ...data,
         managerId: user?.id,
         status: 'active',
@@ -694,20 +694,15 @@ export function AppProvider({ children }) {
         try {
           const imageUrl = await storageService.uploadImage(imageFile, 'branches', newBranch.id);
           // Update branch with image URL
-          const updatedBranch = await branchesService.update(newBranch.id, { imageUrl });
-          setBranches(prev => [...prev, updatedBranch]);
-          loggingService.logAction('create', 'branch', updatedBranch.id, `Created branch: ${branchData.name}`);
-          return updatedBranch;
+          newBranch = await branchesService.update(newBranch.id, { imageUrl });
         } catch (uploadError) {
           logger.error('Error uploading branch image:', uploadError);
-          // Still return the branch without image
-          setBranches(prev => [...prev, newBranch]);
-          loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
-          return newBranch;
+          // Keep the successfully created shop even if its image could not be saved.
         }
       }
 
       setBranches(prev => [...prev, newBranch]);
+      setSelectedBranchId(newBranch.id);
       loggingService.logAction('create', 'branch', newBranch.id, `Created branch: ${branchData.name}`);
       return newBranch;
     } catch (error) {
@@ -885,6 +880,7 @@ export function AppProvider({ children }) {
   // Service actions
   const addService = useCallback(async (serviceData) => {
     try {
+      if (!selectedBranchId || !branches.some(branch => branch.id === selectedBranchId)) throw new Error('SHOP_REQUIRED');
       const newService = await servicesService.create({
         ...serviceData,
         branchId: selectedBranchId,
@@ -898,7 +894,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'service', action: 'create' });
       throw error;
     }
-  }, [selectedBranchId]);
+  }, [selectedBranchId, branches]);
 
   const updateService = useCallback(async (serviceId, updates) => {
     try {

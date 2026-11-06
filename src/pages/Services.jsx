@@ -185,13 +185,14 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
 
 export default function Services() {
   const { t } = useTranslation();
-  const { branchServices, selectedBranch, addService, updateService, deleteService } = useApp();
+  const { branchServices, selectedBranch, selectedBranchId, addService, updateService, deleteService } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [deletingService, setDeletingService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const hasSelectedShop = Boolean(selectedBranchId && selectedBranch?.id === selectedBranchId);
 
   const filteredServices = useMemo(() =>
     branchServices.filter((service) =>
@@ -201,6 +202,7 @@ export default function Services() {
   );
 
   const handleAdd = useCallback(() => {
+    setError(null);
     setEditingService(null);
     setIsFormOpen(true);
   }, []);
@@ -227,7 +229,9 @@ export default function Services() {
       setEditingService(null);
     } catch (err) {
       logErrorSafely(err, 'Services.save');
-      setError(getErrorMessage(err, 'Failed to save service. Please try again.'));
+      setError(err?.message === 'SHOP_REQUIRED'
+        ? t('services.selectShopFirst')
+        : getErrorMessage(err, t('services.saveFailed'), t));
     } finally {
       setIsSubmitting(false);
     }
@@ -255,11 +259,13 @@ export default function Services() {
             {t('services.subtitle')} {selectedBranch?.name}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={handleAdd}>
+        <button className="btn btn-primary" onClick={handleAdd} disabled={!hasSelectedShop}>
           <Plus size={18} strokeWidth={2} />
           {t('services.addService')}
         </button>
       </div>
+
+      {!hasSelectedShop && <div className="form-error-banner" role="alert">{t('services.selectShopFirst')}</div>}
 
       {/* Search Bar */}
       <div className="services-toolbar animate-fade-in-up stagger-1">
@@ -306,7 +312,7 @@ export default function Services() {
           </div>
           <h3>{t('services.noServices')}</h3>
           <p>{t('services.addFirst')}</p>
-          <button className="btn btn-primary" onClick={handleAdd}>
+          <button className="btn btn-primary" onClick={handleAdd} disabled={!hasSelectedShop}>
             <Plus size={18} strokeWidth={2} />
             {t('services.addFirstService')}
           </button>
@@ -320,7 +326,7 @@ export default function Services() {
         title={editingService ? t('services.editService') : t('services.addNewService')}
       >
         {error && (
-          <div className="form-error-banner" style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--status-error-bg)', color: 'var(--status-error)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
+          <div className="form-error-banner" role="alert" style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm) var(--space-md)', background: 'var(--status-error-bg)', color: 'var(--status-error)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
