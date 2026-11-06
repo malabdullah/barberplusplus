@@ -644,6 +644,9 @@
 .password-reset-form p { color: var(--text-secondary); }
 .password-reset-form .password-reset-error { color: var(--status-error); }
 .password-reset-pagination { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.account-email-form { grid-template-columns: minmax(0,1fr); width: 100%; box-sizing: border-box; }
+.account-email-form .form-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.account-email-form p { overflow-wrap: anywhere; }
 
 .admin-transfer {
   display: grid;
