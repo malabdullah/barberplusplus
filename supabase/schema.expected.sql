@@ -800,7 +800,7 @@ ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "j
 CREATE OR REPLACE FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare
   person auth.users%rowtype;
   request private.customer_password_requests%rowtype;
@@ -952,7 +952,7 @@ begin
   insert into private.customer_password_reset_guards(id,user_id) values(proof.id,uid);
   return jsonb_build_object('operation',proof.id);
 end;
-$$;
+$_$;
 
 
 ALTER FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
