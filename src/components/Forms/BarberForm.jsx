@@ -101,7 +101,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   };
 
   return (
-    <form ref={formRef} className="form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+    <form ref={formRef} className="form barber-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
       <div className="form-section">
         <h4 className="form-section-title">{t('profile.title')}</h4>
 

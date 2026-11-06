@@ -69,6 +69,8 @@
   font-size: 0.75rem;
   color: var(--status-error);
 }
+.barber-form .form-error { font-size: .875rem; line-height: 1.5; color: #b42318; }
+[data-theme='dark'] .barber-form .form-error { color: #ffaaa0; }
 
 .form-hint {
   font-size: 0.75rem;
