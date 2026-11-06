@@ -13,7 +13,7 @@ import { saveBookingDraft } from '../utils/customerBookingDraft';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { validatePhoneNumber } from '../utils/validation';
 import { shopWording } from '../utils/customerTerminology';
-import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
+import { usePublicNavigation, usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './CustomerBooking.css';
 import './CustomerAuth.css';
 import './CustomerAccount.css';
@@ -22,6 +22,7 @@ export default function CustomerAccount() {
   const { t, i18n } = useTranslation();
   const tr = key => t(`customerAuth.${key}`);
   const { customer, loading, error: accountError, refresh, logout, updateProfile } = useCustomerAuth();
+  const { busy: navigationBusy } = usePublicNavigation();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [appointmentMessage, setAppointmentMessage] = useState('');
@@ -119,9 +120,11 @@ export default function CustomerAccount() {
   const appointments = bookings.filter(booking => isPastAppointment(booking, now) === showPast)
     .sort((a, b) => (appointmentDate(a) - appointmentDate(b)) * (showPast ? -1 : 1));
   const dateOptions = { timeZone: 'Asia/Kuwait' };
-  if (!loading && !customer) return <Navigate to={signingOut ? '/book' : '/customer/sign-in'} state={{ returnTo: '/customer/account' }} replace />;
+  // Header sign-out owns the final destination while Auth clears the session.
+  const accountLoading = loading || (!customer && navigationBusy);
+  if (!accountLoading && !customer) return <Navigate to={signingOut ? '/book' : '/customer/sign-in'} state={{ returnTo: '/customer/account' }} replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account">
-    {loading ? <p className="ca-loading" role="status"><Loader2 className="cb-spinner" size={24} aria-hidden="true" />{tr('loading')}</p> : <>
+    {accountLoading ? <p className="ca-loading" role="status"><Loader2 className="cb-spinner" size={24} aria-hidden="true" />{tr('loading')}</p> : <>
       <header className="ca-account-heading">
         <div><p className="ca-eyebrow">{tr('customerAccount')}</p><h1>{tr('myAccount')}</h1><p className="cb-intro">{tr('account.intro')}</p></div>
         <Link className="cb-primary" to="/book"><Plus size={18} aria-hidden="true" />{tr('bookNow')}</Link>
