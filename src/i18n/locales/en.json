@@ -958,6 +958,8 @@
     "passwordsMismatch": "Passwords do not match"
   },
   "mfa": {
+    "adminSetup": "Set up an authenticator app to access the admin dashboard.",
+    "setupFailed": "Could not load or set up two-factor authentication. Try again.",
     "setupTitle": "Two-Factor Authentication",
     "setupDescription": "Add an extra layer of security to your account by enabling two-factor authentication with an authenticator app.",
     "enabled": "Two-Factor Authentication Enabled",

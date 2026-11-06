@@ -23,6 +23,38 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE OR REPLACE FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare actor uuid:=auth.uid(); target auth.users%rowtype; result jsonb; page_number integer;
+begin
+  perform public.enforce_account_session();
+  if actor is null or auth.jwt()->>'aal' is distinct from 'aal2' or not exists(select 1 from auth.users where id=actor and raw_app_meta_data->>'role'='admin' and deleted_at is null) then
+    raise exception 'FORBIDDEN' using errcode='42501';
+  end if;
+  if p_action='list' then
+    page_number:=coalesce((p_data->>'page')::integer,1);
+    if page_number<1 or page_number>10000 then raise exception 'INVALID_REQUEST'; end if;
+    select coalesce(jsonb_agg(x),'[]') into result from (
+      select id,email,raw_user_meta_data->>'name' as name,raw_app_meta_data->>'role' as role,
+        email_confirmed_at is not null as verified
+      from auth.users where deleted_at is null order by created_at,id limit 25 offset (page_number-1)*25
+    ) x;
+    return jsonb_build_object('users',result,'hasMore',exists(select 1 from auth.users where deleted_at is null order by created_at,id offset page_number*25 limit 1));
+  end if;
+  if p_action<>'change' or length(trim(coalesce(p_data->>'reason','')))<8 or length(p_data->>'reason')>500 then raise exception 'INVALID_REQUEST'; end if;
+  select * into target from auth.users where id=(p_data->>'userId')::uuid and deleted_at is null for update;
+  if target.id is null or lower(coalesce(target.email,''))<>lower(coalesce(p_data->>'expectedEmail','')) then raise exception 'EMAIL_CHANGED_REFRESH'; end if;
+  result:=private.write_account_email(target.id,p_data->>'newEmail',actor,'admin_change',trim(p_data->>'reason'));
+  return result||jsonb_build_object('success',true,'signedOut',target.id=actor);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean DEFAULT NULL::boolean) RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -308,6 +340,38 @@ $$;
 ALTER FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare person auth.users%rowtype; old_address text:=lower(trim(p_email));
+begin
+  if auth.role() is distinct from 'service_role' then raise exception 'FORBIDDEN' using errcode='42501'; end if;
+  if coalesce(p_audience,'') not in ('customer','team') or length(coalesce(p_password,''))<8 or octet_length(p_password)>72 then raise exception 'REGISTRATION_CANNOT_CORRECT'; end if;
+  select * into person from auth.users where lower(email)=old_address and deleted_at is null for update;
+  -- Recover safely from a lost response after a successful correction.
+  if person.id is null then
+    select u.* into person from auth.users u join private.account_email_changes e on e.user_id=u.id
+      where e.old_email=old_address and e.new_email=lower(trim(p_new_email)) and e.kind='registration_correction'
+        and e.created_at>now()-interval '10 minutes' and u.email=e.new_email and u.deleted_at is null
+      order by e.created_at desc limit 1 for update of u;
+  end if;
+  if person.id is null or person.email_confirmed_at is not null or (person.banned_until is not null and person.banned_until>now())
+    or coalesce(person.encrypted_password,'')='' or extensions.crypt(p_password,person.encrypted_password) is distinct from person.encrypted_password
+    or not exists(select 1 from auth.identities where user_id=person.id and provider='email')
+    or (p_audience='customer' and coalesce(person.raw_app_meta_data->>'role','')<>'customer')
+    or (p_audience='team' and coalesce(person.raw_app_meta_data->>'role','') not in ('manager','barber','agent')) then
+    raise exception 'REGISTRATION_CANNOT_CORRECT';
+  end if;
+  if lower(person.email)=lower(trim(p_new_email)) then return jsonb_build_object('id',person.id,'email',person.email,'verified',false); end if;
+  return private.write_account_email(person.id,p_new_email,null,'registration_correction','Registrant corrected an unverified address');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."count_users_by_role"("role_filter" "text") RETURNS bigint
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -557,6 +621,7 @@ $_$;
 
 ALTER FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 
+
 CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -639,6 +704,8 @@ begin
   return jsonb_build_object('saved',true);
 end;
 $$;
+
+
 ALTER FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") OWNER TO "postgres";
 
 
@@ -649,7 +716,6 @@ CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text",
 
 
 ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
-
 
 
 CREATE OR REPLACE FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
@@ -825,7 +891,9 @@ CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", 
   )
 $$;
 
+
 ALTER FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_booking_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -957,6 +1025,32 @@ $$;
 
 
 ALTER FUNCTION "public"."detect_suspicious_login_activity"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_account_session"() RETURNS "void"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  current_session uuid;
+begin
+  if auth.jwt()->>'role' is distinct from 'authenticated' then return; end if;
+  current_session := private.current_account_session();
+  if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  if exists (
+    select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role'='admin'
+  ) and (auth.jwt()->>'aal' is distinct from 'aal2' or not exists (
+    select 1 from auth.sessions s
+    join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
+    where s.id=current_session and s.aal='aal2' and f.status='verified' and f.factor_type='totp'
+  )) then
+    raise exception 'ADMIN_MFA_REQUIRED' using errcode='42501';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_account_session"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."enforce_password_session"() RETURNS "void"
@@ -1214,7 +1308,9 @@ begin
   return to_jsonb(c)||jsonb_build_object('staff_details',to_jsonb(details));
 end $$;
 
+
 ALTER FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
@@ -1534,8 +1630,8 @@ CREATE TABLE IF NOT EXISTS "public"."customer_staff_details" (
     "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
-ALTER TABLE "public"."customer_staff_details" OWNER TO "postgres";
 
+ALTER TABLE "public"."customer_staff_details" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."governorates" (
@@ -1797,9 +1893,6 @@ ALTER TABLE ONLY "public"."booking_reminders"
 
 
 
-
-
-
 ALTER TABLE ONLY "public"."bookings"
     ADD CONSTRAINT "bookings_pkey" PRIMARY KEY ("id");
 
@@ -1812,6 +1905,8 @@ ALTER TABLE ONLY "public"."branches"
 
 ALTER TABLE ONLY "public"."customer_staff_details"
     ADD CONSTRAINT "customer_staff_details_pkey" PRIMARY KEY ("customer_id");
+
+
 
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_phone_unique" UNIQUE ("country_code", "phone");
@@ -1909,6 +2004,7 @@ ALTER TABLE ONLY "public"."whatsapp_messages"
 
 
 CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
+
 
 
 CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
@@ -2165,6 +2261,8 @@ CREATE INDEX "idx_whatsapp_messages_session" ON "public"."whatsapp_messages" USI
 
 CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifications" USING "btree" ("event_id", "recipient_user_id") WHERE ("event_id" IS NOT NULL);
 
+
+
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
 
 
@@ -2185,53 +2283,81 @@ CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branc
 
 
 
-
-
-
-
-
-
 CREATE OR REPLACE TRIGGER "clear_customer_phone_verification" AFTER UPDATE ON "public"."customers" FOR EACH ROW WHEN (((("old"."phone")::"text" IS DISTINCT FROM ("new"."phone")::"text") OR (("old"."country_code")::"text" IS DISTINCT FROM ("new"."country_code")::"text"))) EXECUTE FUNCTION "private"."clear_customer_phone_verification"();
+
 
 
 CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();
 
 
+
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
+
+
 
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 
+
+
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
+
+
+
+CREATE OR REPLACE TRIGGER "guard_barber_account_email" BEFORE UPDATE OF "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_account_contact_email"();
+
+
 
 CREATE OR REPLACE TRIGGER "guard_booking_history" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_history"();
 
 
+
 CREATE OR REPLACE TRIGGER "guard_booking_policy" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_policy"();
+
 
 
 CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR UPDATE OF "barber_id", "date", "time", "duration", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_schedule"();
 
 
 
+CREATE OR REPLACE TRIGGER "guard_customer_account_email" BEFORE UPDATE OF "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_account_contact_email"();
+
+
+
 CREATE OR REPLACE TRIGGER "guard_manager_chair" BEFORE INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair"();
+
 
 
 CREATE OR REPLACE TRIGGER "guard_manager_chair_booking" AFTER INSERT OR UPDATE OF "barber_id", "branch_id", "date", "time", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair_booking"();
 
 
+
 CREATE OR REPLACE TRIGGER "link_staff_customer_booking_owner" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."link_staff_customer_booking_owner"();
+
+
 
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 
+
+
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
+
+
 
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 
+
+
 CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."notify_barber_change"();
+
+
 
 CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 
+
+
 CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
+
+
 
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 
@@ -2239,7 +2365,11 @@ CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."servi
 
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "phone", "country_code", "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
 
+
+
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "name", "phone", "country_code", "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
+
+
 
 CREATE OR REPLACE TRIGGER "trigger_detect_suspicious_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."detect_suspicious_booking_activity"();
 
@@ -2326,6 +2456,8 @@ ALTER TABLE ONLY "public"."branches"
 ALTER TABLE ONLY "public"."customer_staff_details"
     ADD CONSTRAINT "customer_staff_details_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
 
+
+
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_created_by_user_id_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
 
@@ -2408,6 +2540,22 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
 
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."whatsapp_conversations"("id") ON DELETE CASCADE;
+
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+
+
+
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
 
 
 
@@ -2685,13 +2833,7 @@ CREATE POLICY "Barbers view branch logs via barber record" ON "public"."logs" FO
 
 
 
-
-
-
 CREATE POLICY "Barbers view own logs" ON "public"."logs" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'barber'::"text") AND ("user_id" = ( SELECT "auth"."uid"() AS "uid"))));
-
-
-
 
 
 
@@ -2751,18 +2893,9 @@ CREATE POLICY "Managers can view services in own branches" ON "public"."services
 
 
 
-
-
-
 CREATE POLICY "Managers view branch logs" ON "public"."logs" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'manager'::"text") AND ("branch_id" IN ( SELECT "branches"."id"
    FROM "public"."branches"
   WHERE ("branches"."manager_id" = ( SELECT "auth"."uid"() AS "uid"))))));
-
-
-
-
-
-
 
 
 
@@ -2808,7 +2941,7 @@ CREATE POLICY "Service role full access to customers" ON "public"."customers" TO
 
 
 
-CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "authenticated", "anon" USING (false) WITH CHECK (false);
+CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "anon", "authenticated" USING (false) WITH CHECK (false);
 
 
 
@@ -2817,9 +2950,6 @@ CREATE POLICY "Service role full access to reminders" ON "public"."booking_remin
 
 
 CREATE POLICY "Service role full access to services" ON "public"."services" TO "service_role" USING (true) WITH CHECK (true);
-
-
-
 
 
 
@@ -2867,20 +2997,11 @@ CREATE POLICY "Users can view own settings" ON "public"."user_settings" FOR SELE
 
 
 
-
-
-
 CREATE POLICY "Users insert own logs" ON "public"."logs" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
 
 
 
-
-
-
 CREATE POLICY "Users view own logs" ON "public"."logs" FOR SELECT USING (("user_id" = "auth"."uid"()));
-
-
-
 
 
 
@@ -2896,6 +3017,8 @@ CREATE POLICY "agents_admins_insert_customers" ON "public"."customers" FOR INSER
 
 
 CREATE POLICY "agents_admins_manage_customer_details" ON "public"."customer_staff_details" TO "authenticated" USING (("public"."is_agent"() OR "public"."is_admin"())) WITH CHECK (("public"."is_agent"() OR "public"."is_admin"()));
+
+
 
 CREATE POLICY "agents_admins_update_customers" ON "public"."customers" FOR UPDATE USING (("public"."is_agent"() OR "public"."is_admin"()));
 
@@ -2921,6 +3044,7 @@ ALTER TABLE "public"."branches" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."customer_staff_details" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2939,9 +3063,13 @@ ALTER TABLE "public"."notification_templates" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
+
 CREATE POLICY "notifications_read_recipient" ON "public"."notifications" FOR SELECT TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")))));
 
+
+
 CREATE POLICY "notifications_update_recipient" ON "public"."notifications" FOR UPDATE TO "authenticated" USING ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids"))))) WITH CHECK ((("recipient_user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("recipient_role")::"text" = ( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text"))) AND ((("recipient_role")::"text" <> 'manager'::"text") OR ("recipient_branch_id" IS NULL) OR ("recipient_branch_id" IN ( SELECT "public"."get_user_branch_ids"() AS "get_user_branch_ids")))));
+
 
 
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
@@ -2949,10 +3077,14 @@ ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_details" TO "service_role" USING (true) WITH CHECK (true);
 
+
+
 ALTER TABLE "public"."services" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
+
+
 
 ALTER TABLE "public"."suspicious_activities" ENABLE ROW LEVEL SECURITY;
 
@@ -2972,13 +3104,16 @@ ALTER TABLE "public"."whatsapp_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."whatsapp_messages" ENABLE ROW LEVEL SECURITY;
 
 
-
-
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT USAGE ON SCHEMA "public" TO "barber_reminder_writer";
+
+
+
+REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 
 
 
@@ -3026,6 +3161,11 @@ GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" inte
 
 
 
+REVOKE ALL ON FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."count_users_by_role"("role_filter" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."count_users_by_role"("role_filter" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."count_users_by_role"("role_filter" "text") TO "service_role";
@@ -3048,27 +3188,33 @@ GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "j
 
 
 
-
 REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
+
+
 
 REVOKE ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) TO "service_role";
 
 
+
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
 
+
+
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+
+
 
 REVOKE ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 
 
+
 REVOKE ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") TO "service_role";
-
 
 
 
@@ -3084,10 +3230,18 @@ GRANT ALL ON FUNCTION "public"."detect_suspicious_login_activity"() TO "service_
 
 
 
+REVOKE ALL ON FUNCTION "public"."enforce_account_session"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_account_session"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."enforce_password_session"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_password_session"() TO "service_role";
+
 
 
 REVOKE ALL ON FUNCTION "public"."finish_admin_password_reset"("p_guard" "uuid", "p_actor" "uuid", "p_target" "uuid") FROM PUBLIC;
@@ -3153,6 +3307,7 @@ REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_ch
 GRANT ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") TO "authenticated";
 
 
+
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "service_role";
 
@@ -3161,10 +3316,13 @@ GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO
 REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
 
+
+
 REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
+
 
 
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
@@ -3200,6 +3358,8 @@ GRANT ALL ON FUNCTION "public"."update_whatsapp_conversation_timestamp"() TO "se
 GRANT ALL ON TABLE "public"."customers" TO "anon";
 GRANT ALL ON TABLE "public"."customers" TO "authenticated";
 GRANT ALL ON TABLE "public"."customers" TO "service_role";
+
+
 
 GRANT ALL ON TABLE "public"."admin_settings" TO "anon";
 GRANT ALL ON TABLE "public"."admin_settings" TO "authenticated";
@@ -3255,7 +3415,6 @@ GRANT ALL ON TABLE "public"."branches" TO "service_role";
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "authenticated";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "service_role";
-
 
 
 
@@ -3344,9 +3503,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 
 
 
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
@@ -3354,16 +3510,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 
 
 
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
 
 
 

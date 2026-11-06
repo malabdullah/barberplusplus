@@ -61,7 +61,7 @@ select lives_ok($$update public.bookings set status = 'cancelled', staff_cancell
 reset role;
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status)
   values ('61000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', current_date + 6, '12:30', 'confirmed')$$, 'admin retains existing booking authorization');
 select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000004'$$, 'admin cancels booking');

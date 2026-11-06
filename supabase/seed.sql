@@ -117,6 +117,11 @@ select
 from auth.users
 where email like '%@barber.test';
 
+-- Local browser tests use this synthetic authenticator fixture.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, secret, created_at, updated_at)
+values ('71000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001',
+  'Synthetic authenticator', 'totp', 'verified', 'JBSWY3DPEHPK3PXP', now(), now());
+
 insert into public.governorates (id, name_en, name_ar, code)
 values (9001, 'Synthetic Governorate', 'محافظة تجريبية', 'TEST');
 

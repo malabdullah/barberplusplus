@@ -59,20 +59,12 @@ try {
  const setSession=await client.auth.setSession(login.data.session);assert.ifError(setSession.error);
  const changer=createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});
  assert.ifError((await changer.auth.setSession(login.data.session)).error);
- const update=await changer.auth.updateUser({email:changedEmail},{emailRedirectTo:'http://localhost:5173/customer/email-callback'});assert.ifError(update.error);
- const pending=await client.auth.getUser();assert.equal(pending.data.user.email,email,'email remains unchanged before confirmation');
+ const update=await changer.auth.updateUser({email:changedEmail},{emailRedirectTo:'http://localhost:5173/customer/email-callback'});
+ assert.ok(update.error,'verified customers cannot request email changes directly');
+ const unchanged=await client.auth.getUser();assert.equal(unchanged.data.user.email,email,'blocked self-service change preserves the primary email');
  const inbox=await(await fetch('http://127.0.0.1:55324/api/v1/messages')).json();
  const messages=inbox.messages.filter(item=>item.To.some(recipient=>[email,changedEmail].includes(recipient.Address)) && !messageIds.includes(item.ID));
- assert.equal(messages.length,2,'both addresses receive change confirmation');
- for(const item of messages){
-  messageIds.push(item.ID);const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${item.ID}`)).json();
-  const match=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(match,'confirmation link exists');
-  const response=await fetch(match[0],{redirect:'manual'});const location=response.headers.get('location');assert.ok(location,'confirmation redirects to app');
-  const redirect=new URL(location);assert.equal(redirect.pathname,'/customer/email-callback');
-  if(redirect.searchParams.has('code')){const result=await client.auth.exchangeCodeForSession(redirect.searchParams.get('code'));assert.ifError(result.error);}
-  else if(redirect.hash){const fragment=new URLSearchParams(redirect.hash.slice(1));if(fragment.has('error'))assert.equal(fragment.get('error_code'),'otp_expired');if(fragment.has('access_token')){const result=await client.auth.setSession({access_token:fragment.get('access_token'),refresh_token:fragment.get('refresh_token')});assert.ifError(result.error);}}
- }
- const updated=await client.auth.getUser();assert.equal(updated.data.user.email,changedEmail,'email changes after confirmation');
+ assert.equal(messages.length,0,'blocked email change sends no confirmation');
  console.log('CUSTOMER_EMAIL_PASS: local email confirmation, role isolation, phone-optional profile, required phone, owned booking history, email recovery and session revocation');
 } finally {
  await client.auth.signOut({scope:'local'}).catch(()=>{});
