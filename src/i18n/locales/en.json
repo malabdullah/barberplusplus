@@ -200,6 +200,8 @@
     "myProfile": "My Profile"
   },
   "auth": {
+    "registrationEmailLinked": "This email is already linked to an account. Use Google, Apple or your existing sign-in method instead.",
+    "registrationExistingSignIn": "Go to team sign-in",
     "registrationNextTitle": "Finish setting up your account",
     "registrationConfirmNext": "Check your email and verify your account, then sign in. Already registered? Sign in with your existing account.",
     "registrationSignInNext": "Sign in to continue setting up your shop.",

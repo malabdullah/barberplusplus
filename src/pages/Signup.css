@@ -40,3 +40,7 @@
     width: 100%;
   }
 }
+.signup-error p { margin: 0; }
+.signup-error a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: inherit; font-weight: 600; text-decoration: underline; }
+.signup-error { color: #b42318; }
+[data-theme='dark'] .signup-error { color: #ffaaa0; }

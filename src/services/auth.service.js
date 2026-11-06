@@ -58,14 +58,15 @@ export const authService = {
    * @returns {Promise<{success: boolean, user?: object, error?: string}>}
    */
   signup: async (userData) => {
+    const email = userData.email.trim().toLowerCase();
     // SECURITY: Rate limiting to prevent abuse
-    const rateLimitCheck = signupRateLimiter.check(userData.email.toLowerCase());
+    const rateLimitCheck = signupRateLimiter.check(email);
     if (!rateLimitCheck.allowed) {
       return { success: false, error: `Too many signup attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
     const { data, error } = await mailClient().auth.signUp({
-      email: userData.email,
+      email,
       password: userData.password,
       options: {
         data: { name: userData.name, phone: userData.phone }
@@ -73,14 +74,20 @@ export const authService = {
     });
 
     if (error) {
+      if (['user_already_exists', 'email_exists'].includes(error.code) || /user already registered/i.test(error.message)) return { success: false, error: 'SIGNUP_EMAIL_EXISTS' };
       // Map Supabase error to user-friendly message
       if (/Database error saving new user/i.test(error.message)) return { success: false, error: 'PHONE_REGISTRATION_CONFLICT' };
       const friendlyError = getErrorMessage(error, 'Registration failed. Please try again.');
       return { success: false, error: friendlyError };
     }
 
+    // Confirmed accounts (including linked OAuth emails) can return a fake user
+    // with no identities instead of an error. No new account or email is created.
+    if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) return { success: false, error: 'SIGNUP_EMAIL_EXISTS' };
+    if (!data.user?.id) return { success: false, error: 'REGISTRATION_FAILED' };
+
     // Reset rate limit on success
-    signupRateLimiter.reset(userData.email.toLowerCase());
+    signupRateLimiter.reset(email);
     return { success: true, confirmationRequired: !data.session };
   },
 
