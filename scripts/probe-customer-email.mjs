@@ -64,7 +64,20 @@ try {
  const unchanged=await client.auth.getUser();assert.equal(unchanged.data.user.email,email,'blocked self-service change preserves the primary email');
  const inbox=await(await fetch('http://127.0.0.1:55324/api/v1/messages')).json();
  const messages=inbox.messages.filter(item=>item.To.some(recipient=>[email,changedEmail].includes(recipient.Address)) && !messageIds.includes(item.ID));
- assert.equal(messages.length,0,'blocked email change sends no confirmation');
+ // Pinned GoTrue sends email before persisting email_change. The database guard
+ // rolls that transaction back; any already-delivered links must be unusable.
+ assert.equal(sql(`select count(*) from auth.users where email='${email}' and coalesce(email_change,'')='' and coalesce(email_change_token_new,'')='' and coalesce(email_change_token_current,'')=''`),'1','blocked update leaves no pending email change');
+ for(const item of messages) {
+  messageIds.push(item.ID);
+  const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${item.ID}`)).json();
+  const href=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(href);
+  const callback=new URL(href[0].replaceAll('&amp;','&'));
+  if(callback.searchParams.get('type')==='email_change') {
+   const result=await changer.auth.verifyOtp({type:'email_change',token_hash:callback.searchParams.get('token_hash') || callback.searchParams.get('token')});
+   assert.ok(result.error,'a blocked email-change link cannot change the account');
+  }
+ }
+ assert.equal((await client.auth.getUser()).data.user.email,email,'rejected links preserve the primary email');
  console.log('CUSTOMER_EMAIL_PASS: local email confirmation, role isolation, phone-optional profile, required phone, owned booking history, email recovery and session revocation');
 } finally {
  await client.auth.signOut({scope:'local'}).catch(()=>{});
