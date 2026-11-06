@@ -125,6 +125,18 @@
     "myProfile": "ملفي الشخصي"
   },
   "auth": {
+    "registrationCheck": "التحقق من تأكيد البريد",
+    "registrationChecking": "جارٍ التحقق من تأكيد البريد…",
+    "registrationResend": "إعادة إرسال رسالة التحقق",
+    "registrationResendIn": "إعادة إرسال رسالة التحقق ({{seconds}}ث)",
+    "registrationResending": "جارٍ إرسال رسالة التحقق…",
+    "registrationNotVerified": "لم يتم تأكيد بريدك بعد. افتح أحدث رسالة تحقق وأكّد بريدك، ثم تحقق مرة أخرى.",
+    "registrationResent": "تم إرسال رسالة تحقق جديدة. استخدم الرابط في أحدث رسالة.",
+    "registrationVerifiedTitle": "تم تأكيد البريد الإلكتروني",
+    "registrationVerified": "تم تأكيد بريدك الإلكتروني. سجّل الدخول لمتابعة إعداد صالونك.",
+    "registrationCheckFailed": "تعذّر إكمال الطلب. يرجى المحاولة مرة أخرى.",
+    "registrationRateLimited": "يرجى الانتظار قليلًا قبل المحاولة مرة أخرى.",
+    "registrationExpired": "انتهت صلاحية صفحة التحقق. سجّل الدخول إذا أكّدت بريدك، أو سجّل مرة أخرى لطلب رابط تحقق جديد.",
     "registrationEmailLinked": "هذا البريد الإلكتروني مرتبط بحساب موجود بالفعل. استخدم Google أو Apple أو طريقة تسجيل الدخول الحالية بدلًا من إنشاء حساب جديد.",
     "registrationExistingSignIn": "الانتقال إلى تسجيل دخول فريق الصالون",
     "registrationNextTitle": "أكمل إعداد حسابك",
