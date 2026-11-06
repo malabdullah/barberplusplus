@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect } from 'react';
 
-export const NavigationContext = createContext({ busy: false, setBusy: () => {} });
+export const NavigationContext = createContext({ busy: false, setBusy: () => {}, setSigningOut: () => {} });
 export const usePublicNavigation = () => useContext(NavigationContext);
 
 // Prevent leaving a page while its account or booking request is in flight.

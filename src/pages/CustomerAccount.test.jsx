@@ -7,7 +7,6 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 import CustomerAccount from './CustomerAccount';
-import { NavigationContext } from '../components/Public/PublicNavigationContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import { customerBookingService } from '../services/customerBooking.service';
 const auth = vi.hoisted(() => ({ updateProfile: vi.fn(), logout: vi.fn(), customer: { id: 'customer', name: 'Test Customer', email: 'customer@example.test', phone: '', countryCode: '+965' } }));
@@ -93,14 +92,4 @@ it('keeps the contact form and original profile when another account owns the ne
   expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.PHONE_IN_USE);
   expect(screen.getByLabelText(en.customerAuth.phone, { exact: false })).toHaveValue('50000099');
   expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-});
-
-it('waits for menu sign-out to navigate instead of redirecting the cleared session to sign-in', () => {
-  const customer = auth.customer;
-  auth.customer = null;
-  try {
-    render(<I18nextProvider i18n={i18n}><MemoryRouter><NavigationContext.Provider value={{ busy: true, setBusy: () => {} }}><CustomerAccount /></NavigationContext.Provider></MemoryRouter></I18nextProvider>);
-    expect(screen.getByRole('status')).toHaveTextContent(en.customerAuth.loading);
-    expect(screen.queryByRole('heading', { name: en.customerAuth.myAccount })).not.toBeInTheDocument();
-  } finally { auth.customer = customer; }
 });

@@ -45,6 +45,7 @@ describe('simple public navigation', () => {
     fireEvent.click(signOut); fireEvent.click(signOut);
     expect(state.logout).toHaveBeenCalledTimes(1);
     expect(header().getByRole('button', { name: 'Signing out…' })).toBeDisabled();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     finish();
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/book'));
     expect(header().getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
