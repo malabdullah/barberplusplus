@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { customerFeaturesEnabled } from '../../lib/runtimeConfig';
 import AccountModeSwitch from '../UI/AccountModeSwitch';
+import CustomerSignOutButton from '../Customer/CustomerSignOutButton';
 import { workDestination } from '../../lib/accountSession';
 import BrandLogo from '../UI/BrandLogo';
 import LanguageSelector from '../UI/LanguageSelector';
@@ -18,8 +19,12 @@ const workspaces = { admin: '/admin', manager: '/dashboard', barber: '/barber', 
 export default function PublicHeader() {
   const { t } = useTranslation();
   const { isAuthenticated, userRole } = useApp();
-  const { customer, loading: customerLoading } = useCustomerAuth();
-  const { busy } = usePublicNavigation();
+  const { customer, loading: customerLoading, logout } = useCustomerAuth();
+  const { busy, setBusy } = usePublicNavigation();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
+  const signOutPending = useRef(false);
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -29,6 +34,18 @@ export default function PublicHeader() {
   const workspace = isAuthenticated && workspaces[userRole];
   const showShopLinks = !workspace && !customer && !customerLoading;
   const returnTo = location.pathname === '/book' || location.state?.returnTo === '/book' ? '/book' : '/customer/account';
+
+  const signOut = async () => {
+    if (busy || signOutPending.current) return;
+    signOutPending.current = true;
+    setSigningOut(true); setSignOutError(false); setBusy(true);
+    try {
+      await logout();
+      setMobileOpen(false); setOpenDropdown(null);
+      navigate('/book', { replace: true });
+    } catch { setSignOutError(true); }
+    finally { signOutPending.current = false; setSigningOut(false); setBusy(false); }
+  };
 
   useEffect(() => { setMobileOpen(false); setOpenDropdown(null); }, [location.key]);
   useEffect(() => {
@@ -55,6 +72,7 @@ export default function PublicHeader() {
     <NavigationLink to="/customer/account">{t('publicNav.myAccount')}</NavigationLink>
     <NavigationLink to="/customer/favourites">{t('customerFavourites.title')}</NavigationLink>
     <NavigationLink to="/customer/account#appointments">{t('publicNav.myAppointments')}</NavigationLink>
+    <CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} />
   </> : <NavigationLink to="/customer/sign-in" state={{ returnTo }} aria-current={location.pathname === '/customer/sign-in' ? 'page' : undefined}>{t('publicNav.customerSignIn')}</NavigationLink>;
   const shopLinks = <>
     <NavigationLink to="/login">{t('publicNav.teamSignIn')}</NavigationLink>
@@ -96,6 +114,7 @@ export default function PublicHeader() {
         </nav>
       </div>
     </div>
+    {signOutError && <p className="public-sign-out-error" role="alert">{t('customerAuth.errors.UNAVAILABLE')}</p>}
     {busy && <span className="sr-only" role="status">{t('publicNav.saving')}</span>}
   </header>;
 }

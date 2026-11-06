@@ -1760,6 +1760,7 @@
     "resumeBooking": "متابعة الحجز",
     "signIn": "تسجيل الدخول",
     "signOut": "تسجيل الخروج",
+    "signingOut": "جارٍ تسجيل الخروج…",
     "createAccount": "إنشاء حساب",
     "name": "اسمك",
     "phone": "رقم الجوال",
