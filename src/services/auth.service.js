@@ -81,7 +81,7 @@ export const authService = {
 
     // Reset rate limit on success
     signupRateLimiter.reset(userData.email.toLowerCase());
-    return { success: true, user: data.user };
+    return { success: true, confirmationRequired: !data.session };
   },
 
   /**

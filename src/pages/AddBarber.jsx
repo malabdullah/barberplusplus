@@ -11,11 +11,14 @@ import './AddBranch.css';
 export default function AddBarber() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { addBarber, selectedBranch, branchServices } = useApp();
+  const { addBarber, selectedBranch, selectedBranchId, branchServices } = useApp();
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasShop = Boolean(selectedBranch?.id && selectedBranch.id === selectedBranchId);
 
   const handleSubmit = async (data) => {
+    if (isSubmitting) return;
+    if (!hasShop) { setError({ message: t('barbers.selectShopFirst') }); return; }
     setError(null);
     setIsSubmitting(true);
     try {
@@ -23,7 +26,7 @@ export default function AddBarber() {
       navigate('/dashboard/barbers');
     } catch (err) {
       logErrorDev('Error creating barber:', err);
-      setError(getErrorMessage(err, t('errors.createBarberFailed'), t));
+      setError({ message: err.message === 'SHOP_REQUIRED' ? t('barbers.selectShopFirst') : getErrorMessage(err, t('errors.createBarberFailed'), t), field: /PHONE_IN_USE/.test(err.message) ? 'phone' : undefined });
       setIsSubmitting(false);
     }
   };
@@ -41,12 +44,6 @@ export default function AddBarber() {
         <p>{t('barbers.addTeamMember')} {selectedBranch?.name}</p>
       </div>
 
-      {error && (
-        <div className="error-banner animate-fade-in">
-          {error}
-        </div>
-      )}
-
       <div className="add-branch-form-container animate-fade-in-up stagger-1">
         <BarberForm
           barber={null}
@@ -54,6 +51,9 @@ export default function AddBarber() {
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isSubmitting={isSubmitting}
+          submissionError={error}
+          onClearError={() => setError(null)}
+          disabledReason={hasShop ? '' : t('barbers.selectShopFirst')}
         />
       </div>
     </div>

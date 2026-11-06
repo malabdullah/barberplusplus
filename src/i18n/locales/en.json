@@ -200,6 +200,9 @@
     "myProfile": "My Profile"
   },
   "auth": {
+    "registrationNextTitle": "Finish setting up your account",
+    "registrationConfirmNext": "Check your email and verify your account, then sign in. Already registered? Sign in with your existing account.",
+    "registrationSignInNext": "Sign in to continue setting up your shop.",
     "login": "Login",
     "logout": "Logout",
     "signup": "Sign Up",
@@ -374,6 +377,7 @@
     "createBranch": "Create Branch"
   },
   "barbers": {
+    "selectShopFirst": "Select a shop you manage before adding a barber. If no shops are listed, create your shop first.",
     "title": "Barbers",
     "subtitle": "Manage your team members",
     "addBarber": "Add Barber",
