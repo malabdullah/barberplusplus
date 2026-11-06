@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
@@ -110,6 +110,7 @@ function ProtectedRoute({ children, allowedRole }) {
 
 function AppRoutes() {
   const { isAuthenticated, userRole, loading } = useApp();
+  const location = useLocation();
 
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/';
@@ -123,7 +124,10 @@ function AppRoutes() {
   };
 
   // Show loading while auth state is being determined
-  if (loading) {
+  // Email verification establishes a staff session before its callback settles.
+  // Keep that public callback mounted while staff data loads: its one-time URL
+  // has already been cleared, so remounting would report a false expired link.
+  if (loading && location.pathname !== '/customer/email-callback') {
     return (
       <div style={{
         display: 'flex',

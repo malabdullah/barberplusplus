@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { verificationUrl } from '../public/email/verification-url.js';
+
+test('manager verification keeps the work destination and team sign-in link', () => {
+  const target = `${appUrl}/customer/email-callback?next=work`;
+  const result = verificationUrl(link('signup', target), config);
+  assert.equal(new URL(result.url).searchParams.get('redirect_to'), target);
+  assert.equal(result.customer, false);
+});
 const appUrl = 'https://app.example.test';
 const config = { appUrl, supabaseUrl: 'https://backend.example.test' };
 const token = 'a'.repeat(56);

@@ -32,5 +32,5 @@ export function verificationUrl(input, config) {
   verify.searchParams.set('type', type);
   verify.searchParams.set('token', token);
   verify.searchParams.set('redirect_to', target.href);
-  return { url: verify.href, type, customer: target.pathname.startsWith('/customer/') };
+  return { url: verify.href, type, customer: target.pathname.startsWith('/customer/') && target.searchParams.get('next') !== 'work' };
 }
