@@ -101,7 +101,8 @@ Deno.test('email login and recovery enforce rate limits and authenticated identi
  const f=fixture({emailSignIn:async()=>null,emailLink:async()=>{},identity:async()=>null});
  assert((await f.handler(req({action:'email-login',email:'test@example.test',password}))).status===401);
  assert((await f.handler(req({action:'email-recovery',email:'test@example.test'}))).status===200);
- assert((await f.handler(req({action:'email-reset',password}))).status===401);
+ const rejected=await f.handler(req({action:'email-reset',password}));
+ assert(rejected.status===400&&(await rejected.json()).error==='PASSWORD_PROOF_REQUIRED');
  const limited=make({rpc:async()=>false,emailLink:async()=>{throw Error('must not run');}});
  assert((await limited(req({action:'email-recovery',email:'test@example.test'}))).status===429);
 });

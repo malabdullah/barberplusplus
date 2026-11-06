@@ -1,3 +1,4 @@
+import CustomerPassword from './CustomerPassword';
 import { customerReturnTo, customerAuthPath } from '../utils/customerBookingDraft';
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -13,6 +14,9 @@ import { rememberEmail } from '../lib/customerEmailFlow';
 import { validatePassword } from '../utils/validation';
 
 export default function CustomerAuth({ mode }) {
+  return mode === 'reset-password' ? <CustomerPassword mode="reset" /> : <CustomerEmailAuth mode={mode} />;
+}
+function CustomerEmailAuth({ mode }) {
   const { t } = useTranslation();
   const tr = key => t(`customerAuth.${key}`);
   const { customer, loading, login, resetPassword } = useCustomerAuth();
@@ -36,13 +40,12 @@ export default function CustomerAuth({ mode }) {
     try {
       if (mode === 'sign-in') { await login(form); navigate(returnTo, { replace: true }); }
       else if (signup || recovery) {
-        if (signup) await customerAuthService.requestSignup({ ...form, returnTo });
-        else await customerAuthService.requestRecovery({ ...form, returnTo });
-        const pending = { email: form.email.trim().toLowerCase(), purpose: signup ? 'signup' : 'recovery', returnTo, sentAt: Date.now() };
+        const delivery = signup ? await customerAuthService.requestSignup({ ...form, returnTo }) : await customerAuthService.requestRecovery({ ...form, returnTo });
+        const pending = { email: form.email.trim().toLowerCase(), purpose: signup ? 'signup' : 'recovery', returnTo, sentAt: Date.now(), ...(delivery?.requestId ? { requestId: delivery.requestId } : {}) };
         rememberEmail(pending); setForm(current => ({ ...current, password: '', confirmPassword: '' }));
         navigate(`/customer/verify-email?purpose=${pending.purpose}`, { state: pending });
       } else if (reset && location.state?.recovery) {
-        await resetPassword({ password: form.password }); setForm(current => ({ ...current, password: '', confirmPassword: '' })); setResetDone(true);
+        await resetPassword({ password: form.password, confirmPassword: form.confirmPassword }); setForm(current => ({ ...current, password: '', confirmPassword: '' })); setResetDone(true);
       }
     } catch (failure) { setError(failure.message); }
     finally { setBusy(false); }

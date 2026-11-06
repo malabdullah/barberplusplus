@@ -21,11 +21,11 @@ async function call(action,data={},token='',fn='customer-auth') {
 }
 async function message(subject) {
  const response=await fetch('http://127.0.0.1:55324/api/v1/messages');const inbox=await response.json();
- const found=inbox.messages.find(item=>item.Subject===subject && item.To.some(recipient=>recipient.Address===email) && !messageIds.includes(item.ID));
+ const found=inbox.messages.find(item=>(subject==='Reset your Barber++ password'?/reset.*password/i.test(item.Subject):item.Subject===subject) && item.To.some(recipient=>recipient.Address===email) && !messageIds.includes(item.ID));
  assert.ok(found,'local confirmation message is delivered');messageIds.push(found.ID);
  const detail=await(await fetch(`http://127.0.0.1:55324/api/v1/message/${found.ID}`)).json();
- const match=detail.Text.match(/http:\/\/localhost:5173\/customer\/email-callback\?[^\s]+/);assert.ok(match,'customer email callback link exists');
- const url=new URL(match[0]);return {type:url.searchParams.get('type'),token_hash:url.searchParams.get('token_hash')};
+ const match=(detail.Text || detail.HTML).match(/https?:\/\/[^\s"<>]+/);assert.ok(match,'customer email callback link exists');
+ const url=new URL(match[0].replaceAll('&amp;','&'));return {type:url.searchParams.get('type'),token_hash:url.searchParams.get('token_hash') || url.searchParams.get('token')};
 }
 try {
  const signup=await call('email-signup',{name:'Email Probe Customer',email,password:'Short12!',returnTo:'/book'});assert.equal(signup.status,200,JSON.stringify(signup.data));
@@ -51,8 +51,8 @@ try {
  const booking=await call('book',{...selection,time:slots.data.slots[0],verification:proof.data.verification},token,'customer-booking');if(booking.data.id)createdBookings.push(booking.data.id);assert.equal(booking.status,200,JSON.stringify(booking.data));
  const mine=await call('bookings',{},token);assert.equal(mine.status,200);assert.ok(mine.data.bookings.some(item=>item.id===booking.data.id));
  const recovery=await call('email-recovery',{email,returnTo:'/book'});assert.equal(recovery.status,200,JSON.stringify(recovery.data));
- const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await client.auth.verifyOtp(resetLink);assert.ifError(recovered.error);
- const reset=await call('email-reset',{password:'Newpass1!'},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));
+ const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await call('password-recovery-verify',{requestId:recovery.data.requestId,tokenHash:resetLink.token_hash});assert.equal(recovered.status,200,JSON.stringify(recovered.data));
+ const reset=await call('email-reset',{password:'Newpass1!',confirmPassword:'Newpass1!',proof:recovered.data.proof},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));
  assert.equal((await call('profile',{},token)).status,401,'reset revokes old access session');
  assert.equal((await call('email-login',{email,password:'Short12!'})).status,401);
  const login=await call('email-login',{email,password:'Newpass1!'});assert.equal(login.status,200,JSON.stringify(login.data));assert.equal(login.data.profile.phone,phone);

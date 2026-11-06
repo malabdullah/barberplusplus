@@ -1,3 +1,4 @@
+import CustomerPassword from './CustomerPassword';
 import BrandLogo from '../components/UI/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -19,6 +20,7 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   usePublicNavigationBusy(isLoading);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [recoveryRole, setRecoveryRole] = useState(null);
   const [isValidSession, setIsValidSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
@@ -27,6 +29,7 @@ export default function ResetPassword() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          setRecoveryRole(session.user.app_metadata?.role);
           setIsValidSession(true);
         }
       } catch (err) {
@@ -38,6 +41,7 @@ export default function ResetPassword() {
     // Listen for PASSWORD_RECOVERY event from the reset link
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryRole(session?.user.app_metadata?.role);
         setIsValidSession(true);
         setIsCheckingSession(false);
       }
@@ -88,6 +92,8 @@ export default function ResetPassword() {
       setIsLoading(false);
     }
   };
+
+  if (['customer', 'manager', 'barber'].includes(recoveryRole)) return <CustomerPassword mode="reset" audience="work" />;
 
   // Loading state
   if (isCheckingSession) {

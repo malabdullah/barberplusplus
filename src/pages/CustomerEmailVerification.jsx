@@ -20,6 +20,7 @@ export default function CustomerEmailVerification() {
     return value?.purpose === purpose ? value : null;
   });
   const returnTo = emailDestination(pending?.returnTo || customerReturnTo(location));
+  const [requestId, setRequestId] = useState(pending?.requestId || '');
   const [email, setEmail] = useState(pending?.email || '');
   const [editing, setEditing] = useState(!pending?.email);
   const [code, setCode] = useState(''); const [busy, setBusy] = useState(false);
@@ -36,9 +37,9 @@ export default function CustomerEmailVerification() {
     if (!validEmail()) { setError('INVALID_DETAILS'); return; }
     setBusy(true); setError(''); setNotice('');
     try {
-      if (purpose === 'recovery') await customerAuthService.requestRecovery({ email, returnTo });
-      else await customerAuthService.resendConfirmation({ email, returnTo });
-      rememberEmail({ email, purpose, returnTo }); setRetryAt(Date.now() + 60000); setNow(Date.now());
+      const delivery = purpose === 'recovery' ? (pending?.setup ? await customerAuthService.setupPassword({ audience: pending?.audience }) : await customerAuthService.requestRecovery({ email, returnTo })) : await customerAuthService.resendConfirmation({ email, returnTo });
+      setRequestId(delivery?.requestId || '');
+      rememberEmail({ email, purpose, returnTo, requestId: delivery?.requestId, setup: pending?.setup, audience: pending?.audience }); setRetryAt(Date.now() + 60000); setNow(Date.now());
       setEditing(false); setCode(''); setNotice(tr('email.resent'));
     } catch (failure) { setError(failure.message === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'UNAVAILABLE'); }
     finally { setBusy(false); }
@@ -49,7 +50,7 @@ export default function CustomerEmailVerification() {
     if (!/^\d{6,10}$/.test(code)) { setError('INVALID_CODE'); return; }
     setBusy(true); setError(''); setNotice('');
     try {
-      await customerAuthService.verifyEmailCode({ email, code, purpose });
+      await customerAuthService.verifyEmailCode({ email, code, purpose, requestId, ...(pending?.audience === 'work' ? { signInPath: '/login' } : {}) });
       forgetEmail();
       if (purpose === 'recovery') { navigate('/customer/reset-password', { replace: true, state: { recovery: true, returnTo } }); return; }
       const profile = await customerAuthService.ensureEmailProfile();
@@ -71,9 +72,9 @@ export default function CustomerEmailVerification() {
         <p className="cb-helper" id="email-code-hint">{tr('email.codeHint')}</p>
         <button type="submit" className="cb-primary ca-submit" disabled={busy}>{busy && <Loader2 className="cb-spinner" size={18} aria-hidden="true" />}{tr('email.verifyCode')}</button>
       </fieldset></form>
-      <div className="ca-verification-actions"><button type="button" className="cb-text-button" onClick={resend} disabled={busy || remaining > 0}>{remaining ? t('customerAuth.email.resendIn', { seconds: remaining }) : tr('email.resendCode')}</button>{!editing && <button className="cb-text-button" type="button" disabled={busy} onClick={() => {
+      <div className="ca-verification-actions"><button type="button" className="cb-text-button" onClick={resend} disabled={busy || remaining > 0}>{remaining ? t('customerAuth.email.resendIn', { seconds: remaining }) : tr('email.resendCode')}</button>{!editing && !pending?.setup && <button className="cb-text-button" type="button" disabled={busy} onClick={() => {
         if (purpose === 'signup') { navigate('/customer/sign-up', { state: { email, returnTo } }); return; }
-        setEditing(true); setCode(''); setError('');
+        setEditing(true); setRequestId(''); setCode(''); setError('');
       }}>{tr('email.changeAddress')}</button>}</div>
       <p className="cb-helper ca-email-hint">{tr('email.linkAlternative')}</p>
     </>}

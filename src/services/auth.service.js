@@ -1,3 +1,4 @@
+import { customerAuthService } from './customerAuth.service';
 import { createClient } from '@supabase/supabase-js';
 import { appConfig } from '../lib/runtimeConfig';
 import { supabase } from '../lib/supabase';
@@ -6,7 +7,6 @@ import {
   signupRateLimiter,
   passwordResetRateLimiter,
   validateUserRole,
-  validateRedirectUrl,
 } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
 
@@ -104,12 +104,9 @@ export const authService = {
       return { success: false, error: `Too many reset attempts. Please try again in ${Math.ceil(rateLimitCheck.retryAfter / 60)} minutes.` };
     }
 
-    // SECURITY: Validate redirect URL
-    const safeRedirectUrl = validateRedirectUrl(`${window.location.origin}/reset-password`);
-
-    const { error } = await mailClient().auth.resetPasswordForEmail(email, {
-      redirectTo: safeRedirectUrl,
-    });
+    let error;
+    try { await customerAuthService.requestRecovery({ email, audience: 'work' }); }
+    catch (failure) { error = failure; }
 
     if (error) {
       // Map Supabase error to user-friendly message
