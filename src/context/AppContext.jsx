@@ -752,6 +752,7 @@ export function AppProvider({ children }) {
   // Barber actions
   const addBarber = useCallback(async (barberData) => {
     try {
+      if (!selectedBranchId || !branches.some(branch => branch.id === selectedBranchId)) throw new Error('SHOP_REQUIRED');
       const { profilePictureFile, ...data } = barberData;
 
       // Create barber record first
@@ -798,7 +799,7 @@ export function AppProvider({ children }) {
       loggingService.logError(error, { entityType: 'barber', action: 'create' });
       throw error;
     }
-  }, [selectedBranchId]);
+  }, [selectedBranchId, branches]);
 
   const resendBarberInvite = useCallback(async (barberId) => {
     try {
@@ -1212,12 +1213,8 @@ export function AppProvider({ children }) {
   const signup = useCallback(async (userData) => {
     try {
       const result = await authService.signup(userData);
-      if (result.success) {
-        setUser(result.user);
-        setUserRole('manager'); // Signup is only for managers
-        setIsAuthenticated(true);
-        loggingService.logAuth('signup', result.user.id, 'manager', true);
-      }
+      // Registration can return an unconfirmed or obfuscated user without a
+      // session. Only the actual Auth session listener may grant work access.
       return result;
     } catch (error) {
       logger.error('Signup error:', error);

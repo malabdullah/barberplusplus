@@ -1,6 +1,6 @@
 import BrandLogo from '../components/UI/BrandLogo';
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -12,7 +12,6 @@ import './Signup.css';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { signup } = useApp();
 
   const [formData, setFormData] = useState({
@@ -27,6 +26,7 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registration, setRegistration] = useState(null);
   usePublicNavigationBusy(isLoading);
 
   const handleChange = (e) => {
@@ -97,7 +97,9 @@ export default function Signup() {
       });
 
       if (result.success) {
-        navigate('/');
+        setRegistration(result);
+        setFormData(previous => ({ ...previous, password: '', confirmPassword: '' }));
+        setIsLoading(false);
       } else {
         // Use errorMessages utility to get user-friendly message
         const errorMessage = result.error 
@@ -139,12 +141,12 @@ export default function Signup() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>{t('auth.createAccount')}</h1>
-          <p>{t('auth.signUpMessage')}</p>
+          <h1>{t(registration ? 'auth.registrationNextTitle' : 'auth.createAccount')}</h1>
+          <p>{t(registration ? registration.confirmationRequired ? 'auth.registrationConfirmNext' : 'auth.registrationSignInNext' : 'auth.signUpMessage')}</p>
         </div>
 
         {/* Signup Form */}
-        <form className="login-form" onSubmit={handleSubmit}>
+        {registration ? <Link className="login-submit" to="/login">{t('auth.signIn')}<ArrowRight size={18} aria-hidden="true" /></Link> : <form className="login-form" onSubmit={handleSubmit}>
           {error && (
             <div className="login-error animate-fade-in">
               {error}
@@ -281,7 +283,7 @@ export default function Signup() {
               </>
             )}
           </button>
-        </form>
+        </form>}
 
         {/* Footer */}
         <div className="login-footer">
