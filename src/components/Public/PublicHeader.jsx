@@ -20,7 +20,7 @@ export default function PublicHeader() {
   const { t } = useTranslation();
   const { isAuthenticated, userRole } = useApp();
   const { customer, loading: customerLoading, logout } = useCustomerAuth();
-  const { busy, setBusy } = usePublicNavigation();
+  const { busy, setBusy, setSigningOut: setNavigationSigningOut } = usePublicNavigation();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -38,12 +38,12 @@ export default function PublicHeader() {
   const signOut = async () => {
     if (busy || signOutPending.current) return;
     signOutPending.current = true;
-    setSigningOut(true); setSignOutError(false); setBusy(true);
+    setSigningOut(true); setSignOutError(false); setBusy(true); setNavigationSigningOut(true);
     try {
       await logout();
       setMobileOpen(false); setOpenDropdown(null);
       navigate('/book', { replace: true });
-    } catch { setSignOutError(true); }
+    } catch { setSignOutError(true); setNavigationSigningOut(false); }
     finally { signOutPending.current = false; setSigningOut(false); setBusy(false); }
   };
 

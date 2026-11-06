@@ -8,8 +8,12 @@ import { NavigationContext } from './PublicNavigationContext';
 
 export default function PublicLayout() {
   const [busy, setBusy] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
   const { t } = useTranslation();
+  // Keep protected pages unmounted until the signed-out destination commits.
+  // A lazy route can otherwise leave their sign-in guards racing navigation.
+  useEffect(() => { setSigningOut(false); }, [location.key]);
   useEffect(() => {
     const titleKeys = { '/': 'publicNav.pageTitle', '/login': 'publicNav.teamSignIn', '/signup': 'publicNav.registerShop', '/forgot-password': 'auth.forgotPassword', '/reset-password': 'auth.resetPassword' };
     if (titleKeys[location.pathname]) document.title = `${t(titleKeys[location.pathname])} | Barber++`;
@@ -36,11 +40,11 @@ export default function PublicLayout() {
     return () => { observer.disconnect(); window.clearTimeout(timer); };
   }, [location.pathname, location.hash]);
 
-  return <NavigationContext.Provider value={{ busy, setBusy }}>
+  return <NavigationContext.Provider value={{ busy: busy || signingOut, setBusy, setSigningOut }}>
     <div className="public-site">
       <a className="public-skip" href="#public-content">{t('publicNav.skip')}</a>
       <PublicHeader />
-      <div id="public-content" className="public-content" tabIndex={-1}><Outlet /></div>
+      <div id="public-content" className="public-content" tabIndex={-1}>{signingOut ? <p className="public-sign-out-loading" role="status">{t('customerAuth.signingOut')}</p> : <Outlet />}</div>
       <PublicFooter />
     </div>
   </NavigationContext.Provider>;
