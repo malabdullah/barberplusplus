@@ -2941,7 +2941,7 @@ CREATE POLICY "Service role full access to customers" ON "public"."customers" TO
 
 
 
-CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "anon", "authenticated" USING (false) WITH CHECK (false);
+CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "authenticated", "anon" USING (false) WITH CHECK (false);
 
 
 
