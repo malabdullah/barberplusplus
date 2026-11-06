@@ -403,7 +403,9 @@
     "adjustSearch": "جرب تعديل البحث",
     "addFirstService": "أضف أول خدمة",
     "addNewService": "إضافة خدمة جديدة",
-    "deleteService": "حذف الخدمة"
+    "deleteService": "حذف الخدمة",
+    "selectShopFirst": "اختر صالوناً أو أنشئ صالوناً قبل إضافة الخدمات.",
+    "saveFailed": "تعذّر حفظ الخدمة. يرجى المحاولة مرة أخرى."
   },
   "bookings": {
     "title": "الحجوزات",
