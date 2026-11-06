@@ -198,6 +198,7 @@ function CustomerForm({ customer, branches = [], barbers = [], onSubmit, onCance
             <label className="form-label">{t('agent.customers.form.email')}</label>
             <input
               type="email"
+              readOnly={Boolean(customer?.id)}
               name="email"
               value={formData.email}
               onChange={handleChange}
@@ -206,6 +207,7 @@ function CustomerForm({ customer, branches = [], barbers = [], onSubmit, onCance
               disabled={loading}
             />
             {errors.email && <span className="form-error">{errors.email}</span>}
+            {customer?.id && <p className="form-help">{t('accountEmail.adminOnly')}</p>}
           </div>
         </div>
       </div>

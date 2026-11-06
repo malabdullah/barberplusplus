@@ -1,3 +1,5 @@
+import { useApp } from '../context/AppContext';
+import CustomerPassword from './CustomerPassword';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +8,12 @@ import { validatePassword } from '../utils/validation';
 import './admin/AdminPages.css';
 
 export default function ChangePassword() {
+  const { userRole } = useApp();
+  if (['customer', 'manager', 'barber'].includes(userRole)) return <CustomerPassword audience="work" backTo={userRole === 'barber' ? '/barber/settings' : '/dashboard/settings'} />;
+  return <LegacyChangePassword />;
+}
+
+function LegacyChangePassword() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');

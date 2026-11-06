@@ -1,6 +1,6 @@
 import BrandLogo from '../components/UI/BrandLogo';
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, User, Phone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -9,10 +9,12 @@ import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Login.css';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './Signup.css';
+import { registrationService } from '../services/registration.service';
+import { pendingRegistration, rememberRegistration, forgetRegistration } from '../lib/pendingRegistration';
+import RegistrationEmailCorrection from '../components/Customer/RegistrationEmailCorrection';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { signup } = useApp();
 
   const [formData, setFormData] = useState({
@@ -26,13 +28,51 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [emailAlreadyLinked, setEmailAlreadyLinked] = useState(false);
+  const errorRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
-  usePublicNavigationBusy(isLoading);
+  const [registration, setRegistration] = useState(pendingRegistration);
+  const [verificationBusy, setVerificationBusy] = useState('');
+  const [correctionBusy, setCorrectionBusy] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
+  const [verificationError, setVerificationError] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [clock, setClock] = useState(Date.now);
+  const verificationPending = useRef(false);
+  const cooldown = Math.max(0, Math.ceil(((registration?.resendAt || 0) - clock) / 1000));
+  usePublicNavigationBusy(isLoading || Boolean(verificationBusy) || correctionBusy);
+  useEffect(() => {
+    if (!registration?.confirmationRequired || verified) return undefined;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [registration?.confirmationRequired, verified]);
+  useEffect(() => { if (error || emailAlreadyLinked) errorRef.current?.focus(); }, [error, emailAlreadyLinked]);
+
+  const verificationAction = async action => {
+    if (!registration?.receipt || correctionBusy || verificationError === 'registrationExpired' || verificationPending.current || action === 'resend' && cooldown > 0) return;
+    verificationPending.current = true; setVerificationBusy(action); setVerificationMessage(''); setVerificationError('');
+    try {
+      const result = await registrationService[action](registration.receipt);
+      if (result.verified) { setVerified(true); forgetRegistration(); setVerificationMessage('registrationVerified'); }
+      else if (action === 'resend') {
+        const pending = { ...registration, ...result };
+        setRegistration(pending); rememberRegistration(pending); setClock(Date.now()); setVerificationMessage('registrationResent');
+      } else setVerificationMessage('registrationNotVerified');
+    } catch (failure) {
+      setVerificationError(failure.message === 'REGISTRATION_EXPIRED' ? 'registrationExpired' : failure.message === 'RATE_LIMITED' ? 'registrationRateLimited' : 'registrationCheckFailed');
+      if (failure.message === 'RATE_LIMITED') {
+        const pending = { ...registration, resendAt: Date.now() + Math.max(1, failure.retryAfter || 60) * 1000 };
+        setRegistration(pending); rememberRegistration(pending); setClock(Date.now());
+      }
+      if (failure.message === 'REGISTRATION_EXPIRED') forgetRegistration();
+    } finally { verificationPending.current = false; setVerificationBusy(''); }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
+    setEmailAlreadyLinked(false);
   };
 
   const validateForm = () => {
@@ -82,11 +122,12 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    if (isLoading) return;
     if (!validateForm()) return;
 
     setIsLoading(true);
     setError('');
+    setEmailAlreadyLinked(false);
 
     try {
       const result = await signup({
@@ -97,8 +138,21 @@ export default function Signup() {
       });
 
       if (result.success) {
-        navigate('/');
+        setRegistration(result);
+        rememberRegistration(result);
+        setClock(Date.now());
+        setFormData(previous => ({ ...previous, password: '', confirmPassword: '' }));
+        setIsLoading(false);
       } else {
+        if (result.error === 'SIGNUP_EMAIL_EXISTS') {
+          setEmailAlreadyLinked(true);
+          setIsLoading(false);
+          return;
+        }
+        if (['INVALID_PHONE', 'RATE_LIMITED', 'WEAK_PASSWORD', 'INVALID_DETAILS'].includes(result.error)) {
+          const keys = { INVALID_PHONE: 'validation.invalidPhone', RATE_LIMITED: 'auth.registrationRateLimited', WEAK_PASSWORD: 'customerAuth.errors.WEAK_PASSWORD', INVALID_DETAILS: 'errors.invalidData' };
+          setError(t(keys[result.error])); setIsLoading(false); return;
+        }
         // Use errorMessages utility to get user-friendly message
         const errorMessage = result.error 
           ? getErrorMessage(result.error, t('auth.registrationFailed'), t)
@@ -139,15 +193,28 @@ export default function Signup() {
 
         {/* Welcome Text */}
         <div className="login-welcome">
-          <h1>{t('auth.createAccount')}</h1>
-          <p>{t('auth.signUpMessage')}</p>
+          <h1>{t(verified ? 'auth.registrationVerifiedTitle' : registration ? 'auth.registrationNextTitle' : 'auth.createAccount')}</h1>
+          <p role={verified ? 'status' : undefined}>{t(verified ? 'auth.registrationVerified' : registration ? registration.confirmationRequired ? 'auth.registrationConfirmNext' : 'auth.registrationSignInNext' : 'auth.signUpMessage')}</p>
         </div>
 
         {/* Signup Form */}
-        <form className="login-form" onSubmit={handleSubmit}>
-          {error && (
-            <div className="login-error animate-fade-in">
-              {error}
+        {registration ? <div className="signup-verification" aria-busy={Boolean(verificationBusy) || correctionBusy}>
+          {registration.email && <p className="signup-verification-email"><bdi>{registration.email}</bdi></p>}
+          {verificationMessage && !verified && <p className="signup-verification-status" role="status">{t(`auth.${verificationMessage}`)}</p>}
+          {verificationError && <p className="login-error signup-error" role="alert">{t(`auth.${verificationError}`)}</p>}
+          {registration.confirmationRequired && !verified && <>
+            <button type="button" className="login-submit" disabled={Boolean(verificationBusy) || correctionBusy || verificationError === 'registrationExpired'} onClick={() => verificationAction('status')}>{t(verificationBusy === 'status' ? 'auth.registrationChecking' : 'auth.registrationCheck')}</button>
+            <button type="button" className="signup-resend" disabled={Boolean(verificationBusy) || correctionBusy || cooldown > 0 || verificationError === 'registrationExpired'} onClick={() => verificationAction('resend')}>{t(verificationBusy === 'resend' ? 'auth.registrationResending' : cooldown ? 'auth.registrationResendIn' : 'auth.registrationResend', { seconds: cooldown })}</button>
+            <RegistrationEmailCorrection email={registration.email} audience="team" disabled={Boolean(verificationBusy)} onBusy={setCorrectionBusy} onCorrected={result => {
+              const pending={...registration,...result}; setRegistration(pending); rememberRegistration(pending); setClock(Date.now()); setVerificationError(''); setVerificationMessage(result.delivered?'registrationCorrected':'registrationCorrectionDeliveryFailed');
+            }} />
+          </>}
+          <Link className={verified || !registration.confirmationRequired ? 'login-submit' : 'signup-sign-in'} to="/login" onClick={event => { if (verificationBusy) event.preventDefault(); }} aria-disabled={Boolean(verificationBusy)}>{t('auth.signIn')}<ArrowRight size={18} aria-hidden="true" /></Link>
+        </div> : <form className="login-form" onSubmit={handleSubmit}>
+          {(error || emailAlreadyLinked) && (
+            <div ref={errorRef} className="login-error signup-error animate-fade-in" role="alert" tabIndex={-1}>
+              <p>{emailAlreadyLinked ? t('auth.registrationEmailLinked') : error}</p>
+              {emailAlreadyLinked && <Link to="/login">{t('auth.registrationExistingSignIn')}</Link>}
             </div>
           )}
 
@@ -281,7 +348,7 @@ export default function Signup() {
               </>
             )}
           </button>
-        </form>
+        </form>}
 
         {/* Footer */}
         <div className="login-footer">

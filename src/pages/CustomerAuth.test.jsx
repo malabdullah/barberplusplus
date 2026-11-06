@@ -7,12 +7,13 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 import CustomerAuth from './CustomerAuth';
+import { rememberPasswordProof } from '../lib/customerPasswordProof';
 import CustomerEmailVerification from './CustomerEmailVerification';
 import { customerAuthService } from '../services/customerAuth.service';
 const auth = vi.hoisted(() => ({ login: vi.fn(), signup: vi.fn(), resetPassword: vi.fn(), refresh: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: null, loading: false, ...auth }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { requestSignup: vi.fn(), requestRecovery: vi.fn(), resendConfirmation: vi.fn(), verifyEmailCode: vi.fn(), ensureEmailProfile: vi.fn(), socialProviders: vi.fn(), startSocial: vi.fn() } }));
+vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { requestSignup: vi.fn(), requestRecovery: vi.fn(), resendConfirmation: vi.fn(), verifyEmailCode: vi.fn(), ensureEmailProfile: vi.fn(), resetPassword: vi.fn(), socialProviders: vi.fn(), startSocial: vi.fn() } }));
 let i18n;
 beforeEach(async () => {
   vi.resetAllMocks(); sessionStorage.clear();
@@ -46,9 +47,9 @@ describe('customer authentication screens', () => {
   it('requests email recovery and resets only after a link', async () => {
     mount('forgot-password'); fill(en.customerAuth.email.label, 'test@example.test'); click(en.customerAuth.email.sendRecovery);
     await screen.findByRole('status'); expect(customerAuthService.requestRecovery).toHaveBeenCalledWith(expect.objectContaining({ email: 'test@example.test' }));
-    cleanup(); mount('reset-password', { recovery: true }); fill('New password', 'Newpass1!'); fill('Confirm password', 'Newpass1!'); click('Reset password');
-    expect(await screen.findByRole('status')).toHaveTextContent(en.customerAuth.resetSuccess);
-    expect(auth.resetPassword).toHaveBeenCalledWith({ password: 'Newpass1!' });
+    cleanup(); rememberPasswordProof({ proof: 'af220000-0000-4000-8000-000000000004', expiresIn: 300 }); mount('reset-password'); fill('New password', 'Newpass1!'); fill('Confirm password', 'Newpass1!'); click(en.customerPassword.savePassword);
+    expect(await screen.findByRole('status')).toHaveTextContent(en.customerPassword.success);
+    expect(customerAuthService.resetPassword).toHaveBeenCalledWith({ currentPassword: '', password: 'Newpass1!', confirmPassword: 'Newpass1!' });
   });
   it('rejects invalid email and weak or mismatched passwords', async () => {
     mount('sign-up'); click('Create account'); expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.INVALID_DETAILS);
@@ -57,8 +58,8 @@ describe('customer authentication screens', () => {
     expect(customerAuthService.requestSignup).not.toHaveBeenCalled();
   });
   it('handles a missing reset link and renders Arabic correctly', async () => {
-    mount('reset-password'); expect(screen.getByText(en.customerAuth.email.invalidLink)).toBeInTheDocument();
-    await i18n.changeLanguage('ar'); await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ar.customerAuth.titles['reset-password']));
+    mount('reset-password'); expect(screen.getByText(en.customerPassword.verifyFirst)).toBeInTheDocument();
+    await i18n.changeLanguage('ar'); await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ar.customerPassword.resetTitle));
     expect(screen.getByRole('heading', { level: 1 }).closest('.customer-booking')).toHaveAttribute('dir', 'rtl');
   });
 });
@@ -84,3 +85,4 @@ it('returns password recovery to customer sign in', () => {
   mount('forgot-password');
   expect(screen.getByRole('link', { name: en.customerAuth.backToSignIn })).toHaveAttribute('href', '/customer/sign-in');
 });
+vi.mock('../services/registration.service',()=>({registrationService:{correct:vi.fn()}}));

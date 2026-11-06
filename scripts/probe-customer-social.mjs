@@ -55,11 +55,14 @@ try {
   assert.notEqual(second.id, first.id, 'separate provider identities keep separate accounts');
   for (const user of [google, apple]) {
     const updated = await call('update-profile', { name: 'Social Probe Customer', countryCode: '+965', phone, email: 'untrusted@customer.test' }, user.token);
-    assert.equal(updated.status, user.id === google.id ? 200 : 409);
+    assert.equal(updated.status,403);
+    assert.equal(updated.data.error,'EMAIL_ADMIN_ONLY');
+    const contactUpdate=await call('update-profile',{name:'Social Probe Customer',countryCode:'+965',phone},user.token);
+    assert.equal(contactUpdate.status,user.id===google.id?200:409);
     if (user.id === google.id) {
-      assert.equal(updated.data.profile.phone, phone);
-      assert.notEqual(updated.data.profile.email, 'untrusted@customer.test');
-    } else assert.equal(updated.data.error, 'PHONE_IN_USE');
+      assert.equal(contactUpdate.data.profile.phone, phone);
+      assert.notEqual(contactUpdate.data.profile.email, 'untrusted@customer.test');
+    } else assert.equal(contactUpdate.data.error, 'PHONE_IN_USE');
     assert.deepEqual((await call('bookings', {}, user.token)).data.bookings, []);
   }
   assert.equal(sql(`select count(*) from private.customer_account_profiles where phone='${phone}'`), '1');

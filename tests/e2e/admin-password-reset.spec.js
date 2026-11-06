@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { verifyLocalAdmin } from './fixtures/admin-mfa';
 
 const synthetic = { id: '20000000-0000-4000-8000-000000000002', email: 'user@barber.test', role: 'manager' };
 
@@ -7,7 +8,7 @@ test('administrator can select a non-admin and submit a temporary password', asy
   await page.getByLabel('Email').fill('admin@barber.test');
   await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
   await page.locator('button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/admin/);
+  await verifyLocalAdmin(page);
   let resets = 0;
   await page.route('**/functions/v1/admin-password-reset', async route => {
     const headers = { 'Access-Control-Allow-Origin': new URL(page.url()).origin, 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type':'application/json' };
@@ -38,7 +39,14 @@ test('non-admin users cannot open the admin reset page', async ({ page }) => {
   await page.goto('/admin/users/passwords');
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/);
   await page.goto('/dashboard/settings');
+  const capability = page.waitForResponse(response => response.url().endsWith('/functions/v1/customer-auth') && response.request().method() === 'POST' && response.request().postDataJSON()?.action === 'password-status');
   await page.locator('.settings-link-btn').filter({hasText:/Change Password|تغيير كلمة المرور/i}).click();
+  const response = await capability;
+  expect(response.status()).toBe(200);
+  expect((await response.json()).hasPassword).toBe(true);
   await expect(page).toHaveURL(/\/change-password$/);
-  await expect(page.locator('#own-password')).toBeVisible();
+  await expect(page.locator('#currentPassword')).toBeVisible();
+  await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'new-password');
+  await expect(page.locator('#confirmPassword')).toBeVisible();
+  await expect(page.locator('#own-password')).toHaveCount(0);
 });

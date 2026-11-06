@@ -29,8 +29,12 @@ select throws_ok($$select public.customer_account_api('update-profile',current_s
 select is(private.resolve_booking_customer('ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201'),(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'booking resolves the canonical customer using the live account link');
 select throws_ok($$select private.resolve_booking_customer('ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000202')$$,'P0001','AUTH_REQUIRED','another customer session cannot resolve the account');
 select is(public.customer_account_api('bookings',current_setting('canonical.two')::jsonb),'[]'::jsonb,'new profile has no inferred history');
-update auth.users set email='canonical-confirmed@example.test' where id='ab920000-0000-4000-8000-000000000101';
+select private.write_account_email('ab920000-0000-4000-8000-000000000101','canonical-confirmed@example.test','00000000-0000-4000-8000-000000000001','admin_change','Synthetic admin confirmed this address');
 select is((select email::text from public.customers where id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),'canonical-confirmed@example.test','confirmed login-email change reaches the canonical contact');
+select ok(not exists(select 1 from auth.sessions where user_id='ab920000-0000-4000-8000-000000000101'),'admin email change ends the customer session');
+-- Simulate a fresh sign-in before continuing the history-preservation checks.
+insert into auth.sessions(id,user_id) values('ab920000-0000-4000-8000-000000000203','ab920000-0000-4000-8000-000000000101');
+select set_config('canonical.one',(current_setting('canonical.one')::jsonb||'{"session_id":"ab920000-0000-4000-8000-000000000203"}')::text,true);
 select set_config('request.jwt.claims','{"sub":"ab920000-0000-4000-8000-000000000101","role":"authenticated","app_metadata":{"role":"customer"}}',true);
 set local role authenticated;
 select is((select count(*) from public.customers where id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),0::bigint,'customer cannot bypass the account API and read staff records');
@@ -39,7 +43,7 @@ select throws_ok($$select public.save_customer_profile(null,'{"name":"Forged sta
 reset role;
 insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)
 values('ab920000-0000-4000-8000-000000000301',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121',array['20000000-0000-4000-8000-000000000121']::uuid[],'2039-01-02','09:00',30,5,'completed','system');
-select private.record_customer_booking_owner('ab920000-0000-4000-8000-000000000301','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201');
+select private.record_customer_booking_owner('ab920000-0000-4000-8000-000000000301','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000203');
 select public.customer_account_api('update-profile',current_setting('canonical.one')::jsonb||'{"phone":"59998402","country_code":"+965"}');
 select is((select customer_id from public.bookings where id='ab920000-0000-4000-8000-000000000301'),(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'phone change retains the booking customer ID');
 select is(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)->0->>'id','ab920000-0000-4000-8000-000000000301','owned history survives a phone change');
@@ -68,8 +72,8 @@ select ok(not has_function_privilege('anon','public.customer_claim_booking(uuid,
 select ok(not has_function_privilege('authenticated','public.customer_claim_booking(uuid,uuid,uuid)','EXECUTE'),'authenticated clients cannot bypass the receipt gateway');
 select throws_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000102','ab920000-0000-4000-8000-000000000202')$$,'P0001','INVALID_REQUEST','a different canonical customer cannot claim the receipt');
 select throws_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000202')$$,'P0001','AUTH_REQUIRED','another session cannot claim the receipt');
-select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201')$$,'the gateway can attach the single receipt to its matching live account');
-select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201')$$,'repeated saves are idempotent');
+select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000203')$$,'the gateway can attach the single receipt to its matching live account');
+select lives_ok($$select public.customer_claim_booking('ab920000-0000-4000-8000-000000000303','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000203')$$,'repeated saves are idempotent');
 select is((select count(*) from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000303'),1::bigint,'one booking gets exactly one explicit owner');
 select ok(exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000303'),'claimed appointment appears in account history');
 select * from finish();

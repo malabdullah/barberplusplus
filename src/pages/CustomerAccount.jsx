@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, CheckCircle2, ChevronRight, Loader2, LogOut, Pencil, Plus, RotateCcw } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, Loader2, Pencil, Plus, RotateCcw } from 'lucide-react';
 import UpcomingBookingActions from '../components/Customer/UpcomingBookingActions';
 import BookingRating from '../components/Customer/BookingRating';
+import CustomerSignOutButton from '../components/Customer/CustomerSignOutButton';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import { customerBookingService } from '../services/customerBooking.service';
@@ -82,8 +83,7 @@ export default function CustomerAccount() {
     if (form.name.trim().length < 2 || form.name.trim().length > 120 || !form.email || form.email.trim().length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(form.email.trim()) || form.phone && !validatePhoneNumber(form.phone.replace(/[\s()-]/g, ''), form.countryCode).valid) { setError(tr('errors.INVALID_DETAILS')); return; }
     setBusy(true);
     try {
-      const changedEmail = form.email.trim().toLowerCase() !== (customer.email || '').toLowerCase();
-      await updateProfile(form); setEditing(false); setSaved(changedEmail ? 'email' : 'profile');
+      await updateProfile({...form,email:customer.email || ''}); setEditing(false); setSaved('profile');
     } catch (failure) { setError(tr(failure.message === 'PHONE_IN_USE' ? 'errors.PHONE_IN_USE' : 'errors.UNAVAILABLE')); }
     finally { setBusy(false); }
   };
@@ -132,7 +132,7 @@ export default function CustomerAccount() {
           {saved && <p className="ca-profile-saved" role="status"><CheckCircle2 size={18} aria-hidden="true" />{tr(saved === 'email' ? 'email.changeSent' : 'profileSaved')}</p>}
           {editing ? <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy}>
             <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-name">{tr('name')}</label><input className="cb-input" id="account-name" autoComplete="name" value={form.name} maxLength={120} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} required /></div>
-            <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-email">{tr('email.label')}</label><input className="cb-input" id="account-email" type="email" autoComplete="email" dir="ltr" value={form.email} maxLength={254} onChange={event => setForm(current => ({ ...current, email: event.target.value }))} aria-describedby="account-email-hint" required /><p id="account-email-hint" className="cb-helper">{tr('account.emailHint')}</p></div>
+            <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-email">{tr('email.label')}</label><input className="cb-input" id="account-email" type="email" dir="ltr" value={customer.email || ''} readOnly aria-describedby="account-email-hint" /><p id="account-email-hint" className="cb-helper">{t('accountEmail.adminOnly')}</p></div>
             <div className="ca-profile-field"><label className="cb-field-label" htmlFor="account-phone">{tr('phone')} <span className="ca-optional">{tr('account.optional')}</span></label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={form.countryCode} onChange={event => setForm(current => ({ ...current, countryCode: event.target.value }))}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="account-phone" type="tel" autoComplete="tel-national" inputMode="tel" value={form.phone} maxLength={14} onChange={event => setForm(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') }))} /></div></div>
             <div className="ca-profile-buttons"><button type="submit" className="cb-primary" disabled={busy}>{busy && <Loader2 size={18} className="cb-spinner" aria-hidden="true" />}{tr('save')}</button><button type="button" className="cb-secondary" disabled={busy} onClick={() => { setEditing(false); setError(''); }}>{tr('cancel')}</button></div>
           </fieldset></form> : <dl className="ca-profile-details">
@@ -140,7 +140,7 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/forgot-password">{tr('changePassword')}<ChevronRight size={18} aria-hidden="true" /></Link><button type="button" disabled={busy} onClick={signOut}>{tr('signOut')}<LogOut size={18} aria-hidden="true" /></button></div>
+          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} /></div>
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">
           <header className="ca-appointments-heading"><h2 id="appointments">{tr('myAppointments')}</h2><p>{tr('account.appointmentsIntro')}</p></header>

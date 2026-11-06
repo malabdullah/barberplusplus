@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
 import './Forms.css';
 
-export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false }) {
+export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false, submissionError = null, onClearError, disabledReason = '' }) {
   const { t } = useTranslation();
   // Use cached geolocation hook instead of direct API call
   const { dialCode: detectedCountryCode } = useGeoLocation(barber?.countryCode);
@@ -22,6 +22,14 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   });
 
   const [errors, setErrors] = useState({});
+  const formRef = useRef(null);
+  const errorRef = useRef(null);
+  const phoneError = errors.phone || (submissionError?.field === 'phone' ? submissionError.message : '');
+  useEffect(() => {
+    if (!submissionError) return;
+    if (submissionError.field === 'phone') formRef.current?.elements.namedItem('phone')?.focus();
+    else errorRef.current?.focus();
+  }, [submissionError]);
 
   // Update country code when geolocation hook returns detected country
   useEffect(() => {
@@ -34,6 +42,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
     const { name, value, type, checked } = e.target;
     const newValue = type === 'checkbox' ? checked : value;
     setFormData((prev) => ({ ...prev, [name]: newValue }));
+    onClearError?.();
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -66,7 +75,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
     if (!formData.name.trim()) newErrors.name = t('validation.nameRequired');
     if (!formData.email.trim()) {
       newErrors.email = t('validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = t('validation.invalidEmail');
     }
     if (!formData.phone.trim()) {
@@ -83,13 +92,16 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting || disabledReason) return;
     if (validate()) {
-      onSubmit(formData);
+      onSubmit({ ...formData, name: formData.name.trim(), email: formData.email.trim().toLowerCase() });
+    } else {
+      requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
     }
   };
 
   return (
-    <form className="form" onSubmit={handleSubmit}>
+    <form ref={formRef} className="form barber-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
       <div className="form-section">
         <h4 className="form-section-title">{t('profile.title')}</h4>
 
@@ -133,23 +145,27 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('common.fullName')}</label>
+          <label className="form-label" htmlFor="barber-name">{t('common.fullName')}</label>
           <input
             type="text"
             name="name"
+            id="barber-name"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'barber-name-error' : undefined}
             value={formData.name}
             onChange={handleChange}
             className={`form-input ${errors.name ? 'error' : ''}`}
             placeholder={t('barbers.namePlaceholder')}
           />
-          {errors.name && <span className="form-error">{errors.name}</span>}
+          {errors.name && <span className="form-error" id="barber-name-error">{errors.name}</span>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('barbers.nameAr')}</label>
+          <label className="form-label" htmlFor="barber-name-ar">{t('barbers.nameAr')}</label>
           <input
             type="text"
             name="nameAr"
+            id="barber-name-ar"
             value={formData.nameAr}
             onChange={handleChange}
             className="form-input"
@@ -159,23 +175,29 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('common.email')}</label>
+          <label className="form-label" htmlFor="barber-email">{t('common.email')}</label>
           <input
             type="email"
             name="email"
+            id="barber-email"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'barber-email-error' : undefined}
             value={formData.email}
-            onChange={handleChange}
+            onChange={barber?.id ? undefined : handleChange}
+            readOnly={Boolean(barber?.id)}
             className={`form-input ${errors.email ? 'error' : ''}`}
             placeholder="barber@example.com"
           />
-          {errors.email && <span className="form-error">{errors.email}</span>}
+          {errors.email && <span className="form-error" id="barber-email-error">{errors.email}</span>}
+          {barber?.id && <p className="form-help">{t('accountEmail.adminOnly')}</p>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('common.phone')}</label>
+          <label className="form-label" htmlFor="barber-phone">{t('common.phone')}</label>
           <div className="phone-input-group">
             <select
               name="countryCode"
+              aria-label={t('customerAuth.countryCode')}
               value={formData.countryCode}
               onChange={handleChange}
               className="form-input form-select country-code-select"
@@ -189,13 +211,16 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             <input
               type="tel"
               name="phone"
+              id="barber-phone"
+              aria-invalid={Boolean(phoneError)}
+              aria-describedby={phoneError ? 'barber-phone-error' : undefined}
               value={formData.phone}
               onChange={handleChange}
-              className={`form-input phone-number-input ${errors.phone ? 'error' : ''}`}
+              className={`form-input phone-number-input ${phoneError ? 'error' : ''}`}
               placeholder="XXXX XXXX"
             />
           </div>
-          {errors.phone && <span className="form-error">{errors.phone}</span>}
+          {phoneError && <span className="form-error" id="barber-phone-error" role="alert">{phoneError}</span>}
         </div>
       </div>
 
@@ -221,11 +246,13 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         )}
       </div>
 
+      {disabledReason && <p className="error-banner" role="alert">{disabledReason}</p>}
+      {submissionError && submissionError.field !== 'phone' && <p ref={errorRef} className="error-banner" role="alert" tabIndex={-1}>{submissionError.message}</p>}
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={isSubmitting}>
           {t('common.cancel')}
         </button>
-        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting || Boolean(disabledReason)}>
           {isSubmitting ? t('common.loading') : (barber ? t('common.saveChanges') : t('barbers.addBarber'))}
         </button>
       </div>
