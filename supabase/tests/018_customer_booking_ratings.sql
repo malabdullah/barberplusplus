@@ -20,8 +20,9 @@ select public.customer_account_api('email-ensure',current_setting('rating.one'):
 select public.customer_account_api('email-ensure',current_setting('rating.two')::jsonb);
 insert into public.branches(id,manager_id,name,status) values
 ('dc060000-0000-4000-8000-000000000301','dc060000-0000-4000-8000-000000000103','Rating Shop','active');
-insert into public.barbers(id,branch_id,name,status) values
-('dc060000-0000-4000-8000-000000000401','dc060000-0000-4000-8000-000000000301','Rating Barber','active');
+insert into public.services(id,branch_id,name,duration,price) values('dc060000-0000-4000-8000-000000000402','dc060000-0000-4000-8000-000000000301','Rating service',30,3);
+insert into public.barbers(id,branch_id,name,status,service_ids) values
+('dc060000-0000-4000-8000-000000000401','dc060000-0000-4000-8000-000000000301','Rating Barber','active',array['dc060000-0000-4000-8000-000000000402']::uuid[]);
 insert into public.bookings(id,branch_id,barber_id,date,time,status) values
 ('dc060000-0000-4000-8000-000000000501','dc060000-0000-4000-8000-000000000301','dc060000-0000-4000-8000-000000000401',current_date-7,'10:00','completed'),
 ('dc060000-0000-4000-8000-000000000502','dc060000-0000-4000-8000-000000000301','dc060000-0000-4000-8000-000000000401',current_date-7,'11:00','cancelled'),

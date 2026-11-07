@@ -9,6 +9,14 @@ select is((select count(*) from information_schema.columns where table_schema='p
 insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
 ('ab920000-0000-4000-8000-000000000101','canonical-one@example.test',now(),'{"role":"customer"}'),
 ('ab920000-0000-4000-8000-000000000102','canonical-two@example.test',now(),'{"role":"customer"}');
+insert into auth.users(id,email,raw_app_meta_data) values('ab920000-0000-4000-8000-000000000103','canonical-agent@example.test','{"role":"agent"}');
+insert into public.branches(id,manager_id,name,working_hours)
+select 'ab920000-0000-4000-8000-000000000401','00000000-0000-4000-8000-000000000002','Canonical Contact Fixture',jsonb_object_agg(day,'{"open":"09:00","close":"18:00"}'::jsonb)
+from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day;
+insert into public.services(id,branch_id,name,duration,price) values('ab920000-0000-4000-8000-000000000402','ab920000-0000-4000-8000-000000000401','Canonical Haircut',30,5);
+insert into public.barbers(id,branch_id,name,service_ids,availability)
+select 'ab920000-0000-4000-8000-000000000403','ab920000-0000-4000-8000-000000000401','Canonical Barber',array['ab920000-0000-4000-8000-000000000402']::uuid[],jsonb_object_agg(day,'{"enabled":true,"start":"09:00","end":"18:00"}'::jsonb)
+from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day;
 insert into auth.sessions(id,user_id) values
 ('ab920000-0000-4000-8000-000000000201','ab920000-0000-4000-8000-000000000101'),
 ('ab920000-0000-4000-8000-000000000202','ab920000-0000-4000-8000-000000000102');
@@ -29,7 +37,8 @@ select throws_ok($$select public.customer_account_api('update-profile',current_s
 select is(private.resolve_booking_customer('ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201'),(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'booking resolves the canonical customer using the live account link');
 select throws_ok($$select private.resolve_booking_customer('ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000202')$$,'P0001','AUTH_REQUIRED','another customer session cannot resolve the account');
 select is(public.customer_account_api('bookings',current_setting('canonical.two')::jsonb),'[]'::jsonb,'new profile has no inferred history');
-update auth.users set email='canonical-confirmed@example.test' where id='ab920000-0000-4000-8000-000000000101';
+select private.write_account_email('ab920000-0000-4000-8000-000000000101','canonical-confirmed@example.test',null,'admin_change','Transactional canonical-contact fixture');
+insert into auth.sessions(id,user_id) values('ab920000-0000-4000-8000-000000000201','ab920000-0000-4000-8000-000000000101');
 select is((select email::text from public.customers where id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),'canonical-confirmed@example.test','confirmed login-email change reaches the canonical contact');
 select set_config('request.jwt.claims','{"sub":"ab920000-0000-4000-8000-000000000101","role":"authenticated","app_metadata":{"role":"customer"}}',true);
 set local role authenticated;
@@ -37,30 +46,31 @@ select is((select count(*) from public.customers where id=(current_setting('cano
 select is((select count(*) from public.customer_staff_details),0::bigint,'customer cannot read staff notes');
 select throws_ok($$select public.save_customer_profile(null,'{"name":"Forged staff record"}')$$,'42501','NOT_AUTHORIZED','customer cannot execute staff contact writes');
 reset role;
+select set_config('request.jwt.claims','{}',true);
 insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)
-values('ab920000-0000-4000-8000-000000000301',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121',array['20000000-0000-4000-8000-000000000121']::uuid[],'2039-01-02','09:00',30,5,'completed','system');
+values('ab920000-0000-4000-8000-000000000301',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'ab920000-0000-4000-8000-000000000401','ab920000-0000-4000-8000-000000000403',array['ab920000-0000-4000-8000-000000000402']::uuid[],'2039-01-02','09:00',30,5,'completed','system');
 select private.record_customer_booking_owner('ab920000-0000-4000-8000-000000000301','ab920000-0000-4000-8000-000000000101','ab920000-0000-4000-8000-000000000201');
 select public.customer_account_api('update-profile',current_setting('canonical.one')::jsonb||'{"phone":"59998402","country_code":"+965"}');
 select is((select customer_id from public.bookings where id='ab920000-0000-4000-8000-000000000301'),(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'phone change retains the booking customer ID');
 select is(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)->0->>'id','ab920000-0000-4000-8000-000000000301','owned history survives a phone change');
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"}}',true);
+select set_config('request.jwt.claims','{"sub":"ab920000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"agent"}}',true);
 set local role authenticated;
 select lives_ok($$select public.save_customer_profile((current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'{"name":"Agent Correction","notes":"Internal only","tags":["test"]}')$$,'agent atomically saves contact and separate annotations');
 select is((select notes from public.customer_staff_details where customer_id=(current_setting('canonical.profile')::jsonb->>'customerId')::uuid),'Internal only','staff annotation references the same customer');
 reset role;
 select is(public.customer_account_api('profile',current_setting('canonical.one')::jsonb)->>'name','Agent Correction','staff RPC edits are visible in the customer profile');
 select ok(not (public.customer_account_api('profile',current_setting('canonical.one')::jsonb) ? 'notes'),'customer API never exposes staff notes');
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"}}',true);
+select set_config('request.jwt.claims','{"sub":"ab920000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"agent"}}',true);
 set local role authenticated;
 insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)
-values('ab920000-0000-4000-8000-000000000302',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121',array['20000000-0000-4000-8000-000000000121']::uuid[],'2039-01-03','09:00',30,5,'cancelled','whatsapp_agent');
+values('ab920000-0000-4000-8000-000000000302',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'ab920000-0000-4000-8000-000000000401','ab920000-0000-4000-8000-000000000403',array['ab920000-0000-4000-8000-000000000402']::uuid[],(clock_timestamp() at time zone 'Asia/Kuwait')::date+2,'09:00',30,5,'confirmed','whatsapp_agent');
 reset role;
 select is((select account_user_id from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000302'),'ab920000-0000-4000-8000-000000000101'::uuid,'staff-selected canonical customer receives ownership of the new appointment');
 select ok(exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000302'),'staff-created appointment appears in the linked customer history');
 select set_config('request.jwt.claims','{"role":"service_role"}',true);
 set local role service_role;
 insert into public.bookings(id,customer_id,branch_id,barber_id,date,time,duration,price,status,added_by_type)
-values('ab920000-0000-4000-8000-000000000303',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'10000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000121','2039-01-04','09:00',30,5,'cancelled','system');
+values('ab920000-0000-4000-8000-000000000303',(current_setting('canonical.profile')::jsonb->>'customerId')::uuid,'ab920000-0000-4000-8000-000000000401','ab920000-0000-4000-8000-000000000403','2039-01-04','09:00',30,5,'cancelled','system');
 reset role;
 select is((select count(*) from private.customer_booking_owners where booking_id='ab920000-0000-4000-8000-000000000303'),0::bigint,'guest service call does not infer ownership from a matching contact');
 select ok(not exists(select 1 from jsonb_array_elements(public.customer_account_api('bookings',current_setting('canonical.one')::jsonb)) b where b->>'id'='ab920000-0000-4000-8000-000000000303'),'phone-matched guest appointment is excluded from private account history');

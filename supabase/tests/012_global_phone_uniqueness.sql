@@ -43,7 +43,8 @@ select lives_ok($$insert into public.customers(name,country_code,phone) values('
 select is((select count(*) from public.customers where country_code='+965' and phone='59998005'),1::bigint,'formatted upsert retains one customer record');
 select is((select count(*) from information_schema.columns where table_schema='private' and table_name='customer_accounts' and column_name in ('name','phone','phone_e164','email','country_code')),0::bigint,'account links contain no repeated contact fields');
 select is((select phone_e164 from private.customer_account_profiles where user_id='aa990000-0000-4000-8000-000000000104'),'+96559998015','international phone is derived from the canonical customer');
-insert into public.barbers(id,branch_id,user_id,name,country_code,phone) values('aa990000-0000-4000-8000-000000000501','aa990000-0000-4000-8000-000000000301','aa990000-0000-4000-8000-000000000103','Phone Test Barber','+965','59998003');
+insert into public.barbers(id,branch_id,user_id,name,country_code,phone,status) values
+('aa990000-0000-4000-8000-000000000501','aa990000-0000-4000-8000-000000000301','aa990000-0000-4000-8000-000000000103','Phone Test Barber','+965','59998003','inactive');
 select is((select count(*) from private.phone_sources where phone='+96559998003'),2::bigint,'barber login and linked barber record share one identity');
 select throws_ok($$update public.barbers set phone='59998001' where id='aa990000-0000-4000-8000-000000000501'$$,'23505','PHONE_IN_USE','barber cannot use admin number');
 select throws_ok($$update public.barbers set user_id='aa990000-0000-4000-8000-000000000102' where id='aa990000-0000-4000-8000-000000000501'$$,'P0001','INVALID_BARBER_ACCOUNT','manager cannot be disguised as a linked barber identity');
@@ -55,7 +56,8 @@ select throws_ok($$update public.branches set phone='59998003' where id='aa99000
 select lives_ok($$insert into public.customers(name,country_code,phone) values('Different country','+973','59998005')$$,'same national digits in another country are a distinct international number');
 update public.branches set phone='59998006' where id='aa990000-0000-4000-8000-000000000301';
 select lives_ok($$update auth.users set raw_user_meta_data=raw_user_meta_data||'{"phone":"+96559998004"}' where id='aa990000-0000-4000-8000-000000000102'$$,'a fully released number can be claimed elsewhere');
-select throws_ok($$insert into public.barbers(branch_id,name,country_code,phone) values('aa990000-0000-4000-8000-000000000301','Unlinked duplicate','+965','59998006')$$,'23505','PHONE_IN_USE','unlinked barber also cannot reuse shop contact');
+select throws_ok($$insert into public.barbers(branch_id,name,country_code,phone,status) values
+('aa990000-0000-4000-8000-000000000301','Unlinked duplicate','+965','59998006','inactive')$$,'23505','PHONE_IN_USE','unlinked barber also cannot reuse shop contact');
 insert into auth.users(id,email,raw_app_meta_data) values('aa990000-0000-4000-8000-000000000106','phone-invited@customer.test','{"role":"barber"}');
 select lives_ok($$update public.barbers set user_id='aa990000-0000-4000-8000-000000000106' where id='aa990000-0000-4000-8000-000000000501'$$,'invitation links an existing unassigned barber without losing its phone claim');
 select is((select owner_key from private.phone_numbers where phone='+96559998003'),'user:aa990000-0000-4000-8000-000000000106','linked invitation transfers the number to the trusted barber identity');
