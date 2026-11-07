@@ -17,7 +17,7 @@ export const supabase = createClient(
       flowType: 'pkce',
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: !(typeof window !== 'undefined' && ['/customer/auth-callback', '/customer/email-callback', '/team/auth-callback'].includes(window.location.pathname)),
+      detectSessionInUrl: !(typeof window !== 'undefined' && ['/customer/auth-callback', '/customer/email-callback', '/team/auth-callback', '/accept-invite'].includes(window.location.pathname)),
     },
   }
 );

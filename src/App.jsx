@@ -132,7 +132,8 @@ function AppRoutes() {
   // Email verification establishes a staff session before its callback settles.
   // Keep that public callback mounted while staff data loads: its one-time URL
   // has already been cleared, so remounting would report a false expired link.
-  if (loading && location.pathname !== '/customer/email-callback') {
+  // Invitation acceptance also refreshes the role/session while its callback settles.
+  if (loading && !['/customer/email-callback', '/accept-invite'].includes(location.pathname)) {
     return (
       <div style={{
         display: 'flex',

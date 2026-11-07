@@ -1,61 +1,43 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
-import BarberForm from '../components/Forms/BarberForm';
+import { barberInvitationsService as api } from '../services/barberInvitations.service';
 import BackLink from '../components/UI/BackLink';
-import { logErrorDev } from '../utils/security';
-import { getErrorMessage } from '../utils/errorMessages';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
+import '../components/Forms/Forms.css';
+import '../components/Invitations/Invitations.css';
 import './AddBranch.css';
-
 export default function AddBarber() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { addBarber, selectedBranch, selectedBranchId, branchServices } = useApp();
-  const [error, setError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const hasShop = Boolean(selectedBranch?.id && selectedBranch.id === selectedBranchId);
-
-  const handleSubmit = async (data) => {
-    if (isSubmitting) return;
-    if (!hasShop) { setError({ message: t('barbers.selectShopFirst') }); return; }
-    setError(null);
-    setIsSubmitting(true);
+  const { t } = useTranslation(); const tr = (key, options) => t('barberInvitations.' + key, options);
+  const { selectedBranch } = useApp(); const navigate = useNavigate();
+  const [email, setEmail] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [confirm, setConfirm] = useState(false);
+  const currentBranch = useRef(selectedBranch?.id);
+  currentBranch.current = selectedBranch?.id;
+  useEffect(() => { setConfirm(false); setError(''); }, [selectedBranch?.id]);
+  const send = async confirmed => {
+    const branchId = selectedBranch?.id;
+    if (busy) return; setError(''); setBusy(true);
     try {
-      const created = await addBarber(data);
-      navigate('/dashboard/barbers', { state: { imageWarning: created?.imageWarning } });
-    } catch (err) {
-      logErrorDev('Error creating barber:', err);
-      setError({ message: err.message === 'SHOP_REQUIRED' ? t('barbers.selectShopFirst') : getErrorMessage(err, t('errors.createBarberFailed'), t), field: /PHONE_IN_USE/.test(err.message) ? 'phone' : undefined });
-      setIsSubmitting(false);
-    }
+      if (!branchId) throw new Error('SHOP_REQUIRED');
+      if (!confirmed) {
+        const checked = await api.check(branchId, email);
+        if (currentBranch.current !== branchId) return;
+        if (checked.kind === 'customer') { setConfirm(true); return; }
+      }
+      const result = await api.send(branchId, email, confirmed);
+      if (currentBranch.current !== branchId) return;
+      navigate('/dashboard/barbers', { state: { invitationNotice: result.delivered ? 'sent' : 'deliveryFailed' } });
+    } catch (e) { setError(e.message); setConfirm(false); } finally { setBusy(false); }
   };
-
-  const handleCancel = () => {
-    navigate('/dashboard/barbers');
-  };
-
-  return (
-    <div className="add-branch-page">
-      <BackLink to="/dashboard/barbers" label={t('barbers.backToBarbers')} className="animate-fade-in" />
-
-      <div className="add-branch-header animate-fade-in-up">
-        <h1>{t('barbers.addNewBarber')}</h1>
-        <p>{t('barbers.addTeamMember')} {selectedBranch?.name}</p>
-      </div>
-
-      <div className="add-branch-form-container animate-fade-in-up stagger-1">
-        <BarberForm
-          barber={null}
-          services={branchServices}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isSubmitting={isSubmitting}
-          submissionError={error}
-          onClearError={() => setError(null)}
-          disabledReason={hasShop ? '' : t('barbers.selectShopFirst')}
-        />
-      </div>
-    </div>
-  );
+  return <div className="add-branch-page invitation-form">
+    <BackLink to="/dashboard/barbers" label={t('barbers.backToBarbers')} />
+    <div className="add-branch-header"><h1>{tr('invite')}</h1><p>{selectedBranch?.name}</p></div>
+    {(error || !selectedBranch) && <p className="error-banner" role="alert">{tr('errors.' + (error || 'SHOP_REQUIRED'))}</p>}
+    <form className="form" onSubmit={e => { e.preventDefault(); send(false); }}>
+      <div className="form-group"><label className="form-label" htmlFor="invite-email">{t('common.email')}</label><input id="invite-email" className="form-input" type="email" dir="ltr" value={email} onChange={e => { setEmail(e.target.value); setError(''); setConfirm(false); }} maxLength={254} autoComplete="email" disabled={busy} required /></div>
+      <button className="btn btn-primary" type="submit" disabled={busy || !selectedBranch}>{tr(busy ? 'sending' : 'send')}</button>
+    </form>
+    <ConfirmDialog isOpen={confirm} onClose={() => !busy && setConfirm(false)} onConfirm={() => send(true)} title={tr('existingCustomer')} message={tr('customerConfirm', { email: email.trim() })} confirmText={tr('send')} cancelText={t('common.cancel')} variant="warning" />
+  </div>;
 }

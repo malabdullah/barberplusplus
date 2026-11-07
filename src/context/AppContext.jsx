@@ -769,76 +769,6 @@ export function AppProvider({ children }) {
   }, [selectedBranchId, branches]);
 
   // Barber actions
-  const addBarber = useCallback(async (barberData) => {
-    try {
-      if (!selectedBranchId || !branches.some(branch => branch.id === selectedBranchId)) throw new Error('SHOP_REQUIRED');
-      const { profilePictureFile, ...data } = barberData;
-
-      if (profilePictureFile) storageService.validateFile(profilePictureFile);
-      // Create barber record first
-      const newBarber = await barbersService.create({
-        ...data,
-        branchId: selectedBranchId,
-        status: 'active',
-        availability: BARBER_DEFAULT_SCHEDULE,
-      });
-
-      // Upload profile picture if provided
-      if (profilePictureFile) {
-        try {
-          const avatarUrl = await storageService.uploadImage(profilePictureFile, 'barbers', newBarber.id);
-          await barbersService.update(newBarber.id, { avatarUrl });
-          newBarber.avatarUrl = avatarUrl;
-          newBarber.profilePicture = avatarUrl; // For backwards compatibility
-        } catch (uploadError) {
-          logger.error('Error uploading barber profile picture:', uploadError);
-          newBarber.imageWarning = true;
-        }
-      }
-
-      // Send invite email
-      try {
-        await barbersService.sendInvite(
-          newBarber.id,
-          barberData.email,
-          barberData.name,
-          selectedBranchId
-        );
-        newBarber.inviteStatus = 'sent';
-        newBarber.inviteSentAt = new Date().toISOString();
-      } catch (inviteError) {
-        logger.error('Failed to send invite:', inviteError);
-        // Barber was created, but invite failed - they can resend later
-        newBarber.inviteError = inviteError.message;
-      }
-
-      setBarbers(prev => [...prev, newBarber]);
-      loggingService.logAction('create', 'barber', newBarber.id, `Added barber: ${barberData.name}`);
-      return newBarber;
-    } catch (error) {
-      logger.error('Error creating barber:', error);
-      loggingService.logError(error, { entityType: 'barber', action: 'create' });
-      throw error;
-    }
-  }, [selectedBranchId, branches]);
-
-  const resendBarberInvite = useCallback(async (barberId) => {
-    try {
-      await barbersService.resendInvite(barberId);
-      // Update barber's invite status in local state
-      setBarbers(prev =>
-        prev.map(b => b.id === barberId
-          ? { ...b, inviteStatus: 'sent', inviteSentAt: new Date().toISOString() }
-          : b
-        )
-      );
-      return { success: true };
-    } catch (error) {
-      logger.error('Error resending invite:', error);
-      throw error;
-    }
-  }, []);
-
   const updateBarber = useCallback(async (barberId, updates) => {
     try {
       const { profilePictureFile, ...data } = updates;
@@ -1407,10 +1337,8 @@ export function AppProvider({ children }) {
     addBranch,
     updateBranch,
     deleteBranch,
-    addBarber,
     updateBarber,
     deleteBarber,
-    resendBarberInvite,
     addService,
     updateService,
     deleteService,
@@ -1443,7 +1371,7 @@ export function AppProvider({ children }) {
     // Actions (useCallback wrapped, stable references)
     setTheme, setLanguage, setSelectedBranchId, reloadData,
     addBranch, updateBranch, deleteBranch,
-    addBarber, updateBarber, deleteBarber, resendBarberInvite,
+    updateBarber, deleteBarber,
     addService, updateService, deleteService,
     addBooking, updateBooking, cancelBooking, extendBooking, changeBookingServices,
     login, signup, logout,

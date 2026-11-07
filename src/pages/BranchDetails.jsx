@@ -186,8 +186,8 @@ export default function BranchDetails() {
           ) : (
             <div className="empty-section">
               <p>{t('branches.noBarbersAssigned')}</p>
-              <Link to="/dashboard/barbers" className="btn btn-sm btn-primary">
-                <Plus size={14} /> {t('barbers.addBarber')}
+              <Link to="/dashboard/barbers/new" className="btn btn-sm btn-primary">
+                <Plus size={14} /> {t('barberInvitations.invite')}
               </Link>
             </div>
           )}

@@ -230,11 +230,11 @@ export default function Dashboard() {
                 </div>
                 <span>{t('bookings.newBooking')}</span>
               </Link>
-              <Link to="/dashboard/barbers" className="quick-action-btn">
+              <Link to="/dashboard/barbers/new" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Users size={24} strokeWidth={1.5} />
                 </div>
-                <span>{t('barbers.addBarber')}</span>
+                <span>{t('barberInvitations.invite')}</span>
               </Link>
               <Link to="/dashboard/services" className="quick-action-btn">
                 <div className="quick-action-icon">

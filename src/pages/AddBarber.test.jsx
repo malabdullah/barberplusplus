@@ -1,64 +1,34 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import AddBarber from './AddBarber';
-
-const state = vi.hoisted(() => ({ addBarber: vi.fn(), selectedBranch: { id: 'shop', name: 'QA Shop' }, selectedBranchId: 'shop', branchServices: [{ id: 'service', name: 'Haircut', price: 3, status: 'active' }] }));
+const state = vi.hoisted(() => ({ selectedBranch: { id: 'shop', name: 'QA Shop' } }));
+const api = vi.hoisted(() => ({ check: vi.fn(), send: vi.fn() }));
 vi.mock('../context/AppContext', () => ({ useApp: () => state }));
-vi.mock('../hooks/useGeoLocation', () => ({ useGeoLocation: () => ({ dialCode: '+965' }) }));
+vi.mock('../services/barberInvitations.service', () => ({ barberInvitationsService: api }));
 let i18n;
 beforeEach(async () => {
-  state.selectedBranch = { id: 'shop', name: 'QA Shop' }; state.selectedBranchId = 'shop';
-  state.addBarber.mockReset().mockResolvedValue({ id: 'new-barber' });
-  i18n = i18next.createInstance();
-  await i18n.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
+ state.selectedBranch = { id: 'shop', name: 'QA Shop' }; api.check.mockReset().mockResolvedValue({ kind: 'new' }); api.send.mockReset().mockResolvedValue({ delivered: true });
+ i18n=i18next.createInstance(); await i18n.init({lng:'en',resources:{en:{translation:en}}});
 });
 afterEach(cleanup);
-function mount() {
-  return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={['/dashboard/barbers/new']}><Routes><Route path="/dashboard/barbers/new" element={<AddBarber />} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>);
-}
-function fill() {
-  fireEvent.click(screen.getByRole('checkbox', { name: /Haircut/ }));
-  fireEvent.change(screen.getByLabelText(en.common.fullName), { target: { value: '  QA Barber  ' } });
-  fireEvent.change(screen.getByLabelText(en.common.email), { target: { value: ' QA@example.test ' } });
-  fireEvent.change(screen.getByLabelText(en.common.phone), { target: { value: '59998721' } });
-}
-it('shows a duplicate phone error beside the field, focuses it, and lets a corrected submission succeed', async () => {
-  state.addBarber.mockRejectedValueOnce(new Error('PHONE_IN_USE'));
-  mount(); fill(); fireEvent.click(screen.getByRole('button', { name: en.barbers.addBarber }));
-  expect(await screen.findByRole('alert')).toHaveTextContent(en.errors.phoneInUse);
-  expect(screen.getByLabelText(en.common.phone)).toHaveFocus();
-  expect(screen.getByLabelText(en.common.phone)).toHaveAttribute('aria-invalid', 'true');
-  expect(screen.getByLabelText(en.common.fullName)).toHaveValue('  QA Barber  ');
-  fireEvent.change(screen.getByLabelText(en.common.phone), { target: { value: '59998722' } });
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: en.barbers.addBarber }));
-  await screen.findByRole('heading', { name: 'Barber list' });
-  expect(state.addBarber).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'QA Barber', email: 'qa@example.test', phone: '59998722' }));
+function mount() { return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={['/dashboard/barbers/new']}><Routes><Route path="/dashboard/barbers/new" element={<AddBarber />} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>); }
+const enter = () => fireEvent.change(screen.getByLabelText(en.common.email), { target: { value: 'qa@example.test' } });
+it('asks only for email and checks it before sending', async () => {
+ mount(); enter(); fireEvent.click(screen.getByRole('button',{name:en.barberInvitations.send}));
+ await screen.findByRole('heading',{name:'Barber list'}); expect(api.check).toHaveBeenCalledWith('shop','qa@example.test'); expect(api.send).toHaveBeenCalledWith('shop','qa@example.test',false);
 });
-it('prevents a create request without a selected shop and explains how to proceed', () => {
-  state.selectedBranch = null; state.selectedBranchId = null; mount();
-  expect(screen.getByRole('alert')).toHaveTextContent(en.barbers.selectShopFirst);
-  expect(screen.getByRole('button', { name: en.barbers.addBarber })).toBeDisabled();
-  expect(state.addBarber).not.toHaveBeenCalled();
+it('requires a separate confirmation for an existing customer',async()=>{
+ api.check.mockResolvedValue({kind:'customer'});mount();enter();fireEvent.click(screen.getByRole('button',{name:en.barberInvitations.send}));
+ const dialog=await screen.findByRole('alertdialog');expect(api.send).not.toHaveBeenCalled();expect(dialog).toHaveTextContent('same account');expect(dialog).toHaveTextContent('qa@example.test');
+ fireEvent.click(within(dialog).getByRole('button',{name:en.barberInvitations.send}));await screen.findByRole('heading',{name:'Barber list'});expect(api.send).toHaveBeenCalledWith('shop','qa@example.test',true);
 });
-it('makes a general server error visible and restores the submit button', async () => {
-  state.addBarber.mockRejectedValue(new Error('network failure')); mount(); fill();
-  fireEvent.click(screen.getByRole('button', { name: en.barbers.addBarber }));
-  const alert = await screen.findByRole('alert');
-  expect(alert).toHaveTextContent(en.errors.createBarberFailed); expect(alert).toHaveFocus();
-  expect(screen.getByRole('button', { name: en.barbers.addBarber })).toBeEnabled();
+it('shows an occupied staff email error without creating an invitation',async()=>{
+ api.check.mockRejectedValue(new Error('EMAIL_UNAVAILABLE'));mount();enter();fireEvent.click(screen.getByRole('button',{name:en.barberInvitations.send}));
+ expect(await screen.findByRole('alert')).toHaveTextContent(en.barberInvitations.errors.EMAIL_UNAVAILABLE);expect(api.send).not.toHaveBeenCalled();expect(screen.getByLabelText(en.common.email)).toHaveValue('qa@example.test');
 });
-it('validates empty fields and blocks additional clicks while creating', async () => {
-  mount(); fireEvent.click(screen.getByRole('button', { name: en.barbers.addBarber }));
-  await waitFor(() => expect(screen.getByLabelText(en.common.fullName)).toHaveFocus());
-  expect(state.addBarber).not.toHaveBeenCalled();
-  fill(); state.addBarber.mockReturnValue(new Promise(() => {}));
-  fireEvent.click(screen.getByRole('button', { name: en.barbers.addBarber }));
-  expect(screen.getByRole('button', { name: en.common.loading })).toBeDisabled();
-  expect(state.addBarber).toHaveBeenCalledTimes(1);
-});
+it('blocks invitations before shop creation',()=>{state.selectedBranch=null;mount();expect(screen.getByRole('alert')).toHaveTextContent(en.barberInvitations.errors.SHOP_REQUIRED);expect(screen.getByRole('button',{name:en.barberInvitations.send})).toBeDisabled();});

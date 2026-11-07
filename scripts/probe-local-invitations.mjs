@@ -15,24 +15,23 @@ const login = await manager.auth.signInWithPassword({ email: 'manager@barber.tes
 assert.ifError(login.error);
 const id = randomUUID();
 const email = `invite-${id}@barber.test`;
-let invitedUser, invitedClient;
+let invitedUser, invitedClient, invitationId, barberId;
 const headers = { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${login.data.session.access_token}`, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' };
 try {
-  const service = await manager.from('services').select('id').eq('branch_id', '10000000-0000-4000-8000-000000000001').eq('status', 'active').limit(1).single();
-  assert.ifError(service.error);
-  const created = await manager.from('barbers').insert({ id, branch_id: '10000000-0000-4000-8000-000000000001', name: 'Synthetic Invitation Probe', email, country_code: '+965', phone: '59998591', service_ids: [service.data.id], invite_status: 'pending' });
-  assert.ifError(created.error);
-  const payload = { barberId: id, email, name: 'Synthetic Invitation Probe', branchId: '10000000-0000-4000-8000-000000000001' };
-  const denied = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/invite-barber`, { method: 'POST', headers, body: JSON.stringify({ ...payload, branchId: '10000000-0000-4000-8000-000000000002' }) });
+  const branchId = '10000000-0000-4000-8000-000000000001';
+  const invoke = async (action, data = {}, requestHeaders = headers) => {
+    const response = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/invite-barber`, { method: 'POST', headers: requestHeaders, body: JSON.stringify({ action, ...data }) });
+    return { status: response.status, data: await response.json() };
+  };
+  const denied = await invoke('check', { branchId: '10000000-0000-4000-8000-000000000002', email });
   assert.equal(denied.status, 403, 'cross-tenant invitation denied');
-  const response = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/invite-barber`, { method: 'POST', headers, body: JSON.stringify(payload) });
-  assert.equal(response.status, 200, 'owned invitation executes');
-  const result = await response.json(); invitedUser = result.userId;
-  assert.match(invitedUser, /^[a-f0-9-]{36}$/);
-  const linked = await manager.from('barbers').select('user_id,phone').eq('id', id).single();
-  assert.ifError(linked.error);
-  assert.equal(linked.data.user_id, invitedUser);
-  assert.equal(linked.data.phone, '59998591', 'invitation preserves the existing barber phone claim');
+  const checked = await invoke('check', { branchId, email });
+  assert.equal(checked.status, 200); assert.equal(checked.data.kind, 'new');
+  const sent = await invoke('send', { branchId, email });
+  assert.equal(sent.status, 200); assert.equal(sent.data.delivered, true);
+  invitationId = sent.data.id;
+  const before = await manager.from('barbers').select('id').eq('email', email);
+  assert.ifError(before.error); assert.equal(before.data.length, 0, 'sending does not create a barber');
   let message;
   for (let i = 0; i < 30; i++) {
     const inbox = await (await fetch('http://127.0.0.1:55324/api/v1/messages')).json();
@@ -43,29 +42,34 @@ try {
   assert.ok(message, 'invitation delivered to the local mail viewer');
   const detail = await (await fetch(`http://127.0.0.1:55324/api/v1/message/${message.ID}`)).json();
   const links = String(detail.HTML || detail.Text).match(/https?:\/\/[^\s"'<>]+/g) || [];
-  const action = links.map(link => new URL(link.replaceAll('&amp;', '&'))).find(link => link.origin === config.VITE_SUPABASE_URL && link.pathname === '/auth/v1/verify');
-  assert.ok(action, 'email uses local Auth verification URL');
-  const verifyResponse = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/customer-auth`, { method: 'POST', headers: { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' }, body: JSON.stringify({ action: 'password-invite-verify', tokenHash: action.searchParams.get('token') }) });
-  assert.equal(verifyResponse.status, 200);
-  const accepted = await verifyResponse.json();
-  assert.equal(accepted.session.user.app_metadata.role, 'barber');
-  const password = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/customer-auth`, { method: 'POST', headers: { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${accepted.session.access_token}`, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' }, body: JSON.stringify({ action: 'email-reset', proof: accepted.proof, password: 'LocalOnlyInvite123!', confirmPassword: 'LocalOnlyInvite123!' }) });
-  assert.equal(password.status, 200);
+  const action = links.map(link => new URL(link.replaceAll('&amp;', '&'))).find(link => link.origin === 'http://localhost:5173' && link.pathname === '/accept-invite');
+  assert.ok(action, 'email returns to the configured application');
+  assert.equal(action.searchParams.get('invitation'), invitationId);
+  const invitation = { id: invitationId, token: new URLSearchParams(action.hash.slice(1)).get('token') };
+  const anonymous = { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' };
+  const resolved = await invoke('resolve', invitation, anonymous);
+  assert.equal(resolved.status, 200); assert.equal(resolved.data.kind, 'new');
+  const accepted = await invoke('accept', { ...invitation, name: 'Synthetic Invitation Probe', countryCode: '+965', phone: '59998591', password: 'LocalOnlyInvite123!' }, anonymous);
+  assert.equal(accepted.status, 200);
+  barberId = accepted.data.barber_id;
+  assert.equal((await invoke('accept', { ...invitation }, anonymous)).data.error, 'INVITE_USED', 'acceptance is single-use');
   invitedClient = createClient(config.VITE_SUPABASE_URL, config.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  assert.ifError((await invitedClient.auth.signInWithPassword({ email, password: 'LocalOnlyInvite123!' })).error);
-  const own = await invitedClient.from('barbers').select('id,invite_status').eq('id', id);
+  const signedIn = await invitedClient.auth.signInWithPassword({ email, password: 'LocalOnlyInvite123!' });
+  assert.ifError(signedIn.error); invitedUser = signedIn.data.user.id; assert.equal(signedIn.data.user.app_metadata.role, 'barber');
+  const own = await invitedClient.from('barbers').select('id,invite_status,status,service_ids,availability_approved_at').eq('id', barberId);
   assert.ifError(own.error); assert.equal(own.data.length, 1); assert.equal(own.data[0].invite_status, 'accepted');
+  assert.equal(own.data[0].status, 'inactive'); assert.deepEqual(own.data[0].service_ids, []); assert.equal(own.data[0].availability_approved_at, null);
   const secret = readFileSync('supabase/functions/.env.local', 'utf8').match(/^CRON_SHARED_SECRET=(.+)$/m)?.[1];
   assert.ok(secret);
   const cleanup = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/cleanup-notifications`, { method: 'POST', headers: { ...headers, 'x-cron-secret': secret } });
   assert.equal(cleanup.status, 200, 'local cron secret is actually configured');
-  console.log('LOCAL_INVITATIONS_PASS: tenant denial, owned invite, local email, correct Auth redirect, trusted barber role, password setup, scoped access and authorized cron handler');
+  console.log('LOCAL_INVITATIONS_PASS: tenant denial, email-only invite, local email, single-use acceptance, trusted barber role, own credentials, inactive setup, scoped access and authorized cron handler');
 } finally {
   if (invitedClient) await invitedClient.auth.signOut();
-  const removed = await manager.from('barbers').delete().eq('id', id);
-  assert.ifError(removed.error);
-  // Local-only administrative cleanup is bound to the exact synthetic email.
-  // No service-role key is exposed to the browser or process output.
-  docker(['exec', '-i', db, 'psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-U', 'supabase_admin', '-d', 'postgres'], { input: `DELETE FROM auth.users WHERE email='${email}' AND invited_at IS NOT NULL;` });
+  // Local CI cleanup is restricted to this exact generated email and IDs.
+  // Delete the private invitation first because its acceptance references the identity.
+  if (invitationId) docker(['exec', '-i', db, 'psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-U', 'supabase_admin', '-d', 'postgres'], { input: `DELETE FROM private.shop_barber_invitations WHERE id='${invitationId}' AND email='${email}';` });
+  if (barberId) { const removed = await manager.from('barbers').delete().eq('id', barberId).eq('email', email); assert.ifError(removed.error); }
+  if (invitedUser) docker(['exec', '-i', db, 'psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-U', 'supabase_admin', '-d', 'postgres'], { input: `DELETE FROM auth.users WHERE id='${invitedUser}' AND email='${email}';` });
   await manager.auth.signOut();
 }

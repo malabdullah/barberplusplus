@@ -130,9 +130,8 @@ reset role;
 -- New barber: approving a break first must not publish unapproved working hours.
 select set_config('request.jwt.claims','{}',true);
 insert into auth.users(id,email,raw_app_meta_data) values('ec090000-0000-4000-8000-000000000005','granular-new-barber@example.test','{"role":"barber"}');
-select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
-set local role authenticated;
-insert into public.barbers(id,branch_id,user_id,name,service_ids) values('ec090000-0000-4000-8000-000000000302','ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000005','New Granular Barber',array['ec090000-0000-4000-8000-000000000201']::uuid[]);
+-- Server fixture matches an accepted invitation, with no approved hours.
+insert into public.barbers(id,branch_id,user_id,name,service_ids,availability,availability_approved_at) values('ec090000-0000-4000-8000-000000000302','ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000005','New Granular Barber',array['ec090000-0000-4000-8000-000000000201']::uuid[],'{}',null);
 reset role;
 select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000005","role":"authenticated","app_metadata":{"role":"barber"}}',true);
 set local role authenticated;
