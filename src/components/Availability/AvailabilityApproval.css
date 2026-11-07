@@ -18,4 +18,42 @@
 .availability-person-items ul,.availability-decision-history{padding:0;list-style:none}.availability-person-items li{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;border-bottom:1px solid var(--border-color);padding-block:12px}.availability-decision-history li{padding-block:12px;border-bottom:1px solid var(--border-color)}
 .availability-decision-notice{padding:16px;background:var(--bg-secondary);border-inline-start:3px solid var(--status-success,#3a8254)}
 .availability-back{display:inline-block;margin-block-end:20px}
+.availability-requests-page .page-header{background:none;border:0;padding:0;margin-block-end:24px;align-items:center}
+.availability-requests-page .page-title{font-size:clamp(26px,3vw,36px)}
+.availability-requests-page .availability-status-tabs{gap:0;border-bottom:1px solid var(--border-color,var(--surface-divider));margin-block:0 20px}
+.availability-requests-page .availability-status-tabs .btn{background:none;border:0;border-radius:0;color:var(--text-secondary);box-shadow:none;padding:12px 20px;min-height:44px;border-bottom:2px solid transparent}
+.availability-requests-page .availability-status-tabs [aria-pressed=true]{color:var(--accent-primary);border-bottom-color:var(--accent-primary)}
+.availability-requests-page .availability-list-filters{gap:12px;margin-block:0 24px}
+.availability-requests-page .availability-list-filters label{font-size:13px;color:var(--text-secondary);gap:6px}
+.availability-request-list{border-top:1px solid var(--border-color,var(--surface-divider))}
+.availability-request-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;padding:22px 0;border-bottom:1px solid var(--border-color,var(--surface-divider))}
+.availability-row-heading{grid-column:1/-1;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.availability-row-heading h2{font:600 19px/1.4 var(--font-body);margin:4px 0;overflow-wrap:anywhere}
+.availability-row-heading p{margin:0;color:var(--text-secondary);font-size:14px;overflow-wrap:anywhere}
+.availability-row-heading time{font-size:13px;color:var(--text-secondary);white-space:nowrap;padding-block-start:4px}
+.availability-request-row .availability-item-type{color:var(--accent-primary);font-size:13px}
+.availability-row-value{min-width:0;font-size:15px;line-height:1.6}
+.availability-row-value p{margin:0 0 4px;overflow-wrap:anywhere}
+.availability-details-link{display:inline-block;margin-block-start:6px;color:var(--text-secondary);text-decoration:underline;text-underline-offset:3px;min-height:30px}
+.availability-details-link:hover{color:var(--accent-primary)}
+.availability-compact-hours{margin:0 0 6px;display:grid;gap:4px}
+.availability-compact-hours>div{display:flex;flex-wrap:wrap;column-gap:12px}
+.availability-compact-hours dt{color:var(--text-secondary)}
+.availability-compact-hours dd{margin:0;white-space:nowrap}
+.availability-quick-review{display:contents}
+.availability-quick-actions{display:flex;align-items:flex-start;gap:8px}
+.availability-quick-actions .btn{min-height:44px;padding:10px 16px}
+.availability-decline-action{color:var(--status-error);background:none;border-color:transparent}
+.availability-decline-action:hover{background:var(--status-error-bg)}
+.availability-quick-review>.form-error,.availability-quick-review>.availability-conflicts,.availability-inline-editor,.availability-inline-decline{grid-column:1/-1;min-width:0}
+.availability-quick-review .availability-item-editor{margin:0 0 16px;border:0;border-radius:var(--radius-md);padding:20px;background:var(--bg-secondary)}
+.availability-inline-actions{display:flex;flex-wrap:wrap;gap:8px}
+.availability-inline-decline{display:grid;gap:10px;border-inline-start:2px solid var(--status-error);padding-inline-start:16px}
+.availability-inline-decline textarea{min-height:80px;max-width:100%}
+.availability-list-notice{color:var(--status-success);margin-block:0 16px}
+@media(max-width:800px){.availability-request-row{grid-template-columns:minmax(0,1fr)}.availability-quick-actions{grid-column:1/-1}.availability-row-heading time{white-space:normal;text-align:end;min-width:70px}.availability-compact-hours>div{display:block}.availability-requests-page .availability-list-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.availability-requests-page .availability-list-filters label:first-child{grid-column:1/-1}.availability-quick-actions .btn{flex:1;padding-inline:10px}.availability-requests-page .availability-status-tabs .btn{flex:1;padding-inline:10px}}
 @media(max-width:600px){.availability-list-filters,.availability-item-comparison{grid-template-columns:minmax(0,1fr)}.availability-hour-editor{grid-template-columns:repeat(2,minmax(0,1fr))}.availability-day-toggle{grid-column:1/-1}.availability-item-two-fields{grid-template-columns:minmax(0,1fr)}.availability-item-comparison section,.availability-item-decision,.availability-item-editor{padding:16px}.availability-item-decision .page-actions{display:grid;grid-template-columns:minmax(0,1fr)}.availability-item-decision .btn{width:100%}}
+
+.availability-filter-toggle{display:none}
+.availability-review-actions{display:grid;gap:16px;margin-block:24px}
+@media(max-width:800px){.availability-filter-toggle{display:inline-flex;margin-block-end:16px}.availability-requests-page .availability-list-filters:not(.is-open){display:none}.availability-requests-page .page-header{gap:12px;flex-direction:row}.availability-requests-page .page-title{font-size:26px}.availability-requests-page .page-header>.btn{padding:10px 12px;flex-shrink:0}.availability-quick-review .availability-item-editor{padding:16px}}
