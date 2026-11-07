@@ -1232,19 +1232,10 @@ begin
  return person.raw_user_meta_data;
 end $_$;
 ALTER FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RETURNS "jsonb"
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-  select jsonb_build_object('cancel_minutes',p->'cancel_minutes','reschedule_minutes',p->'reschedule_minutes')
-  from (select private.booking_policy(p_branch) p) policy
-  where exists(select 1 from public.branches where id=p_branch and status='active')
-$$;
-ALTER FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare
  actor uuid:=nullif(p_data->>'actor','')::uuid; sid uuid:=nullif(p_data->>'session','')::uuid;
  shop_id uuid:=nullif(p_data->>'branch_id','')::uuid; invite_id uuid:=nullif(p_data->>'id','')::uuid;
@@ -1367,8 +1358,17 @@ begin
  insert into public.logs(level,log_type,user_id,user_role,action,entity_type,entity_id,message) values('info','action',person.id,'barber','accept_invite','barber',chair.id,'Barber invitation accepted');
  perform private.deliver_dashboard_notification(inv.id,inv.manager_id,inv.branch_id,'manager','barber_invite_accepted',chair.id,'barber',jsonb_build_object('barberId',chair.id,'barberName',label));
  return jsonb_build_object('accepted',true,'barber_id',chair.id);
-end $$;
+end $_$;
 ALTER FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select jsonb_build_object('cancel_minutes',p->'cancel_minutes','reschedule_minutes',p->'reschedule_minutes')
+  from (select private.booking_policy(p_branch) p) policy
+  where exists(select 1 from public.branches where id=p_branch and status='active')
+$$;
+ALTER FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -2266,12 +2266,12 @@ GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "
 REVOKE ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
-REVOKE ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "service_role";

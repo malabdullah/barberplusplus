@@ -21,7 +21,7 @@ for (const language of ['en','ar']) for (const theme of ['light','dark']) test(`
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.screenshot({path:'.cloud-test/invitation-'+engine+'-'+language+'-'+theme+'.png',fullPage:true});
 });
-if(engine==='chromium') test('manager invites; barber resumes, joins once and submits their own availability',async({page,request,context})=>{
+if(engine==='chromium') test('manager invites; barber resumes, joins once and opens their availability',async({page,request,context})=>{
  test.setTimeout(240000);const email='invitation-browser-'+Date.now()+'@example.test';
  await managerLogin(page); await page.goto('/dashboard/barbers/new');
  await page.locator('#invite-email').fill(manager.email); await page.locator('form button[type="submit"]').click();
