@@ -965,7 +965,7 @@ export default function MyAvailability({ targetBarber = null }) {
               <li>{t('availability.tipVacationsNoBook')}</li>
             </>
           )}
-          <li>{t('availability.tipChangesApplied')}</li>
+          <li>{t(isManager ? 'availabilityApproval.approved' : 'availabilityApproval.barberHelp')}</li>
         </ul>
       </div>
     </div>
