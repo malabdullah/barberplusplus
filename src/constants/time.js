@@ -1,9 +1,6 @@
 // Time slots for booking
-export const TIME_SLOTS = [];
-for (let hour = 7; hour <= 20; hour++) {
-  TIME_SLOTS.push(`${hour.toString().padStart(2, '0')}:00`);
-  TIME_SLOTS.push(`${hour.toString().padStart(2, '0')}:30`);
-}
+export const TIME_SLOTS = Array.from({ length: 24 * 12 }, (_, index) =>
+  `${Math.floor(index / 12).toString().padStart(2, '0')}:${((index % 12) * 5).toString().padStart(2, '0')}`);
 
 // Time options for availability settings
 export const TIME_OPTIONS = [];

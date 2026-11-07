@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,6 +20,9 @@ import ManagerSocialAccounts from '../components/Customer/ManagerSocialAccounts'
 import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
 import { GCC_COUNTRIES } from '../constants/countries';
+import { getErrorMessage } from '../utils/errorMessages';
+import { storageService } from '../services/storage.service';
+import { validatePhoneNumber } from '../utils/validation';
 import { notificationPreferencesService } from '../services';
 import { useGeoLocation } from '../hooks/useGeoLocation';
 import './Settings.css';
@@ -53,13 +56,14 @@ function SettingsItem({ label, description, children }) {
   );
 }
 
-function Toggle({ checked, onChange, disabled = false }) {
+function Toggle({ checked, onChange, label, disabled = false }) {
   return (
     <button
       className={`toggle ${checked ? 'active' : ''}`}
       onClick={() => onChange(!checked)}
       disabled={disabled}
       aria-busy={disabled}
+      aria-label={label}
       role="switch"
       aria-checked={checked}
     >
@@ -88,7 +92,7 @@ const parsePhone = (fullPhone) => {
 export default function Settings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, userRole, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
+  const { user, userRole, saveWorkProfile, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
   // Use cached geolocation hook instead of direct API call
@@ -103,7 +107,7 @@ export default function Settings() {
 
   // Update country code when geolocation hook returns detected country
   useEffect(() => {
-    if (detectedCountryCode && (!profile.countryCode || profile.countryCode === '+965')) {
+    if (detectedCountryCode && !profile.countryCode) {
       setProfile(prev => ({ ...prev, countryCode: detectedCountryCode }));
     }
   }, [detectedCountryCode, profile.countryCode]);
@@ -135,9 +139,37 @@ export default function Settings() {
     }
   };
 
-  const handleSaveProfile = () => {
-    // In production, this would update the profile via API
-    // Profile update logic will be implemented when API is ready
+  const photoInput = useRef(null);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSaved, setProfileSaved] = useState(false);
+  const handlePhoto = event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      storageService.validateFile(file);
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+      setPhoto(file); setPhotoPreview(URL.createObjectURL(file)); setProfileError('');
+    } catch (error) { setProfileError(getErrorMessage(error, t('common.error'), t)); event.target.value = ''; }
+  };
+  const handleSaveProfile = async () => {
+    if (profileSaving) return;
+    setProfileError(''); setProfileSaved(false);
+    if (profile.name.trim().length < 2 || profile.name.trim().length > 120) { setProfileError(t('managerAudit.nameLength')); return; }
+    if (!validatePhoneNumber(profile.phone, profile.countryCode).valid) { setProfileError(t('validation.invalidPhone')); return; }
+    setProfileSaving(true);
+    let uploaded;
+    try {
+      if (photo) uploaded = await storageService.uploadImage(photo, 'profiles', user.id);
+      await saveWorkProfile(profile, uploaded || null);
+      if (uploaded && user.user_metadata.avatar_url) await storageService.deleteImage(user.user_metadata.avatar_url);
+      setPhoto(null); setProfileSaved(true);
+    } catch (error) {
+      if (uploaded) await storageService.deleteImage(uploaded).catch(() => {});
+      setProfileError(getErrorMessage(error, t('common.error'), t));
+    } finally { setProfileSaving(false); }
   };
 
   return (
@@ -161,19 +193,22 @@ export default function Settings() {
           >
             <div className="profile-avatar-section">
               <div className="profile-avatar">
-                {(user?.user_metadata?.name || 'User').split(' ').map((n) => n[0]).join('')}
+                {photoPreview || user?.user_metadata?.avatar_url
+                  ? <img src={photoPreview || user.user_metadata.avatar_url} alt={profile.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'inherit'}} />
+                  : (user?.user_metadata?.name || 'User').split(' ').map((n) => n[0]).join('') }
               </div>
-              <button className="avatar-upload-btn">
+              <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhoto} hidden />
+              <button className="avatar-upload-btn" type="button" disabled={profileSaving} onClick={() => photoInput.current?.click()}>
                 <Camera size={16} strokeWidth={1.5} />
                 {t('settings.changePhoto')}
               </button>
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t('common.fullName')}</label>
+              <label className="form-label" htmlFor="manager-name">{t('common.fullName')}</label>
               <input
                 type="text"
-                name="name"
+                name="name" id="manager-name"
                 value={profile.name}
                 onChange={handleProfileChange}
                 className="form-input"
@@ -181,10 +216,10 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t('common.email')}</label>
+              <label className="form-label" htmlFor="manager-email">{t('common.email')}</label>
               <input
                 type="email"
-                name="email"
+                name="email" id="manager-email"
                 value={profile.email}
                 readOnly
                 className="form-input"
@@ -193,10 +228,10 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">{t('common.phone')}</label>
+              <label className="form-label" htmlFor="manager-phone">{t('common.phone')}</label>
               <div className="phone-input-group">
                 <select
-                  name="countryCode"
+                  name="countryCode" aria-label={t('customerAuth.countryCode')}
                   value={profile.countryCode}
                   onChange={handleProfileChange}
                   className="form-input form-select country-code-select"
@@ -209,7 +244,7 @@ export default function Settings() {
                 </select>
                 <input
                   type="tel"
-                  name="phone"
+                  name="phone" id="manager-phone"
                   value={profile.phone}
                   onChange={handleProfileChange}
                   className="form-input phone-number-input"
@@ -218,7 +253,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <button className="btn btn-primary" onClick={handleSaveProfile}>
+            {profileError && <p role="alert" className="form-error">{profileError}</p>}
+            {profileSaved && <p role="status">{t('managerAudit.profileSaved')}</p>}
+            <button className="btn btn-primary" disabled={profileSaving} onClick={handleSaveProfile}>
               <Save size={16} strokeWidth={1.5} />
               {t('common.saveChanges')}
             </button>
@@ -245,6 +282,7 @@ export default function Settings() {
                 <Toggle
                   disabled={savingNotificationPreference}
                   checked={notificationPreferences?.newBookings}
+                  label={t('settings.newBookings')}
                   onChange={() => handleNotificationChange('newBookings')}
                 />
               </SettingsItem>
@@ -256,6 +294,7 @@ export default function Settings() {
                 <Toggle
                   disabled={savingNotificationPreference}
                   checked={notificationPreferences?.bookingUpdates}
+                  label={t('settings.bookingUpdates')}
                   onChange={() => handleNotificationChange('bookingUpdates')}
                 />
               </SettingsItem>
@@ -267,6 +306,7 @@ export default function Settings() {
                 <Toggle
                   disabled={savingNotificationPreference}
                   checked={notificationPreferences?.cancellations}
+                  label={t('settings.cancellations')}
                   onChange={() => handleNotificationChange('cancellations')}
                 />
               </SettingsItem>
@@ -283,6 +323,7 @@ export default function Settings() {
                 <Toggle
                   disabled={savingNotificationPreference}
                   checked={notificationPreferences?.systemAlerts}
+                  label={t('settings.systemAlerts')}
                   onChange={() => handleNotificationChange('systemAlerts')}
                 />
               </SettingsItem>

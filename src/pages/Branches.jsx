@@ -1,5 +1,5 @@
 import React, { useState, memo, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
@@ -42,7 +42,7 @@ const BranchCard = memo(function BranchCard({ branch, barberCount, serviceCount,
           )}
         </div>
         <div className={`branch-status ${branch.status}`}>
-          {branch.status === 'active' ? t('availability.open') : t('availability.closed')}
+          {branch.status === 'active' ? t('managerAudit.active') : t('availability.closed')}
         </div>
       </div>
 
@@ -116,6 +116,7 @@ const BranchCard = memo(function BranchCard({ branch, barberCount, serviceCount,
 });
 
 export default function Branches() {
+  const location = useLocation();
   const { t } = useTranslation();
   const { branches, barbers, services, deleteBranch } = useApp();
   const [deletingBranch, setDeletingBranch] = useState(null);
@@ -155,6 +156,7 @@ export default function Branches() {
 
   return (
     <div className="branches-page">
+      {location.state?.imageWarning && <p role="alert">{t('managerAudit.imageWarning')}</p>}
       {deleteError && <p className="error-banner" role="alert">{deleteError}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">

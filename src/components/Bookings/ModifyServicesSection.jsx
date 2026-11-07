@@ -132,7 +132,7 @@ export default function ModifyServicesSection({
 
   const increment = (serviceId) => {
     const service = services?.find(s => s.id === serviceId);
-    if (!service) return;
+    if (!service || service.status === 'inactive' || (barberData?.services && !barberData.services.includes(serviceId))) return;
 
     // Check if we can add more (duration validation)
     if (newDuration + service.duration > maxAllowedDuration) {
@@ -166,7 +166,7 @@ export default function ModifyServicesSection({
 
   const canAdd = (serviceId) => {
     const service = services?.find(s => s.id === serviceId);
-    if (!service) return false;
+    if (!service || service.status === 'inactive' || (barberData?.services && !barberData.services.includes(serviceId))) return false;
     return newDuration + service.duration <= maxAllowedDuration;
   };
 

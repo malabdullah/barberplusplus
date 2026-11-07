@@ -22,3 +22,9 @@ describe('dashboard notification navigation and copy', () => {
     expect(getAddedByConfig('manager').labelKey).toBe('bookings.addedBy.manager');
   });
 });
+
+it('routes availability approval notifications to the scoped review or barber availability page', () => {
+  const notification = { entityType: 'availability_request', entityId: 'request', metadata: { barberId: 'staff' } };
+  expect(notificationDestination(notification, 'manager')).toBe('/dashboard/availability-requests/request');
+  expect(notificationDestination(notification, 'barber')).toBe('/barber/availability');
+});

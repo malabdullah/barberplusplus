@@ -95,12 +95,9 @@ export const servicesService = {
    * @returns {Promise<boolean>}
    */
   delete: async (id) => {
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
+    const { data, error } = await supabase.rpc('archive_service', { p_id: id });
     if (error) throw error;
-    return true;
+    return toFrontend(data);
   },
 };
 

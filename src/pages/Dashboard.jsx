@@ -1,3 +1,4 @@
+import { bookingServices } from '../utils/bookingServices';
 import React, { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -94,9 +95,7 @@ export default function Dashboard() {
       .filter(b => b.date === today)
       .map(booking => {
         const barber = barbersMap.get(booking.barberId);
-        const services = (booking.serviceIds || [])
-          .map(id => servicesMap.get(id))
-          .filter(Boolean);
+        const services = bookingServices(booking, [...servicesMap.values()]);
 
         return {
           ...booking,
@@ -123,7 +122,7 @@ export default function Dashboard() {
             {t(`dashboard.greeting.${getTimeOfDay()}`)}
           </h2>
           <p className="dashboard-welcome-text">
-            {t('dashboard.welcomeMessage', { branch: selectedBranch?.name })}
+            {selectedBranch ? t('dashboard.welcomeMessage', { branch: selectedBranch.name }) : t('managerAudit.firstShop')}
           </p>
         </div>
         <div className="dashboard-welcome-date">
@@ -147,7 +146,6 @@ export default function Dashboard() {
           label={t('dashboard.weekRevenue')}
           value={`${metrics.weekRevenue.toLocaleString()} ${t('common.currency')}`}
           subValue={t('dashboard.fromBookings', { count: metrics.weekBookings })}
-          trend={12}
           color="success"
           delay={2}
         />
@@ -232,7 +230,7 @@ export default function Dashboard() {
                 </div>
                 <span>{t('services.addService')}</span>
               </Link>
-              <Link to="/dashboard/branches" className="quick-action-btn">
+              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/branches/new'} className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>

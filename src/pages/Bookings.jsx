@@ -1,3 +1,5 @@
+import { Link, useSearchParams } from 'react-router-dom';
+import { bookingServices } from '../utils/bookingServices';
 import { useNotificationBooking } from '../hooks/useNotificationBooking';
 import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -164,7 +166,7 @@ const BookingDetails = memo(function BookingDetails({
 
       <div className="booking-details-price">
         <span>{t('bookings.total')}</span>
-        <span className="price">{booking.price} {t('common.currency')}</span>
+        <span className="price">{Number(booking.price).toFixed(3)} {t('common.currency')}</span>
       </div>
 
       <ModifyServicesSection
@@ -226,7 +228,7 @@ const BookingDetails = memo(function BookingDetails({
         </div>
       )}
 
-      {barberData?.managerChair && ['pending', 'confirmed'].includes(booking.status)
+      {['pending', 'confirmed'].includes(booking.status)
         && booking.date >= getKuwaitDate() && (
           <button className="btn btn-secondary" onClick={onReschedule}>{t('chair.reschedule')}</button>
         )}
@@ -240,7 +242,7 @@ const BookingDetails = memo(function BookingDetails({
         >
           {BOOKING_STATUSES.map((status) => (
             <option key={status} value={status}
-              disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
+              disabled={(status === 'no-show' && appointmentDate(booking).getTime() > Date.now()) || (status === 'completed' && appointmentDate(booking).getTime() + booking.duration * 60000 > Date.now())}>
               {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
@@ -252,6 +254,10 @@ const BookingDetails = memo(function BookingDetails({
 
 export default function Bookings() {
   const { t, i18n } = useTranslation();
+  const [reviewParams] = useSearchParams();
+  const returnBarber = reviewParams.get('reviewBarber');
+  const returnRequest = reviewParams.get('reviewRequest');
+  const safeId = value => /^[0-9a-f-]{36}$/i.test(value || '');
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const {
     branchBookings,
@@ -306,9 +312,7 @@ export default function Bookings() {
     Object.entries(bookingsByDate).forEach(([date, bookings]) => {
       enriched[date] = bookings.map(booking => {
         const barber = barbersMap.get(booking.barberId);
-        const services = (booking.serviceIds || [])
-          .map(id => servicesMap.get(id))
-          .filter(Boolean);
+        const services = bookingServices(booking, [...servicesMap.values()]);
 
         return {
           ...booking,
@@ -369,6 +373,7 @@ export default function Bookings() {
 
   return (
     <div className="bookings-page manager-bookings-page">
+      {safeId(returnBarber) && <Link className="btn btn-secondary" to={safeId(returnRequest) ? `/dashboard/availability-requests/${returnRequest}` : `/dashboard/availability-requests?barber=${returnBarber}`}>{t('availabilityApproval.returnReview')}</Link>}
       {statusError && <p className="error-banner" role="alert">{statusError}</p>}
       {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">
@@ -574,7 +579,7 @@ export default function Bookings() {
                 } catch (error) {
                   setSelectedBooking(null);
                   setStatusError(t(error.message === 'BOOKING_NO_SHOW_BEFORE_START'
-                    ? 'bookings.noShowBeforeStart' : 'common.error'));
+                    ? 'bookings.noShowBeforeStart' : error.message === 'BOOKING_NOT_FINISHED' ? 'managerAudit.notFinished' : 'common.error'));
                 }
               }}
               services={branchServices}

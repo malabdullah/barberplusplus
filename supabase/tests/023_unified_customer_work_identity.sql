@@ -20,8 +20,8 @@ insert into public.branches(id,manager_id,name,status) values
 ('df110000-0000-4000-8000-000000000101','df110000-0000-4000-8000-000000000001','Unified Own Shop','active'),
 ('df110000-0000-4000-8000-000000000102','df110000-0000-4000-8000-000000000004','Unified Other Shop','active');
 insert into public.barbers(id,user_id,branch_id,name,status,phone,country_code) values
-('df110000-0000-4000-8000-000000000201','df110000-0000-4000-8000-000000000002','df110000-0000-4000-8000-000000000101','Professional Barber','active','59997402','+965'),
-('df110000-0000-4000-8000-000000000202',null,'df110000-0000-4000-8000-000000000102','Other Barber','active',null,'+965');
+('df110000-0000-4000-8000-000000000201','df110000-0000-4000-8000-000000000002','df110000-0000-4000-8000-000000000101','Professional Barber','inactive','59997402','+965'),
+('df110000-0000-4000-8000-000000000202',null,'df110000-0000-4000-8000-000000000102','Other Barber','inactive',null,'+965');
 select set_config('unified.profile',public.customer_account_api('profile',current_setting('unified.manager')::jsonb)::text,true);
 select is(current_setting('unified.profile')::jsonb->>'id','df110000-0000-4000-8000-000000000001','manager customer mode keeps the same Auth identity');
 select is(current_setting('unified.profile')::jsonb->>'phone','59997401','manager reuses own existing phone');

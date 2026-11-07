@@ -48,7 +48,7 @@ const toDatabase = (data) => {
   if (data.numberOfBarbers !== undefined) result.number_of_barbers = data.numberOfBarbers ? parseInt(data.numberOfBarbers, 10) : null;
   if (data.status !== undefined) result.status = data.status;
   if (data.openingHours !== undefined) result.working_hours = data.openingHours;
-  if (data.imageUrl !== undefined) result.image_url = data.imageUrl;
+  if (data.imageUrl !== undefined) result.image_url = data.imageUrl?.startsWith('blob:') ? undefined : data.imageUrl;
   return result;
 };
 
@@ -107,7 +107,7 @@ export const branchesService = {
     const { data, error } = await supabase
       .from('branches')
       .insert([toDatabase(branchData)])
-      .select()
+      .select('*, governorates:governorate_id(name_en,name_ar), areas:area_id(name_en,name_ar)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -124,7 +124,7 @@ export const branchesService = {
       .from('branches')
       .update(toDatabase(branchData))
       .eq('id', id)
-      .select()
+      .select('*, governorates:governorate_id(name_en,name_ar), areas:area_id(name_en,name_ar)')
       .single();
     if (error) throw error;
     return toFrontend(data);

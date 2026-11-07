@@ -1,5 +1,5 @@
 import React, { useState, memo, useMemo, useCallback, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Users,
@@ -38,7 +38,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 
   const handleScheduleClick = (e) => {
     e.stopPropagation();
-    // View schedule - could navigate to schedule page
+    navigate(barber.managerChair ? '/dashboard/my-chair?view=hours' : `/dashboard/barbers/${barber.id}/schedule`);
   };
 
   const handleDeleteClick = (e) => {
@@ -88,6 +88,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 
       <div className="barber-card-content">
         <h3 className="barber-name">{barber.name}</h3>
+        {!barber.availabilityApprovedAt && <p>{t('availabilityApproval.initial')}</p>}
         <div className="barber-status-row">
           <div className={`barber-status ${barber.status}`}>
             {barber.status === 'active' ? t('common.active') : t('barbers.away')}
@@ -176,6 +177,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 });
 
 export default function Barbers() {
+  const location = useLocation();
   const { t } = useTranslation();
   const {
     branchBarbers,
@@ -245,6 +247,7 @@ export default function Barbers() {
 
   return (
     <div className="barbers-page">
+      {location.state?.imageWarning && <p role="alert">{t('managerAudit.imageWarning')}</p>}
       {/* Toast Notification */}
       {toast && (
         <div className={`barbers-toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
@@ -272,6 +275,8 @@ export default function Barbers() {
           {t('barbers.addBarber')}
         </Link>
       </div>
+
+      <Link className="btn btn-secondary" to="/dashboard/availability-requests">{t('availabilityApproval.requests')}</Link>
 
       {/* Search Bar */}
       <div className="barbers-toolbar animate-fade-in-up stagger-1">

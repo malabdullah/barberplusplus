@@ -12,7 +12,6 @@ import {
   notificationPreferencesService,
 } from '../services';
 import { agentService } from '../services/agent.service';
-import { customersService } from '../services/customers.service';
 import { supabase } from '../lib/supabase';
 import { checkBookingConflicts, checkExtensionConflicts } from '../utils/bookingConflicts';
 import { validateUserRole } from '../utils/security';
@@ -651,12 +650,13 @@ export function AppProvider({ children }) {
       ]);
       setBranches(branchesData);
       setBarbers(barbersData);
+      if (userRole === 'barber') setBarberProfile(barbersData.find(barber => barber.userId === user?.id) || null);
       setServices(servicesData);
       setBookings(bookingsData);
     } catch (error) {
       logger.error('Error reloading data:', error);
     }
-  }, []);
+  }, [userRole, user?.id]);
 
   // Reconcile counts from the server; repeated read actions are idempotent.
   const markNotificationRead = useCallback(async (notificationId) => {
@@ -697,6 +697,7 @@ export function AppProvider({ children }) {
           newBranch = await branchesService.update(newBranch.id, { imageUrl });
         } catch (uploadError) {
           logger.error('Error uploading branch image:', uploadError);
+          newBranch.imageWarning = true;
           // Keep the successfully created shop even if its image could not be saved.
         }
       }
@@ -723,14 +724,22 @@ export function AppProvider({ children }) {
       // Upload new image if provided
       if (imageFile) {
         try {
-          const imageUrl = await storageService.replaceImage(imageFile, 'branches', branchId, oldImageUrl);
+          const imageUrl = await storageService.uploadImage(imageFile, 'branches', branchId);
           data.imageUrl = imageUrl;
         } catch (uploadError) {
           logger.error('Error uploading branch image:', uploadError);
+          throw uploadError;
         }
       }
 
-      const updated = await branchesService.update(branchId, data);
+      let updated;
+      try {
+        updated = await branchesService.update(branchId, data);
+      } catch (error) {
+        if (imageFile && data.imageUrl) await storageService.deleteImage(data.imageUrl);
+        throw error;
+      }
+      if (imageFile && oldImageUrl) await storageService.deleteImage(oldImageUrl);
       setBranches(prev =>
         prev.map(b => b.id === branchId ? updated : b)
       );
@@ -765,6 +774,7 @@ export function AppProvider({ children }) {
       if (!selectedBranchId || !branches.some(branch => branch.id === selectedBranchId)) throw new Error('SHOP_REQUIRED');
       const { profilePictureFile, ...data } = barberData;
 
+      if (profilePictureFile) storageService.validateFile(profilePictureFile);
       // Create barber record first
       const newBarber = await barbersService.create({
         ...data,
@@ -782,6 +792,7 @@ export function AppProvider({ children }) {
           newBarber.profilePicture = avatarUrl; // For backwards compatibility
         } catch (uploadError) {
           logger.error('Error uploading barber profile picture:', uploadError);
+          newBarber.imageWarning = true;
         }
       }
 
@@ -839,14 +850,23 @@ export function AppProvider({ children }) {
       // Upload new profile picture if provided
       if (profilePictureFile) {
         try {
-          const avatarUrl = await storageService.replaceImage(profilePictureFile, 'barbers', barberId, oldAvatarUrl);
+          const avatarUrl = await storageService.uploadImage(profilePictureFile, 'barbers', barberId);
           data.avatarUrl = avatarUrl;
+          data.profilePicture = avatarUrl;
         } catch (uploadError) {
           logger.error('Error uploading barber profile picture:', uploadError);
+          throw uploadError;
         }
       }
 
-      const updated = await barbersService.update(barberId, data);
+      let updated;
+      try {
+        updated = await barbersService.update(barberId, data);
+      } catch (error) {
+        if (profilePictureFile && data.avatarUrl) await storageService.deleteImage(data.avatarUrl);
+        throw error;
+      }
+      if (profilePictureFile && oldAvatarUrl) await storageService.deleteImage(oldAvatarUrl);
       setBarbers(prev =>
         prev.map(b => b.id === barberId ? updated : b)
       );
@@ -914,8 +934,8 @@ export function AppProvider({ children }) {
   const deleteService = useCallback(async (serviceId) => {
     try {
       const serviceName = services.find(s => s.id === serviceId)?.name || 'Unknown';
-      await servicesService.delete(serviceId);
-      setServices(prev => prev.filter(s => s.id !== serviceId));
+      const archived = await servicesService.delete(serviceId);
+      setServices(prev => prev.map(service => service.id === serviceId ? archived : service));
       loggingService.logAction('delete', 'service', serviceId, `Deleted service: ${serviceName}`);
     } catch (error) {
       logger.error('Error deleting service:', error);
@@ -953,28 +973,6 @@ export function AppProvider({ children }) {
         throw new Error(conflict.reason);
       }
 
-      // Handle customer creation/linking
-      let customerId = bookingData.customerId;
-
-      // If no customerId but we have phone info, find or create customer
-      if (!customerId && bookingData.customerPhone && bookingData.customerCountryCode) {
-        try {
-          const customer = await customersService.findOrCreate({
-            countryCode: bookingData.customerCountryCode,
-            phone: bookingData.customerPhone,
-            name: bookingData.customerName,
-            createdByType: userRole,
-            createdByUserId: user?.id,
-          });
-          customerId = customer?.id;
-          logger.debug('Customer linked to booking', { customerId, isNew: bookingData.isNewCustomer });
-        } catch (customerError) {
-          if (/PHONE_IN_USE|INVALID_PHONE/.test(customerError.message)) throw customerError;
-          // Log but don't block booking creation if customer creation fails
-          logger.error('Error creating/finding customer', customerError);
-        }
-      }
-
       const newBooking = await bookingsService.create({
         ...bookingData,
         branchId: selectedBranchId,
@@ -982,7 +980,6 @@ export function AppProvider({ children }) {
         duration: totalDuration || 30,
         price: totalPrice || 0,
         status: 'confirmed',
-        customerId, // Link to customer record
         addedByType: userRole,
         addedByUserId: user?.id,
       });
@@ -999,7 +996,8 @@ export function AppProvider({ children }) {
 
   const updateBooking = useCallback(async (bookingId, updates) => {
     try {
-      const updated = await bookingsService.update(bookingId, {
+      const updated = await (updates.customerName !== undefined ? bookingsService.saveAppointment : bookingsService.update)(bookingId, {
+        branchId: updates.branchId || bookings.find(booking => booking.id === bookingId)?.branchId,
         ...updates,
         modifiedByType: userRole,
         modifiedByUserId: user?.id,
@@ -1074,7 +1072,7 @@ export function AppProvider({ children }) {
 
       // Calculate new values FIRST (before conflict check)
       const newServiceIds = [...(booking.serviceIds || []), additionalServiceId];
-      const allSelectedServices = services.filter(s => newServiceIds.includes(s.id));
+      const allSelectedServices = newServiceIds.map(id => services.find(service => service.id === id)).filter(Boolean);
       const newTotalDuration = allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
       const newPrice = allSelectedServices.reduce((sum, s) => sum + s.price, 0);
 
@@ -1337,9 +1335,21 @@ export function AppProvider({ children }) {
   const hideNotificationToast = useCallback(() => setToastNotification(null), []);
   const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
 
+  const saveWorkProfile = useCallback(async (profile, avatarUrl = null) => {
+    const { data, error } = await supabase.rpc('save_work_profile', {
+      p_name: profile.name.trim(), p_country_code: profile.countryCode, p_phone: profile.phone,
+      p_avatar_url: avatarUrl,
+    });
+    if (error) throw error;
+    await supabase.auth.refreshSession();
+    setUser(previous => ({ ...previous, user_metadata: data }));
+    return data;
+  }, []);
+
   // PERFORMANCE: Memoize context value to prevent unnecessary re-renders
   const value = useMemo(() => ({
     // State
+    saveWorkProfile,
     user,
     userRole,
     isAdmin,
@@ -1416,7 +1426,7 @@ export function AppProvider({ children }) {
     // State dependencies
     user, userRole, isAdmin, isAgent, manager,
     branches, barbers, services, bookings,
-    selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
+    saveWorkProfile, selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
     metrics, isAuthenticated, adminVerified, loading, theme, language,
     // Barber state
     managerChair, createManagerChair,
