@@ -48,6 +48,7 @@ select set_config('appointments.target',jsonb_build_object(
 
 update public.barbers set user_id='dc090000-0000-4000-8000-000000000105'
 where id='dc090000-0000-4000-8000-000000000401';
+select set_config('request.jwt.claims','{}',true);
 with next_time as (select (now() at time zone 'Asia/Kuwait') + interval '65 minutes' as starts)
 insert into public.bookings(id,branch_id,barber_id,date,time,duration,status)
 select 'dc090000-0000-4000-8000-000000000605','dc090000-0000-4000-8000-000000000301',
@@ -69,6 +70,7 @@ reset role;
 select is(public.shop_booking_policy('dc090000-0000-4000-8000-000000000301'),
   '{"cancel_minutes":0,"reschedule_minutes":240}'::jsonb,'public settings show effective notice without staff permissions');
 select is((select cancel_notice_minutes from public.bookings where id='dc090000-0000-4000-8000-000000000601'),120,'existing appointments retain snapshotted notice');
+select set_config('request.jwt.claims','{}',true);
 with next_time as (select (now() at time zone 'Asia/Kuwait') + interval '30 minutes' as starts)
 insert into public.bookings(id,branch_id,barber_id,date,time,duration,status)
 select 'dc090000-0000-4000-8000-000000000604','dc090000-0000-4000-8000-000000000301',

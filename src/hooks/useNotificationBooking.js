@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { bookingServices } from '../utils/bookingServices';
 import { bookingsService } from '../services/bookings.service';
 
 // Always resolve the ID through the current user's RLS, including after a
@@ -18,8 +19,7 @@ export function useNotificationBooking(services, onSelect, setCurrentWeek, setSe
       const date = new Date(`${booking.date}T12:00:00`);
       setCurrentWeek(date);
       setSelectedDay?.(date);
-      onSelect({ ...booking, serviceName: (booking.serviceIds || [])
-        .map(serviceId => services.find(service => service.id === serviceId)?.name).filter(Boolean).join(', ') });
+      onSelect({ ...booking, serviceName: bookingServices(booking, services).map(service => service.name).filter(Boolean).join(', ') });
       setParams(previous => {
         const next = new URLSearchParams(previous);
         next.delete('booking');

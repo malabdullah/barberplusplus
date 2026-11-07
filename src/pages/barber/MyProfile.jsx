@@ -1,3 +1,5 @@
+import { validateImageFile } from '../../utils/imageValidation';
+import { getErrorMessage as imageErrorMessage } from '../../utils/errorMessages';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +66,8 @@ export default function MyProfile({ chair = false }) {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      try { validateImageFile(file); } catch (error) { setErrors(previous => ({ ...previous, image: imageErrorMessage(error, t('common.error'), t) })); e.target.value = ''; return; }
+      setErrors(previous => ({ ...previous, image: null }));
       // Create object URL for preview (more efficient than base64)
       const previewUrl = URL.createObjectURL(file);
       setFormData(prev => ({
@@ -182,7 +186,7 @@ export default function MyProfile({ chair = false }) {
                 <Camera size={18} strokeWidth={1.5} />
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />

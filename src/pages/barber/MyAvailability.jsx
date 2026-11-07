@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAvailabilityApproval } from '../../hooks/useAvailabilityApproval';
+import AvailabilityApprovalPanel from '../../components/Availability/AvailabilityApprovalPanel';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
@@ -41,7 +44,7 @@ const convertAvailabilityFormat = (availability) => {
     } else if (dayData && typeof dayData === 'object' && 'enabled' in dayData) {
       converted[key] = dayData;
     } else {
-      converted[key] = DEFAULT_SCHEDULE[key];
+      converted[key] = { ...DEFAULT_SCHEDULE[key], enabled: false };
     }
   });
   return converted;
@@ -81,6 +84,7 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
           <>
             <select
               className="schedule-time-select"
+              aria-label={`${day.label} — ${t('availability.from')}`}
               value={schedule.start}
               onChange={(e) => handleTimeChange('start', e.target.value)}
             >
@@ -93,6 +97,7 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
             <span className="schedule-time-separator">{t('availability.to')}</span>
             <select
               className="schedule-time-select"
+              aria-label={`${day.label} — ${t('availability.toTime')}`}
               value={schedule.end}
               onChange={(e) => handleTimeChange('end', e.target.value)}
             >
@@ -164,7 +169,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
 
   const getDayLabel = (dayKey) => {
     const day = DAYS_OF_WEEK.find((d) => d.key === dayKey);
-    return day ? day.label : dayKey;
+    return day ? t(`days.${dayKey}`) : dayKey;
   };
 
   const formatDate = (dateStr) => {
@@ -247,11 +252,11 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
         <div className="section-card-header">
           <div className="section-card-title">
             <Coffee size={20} strokeWidth={1.5} />
-            <h3>{t('availability.timeOff')}</h3>
+            <h3>{t('availabilityCompact.breaks')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
-            {t('availability.addTimeOff')}
+            {t('availabilityCompact.addBreak')}
           </button>
         </div>
 
@@ -285,12 +290,13 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                   <label className="form-label">{t('availability.day')}</label>
                   <select
                     className="form-select"
-                    value={formData.day}
+                    aria-label={t('availability.day')}
+                  value={formData.day}
                     onChange={(e) => setFormData({ ...formData, day: e.target.value })}
                   >
                     {DAYS_OF_WEEK.map((d) => (
                       <option key={d.key} value={d.key}>
-                        {d.label}
+                        {t(`days.${d.key}`)}
                       </option>
                     ))}
                   </select>
@@ -301,7 +307,8 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                   <input
                     type="date"
                     className="form-input"
-                    value={formData.date}
+                    aria-label={t('availability.date')}
+                  value={formData.date}
                     min={today}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     onClick={(e) => e.target.showPicker()}
@@ -312,6 +319,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 <label className="form-label">{t('availability.from')}</label>
                 <select
                   className="form-select"
+                  aria-label={t('availability.from')}
                   value={formData.start}
                   onChange={(e) => setFormData({ ...formData, start: e.target.value })}
                 >
@@ -326,6 +334,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 <label className="form-label">{t('availability.toTime')}</label>
                 <select
                   className="form-select"
+                  aria-label={t('availability.toTime')}
                   value={formData.end}
                   onChange={(e) => setFormData({ ...formData, end: e.target.value })}
                 >
@@ -342,13 +351,13 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
               <input
                 type="text"
                 className="form-input"
-                placeholder={formData.type === 'recurring' ? t('availability.reasonRecurringPlaceholder') : t('availability.reasonOneTimePlaceholder')}
-                value={formData.reason}
+                aria-label={t('availability.reasonOptional')}
+                  value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
             {error && (
-              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+              <div className="form-error" role="alert" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
                 {error}
               </div>
             )}
@@ -357,7 +366,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 {t('common.cancel')}
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
-                {t('availability.addTimeOff')}
+                {t('availabilityCompact.addBreak')}
               </button>
             </div>
           </div>
@@ -367,8 +376,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
           {timeOffs.length === 0 ? (
             <div className="empty-state">
               <Coffee size={32} strokeWidth={1} />
-              <p>{t('availability.noTimeOffScheduled')}</p>
-              <span>{t('availability.addRecurringOrOneTime')}</span>
+              <p>{t('availabilityCompact.noBreaks')}</p>
             </div>
           ) : (
             <>
@@ -390,7 +398,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                         </span>
                       </div>
                       {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
-                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                      <button className="timeoff-delete-btn" aria-label={t('availabilityCompact.removeBreak')} onClick={() => handleDelete(item.id)}>
                         <Trash2 size={16} strokeWidth={2} />
                       </button>
                     </div>
@@ -416,7 +424,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                         </span>
                       </div>
                       {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
-                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                      <button className="timeoff-delete-btn" aria-label={t('availabilityCompact.removeBreak')} onClick={() => handleDelete(item.id)}>
                         <Trash2 size={16} strokeWidth={2} />
                       </button>
                     </div>
@@ -446,6 +454,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
     setError('');
 
     // Check if end date is after start date
+    if (!formData.startDate || !formData.endDate) { setError(t('availability.errorSelectDate')); return; }
     if (formData.startDate > formData.endDate) {
       setError(t('availability.errorEndDateAfterStart'));
       return;
@@ -507,7 +516,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
         <div className="section-card-header">
           <div className="section-card-title">
             <Umbrella size={20} strokeWidth={1.5} />
-            <h3>{t('availability.vacationPeriods')}</h3>
+            <h3>{t('availabilityCompact.vacations')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
@@ -523,6 +532,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                 <input
                   type="date"
                   className="form-input"
+                  aria-label={t('availability.fromDate')}
                   value={formData.startDate}
                   min={today}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -534,6 +544,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                 <input
                   type="date"
                   className="form-input"
+                  aria-label={t('availability.toDate')}
                   value={formData.endDate}
                   min={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -546,13 +557,13 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
               <input
                 type="text"
                 className="form-input"
-                placeholder={t('availability.vacationReasonPlaceholder')}
-                value={formData.reason}
+                aria-label={t('availability.reasonOptional')}
+                  value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
             {error && (
-              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+              <div className="form-error" role="alert" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
                 {error}
               </div>
             )}
@@ -571,8 +582,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
           {sortedVacations.length === 0 ? (
             <div className="empty-state">
               <Umbrella size={32} strokeWidth={1} />
-              <p>{t('availability.noVacationsScheduled')}</p>
-              <span>{t('availability.planTimeOff')}</span>
+              <p>{t('availabilityCompact.noVacations')}</p>
             </div>
           ) : (
             sortedVacations.map((item) => {
@@ -591,7 +601,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                   <div className={`vacation-status-badge ${status}`}>
                     {status === 'upcoming' ? t('availability.upcoming') : t('availability.past')}
                   </div>
-                  <button className="vacation-delete-btn" onClick={() => handleDelete(item.id)}>
+                  <button className="vacation-delete-btn" aria-label={t('availabilityCompact.removeVacation')} onClick={() => handleDelete(item.id)}>
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
                 </div>
@@ -604,44 +614,33 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
   );
 }
 
-export default function MyAvailability() {
+export default function MyAvailability({ targetBarber = null }) {
   const { t } = useTranslation();
-  const { currentBarber, barberBranch, updateBarber } = useApp();
+  const app = useApp();
+  const currentBarber = targetBarber || app.currentBarber;
+  const barberBranch = targetBarber ? app.branches.find(shop => shop.id === targetBarber.branchId) : app.barberBranch;
+  const [params] = useSearchParams();
+  const isManager = app.userRole === 'manager';
+  const [validationError, setValidationError] = useState('');
   const [activeTab, setActiveTab] = useState('schedule');
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [timeOffs, setTimeOffs] = useState([]);
   const [vacations, setVacations] = useState([]);
   const [maxBookingDays, setMaxBookingDays] = useState(30);
   const [hasChanges, setHasChanges] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const saveStatusTimeoutRef = useRef(null);
 
-  // Clear save status after 3 seconds (with proper cleanup)
-  useEffect(() => {
-    if (saveStatus) {
-      saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus(null), 3000);
-      return () => {
-        if (saveStatusTimeoutRef.current) {
-          clearTimeout(saveStatusTimeoutRef.current);
-        }
-      };
-    }
-  }, [saveStatus]);
+  const proposal = useMemo(() => ({ availability: schedule, time_offs: timeOffs, vacations, max_booking_days: Number(maxBookingDays) }), [schedule, timeOffs, vacations, maxBookingDays]);
+  const approval = useAvailabilityApproval({ barberId: currentBarber?.id, requestId: params.get('request'), manager: isManager, proposal, onRefresh: app.reloadData });
 
-  // Only initialize state from currentBarber on first load, not on every change
   useEffect(() => {
-    if (currentBarber && !isInitialized) {
-      if (currentBarber.availability) {
-        setSchedule(convertAvailabilityFormat(currentBarber.availability));
-      }
-      setTimeOffs(currentBarber.timeOffs || []);
-      setVacations(currentBarber.vacations || []);
-      setMaxBookingDays(currentBarber.maxBookingDays || 30);
-      setIsInitialized(true);
-    }
-  }, [currentBarber, isInitialized]);
+    if (!approval.seed) return;
+    setSchedule(convertAvailabilityFormat(approval.seed.availability || {}));
+    setTimeOffs(approval.seed.time_offs || []);
+    setVacations(approval.seed.vacations || []);
+    setMaxBookingDays(approval.seed.max_booking_days || 30);
+    setHasChanges(false);
+  }, [approval.seed]);
 
   const handleDayChange = (dayKey, newSchedule) => {
     setSchedule((prev) => ({
@@ -649,7 +648,6 @@ export default function MyAvailability() {
       [dayKey]: newSchedule,
     }));
     setHasChanges(true);
-    setSaveStatus(null);
   };
 
   const handleAddTimeOff = (timeOff) => {
@@ -669,40 +667,28 @@ export default function MyAvailability() {
   };
 
   const handleSave = async () => {
-    if (isSubmitting) return;
+    setValidationError('');
+    if (Object.values(schedule).some(day => day.enabled && (!day.start || !day.end || day.start >= day.end))) {
+      setValidationError(t('managerAudit.invalidHours')); return;
+    }
+    if (!Number.isInteger(Number(maxBookingDays)) || maxBookingDays < 1 || maxBookingDays > 365) {
+      setValidationError(t('managerAudit.dateUnavailable')); return;
+    }
     setIsSubmitting(true);
     try {
-      await updateBarber(currentBarber.id, {
-        availability: schedule,
-        timeOffs: timeOffs,
-        vacations: vacations,
-        maxBookingDays: maxBookingDays,
-      });
-      setHasChanges(false);
-      setSaveStatus('saved');
-      // Timeout handled by useEffect with proper cleanup
-    } catch (error) {
-      console.error('Error saving availability:', error);
-      setSaveStatus('error');
-      // Timeout handled by useEffect with proper cleanup
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (await approval.decide(isManager ? (approval.review ? 'approve' : 'direct') : 'submit')) {
+        setHasChanges(false);
+      }
+    } finally { setIsSubmitting(false); }
   };
 
   const handleReset = () => {
-    if (currentBarber) {
-      if (currentBarber.availability) {
-        setSchedule(convertAvailabilityFormat(currentBarber.availability));
-      } else {
-        setSchedule(DEFAULT_SCHEDULE);
-      }
-      setTimeOffs(currentBarber.timeOffs || []);
-      setVacations(currentBarber.vacations || []);
-      setMaxBookingDays(currentBarber.maxBookingDays || 30);
-    }
+    if (!approval.seed) return;
+    setSchedule(convertAvailabilityFormat(approval.seed.availability || {}));
+    setTimeOffs(approval.seed.time_offs || []);
+    setVacations(approval.seed.vacations || []);
+    setMaxBookingDays(approval.seed.max_booking_days || 30);
     setHasChanges(false);
-    setSaveStatus(null);
   };
 
   const copyHoursToAll = (sourceDay) => {
@@ -713,7 +699,6 @@ export default function MyAvailability() {
     });
     setSchedule(newSchedule);
     setHasChanges(true);
-    setSaveStatus(null);
   };
 
   const workingDays = Object.values(schedule).filter((d) => d.enabled).length;
@@ -726,14 +711,19 @@ export default function MyAvailability() {
   }).length;
 
   if (!currentBarber) return null;
+  if (approval.loading) return <p role="status">{t('common.loading')}</p>;
+  if (!approval.detail) return <div><p role="alert">{t('common.error')}</p><button className="btn btn-secondary" onClick={approval.reload}>{t('availabilityApproval.reload')}</button></div>;
+  const canSave = !approval.busy && !isSubmitting && (hasChanges || approval.review || (!isManager && !approval.detail.barber.availability_approved_at))
+    && (!isManager || (!approval.checking && !approval.error && approval.conflicts.length === 0 && (!approval.pendingItems.length || currentBarber.managerChair)));
 
   return (
-    <div className="availability-page">
+    <div className={`availability-page ${isManager ? '' : 'availability-page-compact'}`}>
+      {validationError && <p role="alert">{validationError}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">{t('availability.myAvailability')}</h2>
+          <h2 className="page-title">{targetBarber ? t('managerAudit.barberSchedule', { name: currentBarber.name }) : t('availabilityCompact.title')}</h2>
           <p className="page-description">
-            {t('availability.manageScheduleAt')} {barberBranch?.name}
+            {barberBranch?.name}
           </p>
         </div>
         <div className="page-actions">
@@ -744,31 +734,26 @@ export default function MyAvailability() {
             </button>
           )}
           <button
-            className={`btn btn-primary ${!hasChanges || isSubmitting ? 'disabled' : ''}`}
-            onClick={handleSave}
-            disabled={!hasChanges || isSubmitting}
+            className={`btn btn-primary ${!canSave ? 'disabled' : ''}`}
+            onClick={() => handleSave()}
+            disabled={!canSave}
           >
             {isSubmitting ? (
               t('common.saving')
             ) : (
               <>
                 <Save size={18} strokeWidth={2} />
-                {t('common.saveChanges')}
+                {t(isManager ? (approval.review ? 'availabilityApproval.approve' : 'availabilityApproval.saveApproved') : (approval.pending ? 'availabilityCompact.update' : 'availabilityCompact.submit'))}
               </>
             )}
           </button>
         </div>
       </div>
 
-      {saveStatus === 'saved' && (
-        <div className="save-notification animate-fade-in">
-          <Check size={16} strokeWidth={2} />
-          <span>{t('common.changesSaved')}</span>
-        </div>
-      )}
+      <AvailabilityApprovalPanel approval={{ ...approval, notice: hasChanges ? null : approval.notice }} manager={isManager} barberId={currentBarber.id} />
 
       {/* Summary Cards */}
-      <div className="availability-summary animate-fade-in-up stagger-1">
+      {isManager && <div className="availability-summary animate-fade-in-up stagger-1">
         <div className="summary-card">
           <div className="summary-icon">
             <Calendar size={24} strokeWidth={1.5} />
@@ -805,31 +790,34 @@ export default function MyAvailability() {
             <div className="summary-label">{t('availability.upcomingVacations')}</div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Tab Navigation */}
       <div className="availability-tabs animate-fade-in-up stagger-2">
         <button
+          aria-pressed={activeTab === 'schedule'}
           className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
           <Calendar size={18} strokeWidth={2} />
-          {t('availability.weeklySchedule')}
+          {t('availabilityCompact.hours')}
         </button>
         <button
+          aria-pressed={activeTab === 'timeoffs'}
           className={`tab-btn ${activeTab === 'timeoffs' ? 'active' : ''}`}
           onClick={() => setActiveTab('timeoffs')}
         >
           <Coffee size={18} strokeWidth={2} />
-          {t('availability.timeOff')}
+          {t('availabilityCompact.breaks')}
           {timeOffs.length > 0 && <span className="tab-badge">{timeOffs.length}</span>}
         </button>
         <button
+          aria-pressed={activeTab === 'vacations'}
           className={`tab-btn ${activeTab === 'vacations' ? 'active' : ''}`}
           onClick={() => setActiveTab('vacations')}
         >
           <Umbrella size={18} strokeWidth={2} />
-          {t('availability.vacations')}
+          {t('availabilityCompact.vacations')}
           {upcomingVacations > 0 && <span className="tab-badge">{upcomingVacations}</span>}
         </button>
       </div>
@@ -841,9 +829,9 @@ export default function MyAvailability() {
           <div className="schedule-card-header">
             <div className="schedule-card-title">
               <Clock size={20} strokeWidth={1.5} />
-              <h3>{t('availability.weeklySchedule')}</h3>
+              <h3>{t('availabilityCompact.hours')}</h3>
             </div>
-            <div className="schedule-legend">
+            {isManager && <div className="schedule-legend">
               <span className="schedule-legend-item">
                 <span className="legend-dot active"></span>
                 {t('availability.working')}
@@ -852,7 +840,7 @@ export default function MyAvailability() {
                 <span className="legend-dot off"></span>
                 {t('availability.dayOff')}
               </span>
-            </div>
+            </div>}
           </div>
 
           <div className="schedule-grid">
@@ -865,7 +853,7 @@ export default function MyAvailability() {
             {DAYS_OF_WEEK.map((day) => (
               <DayScheduleRow
                 key={day.key}
-                day={day}
+                day={{ ...day, label: t(`days.${day.key}`) }}
                 schedule={schedule[day.key]}
                 onChange={(newSchedule) => handleDayChange(day.key, newSchedule)}
                 onCopyToAll={() => copyHoursToAll(day.key)}
@@ -888,18 +876,17 @@ export default function MyAvailability() {
             <Calendar size={20} strokeWidth={1.5} />
             <h3>{t('availability.bookingWindow')}</h3>
           </div>
-          <p className="booking-window-desc">{t('availability.bookingWindowDesc')}</p>
           <div className="booking-window-input">
             <input
               type="number"
               min="1"
               max="365"
+              aria-label={t('availability.bookingWindow')}
               value={maxBookingDays}
               onChange={(e) => {
                 const value = Math.min(365, Math.max(1, parseInt(e.target.value) || 30));
                 setMaxBookingDays(value);
                 setHasChanges(true);
-                setSaveStatus(null);
               }}
               className="form-input"
             />
@@ -930,31 +917,7 @@ export default function MyAvailability() {
         />
       )}
 
-      {/* Tips */}
-      <div className="availability-tips animate-fade-in-up stagger-3">
-        <h4>{t('availability.tips')}</h4>
-        <ul>
-          {activeTab === 'schedule' && (
-            <>
-              <li>{t('availability.tipToggle')}</li>
-              <li>{t('availability.tipBookingHours')}</li>
-            </>
-          )}
-          {activeTab === 'timeoffs' && (
-            <>
-              <li>{t('availability.tipTimeOffsRecurring')}</li>
-              <li>{t('availability.tipTimeOffsUse')}</li>
-            </>
-          )}
-          {activeTab === 'vacations' && (
-            <>
-              <li>{t('availability.tipVacationsBlock')}</li>
-              <li>{t('availability.tipVacationsNoBook')}</li>
-            </>
-          )}
-          <li>{t('availability.tipChangesApplied')}</li>
-        </ul>
-      </div>
+
     </div>
   );
 }

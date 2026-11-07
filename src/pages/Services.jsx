@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useRef, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Scissors,
@@ -24,6 +24,7 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
   });
 
   const [errors, setErrors] = useState({});
+  const formRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,8 +40,8 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('validation.serviceNameRequired');
-    if (formData.duration < 5) newErrors.duration = t('validation.durationMin');
-    if (formData.price < 0) newErrors.price = t('validation.priceNegative');
+    if (!Number.isInteger(formData.duration) || formData.duration < 5 || formData.duration > 480) newErrors.duration = t('validation.durationMin');
+    if (!Number.isFinite(formData.price) || formData.price < 0 || formData.price > 10000 || Math.abs(formData.price * 1000 - Math.round(formData.price * 1000)) > 0.00001) newErrors.price = t('validation.priceNegative');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -49,28 +50,37 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
     e.preventDefault();
     if (validate()) {
       onSubmit(formData);
+    } else {
+      requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
     }
   };
 
   return (
-    <form className="form" onSubmit={handleSubmit}>
+    <form ref={formRef} className="form" onSubmit={handleSubmit} noValidate>
       <div className="form-group">
-        <label className="form-label">{t('services.name')}</label>
+        <label className="form-label" htmlFor="service-name">{t('services.name')}</label>
         <input
           type="text"
           name="name"
+          id="service-name"
+          aria-required="true"
+          aria-invalid={Boolean(errors.name)}
+          aria-describedby={errors.name ? "service-name-error" : undefined}
           value={formData.name}
           onChange={handleChange}
           className={`form-input ${errors.name ? 'error' : ''}`}
           placeholder={t('services.namePlaceholder')}
         />
-        {errors.name && <span className="form-error">{errors.name}</span>}
+        {errors.name && <span id="service-name-error" className="form-error" role="alert">{errors.name}</span>}
       </div>
 
       <div className="form-group">
-        <label className="form-label">{t('common.description')}</label>
+        <label className="form-label" htmlFor="service-description">{t('common.description')}</label>
         <textarea
           name="description"
+          id="service-description"
+          aria-invalid={Boolean(errors.description)}
+          aria-describedby={errors.description ? "service-description-error" : undefined}
           value={formData.description}
           onChange={handleChange}
           className="form-input form-textarea"
@@ -81,31 +91,41 @@ function ServiceForm({ service, onSubmit, onCancel, isSubmitting = false }) {
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">{t('services.duration')}</label>
+          <label className="form-label" htmlFor="service-duration">{t('services.duration')}</label>
           <input
             type="number"
             name="duration"
+          id="service-duration"
+          aria-required="true"
+          aria-invalid={Boolean(errors.duration)}
+          aria-describedby={errors.duration ? "service-duration-error" : undefined}
             value={formData.duration}
             onChange={handleChange}
             className={`form-input ${errors.duration ? 'error' : ''}`}
             min="5"
-            step="5"
+            step="1"
+            max="480"
           />
-          {errors.duration && <span className="form-error">{errors.duration}</span>}
+          {errors.duration && <span id="service-duration-error" className="form-error" role="alert">{errors.duration}</span>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('services.price')} ({t('common.currency')})</label>
+          <label className="form-label" htmlFor="service-price">{t('services.price')} ({t('common.currency')})</label>
           <input
             type="number"
             name="price"
+          id="service-price"
+          aria-required="true"
+          aria-invalid={Boolean(errors.price)}
+          aria-describedby={errors.price ? "service-price-error" : undefined}
             value={formData.price}
             onChange={handleChange}
             className={`form-input ${errors.price ? 'error' : ''}`}
             min="0"
-            step="1"
+            step="0.001"
+            max="10000"
           />
-          {errors.price && <span className="form-error">{errors.price}</span>}
+          {errors.price && <span id="service-price-error" className="form-error" role="alert">{errors.price}</span>}
         </div>
       </div>
 
@@ -156,7 +176,7 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
             <span>{service.duration} {t('common.min')}</span>
           </div>
           <div className="detail-item price">
-            <span>{service.price} {t('common.currency')}</span>
+            <span>{Number(service.price).toFixed(3)} {t('common.currency')}</span>
           </div>
         </div>
 
@@ -172,7 +192,7 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
             <button
               className="action-btn danger"
               onClick={handleDeleteClick}
-              title={t('services.deleteService')}
+              title={t('managerAudit.archiveService')}
             >
               <Trash2 size={16} strokeWidth={1.5} />
             </button>
@@ -195,7 +215,7 @@ export default function Services() {
   const hasSelectedShop = Boolean(selectedBranchId && selectedBranch?.id === selectedBranchId);
 
   const filteredServices = useMemo(() =>
-    branchServices.filter((service) =>
+    branchServices.filter((service) => service.status !== 'inactive').filter((service) =>
       service.name.toLowerCase().includes(searchQuery.toLowerCase())
     ),
     [branchServices, searchQuery]
@@ -343,9 +363,9 @@ export default function Services() {
         isOpen={!!deletingService}
         onClose={() => setDeletingService(null)}
         onConfirm={handleConfirmDelete}
-        title={t('services.deleteService')}
-        message={t('services.deleteConfirm', { name: deletingService?.name })}
-        confirmText={t('services.deleteService')}
+        title={t('managerAudit.archiveService')}
+        message={t('managerAudit.archiveConfirm', { name: deletingService?.name })}
+        confirmText={t('managerAudit.archiveService')}
         variant="danger"
       />
     </div>

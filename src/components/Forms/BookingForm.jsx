@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, UserPlus, UserCheck, Loader2 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
@@ -9,6 +9,7 @@ import { useGeoLocation } from '../../hooks/useGeoLocation';
 import { useCustomerLookup } from '../../hooks/useCustomerLookup';
 import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
+import { bookingServices } from '../../utils/bookingServices';
 import CustomerSummaryCard from './CustomerSummaryCard';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -26,6 +27,7 @@ import { getErrorMessage } from '../../utils/errorMessages';
  */
 function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
   const { t } = useTranslation();
+  const formRef = useRef(null);
 
   // Determine mode: manager (has barbers array) or barber (has currentBarber)
   // Manager view = barbers array is passed (even if empty)
@@ -42,7 +44,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
     barberId: booking?.barberId || (currentBarber?.id || ''),
     serviceIds: booking?.serviceIds || [],
     date: booking?.date || format(new Date(), 'yyyy-MM-dd'),
-    time: booking?.time || '09:00',
+    time: booking?.time?.slice(0, 5) || '09:00',
     notes: booking?.notes || '',
   });
 
@@ -79,7 +81,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         barberId: booking.barberId || prev.barberId,
         serviceIds: booking.serviceIds || prev.serviceIds,
         date: booking.date || prev.date,
-        time: booking.time || prev.time,
+        time: booking.time?.slice(0, 5) || prev.time,
         notes: booking.notes || prev.notes,
       }));
       // Set customerId for edit mode
@@ -112,13 +114,14 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
 
   // PERFORMANCE: Memoize service calculations to avoid recomputing on every render
   const { selectedServices, totalDuration, totalPrice } = useMemo(() => {
-    const selected = services.filter(s => formData.serviceIds.includes(s.id));
+    const unchanged = booking && JSON.stringify(formData.serviceIds) === JSON.stringify(booking.serviceIds);
+    const selected = unchanged ? bookingServices(booking, services) : formData.serviceIds.map(id => services.find(service => service.id === id)).filter(Boolean);
     return {
       selectedServices: selected,
-      totalDuration: selected.reduce((sum, s) => sum + s.duration, 0),
-      totalPrice: selected.reduce((sum, s) => sum + s.price, 0),
+      totalDuration: unchanged ? booking.duration : selected.reduce((sum, s) => sum + s.duration, 0),
+      totalPrice: unchanged ? booking.price : selected.reduce((sum, s) => sum + s.price, 0),
     };
-  }, [services, formData.serviceIds]);
+  }, [services, formData.serviceIds, booking]);
 
   // Update filtered time slots when date, barber, or duration changes
   useEffect(() => {
@@ -282,35 +285,41 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
       try { await onSubmit(submitData); }
       catch (error) { setSubmitError(getErrorMessage(error, t('common.error'), t)); }
       finally { setSaving(false); }
+    } else {
+      requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
     }
   };
 
   return (
-    <form className="form" onSubmit={handleSubmit}>
+    <form ref={formRef} className="form" onSubmit={handleSubmit} noValidate>
       {submitError && <p className="error-banner" role="alert">{submitError}</p>}
       <div className="form-section">
         <h4 className="form-section-title">{t('bookings.customerInformation')}</h4>
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t('bookings.customerName')}</label>
+            <label className="form-label" htmlFor="staff-booking-customerName">{t('bookings.customerName')}</label>
             <input
               type="text"
               name="customerName"
+              id="staff-booking-customerName"
+              aria-invalid={Boolean(errors.customerName)}
+              aria-describedby={errors.customerName ? 'staff-booking-customerName-error' : undefined}
               readOnly={contactLocked || !!foundCustomer}
               value={formData.customerName}
               onChange={handleChange}
               className={`form-input ${errors.customerName ? 'error' : ''}`}
               placeholder={t('bookings.namePlaceholder')}
             />
-            {errors.customerName && <span className="form-error">{errors.customerName}</span>}
+            {errors.customerName && <span id="staff-booking-customerName-error" className="form-error" role="alert">{errors.customerName}</span>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t('bookings.phoneNumber')}</label>
+            <label className="form-label" htmlFor="staff-booking-customerPhone">{t('bookings.phoneNumber')}</label>
             <div className="phone-input-group">
               <select
                 name="customerCountryCode"
+                aria-label={t('customerAuth.countryCode')}
                 disabled={contactLocked}
                 value={formData.customerCountryCode}
                 onChange={handleChange}
@@ -326,6 +335,9 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
                 <input
                   type="tel"
                   name="customerPhone"
+              id="staff-booking-customerPhone"
+              aria-invalid={Boolean(errors.customerPhone)}
+              aria-describedby={errors.customerPhone ? 'staff-booking-customerPhone-error' : undefined}
                   readOnly={contactLocked}
                   value={formData.customerPhone}
                   onChange={handleChange}
@@ -348,7 +360,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
                 )}
               </div>
             </div>
-            {errors.customerPhone && <span className="form-error">{errors.customerPhone}</span>}
+            {errors.customerPhone && <span id="staff-booking-customerPhone-error" className="form-error" role="alert">{errors.customerPhone}</span>}
           </div>
         </div>
 
@@ -373,10 +385,13 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         {isManagerView && (
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">{t('bookings.barber')}</label>
+              <label className="form-label" htmlFor="staff-booking-barberId">{t('bookings.barber')}</label>
               {barbers.length > 0 ? (
                 <select
                   name="barberId"
+              id="staff-booking-barberId"
+              aria-invalid={Boolean(errors.barberId)}
+              aria-describedby={errors.barberId ? 'staff-booking-barberId-error' : undefined}
                   value={formData.barberId}
                   onChange={handleChange}
                   className={`form-input form-select ${errors.barberId ? 'error' : ''}`}
@@ -393,7 +408,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
                   <span className="form-error">{t('bookings.noBarbersAvailable')}</span>
                 </div>
               )}
-              {errors.barberId && <span className="form-error">{errors.barberId}</span>}
+              {errors.barberId && <span id="staff-booking-barberId-error" className="form-error" role="alert">{errors.barberId}</span>}
             </div>
           </div>
         )}
@@ -403,7 +418,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
           {services.length > 0 ? (
             <>
               <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
-                {services.map((service) => {
+                {services.filter(service => (service.status !== 'inactive' && (!selectedBarber || selectedBarber.services?.includes(service.id))) || booking?.serviceIds.includes(service.id)).map((service) => {
                   const isSelected = formData.serviceIds.includes(service.id);
                   return (
                     <label
@@ -440,15 +455,18 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
               <span className="form-hint">{t('bookings.noServicesAvailable')}</span>
             </div>
           )}
-          {errors.serviceIds && <span className="form-error">{errors.serviceIds}</span>}
+          {errors.serviceIds && <span className="form-error" role="alert">{errors.serviceIds}</span>}
         </div>
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t('bookings.date')}</label>
+            <label className="form-label" htmlFor="staff-booking-date">{t('bookings.date')}</label>
             <input
               type="date"
               name="date"
+              id="staff-booking-date"
+              aria-invalid={Boolean(errors.date)}
+              aria-describedby={errors.date ? 'staff-booking-date-error' : undefined}
               value={formData.date}
               onChange={handleChange}
               onClick={(e) => e.target.showPicker()}
@@ -461,13 +479,16 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
               <span className="form-hint">{t('bookings.selectBarberFirst')}</span>
             )}
             {dateError && <span className="form-error">{dateError}</span>}
-            {errors.date && !dateError && <span className="form-error">{errors.date}</span>}
+            {errors.date && !dateError && <span id="staff-booking-date-error" className="form-error" role="alert">{errors.date}</span>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t('bookings.time')}</label>
+            <label className="form-label" htmlFor="staff-booking-time">{t('bookings.time')}</label>
             <select
               name="time"
+              id="staff-booking-time"
+              aria-invalid={Boolean(errors.time)}
+              aria-describedby={errors.time ? 'staff-booking-time-error' : undefined}
               value={formData.time}
               onChange={handleChange}
               disabled={!formData.date || (isManagerView && !formData.barberId)}
@@ -483,14 +504,16 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
             {!formData.date && (
               <span className="form-hint">{t('bookings.selectDateFirst')}</span>
             )}
-            {errors.time && <span className="form-error">{errors.time}</span>}
+            {errors.time && <span id="staff-booking-time-error" className="form-error" role="alert">{errors.time}</span>}
           </div>
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('bookings.notesLabel')}</label>
+          <label className="form-label" htmlFor="staff-booking-notes">{t('bookings.notesLabel')}</label>
           <textarea
+            maxLength={500}
             name="notes"
+              id="staff-booking-notes"
             value={formData.notes}
             onChange={handleChange}
             className="form-input form-textarea"

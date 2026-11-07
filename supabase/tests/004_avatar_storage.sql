@@ -4,7 +4,7 @@ set local search_path = extensions, public, pg_catalog;
 select plan(14);
 select ok(exists(select 1 from storage.buckets where id='avatars' and public), 'public avatar bucket exists');
 select ok(not has_function_privilege('anon','public.can_write_avatar_object(text)','execute'), 'anonymous callers cannot inspect avatar ownership');
-select ok((select not prosecdef from pg_proc where oid='public.can_write_avatar_object(text)'::regprocedure), 'avatar helper respects caller RLS');
+select ok((select prosecdef and 'search_path=""'=any(proconfig) from pg_proc where oid='public.can_write_avatar_object(text)'::regprocedure), 'avatar predicate uses a locked definer boundary; following checks enforce live ownership');
 
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);

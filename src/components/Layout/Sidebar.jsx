@@ -22,6 +22,7 @@ const navItems = [
   { path: '/dashboard/branches', icon: Building2, labelKey: 'nav.branches' },
   { path: '/dashboard/services', icon: Scissors, labelKey: 'nav.services' },
   { path: '/dashboard/barbers', icon: Users, labelKey: 'nav.barbers' },
+  { path: '/dashboard/availability-requests', icon: Calendar, labelKey: 'availabilityApproval.requests' },
   { path: '/dashboard/bookings', icon: Calendar, labelKey: 'nav.bookings' },
   { path: '/dashboard/my-chair', icon: Scissors, labelKey: 'chair.title', chairOnly: true },
   { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },

@@ -24,6 +24,8 @@ const toFrontend = (barber) => {
     avatarUrl: barber.avatar_url,
     services: barber.service_ids || [],
     availability: barber.availability,
+    availabilityRevision: barber.availability_revision,
+    availabilityApprovedAt: barber.availability_approved_at,
     timeOffs: barber.time_offs || [],
     vacations: barber.vacations || [],
     maxBookingDays: barber.max_booking_days ?? 30,
@@ -53,7 +55,7 @@ const toDatabase = (data) => {
   }
   // Handle both profilePicture and avatarUrl (profilePicture takes precedence)
   if (data.profilePicture !== undefined) {
-    result.avatar_url = data.profilePicture;
+    result.avatar_url = data.profilePicture?.startsWith('blob:') ? undefined : data.profilePicture;
   } else if (data.avatarUrl !== undefined) {
     result.avatar_url = data.avatarUrl;
   }
