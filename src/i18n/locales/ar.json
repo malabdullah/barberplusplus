@@ -2180,6 +2180,7 @@
     }
   },
   "managerAudit": {
+    "barberSchedule": "أوقات عمل {{name}}",
     "archiveService": "أرشفة الخدمة",
     "archiveConfirm": "أرشفة {{name}}؟ ستبقى تفاصيل المواعيد السابقة محفوظة.",
     "firstShop": "أنشئ صالونك الأول لبدء إعداد فريقك والمواعيد.",

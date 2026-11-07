@@ -304,7 +304,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
           <label className="form-label" htmlFor="shop-phone">{t('common.phone')}</label>
           <div className="phone-input-group">
             <select
-              name="countryCode" aria-label={t('common.countryCode')}
+              name="countryCode" aria-label={t('customerAuth.countryCode')}
               value={formData.countryCode}
               onChange={handleChange}
               className="form-input form-select country-code-select"

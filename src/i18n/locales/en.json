@@ -2160,6 +2160,7 @@
     }
   },
   "managerAudit": {
+    "barberSchedule": "{{name}}’s availability",
     "archiveService": "Archive service",
     "archiveConfirm": "Archive {{name}}? Existing appointment details will be kept.",
     "firstShop": "Create your first shop to start setting up your team and appointments.",

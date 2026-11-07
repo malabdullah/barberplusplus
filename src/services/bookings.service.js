@@ -34,7 +34,7 @@ const toFrontend = (booking) => {
     customerCountryCode: customer.country_code || null,
     customerPhone: customer.phone || null,
     date: booking.date,
-    time: booking.time,
+    time: booking.time?.slice(0, 5),
     duration: booking.duration,
     price: parseFloat(booking.price),
     status: booking.status,

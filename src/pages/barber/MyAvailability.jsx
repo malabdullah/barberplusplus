@@ -83,6 +83,7 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
           <>
             <select
               className="schedule-time-select"
+              aria-label={`${day.label} — ${t('availability.from')}`}
               value={schedule.start}
               onChange={(e) => handleTimeChange('start', e.target.value)}
             >
@@ -95,6 +96,7 @@ function DayScheduleRow({ day, schedule, onChange, onCopyToAll, t }) {
             <span className="schedule-time-separator">{t('availability.to')}</span>
             <select
               className="schedule-time-select"
+              aria-label={`${day.label} — ${t('availability.toTime')}`}
               value={schedule.end}
               onChange={(e) => handleTimeChange('end', e.target.value)}
             >
@@ -287,7 +289,8 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                   <label className="form-label">{t('availability.day')}</label>
                   <select
                     className="form-select"
-                    value={formData.day}
+                    aria-label={t('availability.day')}
+                  value={formData.day}
                     onChange={(e) => setFormData({ ...formData, day: e.target.value })}
                   >
                     {DAYS_OF_WEEK.map((d) => (
@@ -303,7 +306,8 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                   <input
                     type="date"
                     className="form-input"
-                    value={formData.date}
+                    aria-label={t('availability.date')}
+                  value={formData.date}
                     min={today}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     onClick={(e) => e.target.showPicker()}
@@ -314,6 +318,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 <label className="form-label">{t('availability.from')}</label>
                 <select
                   className="form-select"
+                  aria-label={t('availability.from')}
                   value={formData.start}
                   onChange={(e) => setFormData({ ...formData, start: e.target.value })}
                 >
@@ -328,6 +333,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 <label className="form-label">{t('availability.toTime')}</label>
                 <select
                   className="form-select"
+                  aria-label={t('availability.toTime')}
                   value={formData.end}
                   onChange={(e) => setFormData({ ...formData, end: e.target.value })}
                 >
@@ -345,12 +351,13 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 type="text"
                 className="form-input"
                 placeholder={formData.type === 'recurring' ? t('availability.reasonRecurringPlaceholder') : t('availability.reasonOneTimePlaceholder')}
-                value={formData.reason}
+                aria-label={t('availability.reasonOptional')}
+                  value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
             {error && (
-              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+              <div className="form-error" role="alert" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
                 {error}
               </div>
             )}
@@ -525,6 +532,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                 <input
                   type="date"
                   className="form-input"
+                  aria-label={t('availability.fromDate')}
                   value={formData.startDate}
                   min={today}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -536,6 +544,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                 <input
                   type="date"
                   className="form-input"
+                  aria-label={t('availability.toDate')}
                   value={formData.endDate}
                   min={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -549,12 +558,13 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                 type="text"
                 className="form-input"
                 placeholder={t('availability.vacationReasonPlaceholder')}
-                value={formData.reason}
+                aria-label={t('availability.reasonOptional')}
+                  value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
             </div>
             {error && (
-              <div className="form-error" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
+              <div className="form-error" role="alert" style={{ color: 'var(--status-error)', marginBottom: '12px', fontSize: '14px' }}>
                 {error}
               </div>
             )}
@@ -759,7 +769,7 @@ export default function MyAvailability({ targetBarber = null }) {
         confirmText={t('managerAudit.saveAvailability')} cancelText={t('common.cancel')} />
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">{t('availability.myAvailability')}</h2>
+          <h2 className="page-title">{targetBarber ? t('managerAudit.barberSchedule', { name: currentBarber.name }) : t('availability.myAvailability')}</h2>
           <p className="page-description">
             {t('availability.manageScheduleAt')} {barberBranch?.name}
           </p>
@@ -922,6 +932,7 @@ export default function MyAvailability({ targetBarber = null }) {
               type="number"
               min="1"
               max="365"
+              aria-label={t('availability.bookingWindow')}
               value={maxBookingDays}
               onChange={(e) => {
                 const value = Math.min(365, Math.max(1, parseInt(e.target.value) || 30));
