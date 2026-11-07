@@ -231,7 +231,7 @@ export default function Settings() {
               <label className="form-label" htmlFor="manager-phone">{t('common.phone')}</label>
               <div className="phone-input-group">
                 <select
-                  name="countryCode" aria-label={t('common.countryCode')}
+                  name="countryCode" aria-label={t('customerAuth.countryCode')}
                   value={profile.countryCode}
                   onChange={handleProfileChange}
                   className="form-input form-select country-code-select"
