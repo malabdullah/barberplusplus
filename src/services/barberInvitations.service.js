@@ -3,11 +3,14 @@ import { appConfig } from '../lib/runtimeConfig';
 import { functionFetch } from '../lib/functionFetch';
 export async function invitationRequest(action, data = {}) {
   const { data: { session } } = await supabase.auth.getSession();
-  const response = await functionFetch(appConfig.supabaseUrl + '/functions/v1/invite-barber', {
+  let response, result;
+  try {
+  response = await functionFetch(appConfig.supabaseUrl + '/functions/v1/invite-barber', {
     method: 'POST', headers: { apikey: appConfig.supabasePublishableKey, 'Content-Type': 'application/json', ...(session ? { Authorization: 'Bearer ' + session.access_token } : {}) },
     body: JSON.stringify({ action, ...data }), signal: AbortSignal.timeout(30000),
   });
-  const result = await response.json();
+  result = await response.json();
+  } catch { throw new Error('UNAVAILABLE'); }
   if (!response.ok) throw new Error(result.error || 'UNAVAILABLE');
   return result;
 }

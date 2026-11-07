@@ -93,7 +93,7 @@ export default function JoinShop() {
     {fatal && <Link className="cb-primary" to="/login">{t('auth.signIn')}</Link>}
     {details && <>
       <p className="invitation-email" dir="ltr">{details.email}</p>
-      {wrongSession ? <div className="invitation-result"><p>{tr('wrongAccount')}</p><button className="cb-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await supabase.auth.signOut({ scope: 'local' }); setSession(null); setDetails(await api.resolve(invite)); } catch (e) { setError(e.message || 'UNAVAILABLE'); } finally { setBusy(false); } }}>{tr('switchAccount')}</button></div>
+      {wrongSession ? <div className="invitation-result"><p>{tr('wrongAccount')}</p><button className="cb-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await supabase.auth.signOut({ scope: 'local' }); setSession(null); setDetails(await api.resolve(invite)); } catch (e) { setError('UNAVAILABLE'); } finally { setBusy(false); } }}>{tr('switchAccount')}</button></div>
       : details.kind === 'customer' && !details.signed_in ? <>
         <p>{tr('existingSignIn')}</p><CustomerSocialButtons authService={social} disabled={busy} />
         <form onSubmit={signIn}><fieldset className="cb-details-fields" disabled={busy}>{passwordField('password', t('auth.password'))}<button type="submit" className="cb-primary ca-submit" disabled={busy}>{t('auth.signIn')}</button></fieldset></form>

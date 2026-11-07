@@ -45,3 +45,13 @@ Deno.test('private failures, stale tokens and old destructive calls are bounded'
  assertEquals((await s.call({barberId:id,email:'legacy@example.test'})).body.error,'LEGACY_INVITE');
  const limited=setup({limit:async()=>false});assertEquals((await limited.call({action:'resolve',id,token:secret},'')).status,429);
 });
+Deno.test('interrupted setup retries the original identity without creating or resetting it',async()=>{
+ const actions:string[]=[];
+ const s=setup({rpc:async(action,data)=>{actions.push(action);if(action==='resolve')return{kind:'new',setup_user:'existing-setup-user',email:'new@example.test'};assertEquals(data.new_user,'existing-setup-user');return{accepted:true};}});
+ assertEquals((await s.call({action:'accept',id,token:secret,name:'New Barber',phone:'59997321',countryCode:'+965',password:'Synthetic12!'},'')).status,200);assertEquals(s.created(),0);assertEquals(actions,['resolve','accept']);
+});
+Deno.test('a competing signup is reconciled only when the server returns that invitation setup identity',async()=>{
+ let resolveCount=0;
+ const s=setup({createUser:async()=>{throw Error('conflict');},rpc:async action=>action==='resolve'?{kind:'new',email:'new@example.test',...(++resolveCount>2?{setup_user:'competing-setup'}:{})}:{accepted:true}});
+ assertEquals((await s.call({action:'accept',id,token:secret,name:'New Barber',phone:'59997321',countryCode:'+965',password:'Synthetic12!'},'')).status,200);
+});

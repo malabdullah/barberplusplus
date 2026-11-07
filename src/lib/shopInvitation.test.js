@@ -10,5 +10,5 @@ it('keeps the invitation in this tab across an OAuth return and clears it after 
 });
 it('rejects malformed tokens and keeps legacy Auth invitation links on their original path', () => {
  window.history.replaceState(null, '', '/accept-invite?invitation=invalid#token=bad'); expect(readShopInvitation()).toBe(null);
- rememberShopInvitation(invite); window.history.replaceState(null, '', '/accept-invite#token_hash=old&type=invite'); expect(hasShopInvitation()).toBe(false);
+ rememberShopInvitation(invite); expect(readShopInvitation()).toBe(null); window.history.replaceState(null, '', '/accept-invite#token_hash=old&type=invite'); expect(hasShopInvitation()).toBe(false);
 });

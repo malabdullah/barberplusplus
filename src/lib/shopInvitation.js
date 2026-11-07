@@ -1,9 +1,9 @@
 const KEY = 'barber-shop-invitation';
-const valid = value => /^[0-9a-f-]{36}$/i.test(value?.id || '') && /^[0-9a-f]{64}$/.test(value?.token || '');
+const valid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value?.id || '') && /^[0-9a-f]{64}$/.test(value?.token || '');
 export function readShopInvitation() {
   const url = new URL(window.location.href);
   const value = { id: url.searchParams.get('invitation'), token: new URLSearchParams(url.hash.slice(1)).get('token') };
-  if (valid(value)) return value;
+  if (url.searchParams.has('invitation')) return valid(value) ? value : null;
   try { const saved = JSON.parse(sessionStorage.getItem(KEY)); if (valid(saved)) return saved; } catch { /* Optional storage. */ }
   return null;
 }

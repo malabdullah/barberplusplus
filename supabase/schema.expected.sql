@@ -1276,8 +1276,12 @@ begin
   if person.id is not null then
    if person.raw_app_meta_data->>'role'<>'customer' or person.raw_app_meta_data->>'role' is null
     or (person.banned_until is not null and person.banned_until>now()) then raise exception 'EMAIL_UNAVAILABLE';end if;
-   if p_action='check' then return jsonb_build_object('kind','customer');end if;
-   if p_action='send' and coalesce((p_data->>'confirm_customer')::boolean,false) is not true then raise exception 'CUSTOMER_CONFIRMATION_REQUIRED';end if;
+   if private.invitation_setup_identity(person.id) then
+    if p_action='check' then return jsonb_build_object('kind','new');end if;
+   else
+    if p_action='check' then return jsonb_build_object('kind','customer');end if;
+    if p_action='send' and coalesce((p_data->>'confirm_customer')::boolean,false) is not true then raise exception 'CUSTOMER_CONFIRMATION_REQUIRED';end if;
+   end if;
   elsif p_action='check' then return jsonb_build_object('kind','new');end if;
   if actual_hash is null or actual_hash !~ '^[0-9a-f]{64}$' then raise exception 'INVALID_REQUEST';end if;
   if p_action='send' then
@@ -1313,8 +1317,8 @@ begin
    select c.* into profile from public.customers c join private.customer_accounts a on a.customer_id=c.id where a.user_id=person.id;
   end if;
   return jsonb_build_object('id',inv.id,'email',inv.email,'shop',shop.name,'expires_at',inv.expires_at,
-   'kind',case when person.id is null or person.raw_app_meta_data->>'invitation_setup'=inv.id::text then 'new' else 'customer' end,
-   'setup_user',case when person.raw_app_meta_data->>'invitation_setup'=inv.id::text then person.id else null end,
+   'kind',case when person.id is null or private.invitation_setup_identity(person.id) then 'new' else 'customer' end,
+   'setup_user',case when private.invitation_setup_identity(person.id) then person.id else null end,
    'signed_in',coalesce(actor=person.id and private.invitation_live(actor,sid,'customer'),false),'name',profile.name,'phone',profile.phone,'country_code',profile.country_code);
  end if;
 
@@ -1327,7 +1331,7 @@ begin
  uid:=nullif(p_data->>'new_user','')::uuid;
  if person.id is null then raise exception 'AUTH_REQUIRED';end if;
  if uid is not null then
-  if person.id<>uid or person.email_confirmed_at is not null or person.raw_app_meta_data->>'invitation_setup' is distinct from inv.id::text then raise exception 'ACCOUNT_CHANGED';end if;
+  if person.id<>uid or person.email_confirmed_at is not null or not private.invitation_setup_identity(person.id) then raise exception 'ACCOUNT_CHANGED';end if;
   if password is null or length(password)<8 or octet_length(password)>72 or person.encrypted_password='' or extensions.crypt(password,person.encrypted_password) is distinct from person.encrypted_password then raise exception 'INVALID_LOGIN';end if;
  else
   if actor is distinct from person.id or not private.invitation_live(actor,sid,'customer') then raise exception 'AUTH_REQUIRED';end if;

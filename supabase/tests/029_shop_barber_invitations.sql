@@ -63,6 +63,18 @@ select throws_ok($$select public.shop_barber_invitation_api('resolve',jsonb_buil
 select set_config('invitation.expired',public.shop_barber_invitation_api('send',current_setting('invitation.manager')::jsonb||jsonb_build_object('email','invitation-expired@example.test','token_hash',repeat('d',64)))::text,true);
 update private.shop_barber_invitations set expires_at=now()-interval '1 second' where id=(current_setting('invitation.expired')::jsonb->>'id')::uuid;
 select throws_ok($$select public.shop_barber_invitation_api('resolve',jsonb_build_object('id',current_setting('invitation.expired')::jsonb->>'id','token_hash',repeat('d',64)))$$,'P0001','INVITE_EXPIRED','expired invitation cannot be used');
+-- Interrupted setup creates an unconfirmed identity before atomic acceptance.
+-- A cancelled/replaced invitation must not strand it or reset its password.
+select set_config('invitation.interrupted',public.shop_barber_invitation_api('send',current_setting('invitation.manager')::jsonb||jsonb_build_object('email','invitation-interrupted@example.test','token_hash',repeat('e',64)))::text,true);
+insert into auth.users(id,email,encrypted_password,raw_app_meta_data) values('fa140000-0000-4000-8000-000000000005','invitation-interrupted@example.test',extensions.crypt('Synthetic12!',extensions.gen_salt('bf')),jsonb_build_object('role','customer','invitation_setup',current_setting('invitation.interrupted')::jsonb->>'id'));
+select public.shop_barber_invitation_api('cancel',current_setting('invitation.manager')::jsonb||jsonb_build_object('id',current_setting('invitation.interrupted')::jsonb->>'id'));
+select is(public.shop_barber_invitation_api('check',current_setting('invitation.manager')::jsonb||'{"email":"invitation-interrupted@example.test"}')->>'kind','new','interrupted unconfirmed setup is not mistaken for a finished customer');
+select set_config('invitation.replacement',public.shop_barber_invitation_api('send',current_setting('invitation.manager')::jsonb||jsonb_build_object('email','invitation-interrupted@example.test','token_hash',repeat('f',64)))::text,true);
+select set_config('invitation.resume',jsonb_build_object('id',current_setting('invitation.replacement')::jsonb->>'id','token_hash',repeat('f',64),'new_user','fa140000-0000-4000-8000-000000000005','name','Resumed Barber','country_code','+965','phone','59979432')::text,true);
+select is(public.shop_barber_invitation_api('resolve',current_setting('invitation.resume')::jsonb)->>'setup_user','fa140000-0000-4000-8000-000000000005','replacement link resumes the original unconfirmed identity');
+select throws_ok($$select public.shop_barber_invitation_api('accept',current_setting('invitation.resume')::jsonb||'{"password":"Different12!"}')$$,'P0001','INVALID_LOGIN','replacement link cannot reset the original password');
+select lives_ok($$select public.shop_barber_invitation_api('accept',current_setting('invitation.resume')::jsonb||'{"password":"Synthetic12!"}')$$,'original password completes interrupted setup through the replacement link');
+select is((select count(*) from public.barbers where user_id='fa140000-0000-4000-8000-000000000005'),1::bigint,'recovery creates exactly one barber for the same identity');
 select set_config('request.jwt.claims','{"sub":"fa140000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 set local role authenticated;
 select throws_ok($$insert into public.barbers(branch_id,name,status) values('fa140000-0000-4000-8000-000000000101','Bypass','inactive')$$,'42501','INVITATION_REQUIRED','manager cannot bypass invitations with a direct insert');

@@ -33,7 +33,8 @@ A new recipient's Auth identity is initially unconfirmed and marked for this
 invitation. Atomic acceptance proves the original password, confirms email,
 upgrades the trusted role, creates one barber and consumes the token. Interrupted
 setup can retry using the original password; resend never deletes or resets an
-account. Existing customers must authenticate as the invited identity. Phone
+account. A cancelled/replaced invitation can also resume that same unconfirmed
+setup identity with the original password. Existing customers must authenticate as the invited identity. Phone
 uniqueness remains enforced across people and shops; promotion reclassifies only
 that same person's canonical phone claim, without merging by phone number.
 
@@ -41,7 +42,7 @@ that same person's canonical phone claim, without merging by phone number.
 
 Hosted Test uses Supabase `qvkucvcjmojjbphlzlks` and its existing gated Worker and
 private inbox. Test invitations never send external email or SMS.
-The frontend, three migrations and invite-barber Function must be deployed together.
+The frontend, four migrations and invite-barber Function must be deployed together.
 Production is a separate approval/release: configure the Function's Resend sending
 credential and verified `noreply@barberplusplus.com`, reply-to
 `support@barberplusplus.com`, and allow the exact `/accept-invite` provider callback.
