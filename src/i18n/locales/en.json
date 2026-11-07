@@ -2137,6 +2137,7 @@
   },
   "availabilityApproval": {
     "title": "Availability approval",
+    "approvalTip": "Changes affect booking availability only after manager approval.",
     "requests": "Availability requests",
     "review": "Review request",
     "managerHelp": "Review the proposed hours, breaks and vacations below. You can edit them before approving. Existing appointments must be resolved first.",
