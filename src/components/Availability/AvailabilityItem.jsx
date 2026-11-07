@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { DAYS, TIME_OPTIONS } from '../../constants/time';
+import { DAYS } from '../../constants/time';
 
 export function AvailabilityItemValue({ category, value }) {
   const { t } = useTranslation();
@@ -39,8 +39,8 @@ export function AvailabilityItemEditor({ item, value, onChange, disabled }) {
       </select></label>
       {value.type === 'recurring' ? <label>{t('availability.day')}<select className="form-select" value={value.day || 'monday'} onChange={event => change('day', event.target.value)}>{DAYS.map(({ key }) => <option key={key} value={key}>{t(`days.${key}`)}</option>)}</select></label>
         : <label>{t('availability.date')}<input className="form-input" type="date" value={value.date || ''} onChange={event => change('date', event.target.value)} /></label>}
-      <div className="availability-item-two-fields"><label>{t('availability.from')}<select className="form-select" value={value.start} onChange={event => change('start', event.target.value)}>{TIME_OPTIONS.map(time => <option key={time}>{time}</option>)}</select></label>
-      <label>{t('availability.toTime')}<select className="form-select" value={value.end} onChange={event => change('end', event.target.value)}>{TIME_OPTIONS.map(time => <option key={time}>{time}</option>)}</select></label></div>
+      <div className="availability-item-two-fields"><label>{t('availability.from')}<input className="form-input" type="time" value={value.start} onChange={event => change('start', event.target.value)} /></label>
+      <label>{t('availability.toTime')}<input className="form-input" type="time" value={value.end} onChange={event => change('end', event.target.value)} /></label></div>
     </> : <div className="availability-item-two-fields"><label>{t('availability.fromDate')}<input className="form-input" type="date" value={value.startDate} onChange={event => change('startDate', event.target.value)} /></label>
       <label>{t('availability.toDate')}<input className="form-input" type="date" value={value.endDate} onChange={event => change('endDate', event.target.value)} /></label></div>}
     <label>{t('availabilityItems.reason')}<input className="form-input" maxLength={300} value={value.reason || ''} onChange={event => change('reason', event.target.value)} /></label>
