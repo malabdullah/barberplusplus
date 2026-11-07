@@ -47,7 +47,7 @@ export default function AvailabilityRequestReview() {
           {item.status === 'approved' && <section><h2>{t('availabilityItems.approvedResult')}</h2><AvailabilityItemValue category={item.category} value={item.approved_value} /></section>}
         </div>
         {item.review_note && <div className="availability-approval-panel"><h2>{t('availabilityItems.reviewNote')}</h2><p>{item.review_note}</p></div>}
-        {item.status === 'pending' && <div className="availability-review-actions"><AvailabilityQuickActions key={item.id} item={item} onDecided={decided} /></div>}
+        {item.status === 'pending' && <div className="availability-review-actions"><AvailabilityQuickActions key={item.id} item={item} onDecided={decided} onAction={() => setNotice(null)} /></div>}
       </>}
     </>}
   </div>;
