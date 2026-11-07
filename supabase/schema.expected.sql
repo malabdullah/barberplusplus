@@ -3655,4 +3655,5 @@ CREATE OR REPLACE FUNCTION "public"."barber_availability"("p_action" "text", "p_
 ALTER FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 REVOKE ALL ON FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") TO "service_role";
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();

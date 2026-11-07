@@ -2,7 +2,12 @@
 export function notificationCopy(notification, t) {
   if (!notification.metadata?.dashboardEvent) return notification;
   const details = notification.metadata;
-  if (notification.entityType === 'availability_request') return { title: t(details.state === 'pending' ? 'availabilityApproval.notificationRequest' : 'availabilityApproval.notificationDecision'), message: t(`availabilityApproval.${details.state === 'pending' ? 'pending' : details.state === 'declined' ? 'declined' : 'approved'}`) };
+  if (notification.entityType === 'availability_request') return {
+    title: t(details.state === 'pending' ? 'availabilityApproval.notificationRequest' : 'availabilityApproval.notificationDecision'),
+    message: details.state === 'pending'
+      ? t('availabilityApproval.notificationRequestDetails', { name: details.barberName || '' })
+      : t(`availabilityApproval.${details.state === 'declined' ? 'declined' : 'approved'}`),
+  };
   const values = { customer: details.customerName || t('bookings.addedBy.customer'),
     barber: details.barberName || '', shop: details.shopName || '',
     date: details.date || '', time: details.time || '' };
