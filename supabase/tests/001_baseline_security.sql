@@ -35,8 +35,8 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  118::bigint,
-  'public policies reflect personal dashboard delivery and protected booking history'
+  126::bigint,
+  'public policies include dashboard delivery, booking history, MFA and session protections'
 );
 
 select is(
