@@ -46,7 +46,7 @@ select is((public.barber_availability('approve',jsonb_build_object('request_id',
 select is((select count(*) from public.bookings where id in('ec080000-0000-4000-8000-000000000501','ec080000-0000-4000-8000-000000000502') and status='confirmed'),2::bigint,'blocked approval never cancels appointments');
 select is((select to_char(time,'HH24:MI') from public.bookings where id='ec080000-0000-4000-8000-000000000501'),'10:00','blocked approval never moves appointments');
 select is((select availability_revision from public.barbers where id='ec080000-0000-4000-8000-000000000301'),0,'blocked approval preserves the approved revision');
-select throws_ok($$update public.barbers set vacations=current_setting('availability.proposal')::jsonb->'vacations' where id='ec080000-0000-4000-8000-000000000301'$$,'P0001','AVAILABILITY_BOOKINGS_CONFLICT','direct manager writes cannot bypass appointment protection');
+select throws_ok($$update public.barbers set vacations=current_setting('availability.proposal')::jsonb->'vacations' where id='ec080000-0000-4000-8000-000000000301'$$,'P0001','AVAILABILITY_INDIVIDUAL_REVIEW_REQUIRED','direct manager writes cannot bypass individual request review');
 update public.bookings set status='cancelled',staff_cancellation='{"reason":"Explicit synthetic cancellation"}' where id='ec080000-0000-4000-8000-000000000501';
 select is(jsonb_array_length(public.barber_availability('preview',jsonb_build_object('request_id',current_setting('availability.saved')::jsonb->'request'->>'id'))->'conflicts'),1,'explicit cancellation resolves only that appointment');
 update public.bookings set date=date+1 where id='ec080000-0000-4000-8000-000000000502';
@@ -60,14 +60,14 @@ select is((select count(*) from public.notifications where entity_type='availabi
 select is((select count(*) from public.notifications where entity_type='availability_request' and recipient_user_id='ec080000-0000-4000-8000-000000000002'),1::bigint,'barber receives the approval decision');
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
 set local role authenticated;
-select set_config('availability.second',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',1,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
+select set_config('availability.second',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',1,'proposal',jsonb_set(current_setting('availability.proposal')::jsonb,'{vacations,0,endDate}',to_jsonb(((clock_timestamp() at time zone 'Asia/Kuwait')::date+3)::text))))::text,true);
 reset role;
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 set local role authenticated;
-select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.second')::jsonb->'request'->>'id','base_revision',1,'proposal',current_setting('availability.proposal')::jsonb||'{"vacations":[]}'))->'request'->>'status','approved','manager can modify then approve the proposal');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.second')::jsonb->'request'->>'id','base_revision',1,'value',jsonb_build_object('id','qa-vacation','startDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text,'endDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text)))->'request'->>'status','approved','manager can modify then approve the proposal');
 reset role;
 select is((select jsonb_array_length(proposal->'vacations') from private.availability_requests where id=(current_setting('availability.second')::jsonb->'request'->>'id')::uuid),1,'original submitted proposal is retained in history');
-select is((select jsonb_array_length(approved_proposal->'vacations') from private.availability_requests where id=(current_setting('availability.second')::jsonb->'request'->>'id')::uuid),0,'manager-modified approval is recorded separately');
+select is((select approved_value->>'startDate' from private.availability_requests where id=(current_setting('availability.second')::jsonb->'request'->>'id')::uuid),((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text,'manager-modified approval is recorded separately');
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
 set local role authenticated;
 select set_config('availability.third',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
@@ -106,7 +106,7 @@ select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-00000000
 set local role authenticated;
 select throws_ok($$select public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',1,'proposal',current_setting('availability.proposal')::jsonb))$$,'P0001','AVAILABILITY_STALE','barber with stale approved revision must reload');
 select set_config('availability.fourth',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
-select set_config('availability.fifth',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',current_setting('availability.proposal')::jsonb||'{"max_booking_days":31}'))::text,true);
+select set_config('availability.fifth',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',jsonb_set(current_setting('availability.proposal')::jsonb,'{vacations,0,reason}','"Updated request"')))::text,true);
 reset role;
 select is((select status from private.availability_requests where id=(current_setting('availability.fourth')::jsonb->'request'->>'id')::uuid),'superseded','updated proposal supersedes old request');
 select is((select count(*) from private.availability_requests where barber_id='ec080000-0000-4000-8000-000000000301' and status='pending'),1::bigint,'only one pending request exists per barber');

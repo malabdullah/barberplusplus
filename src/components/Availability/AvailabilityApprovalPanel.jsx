@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { availabilityItemSummary } from './AvailabilityItem';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '../../utils/errorMessages';
@@ -23,16 +24,18 @@ export function AvailabilitySummary({ value }) {
 }
 export default function AvailabilityApprovalPanel({ approval, manager, barberId }) {
   const { t } = useTranslation();
-  const [note, setNote] = useState('');
-  const latest = approval.detail?.requests[0];
   return <section className="availability-approval-panel" aria-label={t('availabilityApproval.title')}>
     <h3>{t('availabilityApproval.title')}</h3>
     <p>{t(manager ? 'availabilityApproval.managerHelp' : 'availabilityApproval.barberHelp')}</p>
     {approval.notice && <p role="status">{t(`availabilityApproval.${approval.notice}`)}</p>}
     {approval.error && <p role="alert" className="form-error">{getErrorMessage(approval.error, t('common.error'), t)}</p>}
-    {approval.pending && <p className="alert alert-info">{t('availabilityApproval.pending')}</p>}
-    {latest?.status === 'declined' && <p role="status">{t('availabilityApproval.declined')}: {latest.review_note}</p>}
-    {approval.selected && approval.selected.status !== 'pending' && <p>{t('availabilityApproval.reviewedAlready')}</p>}
+    {approval.pendingItems.length > 0 && <div className="availability-person-items"><h4>{t('availabilityItems.pending')}</h4><p>{t('availabilityItems.pendingHelp')}</p><ul>
+      {approval.pendingItems.map(item => <li key={item.id}><strong>{t(`availabilityItems.${item.category}`)}</strong><span>{availabilityItemSummary(item, t)}</span>
+        {manager && <Link to={`/dashboard/availability-requests/${item.id}`}>{t('availabilityApproval.review')}</Link>}</li>)}
+    </ul></div>}
+    {!manager && approval.detail?.requests.some(item => ['approved','declined'].includes(item.status)) && <details><summary>{t('availabilityItems.recentDecisions')}</summary><ul className="availability-decision-history">
+      {approval.detail.requests.filter(item => ['approved','declined'].includes(item.status)).map(item => <li key={item.id}><strong>{t(`availabilityItems.${item.category}`)} · {t(`availabilityItems.${item.status}`)}</strong><p>{availabilityItemSummary(item, t)}</p>{item.review_note && <p>{item.review_note}</p>}</li>)}
+    </ul></details>}
     <details><summary>{t('availabilityApproval.approvedCurrently')}</summary>
       <AvailabilitySummary value={{ availability: approval.detail?.barber.availability,
         time_offs: approval.detail?.barber.time_offs, vacations: approval.detail?.barber.vacations }} />
@@ -48,11 +51,6 @@ export default function AvailabilityApprovalPanel({ approval, manager, barberId 
           <Link className="btn btn-secondary" to={`/dashboard/bookings?booking=${booking.id}&reviewBarber=${barberId}${approval.review ? `&reviewRequest=${approval.review.id}` : ''}`}>
             {t('availabilityApproval.resolveBooking')}</Link>
         </li>)}</ul>
-      </div>}
-      {approval.review && <div className="availability-decline">
-        <label htmlFor="availability-review-note">{t('availabilityApproval.reason')}</label>
-        <textarea id="availability-review-note" className="form-input" maxLength={500} value={note} onChange={event => setNote(event.target.value)} />
-        <button className="btn btn-danger" disabled={approval.busy || note.trim().length < 3} onClick={() => approval.decide('decline', note)}>{t('availabilityApproval.decline')}</button>
       </div>}
     </>}
     <button className="btn btn-secondary" onClick={approval.reload} disabled={approval.busy}>{t('availabilityApproval.reload')}</button>

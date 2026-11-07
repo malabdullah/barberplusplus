@@ -373,7 +373,7 @@ export default function Bookings() {
 
   return (
     <div className="bookings-page manager-bookings-page">
-      {safeId(returnBarber) && <Link className="btn btn-secondary" to={`/dashboard/barbers/${returnBarber}/schedule${safeId(returnRequest) ? `?request=${returnRequest}` : ''}`}>{t('availabilityApproval.returnReview')}</Link>}
+      {safeId(returnBarber) && <Link className="btn btn-secondary" to={safeId(returnRequest) ? `/dashboard/availability-requests/${returnRequest}` : `/dashboard/availability-requests?barber=${returnBarber}`}>{t('availabilityApproval.returnReview')}</Link>}
       {statusError && <p className="error-banner" role="alert">{statusError}</p>}
       {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">

@@ -12,12 +12,12 @@ const barber = { id: 'staff', branchId: 'shop', name: 'Omar', availability: { mo
 const detail = { barber: { availability_revision: 2, availability_approved_at: '2026-11-01', availability: barber.availability, max_booking_days: 30 }, requests: [{ id: 'request', status: 'pending', base_revision: 2, proposal: { availability: barber.availability, time_offs: [], vacations: [], max_booking_days: 30 } }] };
 beforeEach(() => { state.call.mockReset(); state.app = { userRole: 'manager', currentBarber: barber, branches: [{ id: 'shop', name: 'Shop' }], reloadData: vi.fn(), updateBarber: vi.fn() }; });
 afterEach(cleanup);
-it('blocks manager approval and provides a booking-resolution link when the server finds a conflict', async () => {
-  state.call.mockImplementation(async action => action === 'get' ? detail : { blocked: true, conflicts: [{ id: 'booking', date: '2026-11-10', time: '10:00', duration: 30, customer_name: 'Customer' }] });
-  render(<MemoryRouter initialEntries={['/?request=request']}><MyAvailability targetBarber={barber} /></MemoryRouter>);
-  await waitFor(() => expect(screen.getByRole('link', { name: 'availabilityApproval.resolveBooking' })).toBeInTheDocument());
-  expect(screen.getByRole('button', { name: 'availabilityApproval.approve' })).toBeDisabled();
-  expect(screen.getByRole('link', { name: 'availabilityApproval.resolveBooking' })).toHaveAttribute('href', '/dashboard/bookings?booking=booking&reviewBarber=staff&reviewRequest=request');
+it('sends managers to separate pending item reviews instead of approving a bundle', async () => {
+  state.call.mockImplementation(async action => action === 'get' ? { ...detail, pending_items: [{ id: 'request', category: 'hours', status: 'pending', requested_value: { max_booking_days: 30 } }] } : {});
+  render(<MemoryRouter><MyAvailability targetBarber={barber} /></MemoryRouter>);
+  await waitFor(() => expect(screen.getByRole('link', { name: 'availabilityApproval.review' })).toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'availabilityApproval.saveApproved' })).toBeDisabled();
+  expect(screen.getByRole('link', { name: 'availabilityApproval.review' })).toHaveAttribute('href', '/dashboard/availability-requests/request');
   expect(state.app.updateBarber).not.toHaveBeenCalled();
 });
 it('submits a barber proposal instead of directly changing approved availability', async () => {
