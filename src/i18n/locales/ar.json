@@ -2239,6 +2239,7 @@
     "submit": "إرسال للاعتماد",
     "updateRequest": "تحديث الطلب",
     "notificationRequest": "طلب أوقات العمل",
+    "notificationRequestDetails": "أرسل {{name}} طلب أوقات عمل للمراجعة.",
     "notificationDecision": "قرار أوقات العمل",
     "stale": "تم تغيير أوقات العمل أو الطلب. حمّل أحدث البيانات قبل المراجعة أو الإرسال.",
     "approvalRequired": "تتطلب تغييرات أوقات العمل طلباً واعتماد المدير.",

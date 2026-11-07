@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ app: {}, call: vi.fn() }));
@@ -7,6 +7,7 @@ vi.mock('../../context/AppContext', () => ({ useApp: () => state.app }));
 vi.mock('../../services/availability.service', () => ({ availabilityService: { call: (...args) => state.call(...args) } }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: key => key, i18n: { language: 'en' } }) }));
 import MyAvailability from './MyAvailability';
+import { useAvailabilityApproval } from '../../hooks/useAvailabilityApproval';
 const barber = { id: 'staff', branchId: 'shop', name: 'Omar', availability: { monday: { enabled: true, start: '09:00', end: '18:00' } }, maxBookingDays: 30 };
 const detail = { barber: { availability_revision: 2, availability_approved_at: '2026-11-01', availability: barber.availability, max_booking_days: 30 }, requests: [{ id: 'request', status: 'pending', base_revision: 2, proposal: { availability: barber.availability, time_offs: [], vacations: [], max_booking_days: 30 } }] };
 beforeEach(() => { state.call.mockReset(); state.app = { userRole: 'manager', currentBarber: barber, branches: [{ id: 'shop', name: 'Shop' }], reloadData: vi.fn(), updateBarber: vi.fn() }; });
@@ -28,4 +29,14 @@ it('submits a barber proposal instead of directly changing approved availability
   fireEvent.click(screen.getByRole('button', { name: 'availabilityApproval.submit' }));
   await waitFor(() => expect(state.call).toHaveBeenCalledWith('submit', expect.objectContaining({ barber_id: 'staff', base_revision: 2, proposal: expect.objectContaining({ max_booking_days: 31 }) })));
   expect(state.app.updateBarber).not.toHaveBeenCalled();
+});
+it('clears a previous decision message when opening a different request', async () => {
+  state.call.mockImplementation(async action => action === 'get' ? detail : {});
+  const onRefresh = vi.fn();
+  const { result, rerender } = renderHook(({ requestId }) => useAvailabilityApproval({ barberId: 'staff', requestId, manager: true, proposal: detail.requests[0].proposal, onRefresh }), { initialProps: { requestId: 'request' } });
+  await waitFor(() => expect(result.current.detail).toBeTruthy());
+  await act(async () => { await result.current.decide('decline', 'Different hours needed'); });
+  expect(result.current.notice).toBe('declined');
+  rerender({ requestId: 'another-request' });
+  await waitFor(() => expect(result.current.notice).toBeNull());
 });

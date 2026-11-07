@@ -10,6 +10,7 @@ export function useAvailabilityApproval({ barberId, requestId, manager, proposal
   const [checking, setChecking] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [notice, setNotice] = useState(null);
+  useEffect(() => { setNotice(null); }, [barberId, requestId]);
   const reload = useCallback(() => setRefresh(value => value + 1), []);
   useEffect(() => {
     let current = true;

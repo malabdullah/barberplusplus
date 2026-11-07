@@ -2215,6 +2215,7 @@
     "submit": "Submit for approval",
     "updateRequest": "Update request",
     "notificationRequest": "Availability request",
+    "notificationRequestDetails": "{{name}} submitted an availability request for review.",
     "notificationDecision": "Availability decision",
     "stale": "This availability or request has changed. Reload the latest version before reviewing or submitting.",
     "approvalRequired": "Availability changes require a request and manager approval.",
