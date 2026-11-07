@@ -33,7 +33,8 @@ select is(jsonb_array_length(public.customer_favourites_api('favourites-remove',
 select is(jsonb_array_length(public.customer_favourites_api('favourites-list',current_setting('fav.one')::jsonb)),2,'original customer keeps both');
 select throws_ok($$select public.customer_favourites_api('favourites-list',current_setting('fav.one')::jsonb||'{"session_id":"af920000-0000-4000-8000-000000000202"}')$$,'P0001','AUTH_REQUIRED','session must belong to account');
 select throws_ok($$select public.customer_favourites_api('favourites-list','{"user_id":"af920000-0000-4000-8000-000000000103","session_id":"af920000-0000-4000-8000-000000000203"}')$$,'P0001','AUTH_REQUIRED','manager cannot use customer favourites');
-update public.barbers set name='Updated Barber',branch_id='af920000-0000-4000-8000-000000000302' where id='af920000-0000-4000-8000-000000000501';
+insert into public.services(id,branch_id,name,duration,price) values('af920000-0000-4000-8000-000000000402','af920000-0000-4000-8000-000000000302','Destination haircut',30,5);
+update public.barbers set service_ids=array['af920000-0000-4000-8000-000000000402']::uuid[],name='Updated Barber',branch_id='af920000-0000-4000-8000-000000000302' where id='af920000-0000-4000-8000-000000000501';
 select is((select i->>'name' from jsonb_array_elements(public.customer_favourites_api('favourites-list',current_setting('fav.one')::jsonb)) i where i->>'kind'='barber'),'Updated Barber','current name is referenced without a duplicate');
 select is((select i->>'locationChanged' from jsonb_array_elements(public.customer_favourites_api('favourites-list',current_setting('fav.one')::jsonb)) i where i->>'kind'='barber'),'true','moving barber requires location review');
 update public.barbers set status='inactive' where id='af920000-0000-4000-8000-000000000501';

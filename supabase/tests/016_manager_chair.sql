@@ -41,19 +41,20 @@ update public.barbers set status='active',availability='{"monday":{"enabled":tru
 where id='cc030000-0000-4000-8000-000000000301';
 reset role;
 select set_config('request.jwt.claims','{}',true);
+insert into public.customers(id,name,country_code,phone) values('cc030000-0000-4000-8000-000000000501','Chair Customer','+965','59979621');
 insert into public.bookings(id,branch_id,barber_id,date,time,status,added_by_type) values
 ('cc030000-0000-4000-8000-000000000401','cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2035-06-04','10:00','confirmed','customer'),
-('cc030000-0000-4000-8000-000000000402','cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2020-06-01','10:00','completed','customer');
+('cc030000-0000-4000-8000-000000000402','cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2020-06-01','10:00','confirmed','customer');
 select is((select count(*) from public.notifications where entity_id='cc030000-0000-4000-8000-000000000401'),1::bigint,'the manager receives one alert for their own chair');
 select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 set local role authenticated;
 update public.barbers set status='inactive' where id='cc030000-0000-4000-8000-000000000301';
 select is((select count(*) from public.bookings where barber_id='cc030000-0000-4000-8000-000000000301'),2::bigint,'upcoming and past bookings stay visible after closing');
 select throws_ok($$
-insert into public.bookings(branch_id,barber_id,date,time,status,added_by_type) values
-('cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2035-06-04','12:00','confirmed','manager')
+insert into public.bookings(branch_id,barber_id,date,time,status,added_by_type,customer_id,service_ids,duration,price) values
+('cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2035-06-04','12:00','confirmed','manager','cc030000-0000-4000-8000-000000000501',array['cc030000-0000-4000-8000-000000000201']::uuid[],30,5)
 $$,'P0001','SLOT_UNAVAILABLE','even a direct booking write cannot book an inactive chair');
-select lives_ok($$update public.bookings set status='completed' where id='cc030000-0000-4000-8000-000000000401'$$,'existing appointments can still be completed');
+select lives_ok($$update public.bookings set status='completed' where id='cc030000-0000-4000-8000-000000000402'$$,'existing appointments can still be completed');
 select throws_ok($$delete from public.barbers where id='cc030000-0000-4000-8000-000000000301'$$,
 'P0001','CHAIR_HISTORY_PROTECTED','deleting the chair cannot cascade into booking history');
 update public.barbers set status='active' where id='cc030000-0000-4000-8000-000000000301';

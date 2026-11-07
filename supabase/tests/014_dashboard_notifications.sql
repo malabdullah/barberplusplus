@@ -11,9 +11,9 @@ select ok(not has_function_privilege('service_role','private.deliver_dashboard_n
 -- This isolated fixture, including a second barber identity, always rolls back.
 insert into auth.users(id,email,raw_app_meta_data) values ('aa021100-0000-4000-8000-000000000001','notification-barber@example.test','{"role":"barber"}');
 insert into public.branches(id,manager_id,name) values ('aa021100-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000002','Notification fixture');
-insert into public.barbers(id,branch_id,user_id,name) values
-('aa021100-0000-4000-8000-000000000003','aa021100-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000004','First barber'),
-('aa021100-0000-4000-8000-000000000004','aa021100-0000-4000-8000-000000000002','aa021100-0000-4000-8000-000000000001','Second barber');
+insert into public.barbers(id,branch_id,user_id,name,status) values
+('aa021100-0000-4000-8000-000000000003','aa021100-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000004','First barber','inactive'),
+('aa021100-0000-4000-8000-000000000004','aa021100-0000-4000-8000-000000000002','aa021100-0000-4000-8000-000000000001','Second barber','inactive');
 insert into public.user_notification_preferences(user_id,new_bookings,booking_updates,cancellations) values
 ('00000000-0000-4000-8000-000000000002',true,true,true),('00000000-0000-4000-8000-000000000004',true,true,true)
 on conflict(user_id) do update set new_bookings=true,booking_updates=true,cancellations=true;
