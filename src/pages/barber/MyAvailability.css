@@ -1012,3 +1012,49 @@
 [dir="rtl"] .booking-window-input {
   flex-direction: row-reverse;
 }
+
+/* Compact barber workspace */
+.availability-page-compact .page-header{background:none;border:0;padding:0;margin:0;align-items:center}
+.availability-page-compact .page-description{margin:0;color:var(--text-secondary)}
+.availability-page-compact .page-header .btn{width:auto;min-height:44px}
+.availability-page-compact .availability-tabs{flex-direction:row;background:none;border:0;border-bottom:1px solid var(--surface-divider);border-radius:0;padding:0;gap:0}
+.availability-page-compact .availability-tabs .tab-btn{flex:1;min-width:0;min-height:44px;justify-content:center;gap:6px;padding:12px 8px;background:none;color:var(--text-secondary);border-radius:0;border-bottom:2px solid transparent}
+.availability-page-compact .availability-tabs .tab-btn.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary)}
+.availability-page-compact .availability-tabs .tab-btn svg{display:none}
+.availability-page-compact .tab-btn.active .tab-badge{background:var(--accent-glow);color:var(--accent-primary)}
+.availability-barber-requests{padding:0;margin:0;border:0;border-radius:0;background:none}
+.availability-barber-request-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.availability-barber-request-heading h3{font:600 17px/1.4 var(--font-body);margin:0}
+.availability-barber-request-heading .btn{width:auto;min-height:44px;padding:10px 14px}
+.availability-barber-requests details{margin:0;padding-block:12px;border-bottom:1px solid var(--surface-divider)}
+.availability-barber-requests summary{min-height:24px;font-size:14px;font-weight:500}
+.availability-barber-requests .availability-person-items h4{font-size:13px;color:var(--accent-primary);margin-block:12px 0}
+.availability-barber-requests .availability-person-items ul{margin:0}
+.availability-barber-requests .availability-person-items li{justify-content:space-between;font-size:14px}
+.availability-barber-requests .availability-person-items li span{color:var(--text-secondary)}
+.availability-page-compact .schedule-card,.availability-page-compact .section-card,.availability-page-compact .booking-window-card{background:none;border:0;border-radius:0}
+.availability-page-compact .schedule-card-header,.availability-page-compact .section-card-header{padding:0 0 16px;flex-direction:row;align-items:center;border-bottom:1px solid var(--surface-divider)}
+.availability-page-compact .section-card-header .btn{min-height:44px;width:auto}
+.availability-page-compact .schedule-card-title h3,.availability-page-compact .section-card-title h3{font:600 18px/1.4 var(--font-body)}
+.availability-page-compact .schedule-grid{padding:0}
+.availability-page-compact .schedule-row{background:none;border-bottom:1px solid var(--surface-divider);border-radius:0;margin:0;padding:16px 0}
+.availability-page-compact .schedule-footer{background:none;padding:16px 0;border:0}
+.availability-page-compact .booking-window-card{margin:0;padding:16px 0;border-top:1px solid var(--surface-divider)}
+.availability-page-compact .booking-window-header{margin-block-end:12px}
+.availability-page-compact .timeoff-list,.availability-page-compact .vacations-list{padding:0;gap:0}
+.availability-page-compact .timeoff-card,.availability-page-compact .vacation-card{background:none;border-radius:0;border-bottom:1px solid var(--surface-divider);padding:16px 0}
+.availability-page-compact .timeoff-form,.availability-page-compact .vacation-form{border-radius:var(--radius-md);padding:16px;margin-block:16px}
+@media(max-width:768px){
+  .availability-page-compact .page-header{align-items:stretch}
+  .availability-page-compact .page-actions{justify-content:flex-end}
+  .availability-page-compact .page-actions .btn{flex:0 1 auto}
+  .availability-page-compact .schedule-times{padding-inline:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:8px}
+  .availability-page-compact .schedule-time-separator{display:none}
+  .availability-page-compact .schedule-time-select{width:100%;min-width:0;min-height:44px;font-size:16px;padding:8px}
+  .availability-page-compact .hours-copy-btn{margin:0;width:44px;height:44px}
+  .availability-page-compact .schedule-hours{padding-inline:0;text-align:end}
+  .availability-page-compact .timeoff-delete-btn,.availability-page-compact .vacation-delete-btn{width:44px;height:44px;align-self:flex-end}
+  .availability-page-compact .section-card-title svg{display:none}
+  .availability-page-compact .section-card-title{min-width:0}
+  .availability-page-compact .section-card-header .btn{flex-shrink:0}
+}

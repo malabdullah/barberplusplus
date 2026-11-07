@@ -2173,6 +2173,27 @@
     "reasonRequired": "Enter a reason of at least 3 characters for declining.",
     "initial": "Awaiting approved working hours"
   },
+  "availabilityCompact": {
+    "title": "Availability",
+    "hours": "Hours",
+    "breaks": "Breaks",
+    "vacations": "Vacations",
+    "addBreak": "Add break",
+    "removeBreak": "Remove break",
+    "removeVacation": "Remove vacation",
+    "submit": "Send request",
+    "update": "Update request",
+    "requests": "Requests",
+    "noBreaks": "No breaks",
+    "noVacations": "No vacations",
+    "history": "History",
+    "approvedSchedule": "Approved schedule",
+    "submitted": "Request sent",
+    "noChanges": "No changes to send",
+    "approved": "Approved",
+    "declined": "Declined",
+    "blocked": "Approval blocked"
+  },
   "availabilityItems": {
     "hours": "Working hours",
     "break": "Break",

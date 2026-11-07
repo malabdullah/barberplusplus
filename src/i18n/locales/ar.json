@@ -2197,6 +2197,27 @@
     "reasonRequired": "أدخل سبباً للرفض لا يقل عن ثلاثة أحرف.",
     "initial": "بانتظار اعتماد أوقات العمل"
   },
+  "availabilityCompact": {
+    "title": "أوقات العمل",
+    "hours": "ساعات العمل",
+    "breaks": "الاستراحات",
+    "vacations": "الإجازات",
+    "addBreak": "إضافة استراحة",
+    "removeBreak": "إزالة الاستراحة",
+    "removeVacation": "إزالة الإجازة",
+    "submit": "إرسال الطلب",
+    "update": "تحديث الطلب",
+    "requests": "الطلبات",
+    "noBreaks": "لا توجد استراحات",
+    "noVacations": "لا توجد إجازات",
+    "history": "السجل",
+    "approvedSchedule": "الجدول المعتمد",
+    "submitted": "تم إرسال الطلب",
+    "noChanges": "لا توجد تغييرات للإرسال",
+    "approved": "تمت الموافقة",
+    "declined": "تم الرفض",
+    "blocked": "تعذرت الموافقة"
+  },
   "availabilityItems": {
     "hours": "ساعات العمل",
     "break": "استراحة",

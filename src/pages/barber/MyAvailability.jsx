@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useAvailabilityApproval } from '../../hooks/useAvailabilityApproval';
 import AvailabilityApprovalPanel from '../../components/Availability/AvailabilityApprovalPanel';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
@@ -252,11 +252,11 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
         <div className="section-card-header">
           <div className="section-card-title">
             <Coffee size={20} strokeWidth={1.5} />
-            <h3>{t('availability.timeOff')}</h3>
+            <h3>{t('availabilityCompact.breaks')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
-            {t('availability.addTimeOff')}
+            {t('availabilityCompact.addBreak')}
           </button>
         </div>
 
@@ -351,7 +351,6 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
               <input
                 type="text"
                 className="form-input"
-                placeholder={formData.type === 'recurring' ? t('availability.reasonRecurringPlaceholder') : t('availability.reasonOneTimePlaceholder')}
                 aria-label={t('availability.reasonOptional')}
                   value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
@@ -367,7 +366,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                 {t('common.cancel')}
               </button>
               <button className="btn btn-primary" onClick={handleSubmit}>
-                {t('availability.addTimeOff')}
+                {t('availabilityCompact.addBreak')}
               </button>
             </div>
           </div>
@@ -377,8 +376,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
           {timeOffs.length === 0 ? (
             <div className="empty-state">
               <Coffee size={32} strokeWidth={1} />
-              <p>{t('availability.noTimeOffScheduled')}</p>
-              <span>{t('availability.addRecurringOrOneTime')}</span>
+              <p>{t('availabilityCompact.noBreaks')}</p>
             </div>
           ) : (
             <>
@@ -400,7 +398,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                         </span>
                       </div>
                       {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
-                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                      <button className="timeoff-delete-btn" aria-label={t('availabilityCompact.removeBreak')} onClick={() => handleDelete(item.id)}>
                         <Trash2 size={16} strokeWidth={2} />
                       </button>
                     </div>
@@ -426,7 +424,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                         </span>
                       </div>
                       {item.reason && <div className="timeoff-card-reason">{item.reason}</div>}
-                      <button className="timeoff-delete-btn" onClick={() => handleDelete(item.id)}>
+                      <button className="timeoff-delete-btn" aria-label={t('availabilityCompact.removeBreak')} onClick={() => handleDelete(item.id)}>
                         <Trash2 size={16} strokeWidth={2} />
                       </button>
                     </div>
@@ -518,7 +516,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
         <div className="section-card-header">
           <div className="section-card-title">
             <Umbrella size={20} strokeWidth={1.5} />
-            <h3>{t('availability.vacationPeriods')}</h3>
+            <h3>{t('availabilityCompact.vacations')}</h3>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
             <Plus size={16} strokeWidth={2} />
@@ -559,7 +557,6 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
               <input
                 type="text"
                 className="form-input"
-                placeholder={t('availability.vacationReasonPlaceholder')}
                 aria-label={t('availability.reasonOptional')}
                   value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
@@ -585,8 +582,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
           {sortedVacations.length === 0 ? (
             <div className="empty-state">
               <Umbrella size={32} strokeWidth={1} />
-              <p>{t('availability.noVacationsScheduled')}</p>
-              <span>{t('availability.planTimeOff')}</span>
+              <p>{t('availabilityCompact.noVacations')}</p>
             </div>
           ) : (
             sortedVacations.map((item) => {
@@ -605,7 +601,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
                   <div className={`vacation-status-badge ${status}`}>
                     {status === 'upcoming' ? t('availability.upcoming') : t('availability.past')}
                   </div>
-                  <button className="vacation-delete-btn" onClick={() => handleDelete(item.id)}>
+                  <button className="vacation-delete-btn" aria-label={t('availabilityCompact.removeVacation')} onClick={() => handleDelete(item.id)}>
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
                 </div>
@@ -632,24 +628,10 @@ export default function MyAvailability({ targetBarber = null }) {
   const [vacations, setVacations] = useState([]);
   const [maxBookingDays, setMaxBookingDays] = useState(30);
   const [hasChanges, setHasChanges] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const saveStatusTimeoutRef = useRef(null);
   const proposal = useMemo(() => ({ availability: schedule, time_offs: timeOffs, vacations, max_booking_days: Number(maxBookingDays) }), [schedule, timeOffs, vacations, maxBookingDays]);
   const approval = useAvailabilityApproval({ barberId: currentBarber?.id, requestId: params.get('request'), manager: isManager, proposal, onRefresh: app.reloadData });
-
-  // Clear save status after 3 seconds (with proper cleanup)
-  useEffect(() => {
-    if (saveStatus) {
-      saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus(null), 3000);
-      return () => {
-        if (saveStatusTimeoutRef.current) {
-          clearTimeout(saveStatusTimeoutRef.current);
-        }
-      };
-    }
-  }, [saveStatus]);
 
   useEffect(() => {
     if (!approval.seed) return;
@@ -666,7 +648,6 @@ export default function MyAvailability({ targetBarber = null }) {
       [dayKey]: newSchedule,
     }));
     setHasChanges(true);
-    setSaveStatus(null);
   };
 
   const handleAddTimeOff = (timeOff) => {
@@ -696,7 +677,7 @@ export default function MyAvailability({ targetBarber = null }) {
     setIsSubmitting(true);
     try {
       if (await approval.decide(isManager ? (approval.review ? 'approve' : 'direct') : 'submit')) {
-        setHasChanges(false); setSaveStatus('saved');
+        setHasChanges(false);
       }
     } finally { setIsSubmitting(false); }
   };
@@ -707,7 +688,7 @@ export default function MyAvailability({ targetBarber = null }) {
     setTimeOffs(approval.seed.time_offs || []);
     setVacations(approval.seed.vacations || []);
     setMaxBookingDays(approval.seed.max_booking_days || 30);
-    setHasChanges(false); setSaveStatus(null);
+    setHasChanges(false);
   };
 
   const copyHoursToAll = (sourceDay) => {
@@ -718,7 +699,6 @@ export default function MyAvailability({ targetBarber = null }) {
     });
     setSchedule(newSchedule);
     setHasChanges(true);
-    setSaveStatus(null);
   };
 
   const workingDays = Object.values(schedule).filter((d) => d.enabled).length;
@@ -737,13 +717,13 @@ export default function MyAvailability({ targetBarber = null }) {
     && (!isManager || (!approval.checking && !approval.error && approval.conflicts.length === 0 && (!approval.pendingItems.length || currentBarber.managerChair)));
 
   return (
-    <div className="availability-page">
+    <div className={`availability-page ${isManager ? '' : 'availability-page-compact'}`}>
       {validationError && <p role="alert">{validationError}</p>}
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
-          <h2 className="page-title">{targetBarber ? t('managerAudit.barberSchedule', { name: currentBarber.name }) : t('availability.myAvailability')}</h2>
+          <h2 className="page-title">{targetBarber ? t('managerAudit.barberSchedule', { name: currentBarber.name }) : t('availabilityCompact.title')}</h2>
           <p className="page-description">
-            {t('availability.manageScheduleAt')} {barberBranch?.name}
+            {barberBranch?.name}
           </p>
         </div>
         <div className="page-actions">
@@ -763,24 +743,17 @@ export default function MyAvailability({ targetBarber = null }) {
             ) : (
               <>
                 <Save size={18} strokeWidth={2} />
-                {t(isManager ? (approval.review ? 'availabilityApproval.approve' : 'availabilityApproval.saveApproved') : (approval.pending ? 'availabilityApproval.updateRequest' : 'availabilityApproval.submit'))}
+                {t(isManager ? (approval.review ? 'availabilityApproval.approve' : 'availabilityApproval.saveApproved') : (approval.pending ? 'availabilityCompact.update' : 'availabilityCompact.submit'))}
               </>
             )}
           </button>
         </div>
       </div>
 
-      {saveStatus === 'saved' && (
-        <div className="save-notification animate-fade-in">
-          <Check size={16} strokeWidth={2} />
-          <span>{t(isManager ? 'availabilityApproval.approved' : 'availabilityApproval.submitted')}</span>
-        </div>
-      )}
-
-      <AvailabilityApprovalPanel approval={approval} manager={isManager} barberId={currentBarber.id} />
+      <AvailabilityApprovalPanel approval={{ ...approval, notice: hasChanges ? null : approval.notice }} manager={isManager} barberId={currentBarber.id} />
 
       {/* Summary Cards */}
-      <div className="availability-summary animate-fade-in-up stagger-1">
+      {isManager && <div className="availability-summary animate-fade-in-up stagger-1">
         <div className="summary-card">
           <div className="summary-icon">
             <Calendar size={24} strokeWidth={1.5} />
@@ -817,31 +790,34 @@ export default function MyAvailability({ targetBarber = null }) {
             <div className="summary-label">{t('availability.upcomingVacations')}</div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Tab Navigation */}
       <div className="availability-tabs animate-fade-in-up stagger-2">
         <button
+          aria-pressed={activeTab === 'schedule'}
           className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
           <Calendar size={18} strokeWidth={2} />
-          {t('availability.weeklySchedule')}
+          {t('availabilityCompact.hours')}
         </button>
         <button
+          aria-pressed={activeTab === 'timeoffs'}
           className={`tab-btn ${activeTab === 'timeoffs' ? 'active' : ''}`}
           onClick={() => setActiveTab('timeoffs')}
         >
           <Coffee size={18} strokeWidth={2} />
-          {t('availability.timeOff')}
+          {t('availabilityCompact.breaks')}
           {timeOffs.length > 0 && <span className="tab-badge">{timeOffs.length}</span>}
         </button>
         <button
+          aria-pressed={activeTab === 'vacations'}
           className={`tab-btn ${activeTab === 'vacations' ? 'active' : ''}`}
           onClick={() => setActiveTab('vacations')}
         >
           <Umbrella size={18} strokeWidth={2} />
-          {t('availability.vacations')}
+          {t('availabilityCompact.vacations')}
           {upcomingVacations > 0 && <span className="tab-badge">{upcomingVacations}</span>}
         </button>
       </div>
@@ -853,9 +829,9 @@ export default function MyAvailability({ targetBarber = null }) {
           <div className="schedule-card-header">
             <div className="schedule-card-title">
               <Clock size={20} strokeWidth={1.5} />
-              <h3>{t('availability.weeklySchedule')}</h3>
+              <h3>{t('availabilityCompact.hours')}</h3>
             </div>
-            <div className="schedule-legend">
+            {isManager && <div className="schedule-legend">
               <span className="schedule-legend-item">
                 <span className="legend-dot active"></span>
                 {t('availability.working')}
@@ -864,7 +840,7 @@ export default function MyAvailability({ targetBarber = null }) {
                 <span className="legend-dot off"></span>
                 {t('availability.dayOff')}
               </span>
-            </div>
+            </div>}
           </div>
 
           <div className="schedule-grid">
@@ -900,7 +876,6 @@ export default function MyAvailability({ targetBarber = null }) {
             <Calendar size={20} strokeWidth={1.5} />
             <h3>{t('availability.bookingWindow')}</h3>
           </div>
-          <p className="booking-window-desc">{t('availability.bookingWindowDesc')}</p>
           <div className="booking-window-input">
             <input
               type="number"
@@ -912,7 +887,6 @@ export default function MyAvailability({ targetBarber = null }) {
                 const value = Math.min(365, Math.max(1, parseInt(e.target.value) || 30));
                 setMaxBookingDays(value);
                 setHasChanges(true);
-                setSaveStatus(null);
               }}
               className="form-input"
             />
@@ -943,31 +917,7 @@ export default function MyAvailability({ targetBarber = null }) {
         />
       )}
 
-      {/* Tips */}
-      <div className="availability-tips animate-fade-in-up stagger-3">
-        <h4>{t('availability.tips')}</h4>
-        <ul>
-          {activeTab === 'schedule' && (
-            <>
-              <li>{t('availability.tipToggle')}</li>
-              <li>{t('availability.tipBookingHours')}</li>
-            </>
-          )}
-          {activeTab === 'timeoffs' && (
-            <>
-              <li>{t('availability.tipTimeOffsRecurring')}</li>
-              <li>{t('availability.tipTimeOffsUse')}</li>
-            </>
-          )}
-          {activeTab === 'vacations' && (
-            <>
-              <li>{t('availability.tipVacationsBlock')}</li>
-              <li>{t('availability.tipVacationsNoBook')}</li>
-            </>
-          )}
-          <li>{t('availabilityApproval.approvalTip')}</li>
-        </ul>
-      </div>
+
     </div>
   );
 }
