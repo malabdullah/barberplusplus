@@ -1,6 +1,7 @@
-import ConfirmDialog from '../../components/UI/ConfirmDialog';
-import { checkBookingConflicts } from '../../utils/bookingConflicts';
-import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAvailabilityApproval } from '../../hooks/useAvailabilityApproval';
+import AvailabilityApprovalPanel from '../../components/Availability/AvailabilityApprovalPanel';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Clock,
@@ -43,7 +44,7 @@ const convertAvailabilityFormat = (availability) => {
     } else if (dayData && typeof dayData === 'object' && 'enabled' in dayData) {
       converted[key] = dayData;
     } else {
-      converted[key] = DEFAULT_SCHEDULE[key];
+      converted[key] = { ...DEFAULT_SCHEDULE[key], enabled: false };
     }
   });
   return converted;
@@ -168,7 +169,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
 
   const getDayLabel = (dayKey) => {
     const day = DAYS_OF_WEEK.find((d) => d.key === dayKey);
-    return day ? day.label : dayKey;
+    return day ? t(`days.${dayKey}`) : dayKey;
   };
 
   const formatDate = (dateStr) => {
@@ -295,7 +296,7 @@ function TimeOffSection({ timeOffs, onAdd, onDelete, setHasChanges, schedule, t 
                   >
                     {DAYS_OF_WEEK.map((d) => (
                       <option key={d.key} value={d.key}>
-                        {d.label}
+                        {t(`days.${d.key}`)}
                       </option>
                     ))}
                   </select>
@@ -455,6 +456,7 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
     setError('');
 
     // Check if end date is after start date
+    if (!formData.startDate || !formData.endDate) { setError(t('availability.errorSelectDate')); return; }
     if (formData.startDate > formData.endDate) {
       setError(t('availability.errorEndDateAfterStart'));
       return;
@@ -621,8 +623,8 @@ export default function MyAvailability({ targetBarber = null }) {
   const app = useApp();
   const currentBarber = targetBarber || app.currentBarber;
   const barberBranch = targetBarber ? app.branches.find(shop => shop.id === targetBarber.branchId) : app.barberBranch;
-  const { updateBarber, bookings } = app;
-  const [affected, setAffected] = useState(null);
+  const [params] = useSearchParams();
+  const isManager = app.userRole === 'manager';
   const [validationError, setValidationError] = useState('');
   const [activeTab, setActiveTab] = useState('schedule');
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
@@ -632,8 +634,10 @@ export default function MyAvailability({ targetBarber = null }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const initializedBarber = useRef(null);
+
   const saveStatusTimeoutRef = useRef(null);
+  const proposal = useMemo(() => ({ availability: schedule, time_offs: timeOffs, vacations, max_booking_days: Number(maxBookingDays) }), [schedule, timeOffs, vacations, maxBookingDays]);
+  const approval = useAvailabilityApproval({ barberId: currentBarber?.id, requestId: params.get('request'), manager: isManager, proposal, onRefresh: app.reloadData });
 
   // Clear save status after 3 seconds (with proper cleanup)
   useEffect(() => {
@@ -647,20 +651,14 @@ export default function MyAvailability({ targetBarber = null }) {
     }
   }, [saveStatus]);
 
-  // Only initialize state from currentBarber on first load, not on every change
   useEffect(() => {
-    if (currentBarber && initializedBarber.current !== currentBarber.id) {
-      if (currentBarber.availability) {
-        setSchedule(convertAvailabilityFormat(currentBarber.availability));
-      }
-      setTimeOffs(currentBarber.timeOffs || []);
-      setVacations(currentBarber.vacations || []);
-      setMaxBookingDays(currentBarber.maxBookingDays || 30);
-      initializedBarber.current = currentBarber.id;
-      setHasChanges(false);
-      setAffected(null);
-    }
-  }, [currentBarber]);
+    if (!approval.seed) return;
+    setSchedule(convertAvailabilityFormat(approval.seed.availability || {}));
+    setTimeOffs(approval.seed.time_offs || []);
+    setVacations(approval.seed.vacations || []);
+    setMaxBookingDays(approval.seed.max_booking_days || 30);
+    setHasChanges(false);
+  }, [approval.seed]);
 
   const handleDayChange = (dayKey, newSchedule) => {
     setSchedule((prev) => ({
@@ -687,7 +685,7 @@ export default function MyAvailability({ targetBarber = null }) {
     setVacations((prev) => prev.filter((v) => v.id !== id));
   };
 
-  const handleSave = async (confirmed = false) => {
+  const handleSave = async () => {
     setValidationError('');
     if (Object.values(schedule).some(day => day.enabled && (!day.start || !day.end || day.start >= day.end))) {
       setValidationError(t('managerAudit.invalidHours')); return;
@@ -695,46 +693,21 @@ export default function MyAvailability({ targetBarber = null }) {
     if (!Number.isInteger(Number(maxBookingDays)) || maxBookingDays < 1 || maxBookingDays > 365) {
       setValidationError(t('managerAudit.dateUnavailable')); return;
     }
-    const next = { ...currentBarber, availability: schedule, timeOffs, vacations };
-    const conflicts = bookings.filter(booking => booking.barberId === currentBarber.id
-      && ['pending','confirmed'].includes(booking.status)
-      && new Date(`${booking.date}T${booking.time.slice(0,5)}:00+03:00`).getTime() > Date.now()
-      && checkBookingConflicts({ ...booking, barberData: next, existingBookings: [] }).hasConflict);
-    if (confirmed !== true && conflicts.length) { setAffected(conflicts); return; }
-    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await updateBarber(currentBarber.id, {
-        availability: schedule,
-        timeOffs: timeOffs,
-        vacations: vacations,
-        maxBookingDays: maxBookingDays,
-      });
-      setHasChanges(false);
-      setSaveStatus('saved');
-      // Timeout handled by useEffect with proper cleanup
-    } catch (error) {
-      console.error('Error saving availability:', error);
-      setSaveStatus('error');
-      // Timeout handled by useEffect with proper cleanup
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (await approval.decide(isManager ? (approval.review ? 'approve' : 'direct') : 'submit')) {
+        setHasChanges(false); setSaveStatus('saved');
+      }
+    } finally { setIsSubmitting(false); }
   };
 
   const handleReset = () => {
-    if (currentBarber) {
-      if (currentBarber.availability) {
-        setSchedule(convertAvailabilityFormat(currentBarber.availability));
-      } else {
-        setSchedule(DEFAULT_SCHEDULE);
-      }
-      setTimeOffs(currentBarber.timeOffs || []);
-      setVacations(currentBarber.vacations || []);
-      setMaxBookingDays(currentBarber.maxBookingDays || 30);
-    }
-    setHasChanges(false);
-    setSaveStatus(null);
+    if (!approval.seed) return;
+    setSchedule(convertAvailabilityFormat(approval.seed.availability || {}));
+    setTimeOffs(approval.seed.time_offs || []);
+    setVacations(approval.seed.vacations || []);
+    setMaxBookingDays(approval.seed.max_booking_days || 30);
+    setHasChanges(false); setSaveStatus(null);
   };
 
   const copyHoursToAll = (sourceDay) => {
@@ -758,15 +731,14 @@ export default function MyAvailability({ targetBarber = null }) {
   }).length;
 
   if (!currentBarber) return null;
+  if (approval.loading) return <p role="status">{t('common.loading')}</p>;
+  if (!approval.detail) return <div><p role="alert">{t('common.error')}</p><button className="btn btn-secondary" onClick={approval.reload}>{t('availabilityApproval.reload')}</button></div>;
+  const canSave = !approval.busy && !isSubmitting && (hasChanges || approval.review || (!isManager && !approval.detail.barber.availability_approved_at))
+    && (!isManager || (!approval.checking && !approval.error && approval.conflicts.length === 0));
 
   return (
     <div className="availability-page">
       {validationError && <p role="alert">{validationError}</p>}
-      <ConfirmDialog isOpen={Boolean(affected)} onClose={() => setAffected(null)}
-        onConfirm={() => handleSave(true)} variant="warning"
-        title={t('managerAudit.affectedTitle')}
-        message={t('managerAudit.affectedMessage', { appointments: affected?.map(booking => `${booking.date} ${booking.time.slice(0,5)} — ${booking.customerName || booking.id.slice(0,8)}`).join(', ') })}
-        confirmText={t('managerAudit.saveAvailability')} cancelText={t('common.cancel')} />
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{targetBarber ? t('managerAudit.barberSchedule', { name: currentBarber.name }) : t('availability.myAvailability')}</h2>
@@ -782,16 +754,16 @@ export default function MyAvailability({ targetBarber = null }) {
             </button>
           )}
           <button
-            className={`btn btn-primary ${!hasChanges || isSubmitting ? 'disabled' : ''}`}
+            className={`btn btn-primary ${!canSave ? 'disabled' : ''}`}
             onClick={() => handleSave()}
-            disabled={!hasChanges || isSubmitting}
+            disabled={!canSave}
           >
             {isSubmitting ? (
               t('common.saving')
             ) : (
               <>
                 <Save size={18} strokeWidth={2} />
-                {t('common.saveChanges')}
+                {t(isManager ? (approval.review ? 'availabilityApproval.approve' : 'availabilityApproval.saveApproved') : (approval.pending ? 'availabilityApproval.updateRequest' : 'availabilityApproval.submit'))}
               </>
             )}
           </button>
@@ -801,9 +773,11 @@ export default function MyAvailability({ targetBarber = null }) {
       {saveStatus === 'saved' && (
         <div className="save-notification animate-fade-in">
           <Check size={16} strokeWidth={2} />
-          <span>{t('common.changesSaved')}</span>
+          <span>{t(isManager ? 'availabilityApproval.approved' : 'availabilityApproval.submitted')}</span>
         </div>
       )}
+
+      <AvailabilityApprovalPanel approval={approval} manager={isManager} barberId={currentBarber.id} />
 
       {/* Summary Cards */}
       <div className="availability-summary animate-fade-in-up stagger-1">
@@ -903,7 +877,7 @@ export default function MyAvailability({ targetBarber = null }) {
             {DAYS_OF_WEEK.map((day) => (
               <DayScheduleRow
                 key={day.key}
-                day={day}
+                day={{ ...day, label: t(`days.${day.key}`) }}
                 schedule={schedule[day.key]}
                 onChange={(newSchedule) => handleDayChange(day.key, newSchedule)}
                 onCopyToAll={() => copyHoursToAll(day.key)}

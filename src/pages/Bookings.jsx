@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router-dom';
 import { bookingServices } from '../utils/bookingServices';
 import { useNotificationBooking } from '../hooks/useNotificationBooking';
 import React, { useState, useMemo, useEffect, memo } from 'react';
@@ -253,6 +254,10 @@ const BookingDetails = memo(function BookingDetails({
 
 export default function Bookings() {
   const { t, i18n } = useTranslation();
+  const [reviewParams] = useSearchParams();
+  const returnBarber = reviewParams.get('reviewBarber');
+  const returnRequest = reviewParams.get('reviewRequest');
+  const safeId = value => /^[0-9a-f-]{36}$/i.test(value || '');
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const {
     branchBookings,
@@ -368,6 +373,7 @@ export default function Bookings() {
 
   return (
     <div className="bookings-page manager-bookings-page">
+      {safeId(returnBarber) && <Link className="btn btn-secondary" to={`/dashboard/barbers/${returnBarber}/schedule${safeId(returnRequest) ? `?request=${returnRequest}` : ''}`}>{t('availabilityApproval.returnReview')}</Link>}
       {statusError && <p className="error-banner" role="alert">{statusError}</p>}
       {notificationBookingUnavailable && <p className="alert alert-info" role="status">{t('notifications.bookingUnavailable')}</p>}
       <div className="page-header animate-fade-in">

@@ -25,6 +25,7 @@ import Barbers from './pages/Barbers';
 import AddBarber from './pages/AddBarber';
 import EditBarber from './pages/EditBarber';
 import BarberSchedule from './pages/BarberSchedule';
+import AvailabilityRequests from './pages/AvailabilityRequests';
 import Bookings from './pages/Bookings';
 import Settings from './pages/Settings';
 import BarberDashboard from './pages/barber/BarberDashboard';
@@ -212,6 +213,7 @@ function AppRoutes() {
         <Route path="barbers/new" element={<AddBarber />} />
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
         <Route path="barbers/:barberId/schedule" element={<BarberSchedule />} />
+        <Route path="availability-requests" element={<AvailabilityRequests />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="my-chair" element={<MyChair />} />
         <Route path="logs" element={<Logs />} />

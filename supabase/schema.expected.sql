@@ -509,8 +509,8 @@ begin
   end if;
   if v_booking.id is null then
     select * into v_barber from public.barbers where id = (p_data ->> 'barber_id')::uuid
-      and status = 'active';
-    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active';
+      and status = 'active' for share;
+    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' for share;
     if v_barber.id is null or v_branch.id is null
        or v_branch.id is distinct from (p_data ->> 'branch_id')::uuid then
       raise exception 'INVALID_SELECTION';
@@ -1619,6 +1619,8 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     "vacations" "jsonb" DEFAULT '[]'::"jsonb",
     "max_booking_days" integer DEFAULT 30,
     "manager_chair" boolean DEFAULT false NOT NULL,
+    "availability_revision" integer DEFAULT 0 NOT NULL,
+    "availability_approved_at" timestamp with time zone DEFAULT "now"(),
     CONSTRAINT "barbers_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text", 'on_leave'::"text"]))),
     CONSTRAINT "max_booking_days_range" CHECK ((("max_booking_days" >= 1) AND ("max_booking_days" <= 365)))
 );
@@ -3645,3 +3647,12 @@ CREATE OR REPLACE TRIGGER "validate_booking_integrity" BEFORE INSERT OR UPDATE O
 CREATE OR REPLACE TRIGGER "validate_shop" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 
 CREATE OR REPLACE TRIGGER "validate_service" BEFORE INSERT OR DELETE OR UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
+
+CREATE OR REPLACE FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$ select private.availability_api(p_action,p_data); $$;
+ALTER FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+REVOKE ALL ON FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."barber_availability"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();

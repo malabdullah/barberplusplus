@@ -650,12 +650,13 @@ export function AppProvider({ children }) {
       ]);
       setBranches(branchesData);
       setBarbers(barbersData);
+      if (userRole === 'barber') setBarberProfile(barbersData.find(barber => barber.userId === user?.id) || null);
       setServices(servicesData);
       setBookings(bookingsData);
     } catch (error) {
       logger.error('Error reloading data:', error);
     }
-  }, []);
+  }, [userRole, user?.id]);
 
   // Reconcile counts from the server; repeated read actions are idempotent.
   const markNotificationRead = useCallback(async (notificationId) => {
