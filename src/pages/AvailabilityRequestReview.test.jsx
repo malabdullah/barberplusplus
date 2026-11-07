@@ -33,7 +33,7 @@ it('blocks only this conflicting item and links to its appointment resolution', 
 it('submits a modified break as a single item decision without a bundled proposal', async () => {
   setup(); await screen.findByRole('button', { name: 'availabilityItems.modify' });
   fireEvent.click(screen.getByRole('button', { name: 'availabilityItems.modify' }));
-  fireEvent.change(screen.getByRole('combobox', { name: 'availability.from' }), { target: { value: '12:30' } });
+  fireEvent.change(screen.getByLabelText('availability.from', { exact: true }), { target: { value: '12:30' } });
   await waitFor(() => expect(screen.getByRole('button', { name: 'availabilityItems.approveModified' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'availabilityItems.approveModified' }));
   await screen.findByText('availabilityItems.approvedNotice');
