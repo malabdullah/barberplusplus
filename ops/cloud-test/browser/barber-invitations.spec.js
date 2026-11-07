@@ -17,7 +17,7 @@ for (const language of ['en','ar']) for (const theme of ['light','dark']) test(`
  await page.setViewportSize({width:360,height:800});
  await page.addInitScript(({language,theme})=>{localStorage.setItem('barber-language',language);localStorage.setItem('barber-theme',theme);},{language,theme});
  await managerLogin(page); await page.goto('/dashboard/barbers/new');
- await expect(page.locator('#invite-email')).toBeVisible(); expect(await page.locator('form input').count()).toBe(1);
+ await expect(page.locator('#invite-email')).toBeVisible(); await expect(page.locator('form button[type="submit"]')).toBeEnabled(); await expect(page.locator('.add-branch-header p')).toContainText(manager.shopName); expect(await page.locator('form input').count()).toBe(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.screenshot({path:'.cloud-test/invitation-'+engine+'-'+language+'-'+theme+'.png',fullPage:true});
 });
