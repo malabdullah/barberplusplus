@@ -171,7 +171,7 @@ const TopBar = memo(function TopBar({
 
       <div className="topbar-right" ref={dropdownRef}>
         {/* Branch Selector (Manager) or Branch Info (Barber) */}
-        {showBranchSelector ? (
+        {showBranchSelector ? branches.length > 0 && (
           <div className="topbar-branch-selector">
             <button
               className="topbar-branch-btn"

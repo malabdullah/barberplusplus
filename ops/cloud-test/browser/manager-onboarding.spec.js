@@ -103,6 +103,7 @@ if (engine === 'chromium') test('new manager verifies email, creates a shop and 
   await expect(page).toHaveURL(/\/dashboard$/);
   await mailContext.close();
   await expect(page.locator('#first-shop-title')).toHaveText('Welcome to your workspace');
+  await expect(page.locator('.topbar-branch-selector')).toHaveCount(0);
   await expect(page.locator('.dashboard .metric-card')).toHaveCount(0);
   await expect(page.locator('.dashboard').getByRole('link', { name: 'New Booking', exact: true })).toHaveCount(0);
   await page.screenshot({ path: screenshot('first-workspace'), fullPage: true });
