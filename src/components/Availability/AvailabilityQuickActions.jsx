@@ -5,7 +5,7 @@ import { availabilityService } from '../../services/availability.service';
 import { getErrorMessage } from '../../utils/errorMessages';
 import { AvailabilityItemEditor } from './AvailabilityItem';
 
-export default function AvailabilityQuickActions({ item, onDecided }) {
+export default function AvailabilityQuickActions({ item, onDecided, onAction }) {
   const { t } = useTranslation();
   const reasonId = useId();
   const lock = useRef(false);
@@ -31,6 +31,7 @@ export default function AvailabilityQuickActions({ item, onDecided }) {
   }, [mode, item.id, value]);
   const decide = async action => {
     if (lock.current) return;
+    onAction?.();
     lock.current = true; setBusy(true); setError(null);
     try {
       const result = await availabilityService.call(action, { request_id: item.id, value, note: action === 'decline' ? note.trim() : '' });
@@ -39,7 +40,7 @@ export default function AvailabilityQuickActions({ item, onDecided }) {
     } catch (failure) { setError(failure); }
     finally { lock.current = false; setBusy(false); }
   };
-  const toggle = next => { setMode(previous => previous === next ? null : next); setValue(item.requested_value); setError(null); setCheckedValue(null); };
+  const toggle = next => { onAction?.(); setMode(previous => previous === next ? null : next); setValue(item.requested_value); setError(null); setCheckedValue(null); };
   return <div className="availability-quick-review" aria-busy={busy}>
     <div className="availability-quick-actions">
       <button className="btn btn-primary" disabled={busy || mode === 'modify' || conflicts.length > 0} onClick={() => decide('approve')}>{t('availabilityItems.approve')}</button>

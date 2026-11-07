@@ -21,6 +21,7 @@ export default function AvailabilityRequests() {
   const [notice, setNotice] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [result, setResult] = useState({ requests: [], loading: true });
+  useEffect(() => { setNotice(null); }, [shopId, barberId, status, category, page]);
   useEffect(() => { setShopId(selectedBranchId || ''); setPage(0); }, [selectedBranchId]);
   useEffect(() => {
     let current = true; setResult({ requests: [], loading: true });
@@ -72,7 +73,7 @@ export default function AvailabilityRequests() {
           {request.review_note && <p>{request.review_note}</p>}
           <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}`}>{t('availabilityItems.details')}</Link>
         </div>
-        {request.status === 'pending' && <AvailabilityQuickActions item={request} onDecided={decided} />}
+        {request.status === 'pending' && <AvailabilityQuickActions item={request} onDecided={decided} onAction={() => setNotice(null)} />}
       </article>;
     })}</div>
     <div className="page-actions"><button className="btn btn-secondary" disabled={page === 0 || result.loading} onClick={() => setPage(value => value - 1)}>{t('common.previous')}</button>
