@@ -88,6 +88,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 
       <div className="barber-card-content">
         <h3 className="barber-name">{barber.name}</h3>
+        {!barber.availabilityApprovedAt && <p>{t('availabilityApproval.initial')}</p>}
         <div className="barber-status-row">
           <div className={`barber-status ${barber.status}`}>
             {barber.status === 'active' ? t('common.active') : t('barbers.away')}
@@ -274,6 +275,8 @@ export default function Barbers() {
           {t('barbers.addBarber')}
         </Link>
       </div>
+
+      <Link className="btn btn-secondary" to="/dashboard/availability-requests">{t('availabilityApproval.requests')}</Link>
 
       {/* Search Bar */}
       <div className="barbers-toolbar animate-fade-in-up stagger-1">

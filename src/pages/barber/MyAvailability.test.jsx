@@ -1,0 +1,31 @@
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+const state = vi.hoisted(() => ({ app: {}, call: vi.fn() }));
+vi.mock('../../context/AppContext', () => ({ useApp: () => state.app }));
+vi.mock('../../services/availability.service', () => ({ availabilityService: { call: (...args) => state.call(...args) } }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: key => key, i18n: { language: 'en' } }) }));
+import MyAvailability from './MyAvailability';
+const barber = { id: 'staff', branchId: 'shop', name: 'Omar', availability: { monday: { enabled: true, start: '09:00', end: '18:00' } }, maxBookingDays: 30 };
+const detail = { barber: { availability_revision: 2, availability_approved_at: '2026-11-01', availability: barber.availability, max_booking_days: 30 }, requests: [{ id: 'request', status: 'pending', base_revision: 2, proposal: { availability: barber.availability, time_offs: [], vacations: [], max_booking_days: 30 } }] };
+beforeEach(() => { state.call.mockReset(); state.app = { userRole: 'manager', currentBarber: barber, branches: [{ id: 'shop', name: 'Shop' }], reloadData: vi.fn(), updateBarber: vi.fn() }; });
+afterEach(cleanup);
+it('blocks manager approval and provides a booking-resolution link when the server finds a conflict', async () => {
+  state.call.mockImplementation(async action => action === 'get' ? detail : { blocked: true, conflicts: [{ id: 'booking', date: '2026-11-10', time: '10:00', duration: 30, customer_name: 'Customer' }] });
+  render(<MemoryRouter initialEntries={['/?request=request']}><MyAvailability targetBarber={barber} /></MemoryRouter>);
+  await waitFor(() => expect(screen.getByRole('link', { name: 'availabilityApproval.resolveBooking' })).toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'availabilityApproval.approve' })).toBeDisabled();
+  expect(screen.getByRole('link', { name: 'availabilityApproval.resolveBooking' })).toHaveAttribute('href', '/dashboard/bookings?booking=booking&reviewBarber=staff&reviewRequest=request');
+  expect(state.app.updateBarber).not.toHaveBeenCalled();
+});
+it('submits a barber proposal instead of directly changing approved availability', async () => {
+  state.app.userRole = 'barber'; state.app.barberBranch = { name: 'Shop' };
+  state.call.mockImplementation(async action => action === 'get' ? { ...detail, requests: [] } : { request: { status: 'pending' } });
+  render(<MemoryRouter><MyAvailability /></MemoryRouter>);
+  const horizon = await screen.findByRole('spinbutton', { name: 'availability.bookingWindow' });
+  fireEvent.change(horizon, { target: { value: '31' } });
+  fireEvent.click(screen.getByRole('button', { name: 'availabilityApproval.submit' }));
+  await waitFor(() => expect(state.call).toHaveBeenCalledWith('submit', expect.objectContaining({ barber_id: 'staff', base_revision: 2, proposal: expect.objectContaining({ max_booking_days: 31 }) })));
+  expect(state.app.updateBarber).not.toHaveBeenCalled();
+});

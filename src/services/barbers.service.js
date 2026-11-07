@@ -24,6 +24,8 @@ const toFrontend = (barber) => {
     avatarUrl: barber.avatar_url,
     services: barber.service_ids || [],
     availability: barber.availability,
+    availabilityRevision: barber.availability_revision,
+    availabilityApprovedAt: barber.availability_approved_at,
     timeOffs: barber.time_offs || [],
     vacations: barber.vacations || [],
     maxBookingDays: barber.max_booking_days ?? 30,
