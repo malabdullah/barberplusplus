@@ -22,8 +22,8 @@ export default function AddBarber() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await addBarber(data);
-      navigate('/dashboard/barbers');
+      const created = await addBarber(data);
+      navigate('/dashboard/barbers', { state: { imageWarning: created?.imageWarning } });
     } catch (err) {
       logErrorDev('Error creating barber:', err);
       setError({ message: err.message === 'SHOP_REQUIRED' ? t('barbers.selectShopFirst') : getErrorMessage(err, t('errors.createBarberFailed'), t), field: /PHONE_IN_USE/.test(err.message) ? 'phone' : undefined });

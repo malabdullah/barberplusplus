@@ -1,3 +1,5 @@
+import { validateImageFile } from '../../utils/imageValidation';
+import { getErrorMessage as imageErrorMessage } from '../../utils/errorMessages';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
@@ -51,6 +53,8 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      try { validateImageFile(file); } catch (error) { setErrors(previous => ({ ...previous, image: imageErrorMessage(error, t('common.error'), t) })); e.target.value = ''; return; }
+      setErrors(previous => ({ ...previous, image: null }));
       // Create object URL for preview (more efficient than base64)
       const previewUrl = URL.createObjectURL(file);
       setFormData(prev => ({
@@ -86,6 +90,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
         newErrors.phone = t('validation.invalidPhone');
       }
     }
+    if (formData.isActive && !formData.services.length) newErrors.services = t('managerAudit.servicesRequired');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -105,6 +110,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
       <div className="form-section">
         <h4 className="form-section-title">{t('profile.title')}</h4>
 
+        {errors.image && <p role="alert">{errors.image}</p>}
         <div className="profile-picture-upload">
           <div className="profile-picture-preview">
             {formData.profilePicture ? (
@@ -120,7 +126,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             {t('barbers.uploadPhoto')}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
@@ -226,10 +232,11 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
 
       <div className="form-section">
         <h4 className="form-section-title">{t('barbers.assignedServices')}</h4>
+        {errors.services && <p role="alert" className="form-error">{errors.services}</p>}
 
         {services.length > 0 ? (
           <div className="services-select">
-            {services.map((service) => (
+            {services.filter(service => service.status !== 'inactive').map((service) => (
               <label key={service.id} className="service-checkbox">
                 <input
                   type="checkbox"

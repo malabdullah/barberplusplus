@@ -53,7 +53,7 @@ const toDatabase = (data) => {
   }
   // Handle both profilePicture and avatarUrl (profilePicture takes precedence)
   if (data.profilePicture !== undefined) {
-    result.avatar_url = data.profilePicture;
+    result.avatar_url = data.profilePicture?.startsWith('blob:') ? undefined : data.profilePicture;
   } else if (data.avatarUrl !== undefined) {
     result.avatar_url = data.avatarUrl;
   }

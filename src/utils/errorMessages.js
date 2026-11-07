@@ -6,6 +6,22 @@
 
 // Common Supabase/PostgreSQL error patterns
 const ERROR_PATTERNS = {
+  'BOOKING_NOT_FINISHED': 'managerAudit.notFinished',
+  'CUSTOMER_REQUIRED': 'managerAudit.customerRequired',
+  'CUSTOMER_CHANGED': 'managerAudit.customerChanged',
+  'INVALID_CUSTOMER_NAME': 'managerAudit.nameLength',
+  'INVALID_BOOKING_TOTALS': 'managerAudit.pricesChanged',
+  'INVALID_BOOKING_DETAILS': 'managerAudit.invalidBooking',
+  'INVALID_SERVICE_ASSIGNMENT': 'managerAudit.servicesRequired',
+  'BARBER_SERVICES_REQUIRED': 'managerAudit.servicesRequired',
+  'BARBER_HOURS_REQUIRED': 'managerAudit.invalidHours',
+  'INVALID_SHOP_HOURS': 'managerAudit.invalidHours',
+  'INVALID_BARBER_HOURS': 'managerAudit.invalidHours',
+  'SERVICE_HAS_HISTORY': 'managerAudit.archiveRequired',
+  'BOOKING_DATE_UNAVAILABLE': 'managerAudit.dateUnavailable',
+  'SLOT_UNAVAILABLE': 'managerAudit.slotUnavailable',
+  'INVALID_SERVICE': 'managerAudit.invalidService',
+
   'PHONE_IN_USE': 'errors.phoneInUse',
   'PHONE_REGISTRATION_CONFLICT': 'errors.phoneRegistrationConflict',
   // Authentication errors

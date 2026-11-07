@@ -1,3 +1,4 @@
+import { bookingServices } from '../utils/bookingServices';
 import { useNotificationBooking } from '../hooks/useNotificationBooking';
 import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -164,7 +165,7 @@ const BookingDetails = memo(function BookingDetails({
 
       <div className="booking-details-price">
         <span>{t('bookings.total')}</span>
-        <span className="price">{booking.price} {t('common.currency')}</span>
+        <span className="price">{Number(booking.price).toFixed(3)} {t('common.currency')}</span>
       </div>
 
       <ModifyServicesSection
@@ -226,7 +227,7 @@ const BookingDetails = memo(function BookingDetails({
         </div>
       )}
 
-      {barberData?.managerChair && ['pending', 'confirmed'].includes(booking.status)
+      {['pending', 'confirmed'].includes(booking.status)
         && booking.date >= getKuwaitDate() && (
           <button className="btn btn-secondary" onClick={onReschedule}>{t('chair.reschedule')}</button>
         )}
@@ -240,7 +241,7 @@ const BookingDetails = memo(function BookingDetails({
         >
           {BOOKING_STATUSES.map((status) => (
             <option key={status} value={status}
-              disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
+              disabled={(status === 'no-show' && appointmentDate(booking).getTime() > Date.now()) || (status === 'completed' && appointmentDate(booking).getTime() + booking.duration * 60000 > Date.now())}>
               {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
@@ -306,9 +307,7 @@ export default function Bookings() {
     Object.entries(bookingsByDate).forEach(([date, bookings]) => {
       enriched[date] = bookings.map(booking => {
         const barber = barbersMap.get(booking.barberId);
-        const services = (booking.serviceIds || [])
-          .map(id => servicesMap.get(id))
-          .filter(Boolean);
+        const services = bookingServices(booking, [...servicesMap.values()]);
 
         return {
           ...booking,
@@ -574,7 +573,7 @@ export default function Bookings() {
                 } catch (error) {
                   setSelectedBooking(null);
                   setStatusError(t(error.message === 'BOOKING_NO_SHOW_BEFORE_START'
-                    ? 'bookings.noShowBeforeStart' : 'common.error'));
+                    ? 'bookings.noShowBeforeStart' : error.message === 'BOOKING_NOT_FINISHED' ? 'managerAudit.notFinished' : 'common.error'));
                 }
               }}
               services={branchServices}

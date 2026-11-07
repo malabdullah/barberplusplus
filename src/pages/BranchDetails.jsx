@@ -26,7 +26,7 @@ export default function BranchDetails() {
   const { t, i18n } = useTranslation();
   const { branchId } = useParams();
   const navigate = useNavigate();
-  const { branches, barbers, services, bookings, updateBranch, deleteBranch } = useApp();
+  const { branches, barbers, services, bookings, updateBranch, deleteBranch, setSelectedBranchId } = useApp();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -106,7 +106,7 @@ export default function BranchDetails() {
         </div>
 
         <div className="branch-details-actions">
-          <button className="btn btn-secondary" onClick={() => setIsEditOpen(true)}>
+          <button className="btn btn-secondary" onClick={() => navigate(`/dashboard/branches/${branchId}/edit`)}>
             <Edit size={16} strokeWidth={1.5} />
             {t('common.edit')}
           </button>
@@ -155,7 +155,7 @@ export default function BranchDetails() {
           <div className="content-card-header">
             <Users size={20} strokeWidth={1.5} />
             <h3>{t('branches.teamMembers')}</h3>
-            <Link to="/dashboard/barbers" className="content-card-link">
+            <Link to="/dashboard/barbers" onClick={() => setSelectedBranchId(branchId)} className="content-card-link">
               {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
@@ -198,7 +198,7 @@ export default function BranchDetails() {
           <div className="content-card-header">
             <Scissors size={20} strokeWidth={1.5} />
             <h3>{t('branches.servicesOffered')}</h3>
-            <Link to="/dashboard/services" className="content-card-link">
+            <Link to="/dashboard/services" onClick={() => setSelectedBranchId(branchId)} className="content-card-link">
               {t('common.manage')} <ChevronRight size={14} />
             </Link>
           </div>
@@ -210,7 +210,7 @@ export default function BranchDetails() {
                     <span className="service-name">{service.name}</span>
                     <span className="service-duration">{service.duration} {t('common.min')}</span>
                   </div>
-                  <span className="service-price">{service.price} {t('common.currency')}</span>
+                  <span className="service-price">{Number(service.price).toFixed(3)} {t('common.currency')}</span>
                 </div>
               ))}
               {branchServices.length > 5 && (

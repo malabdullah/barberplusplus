@@ -155,6 +155,22 @@ $$;
 ALTER FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."archive_service"("p_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+ SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare result public.services%rowtype;
+begin
+ select * into result from public.services where id=p_id for update;
+ if result.id is null or not (coalesce(private.live_staff_role(),'')='admin' or coalesce(private.live_staff_role(),'')='manager' and result.branch_id in(select public.get_user_branch_ids())) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+ update public.services set status='inactive' where id=p_id returning * into result;return to_jsonb(result);
+end $function$
+
+
+ALTER FUNCTION "public"."archive_service"("p_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."begin_admin_password_reset"("p_actor" "uuid", "p_target" "uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -189,39 +205,19 @@ ALTER FUNCTION "public"."begin_admin_password_reset"("p_actor" "uuid", "p_target
 
 
 CREATE OR REPLACE FUNCTION "public"."can_write_avatar_object"("object_name" "text") RETURNS boolean
-    LANGUAGE "sql" STABLE
+    LANGUAGE "sql"
+ STABLE SECURITY DEFINER
     SET "search_path" TO ''
-    AS $_$
-  select (select auth.uid()) is not null
-    and object_name ~ '^(branches|barbers)/[0-9a-f-]{36}-[0-9]+\.(jpg|jpeg|png|webp|gif)$'
-    and (
-      (select auth.jwt()->'app_metadata'->>'role') = 'admin'
-      or (
-        (select auth.jwt()->'app_metadata'->>'role') = 'manager'
-        and (
-          (split_part(object_name,'/',1) = 'branches' and exists (
-            select 1 from public.branches b
-            where b.id::text = left(split_part(object_name,'/',2),36)
-              and b.manager_id = (select auth.uid())
-          ))
-          or (split_part(object_name,'/',1) = 'barbers' and exists (
-            select 1 from public.barbers b join public.branches branch on branch.id=b.branch_id
-            where b.id::text = left(split_part(object_name,'/',2),36)
-              and branch.manager_id = (select auth.uid())
-          ))
-        )
-      )
-      or (
-        (select auth.jwt()->'app_metadata'->>'role') = 'barber'
-        and split_part(object_name,'/',1) = 'barbers'
-        and exists (
-          select 1 from public.barbers b
-          where b.id::text = left(split_part(object_name,'/',2),36)
-            and b.user_id = (select auth.uid())
-        )
-      )
-    );
-$_$;
+    AS $$
+ select auth.uid() is not null and private.live_staff_role() is not null
+ and object_name ~ '^(branches|barbers|profiles)/[0-9a-f-]{36}-[0-9]+\.(jpg|jpeg|png|webp|gif)$'
+ and (private.live_staff_role()='admin'
+  or split_part(object_name,'/',1)='profiles' and left(split_part(object_name,'/',2),36)=auth.uid()::text and private.live_staff_role() in ('manager','barber')
+  or private.live_staff_role()='manager' and (
+    split_part(object_name,'/',1)='branches' and exists(select 1 from public.branches b where b.id::text=left(split_part(object_name,'/',2),36) and b.manager_id=auth.uid())
+    or split_part(object_name,'/',1)='barbers' and exists(select 1 from public.barbers b join public.branches s on s.id=b.branch_id where b.id::text=left(split_part(object_name,'/',2),36) and s.manager_id=auth.uid()))
+  or private.live_staff_role()='barber' and split_part(object_name,'/',1)='barbers' and exists(select 1 from public.barbers where id::text=left(split_part(object_name,'/',2),36) and user_id=auth.uid()));
+$function$
 
 
 ALTER FUNCTION "public"."can_write_avatar_object"("object_name" "text") OWNER TO "postgres";
@@ -544,7 +540,7 @@ ALTER FUNCTION "public"."customer_activity"("p_before" bigint) OWNER TO "postgre
 CREATE OR REPLACE FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
-    AS $_$
+    AS $$
 declare
   v_barber public.barbers%rowtype;
   v_branch public.branches%rowtype;
@@ -691,13 +687,13 @@ begin
       'date', b.date, 'time', to_char(b.date + b.time, 'HH24:MI'), 'duration', b.duration, 'price', b.price,
       'status', b.status, 'branch_name', br.name, 'branch_name_ar', br.name_ar,
       'barber_name', ba.name, 'barber_name_ar', ba.name_ar, 'address', br.address,
-      'location_url', br.location_url, 'service_names', (select jsonb_agg(jsonb_build_object('name', s.name, 'name_ar', s.name_ar))
-        from public.services s where s.id = any(b.service_ids)))
+      'location_url', br.location_url, 'service_names', (select jsonb_agg(jsonb_build_object('name', x->>'name', 'name_ar', x->>'name_ar'))
+        from jsonb_array_elements(b.service_snapshot) x))
     from public.bookings b join public.branches br on br.id = b.branch_id
       join public.barbers ba on ba.id = b.barber_id where b.id = v_booking.id
   );
 end;
-$_$;
+$function$
 
 
 ALTER FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
@@ -1232,11 +1228,12 @@ ALTER FUNCTION "public"."get_managers"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_user_branch_ids"() RETURNS SETOF "uuid"
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
+    LANGUAGE "sql"
+ STABLE SECURITY DEFINER
+    SET "search_path" TO ''
     AS $$
-  SELECT id FROM branches WHERE manager_id = auth.uid()
-$$;
+  select b.id from public.branches b where b.manager_id=auth.uid() and private.live_staff_role()='manager';
+$function$
 
 
 ALTER FUNCTION "public"."get_user_branch_ids"() OWNER TO "postgres";
@@ -1348,6 +1345,16 @@ $_$;
 ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."manager_can_create_shop"() RETURNS boolean
+    LANGUAGE "sql"
+ STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$ select private.live_staff_role()='manager'; $function$
+
+
+ALTER FUNCTION "public"."manager_can_create_shop"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -1387,6 +1394,32 @@ begin
 end $$;
 
 ALTER FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+ SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare person auth.users%rowtype; e164 text; object_name text;
+begin
+ if private.live_staff_role() not in ('manager','barber') or private.live_staff_role() is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+ if p_name is null or length(trim(p_name)) not between 2 and 120 then raise exception 'INVALID_CUSTOMER_NAME'; end if;
+ e164:=private.canonical_phone(p_phone,p_country_code);
+ if e164 is null or e164 !~ '^\+(965[569][0-9]{7}|9665[0-9]{8}|9715[0-9]{8}|973[0-9]{8}|974[3567][0-9]{7}|968[79][0-9]{7})$' then raise exception 'INVALID_PHONE'; end if;
+ if p_avatar_url is not null then
+  object_name:=substring(p_avatar_url from '/storage/v1/object/public/avatars/(.*)$');
+  if object_name is null or object_name !~ ('^profiles/'||auth.uid()::text||'-[0-9]+\.(jpg|jpeg|png|webp|gif)$')
+    or not exists(select 1 from storage.objects where bucket_id='avatars' and name=object_name) then raise exception 'INVALID_PROFILE_IMAGE'; end if;
+ end if;
+ update auth.users set raw_user_meta_data=coalesce(raw_user_meta_data,'{}')||jsonb_build_object('name',trim(p_name),'phone',e164,'countryCode',p_country_code)
+  ||case when p_avatar_url is null then '{}'::jsonb else jsonb_build_object('avatar_url',p_avatar_url) end
+  where id=auth.uid() returning * into person;
+ return person.raw_user_meta_data;
+end $function$
+
+
+ALTER FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") OWNER TO "postgres";
+
 
 CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
@@ -1447,6 +1480,52 @@ $$;
 
 
 ALTER FUNCTION "public"."shop_reviews"("p_page" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") RETURNS boolean
+    LANGUAGE "sql"
+ STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select case when private.live_staff_role() in ('admin','agent') then true
+    when private.live_staff_role()='manager' then exists(select 1 from public.bookings b
+      join public.branches s on s.id=b.branch_id where b.customer_id=p_id and s.manager_id=auth.uid())
+    when private.live_staff_role()='barber' then exists(select 1 from public.bookings b
+      join public.barbers r on r.id=b.barber_id where b.customer_id=p_id and r.user_id=auth.uid() and not r.manager_chair)
+    else false end;
+$function$
+
+
+ALTER FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+ SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare role_name text:=private.live_staff_role(); result jsonb;
+begin
+ if role_name is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+ if (select count(*) from public.logs where user_id=auth.uid() and action='customer_lookup' and created_at>now()-interval '1 minute')>=30 then raise exception 'RATE_LIMITED'; end if;
+ result:=private.staff_contact(p_country_code,p_phone,null);
+ insert into public.logs(user_id,user_role,level,log_type,action,entity_type,message)
+ values(auth.uid(),role_name,'info','action','customer_lookup','customer','Exact contact lookup');
+ return result;
+end $function$
+
+
+ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+ SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$ select private.staff_save_booking(p_id,p_data); $function$
+
+
+ALTER FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
@@ -1697,7 +1776,7 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "date" "date" NOT NULL,
     "time" time without time zone NOT NULL,
     "duration" integer DEFAULT 30 NOT NULL,
-    "price" numeric(10,2) DEFAULT 0 NOT NULL,
+    "price" numeric(12,3) DEFAULT 0 NOT NULL,
     "status" "text" DEFAULT 'confirmed'::"text",
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -1710,6 +1789,7 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "cancel_notice_minutes" integer DEFAULT 0 NOT NULL,
     "reschedule_notice_minutes" integer DEFAULT 0 NOT NULL,
     "staff_cancellation" "jsonb",
+    "service_snapshot" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
     CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
     CONSTRAINT "bookings_cancel_notice_minutes_check" CHECK ((("cancel_notice_minutes" >= 0) AND ("cancel_notice_minutes" <= 525600))),
     CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
@@ -1727,7 +1807,7 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
     "name" "text" NOT NULL,
     "address" "text",
     "city" "text",
-    "country" "text" DEFAULT 'Saudi Arabia'::"text",
+    "country" "text" DEFAULT 'Kuwait'::"text",
     "phone" "text",
     "email" "text",
     "status" "text" DEFAULT 'active'::"text",
@@ -1858,7 +1938,7 @@ CREATE TABLE IF NOT EXISTS "public"."services" (
     "name" "text" NOT NULL,
     "description" "text",
     "duration" integer DEFAULT 30 NOT NULL,
-    "price" numeric(10,2) NOT NULL,
+    "price" numeric(12,3) NOT NULL,
     "status" "text" DEFAULT 'active'::"text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
@@ -3079,7 +3159,6 @@ CREATE POLICY "Service role full access to services" ON "public"."services" TO "
 
 
 
-CREATE POLICY "Users can delete own branches" ON "public"."branches" FOR DELETE USING (("manager_id" = "auth"."uid"()));
 
 
 
@@ -3087,7 +3166,6 @@ CREATE POLICY "Users can delete own preferences" ON "public"."user_notification_
 
 
 
-CREATE POLICY "Users can insert own branches" ON "public"."branches" FOR INSERT WITH CHECK (("manager_id" = "auth"."uid"()));
 
 
 
@@ -3099,7 +3177,6 @@ CREATE POLICY "Users can insert own settings" ON "public"."user_settings" FOR IN
 
 
 
-CREATE POLICY "Users can update own branches" ON "public"."branches" FOR UPDATE USING (("manager_id" = "auth"."uid"()));
 
 
 
@@ -3186,7 +3263,6 @@ ALTER TABLE "public"."governorates" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."logs" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "managers_barbers_agents_admins_select_customers" ON "public"."customers" FOR SELECT USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 
 
@@ -3208,7 +3284,6 @@ CREATE POLICY "service_manage_customer_details" ON "public"."customer_staff_deta
 ALTER TABLE "public"."services" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (("public"."is_manager"() OR "public"."is_barber"() OR "public"."is_agent"() OR "public"."is_admin"()));
 
 ALTER TABLE "public"."suspicious_activities" ENABLE ROW LEVEL SECURITY;
 
@@ -3263,9 +3338,6 @@ GRANT ALL ON FUNCTION "public"."begin_admin_password_reset"("p_actor" "uuid", "p
 
 
 
-REVOKE ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "service_role";
 
 
 
@@ -3317,8 +3389,6 @@ GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data
 
 
 
-REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
 
 
 
@@ -3396,9 +3466,6 @@ GRANT ALL ON FUNCTION "public"."get_managers"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "anon";
-GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "service_role";
 
 
 
@@ -3656,3 +3723,58 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
+
+REVOKE ALL ON FUNCTION "public"."archive_service"("p_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."archive_service"("p_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."archive_service"("p_id" "uuid") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_write_avatar_object"("object_name" "text") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."get_user_branch_ids"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."manager_can_create_shop"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";
+
+CREATE POLICY "Managers create own shops" ON "public"."branches" FOR INSERT TO "authenticated" WITH CHECK ((( SELECT "manager_can_create_shop"() AS "manager_can_create_shop") AND ("manager_id" = ( SELECT "auth"."uid"() AS "uid"))));
+
+CREATE POLICY "Managers delete own shops" ON "public"."branches" FOR DELETE TO "authenticated" USING (("id" IN ( SELECT "get_user_branch_ids"() AS "get_user_branch_ids")));
+
+CREATE POLICY "Managers update own shops" ON "public"."branches" FOR UPDATE TO "authenticated" USING (("id" IN ( SELECT "get_user_branch_ids"() AS "get_user_branch_ids"))) WITH CHECK ((("manager_id" = ( SELECT "auth"."uid"() AS "uid")) AND ( SELECT "manager_can_create_shop"() AS "manager_can_create_shop")));
+
+CREATE POLICY "staff_related_customers" ON "public"."customers" FOR SELECT TO "authenticated" USING (( SELECT "staff_can_read_customer"("customers"."id") AS "staff_can_read_customer"));
+
+CREATE POLICY "staff_read_customer_details" ON "public"."customer_staff_details" FOR SELECT TO "authenticated" USING (( SELECT "staff_can_read_customer"("customer_staff_details"."customer_id") AS "staff_can_read_customer"));
+
+CREATE OR REPLACE TRIGGER "validate_barber" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
+
+CREATE OR REPLACE TRIGGER "validate_barber_time_off" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_time_off"();
+
+CREATE OR REPLACE TRIGGER "validate_booking_integrity" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_integrity"();
+
+CREATE OR REPLACE TRIGGER "validate_shop" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
+
+CREATE OR REPLACE TRIGGER "validate_service" BEFORE INSERT OR DELETE OR UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();

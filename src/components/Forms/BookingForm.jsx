@@ -403,7 +403,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
           {services.length > 0 ? (
             <>
               <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
-                {services.map((service) => {
+                {services.filter(service => service.status !== 'inactive').map((service) => {
                   const isSelected = formData.serviceIds.includes(service.id);
                   return (
                     <label

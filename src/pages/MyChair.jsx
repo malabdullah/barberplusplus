@@ -1,3 +1,4 @@
+import { bookingServices } from '../utils/bookingServices';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ function ChairAppointments({ chair, history }) {
           {request.appointments.length ? (
             <ul className="chair-appointments">
               {request.appointments.slice(0, pageSize).map(booking => {
-                const names = booking.serviceIds.map(id => services.find(service => service.id === id)?.name).filter(Boolean);
+                const names = bookingServices(booking, services).map(service => service.name);
                 const status = ['no-show', 'no_show'].includes(booking.status) ? 'noShow' : booking.status;
                 return (
                   <li key={booking.id}>
