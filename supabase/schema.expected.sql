@@ -1976,7 +1976,7 @@ CREATE POLICY "Service role full access to barbers" ON "public"."barbers" TO "se
 CREATE POLICY "Service role full access to bookings" ON "public"."bookings" TO "service_role" USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access to branches" ON "public"."branches" TO "service_role" USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access to customers" ON "public"."customers" TO "service_role" USING (true) WITH CHECK (true);
-CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "anon", "authenticated" USING (false) WITH CHECK (false);
+CREATE POLICY "Service role full access to rate_limits" ON "public"."rate_limits" TO "authenticated", "anon" USING (false) WITH CHECK (false);
 CREATE POLICY "Service role full access to reminders" ON "public"."booking_reminders" TO "service_role" USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access to services" ON "public"."services" TO "service_role" USING (true) WITH CHECK (true);
 CREATE POLICY "Users can delete own preferences" ON "public"."user_notification_preferences" FOR DELETE USING (("auth"."uid"() = "user_id"));
