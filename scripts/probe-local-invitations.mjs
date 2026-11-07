@@ -18,7 +18,9 @@ const email = `invite-${id}@barber.test`;
 let invitedUser, invitedClient;
 const headers = { apikey: config.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${login.data.session.access_token}`, 'Content-Type': 'application/json', Origin: 'http://localhost:5173' };
 try {
-  const created = await manager.from('barbers').insert({ id, branch_id: '10000000-0000-4000-8000-000000000001', name: 'Synthetic Invitation Probe', email, country_code: '+965', phone: '59998591', invite_status: 'pending' });
+  const service = await manager.from('services').select('id').eq('branch_id', '10000000-0000-4000-8000-000000000001').eq('status', 'active').limit(1).single();
+  assert.ifError(service.error);
+  const created = await manager.from('barbers').insert({ id, branch_id: '10000000-0000-4000-8000-000000000001', name: 'Synthetic Invitation Probe', email, country_code: '+965', phone: '59998591', service_ids: [service.data.id], invite_status: 'pending' });
   assert.ifError(created.error);
   const payload = { barberId: id, email, name: 'Synthetic Invitation Probe', branchId: '10000000-0000-4000-8000-000000000001' };
   const denied = await fetch(`${config.VITE_SUPABASE_URL}/functions/v1/invite-barber`, { method: 'POST', headers, body: JSON.stringify({ ...payload, branchId: '10000000-0000-4000-8000-000000000002' }) });
