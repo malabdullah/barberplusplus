@@ -172,6 +172,7 @@ set local role authenticated;
 select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.hoursChange')::jsonb->'requests'->0->>'id','value',(current_setting('granular.hoursChange')::jsonb->'requests'->0->'requested_value')||'{"vacations":[],"time_offs":[]}'))->'request'->>'status','approved','hours approval ignores unrelated fields in the review value');
 select is((select jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),2,'forged hours review cannot remove vacations');
 select is((select jsonb_array_length(time_offs) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),1,'forged hours review cannot remove breaks');
+select is(public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'requests'->0->>'id',current_setting('granular.hoursChange')::jsonb->'requests'->0->>'id','recent decisions show the newest review first');
 reset role;
 select set_config('request.jwt.claims','{}',true);
 update auth.users set raw_app_meta_data='{"role":"customer"}' where id='ec090000-0000-4000-8000-000000000002';
