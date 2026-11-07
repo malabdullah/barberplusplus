@@ -68,7 +68,7 @@ export default function AvailabilityRequests() {
         <div className="availability-row-value">
           {groups.length > 0 && <dl className="availability-compact-hours">{groups.map(group => <div key={group.time}><dt>{group.days.join(i18n.language.startsWith('ar') ? '، ' : ', ')}</dt><dd><bdi>{group.time}</bdi></dd></div>)}</dl>}
           {!requested && <p className="availability-removal">{t('availabilityItems.removal')}</p>}
-          <p className={groups.length ? 'text-muted' : undefined}><bdi>{availabilityItemSummary({ ...request, requested_value: value, approved_value: value }, t)}</bdi></p>
+          <p className={groups.length ? 'text-muted' : undefined}>{request.category === 'break' && value ? <><bdi>{value.type === 'recurring' ? t(`days.${value.day}`) : value.date}</bdi> · <bdi dir="ltr">{value.start}–{value.end}</bdi></> : <bdi dir={request.category === 'vacation' ? 'ltr' : undefined}>{availabilityItemSummary({ ...request, requested_value: value, approved_value: value }, t)}</bdi>}</p>
           {value?.reason && <p className="text-muted">{value.reason}</p>}
           {request.review_note && <p>{request.review_note}</p>}
           <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}`}>{t('availabilityItems.details')}</Link>
