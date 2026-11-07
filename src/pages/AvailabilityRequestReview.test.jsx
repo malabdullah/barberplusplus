@@ -15,6 +15,7 @@ beforeEach(() => {
   state.call.mockImplementation(async (action, data) => {
     if (action === 'get') return { barber: { id: 'staff', name: 'Omar', branch_id: 'shop' }, selected_request: { ...state.item }, related_items: [] };
     if (action === 'preview') { if (state.previewError) throw new Error('NOT_AUTHORIZED'); return { conflicts: state.blocked ? [{ id: 'booking', customer_name: 'Customer', date: '2026-11-09', time: '10:00', duration: 30 }] : [] }; }
+    if (action === 'approve' && state.blocked) return { blocked: true, conflicts: [{ id: 'booking', customer_name: 'Customer', date: '2026-11-09', time: '10:00', duration: 30 }] };
     state.item = { ...state.item, status: action === 'approve' ? 'approved' : 'declined', approved_value: data.value, review_note: data.note };
     return { blocked: false, request: state.item };
   });
@@ -22,11 +23,13 @@ beforeEach(() => {
 afterEach(cleanup);
 it('blocks only this conflicting item and links to its appointment resolution', async () => {
   state.blocked = true; setup();
+  fireEvent.click(await screen.findByRole('button', { name: 'availabilityItems.approve' }));
   const resolve = await screen.findByRole('link', { name: 'availabilityApproval.resolveBooking' });
   expect(resolve).toHaveAttribute('href', '/dashboard/bookings?booking=booking&reviewBarber=staff&reviewRequest=request');
   expect(screen.getByRole('button', { name: 'availabilityItems.approve' })).toBeDisabled();
-  fireEvent.change(screen.getByRole('textbox', { name: 'availabilityItems.decisionNote' }), { target: { value: 'Choose another time' } });
-  fireEvent.click(screen.getByRole('button', { name: 'availabilityItems.decline' }));
+  fireEvent.click(screen.getByRole('button', { name: 'availabilityItems.decline', exact: true }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'availabilityItems.declineReason' }), { target: { value: 'Choose another time' } });
+  fireEvent.click(screen.getAllByRole('button', { name: 'availabilityItems.decline', exact: true }).at(-1));
   await screen.findByText('availabilityItems.declinedNotice');
   expect(state.call).toHaveBeenCalledWith('decline', expect.objectContaining({ request_id: 'request', note: 'Choose another time' }));
 });
@@ -50,6 +53,8 @@ it('approves an explicit removal with a null value and offers no empty modificat
   expect(state.call).toHaveBeenCalledWith('approve', { request_id: 'request', value: null, note: '' });
 });
 it('keeps approval disabled if the current conflict preview fails', async () => {
-  state.previewError = true; setup(); await screen.findByRole('alert');
-  expect(screen.getByRole('button', { name: 'availabilityItems.approve' })).toBeDisabled();
+  state.previewError = true; setup();
+  fireEvent.click(await screen.findByRole('button', { name: 'availabilityItems.modify' }));
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'availabilityItems.approveModified' })).toBeDisabled();
 });
