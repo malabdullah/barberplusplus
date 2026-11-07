@@ -1,0 +1,23 @@
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, expect, it, vi } from 'vitest';
+const state = vi.hoisted(() => ({ call: vi.fn() }));
+vi.mock('../services/availability.service', () => ({ availabilityService: { call: (...args) => state.call(...args) } }));
+vi.mock('../context/AppContext', () => ({ useApp: () => ({ selectedBranchId: 'shop', branches: [{ id: 'shop', name: 'Shop' }], barbers: [{ id: 'staff', branchId: 'shop', name: 'Omar' }] }) }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: key => key, i18n: { language: 'en' } }) }));
+import AvailabilityRequests from './AvailabilityRequests';
+afterEach(cleanup);
+it('paginates and resets the page when changing status or type filters', async () => {
+  state.call.mockImplementation(async () => ({ requests: Array.from({ length: 21 }, (_, index) => ({ id: `request-${index}`, category: 'break', status: 'pending', barber_name: 'Omar', shop_name: 'Shop', created_at: '2026-11-07T09:00:00Z', requested_value: { type: 'recurring', day: 'monday', start: '12:00', end: '13:00' } })) }));
+  render(<MemoryRouter><AvailabilityRequests /></MemoryRouter>);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'common.next' })).toBeEnabled());
+  expect(screen.getAllByRole('link', { name: 'availabilityApproval.review' })).toHaveLength(20);
+  expect(screen.getAllByRole('link', { name: 'availabilityApproval.review' })[0]).toHaveAttribute('href', '/dashboard/availability-requests/request-0');
+  fireEvent.click(screen.getByRole('button', { name: 'common.next' }));
+  await waitFor(() => expect(state.call).toHaveBeenCalledWith('list', expect.objectContaining({ offset: 20, status: 'pending' })));
+  fireEvent.click(screen.getByRole('button', { name: 'availabilityItems.approved' }));
+  await waitFor(() => expect(state.call).toHaveBeenCalledWith('list', expect.objectContaining({ offset: 0, status: 'approved' })));
+  fireEvent.change(screen.getByRole('combobox', { name: 'availabilityItems.type' }), { target: { value: 'vacation' } });
+  await waitFor(() => expect(state.call).toHaveBeenCalledWith('list', expect.objectContaining({ category: 'vacation', status: 'approved', branch_id: 'shop' })));
+});

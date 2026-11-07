@@ -734,7 +734,7 @@ export default function MyAvailability({ targetBarber = null }) {
   if (approval.loading) return <p role="status">{t('common.loading')}</p>;
   if (!approval.detail) return <div><p role="alert">{t('common.error')}</p><button className="btn btn-secondary" onClick={approval.reload}>{t('availabilityApproval.reload')}</button></div>;
   const canSave = !approval.busy && !isSubmitting && (hasChanges || approval.review || (!isManager && !approval.detail.barber.availability_approved_at))
-    && (!isManager || (!approval.checking && !approval.error && approval.conflicts.length === 0));
+    && (!isManager || (!approval.checking && !approval.error && approval.conflicts.length === 0 && (!approval.pendingItems.length || currentBarber.managerChair)));
 
   return (
     <div className="availability-page">

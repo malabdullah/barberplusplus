@@ -6,6 +6,7 @@
 
 // Common Supabase/PostgreSQL error patterns
 const ERROR_PATTERNS = {
+  'AVAILABILITY_INDIVIDUAL_REVIEW_REQUIRED': 'availabilityItems.individualRequired',
   'AVAILABILITY_STALE': 'availabilityApproval.stale',
   'AVAILABILITY_APPROVAL_REQUIRED': 'availabilityApproval.approvalRequired',
   'AVAILABILITY_BOOKINGS_CONFLICT': 'availabilityApproval.blocked',

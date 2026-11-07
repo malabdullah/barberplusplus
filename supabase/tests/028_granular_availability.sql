@@ -1,0 +1,184 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select no_plan();
+insert into auth.users(id,email,raw_app_meta_data) values
+ ('ec090000-0000-4000-8000-000000000001','granular-manager@example.test','{"role":"manager"}'),
+ ('ec090000-0000-4000-8000-000000000002','granular-barber@example.test','{"role":"barber"}'),
+ ('ec090000-0000-4000-8000-000000000003','granular-other@example.test','{"role":"manager"}'),
+ ('ec090000-0000-4000-8000-000000000004','granular-customer@example.test','{"role":"customer"}');
+insert into public.branches(id,manager_id,name,working_hours)
+select 'ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000001','Availability QA',
+ jsonb_object_agg(day,'{"open":"09:00","close":"18:00"}'::jsonb) from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day;
+insert into public.branches(id,manager_id,name) values('ec090000-0000-4000-8000-000000000102','ec090000-0000-4000-8000-000000000003','Other shop');
+insert into public.services(id,branch_id,name,duration,price) values('ec090000-0000-4000-8000-000000000201','ec090000-0000-4000-8000-000000000101','Haircut',30,3);
+insert into public.barbers(id,branch_id,user_id,name,service_ids,availability)
+select 'ec090000-0000-4000-8000-000000000301','ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000002','Availability Barber',array['ec090000-0000-4000-8000-000000000201']::uuid[],
+ jsonb_object_agg(day,'{"enabled":true,"start":"09:00","end":"18:00"}'::jsonb) from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day;
+insert into public.customers(id,name,country_code,phone) values('ec090000-0000-4000-8000-000000000401','Availability Customer','+965','59979681');
+insert into public.bookings(id,branch_id,barber_id,customer_id,service_ids,date,time,duration,price,status,added_by_type)
+select fixture.id::uuid,'ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000301','ec090000-0000-4000-8000-000000000401',array['ec090000-0000-4000-8000-000000000201']::uuid[],
+ (clock_timestamp() at time zone 'Asia/Kuwait')::date+2,fixture.slot::time,30,3,'confirmed','customer'
+from (values('ec090000-0000-4000-8000-000000000501','10:00'),('ec090000-0000-4000-8000-000000000502','11:00')) fixture(id,slot);
+select set_config('granular.proposal',(private.normalized_availability(private.availability_snapshot(b))||jsonb_build_object(
+ 'availability',(select jsonb_object_agg(day,'{"enabled":true,"start":"09:30","end":"18:00"}'::jsonb) from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day),
+ 'time_offs',jsonb_build_array(jsonb_build_object('id','break-a','type','recurring','day','monday','start','12:00','end','13:00'),jsonb_build_object('id','break-b','type','one-time','date',((clock_timestamp() at time zone 'Asia/Kuwait')::date+2)::text,'start','14:00','end','15:00')),
+ 'vacations',jsonb_build_array(jsonb_build_object('id','vacation-a','startDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+2)::text,'endDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+2)::text),jsonb_build_object('id','vacation-b','startDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text,'endDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text))))::text,true)
+ from public.barbers b where id='ec090000-0000-4000-8000-000000000301';
+select ok(not has_table_privilege('authenticated','private.availability_requests','SELECT'),'request history remains inaccessible through raw API');
+select ok(not has_function_privilege('authenticated','private.submit_availability_items(public.barbers,jsonb,uuid)','EXECUTE'),'internal split helper cannot be called by clients');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.saved',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',0,'proposal',current_setting('granular.proposal')::jsonb))::text,true);
+select is(jsonb_array_length(current_setting('granular.saved')::jsonb->'requests'),5,'one submission creates working hours, two breaks and two independent vacation requests');
+select is((select availability->'monday'->>'start' from public.barbers where id='ec090000-0000-4000-8000-000000000301'),'09:00','pending hours do not change approved hours');
+select is((select jsonb_array_length(time_offs)+jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),0,'pending breaks and vacations are not applied');
+select is(jsonb_array_length(public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'pending_items'),5,'barber sees all independently pending items');
+select is(public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'draft'->'availability'->'monday'->>'start','09:30','barber draft combines pending proposals for editing');
+select is(jsonb_array_length(public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',0,'proposal',current_setting('granular.proposal')::jsonb))->'created'),0,'identical resubmission creates no duplicate items');
+reset role;
+select set_config('granular.hours',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='working-hours' and status='pending'),true);
+select set_config('granular.breakA',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='break-a' and status='pending'),true);
+select set_config('granular.breakB',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='break-b' and status='pending'),true);
+select set_config('granular.vacA',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='vacation-a' and status='pending'),true);
+select set_config('granular.vacB',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='vacation-b' and status='pending'),true);
+select is((select count(*) from public.notifications where entity_type='availability_request' and recipient_user_id='ec090000-0000-4000-8000-000000000001'),5::bigint,'manager gets exactly one notification per new item');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(jsonb_array_length(public.barber_availability('list')->'requests'),0,'other manager cannot list the requests');
+select throws_ok($$select public.barber_availability('get',jsonb_build_object('request_id',current_setting('granular.breakA')))$$,'42501','NOT_AUTHORIZED','other manager cannot open an item');
+select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.breakA')))$$,'42501','NOT_AUTHORIZED','other manager cannot approve an item');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.breakA')))$$,'42501','NOT_AUTHORIZED','barber cannot approve an item');
+select throws_ok($$update public.barbers set time_offs='[]',vacations='[]',max_booking_days=31 where id='ec090000-0000-4000-8000-000000000301'$$,'42501','AVAILABILITY_APPROVAL_REQUIRED','barber cannot bypass separate decisions');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(jsonb_array_length(public.barber_availability('preview',jsonb_build_object('request_id',current_setting('granular.vacA')))->'conflicts'),2,'only conflicting vacation lists both affected appointments');
+select is((public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.vacA')))->>'blocked')::boolean,true,'conflicting vacation cannot be approved');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.hours')))->'request'->>'status','approved','working hours can be approved while vacation remains blocked');
+select is((select availability->'monday'->>'start' from public.barbers where id='ec090000-0000-4000-8000-000000000301'),'09:30','only new working hours applied');
+select is((select jsonb_array_length(time_offs)+jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),0,'hours approval does not approve any break or vacation');
+select is(jsonb_array_length(public.barber_availability('list','{"status":"pending"}')->'requests'),4,'four sibling requests remain pending');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.breakA'),'value','{"id":"break-a","type":"recurring","day":"monday","start":"12:15","end":"13:15"}'::jsonb))->'request'->>'status','approved','manager modifies and approves one break despite sibling revision changes');
+select is((select time_offs->0->>'start' from public.barbers where id='ec090000-0000-4000-8000-000000000301'),'12:15','modified break is the approved result');
+select throws_ok($$select public.barber_availability('decline',jsonb_build_object('request_id',current_setting('granular.breakB'),'note',''))$$,'P0001','AVAILABILITY_REASON_REQUIRED','decline requires a reason for that item');
+select is(public.barber_availability('decline',jsonb_build_object('request_id',current_setting('granular.breakB'),'note','Please choose another break'))->'request'->>'status','declined','one break can be declined independently');
+select is((select jsonb_array_length(time_offs) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),1,'declined break is not added');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.vacB')))->'request'->>'status','approved','second vacation can be approved independently');
+select is((select vacations->0->>'id' from public.barbers where id='ec090000-0000-4000-8000-000000000301'),'vacation-b','only the selected vacation was applied');
+select is(jsonb_array_length(public.barber_availability('list','{"status":"pending","category":"vacation"}')->'requests'),1,'status and type filters find the remaining vacation');
+select is(jsonb_array_length(public.barber_availability('list','{"status":"declined","category":"break"}')->'requests'),1,'declined break appears in separate history');
+select is(jsonb_array_length(public.barber_availability('list','{"status":"approved","category":"hours"}')->'requests'),1,'approved hours appear in separate history');
+select is((select count(*) from public.bookings where barber_id='ec090000-0000-4000-8000-000000000301' and status='confirmed'),2::bigint,'all separate decisions preserved appointment status');
+select is((select to_char(time,'HH24:MI') from public.bookings where id='ec090000-0000-4000-8000-000000000501'),'10:00','no separate decision moves an appointment');
+select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.hours')))$$,'P0001','AVAILABILITY_STALE','decisions cannot be replayed');
+select throws_ok($$select public.barber_availability('direct',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',3,'proposal',current_setting('granular.proposal')::jsonb))$$,'P0001','AVAILABILITY_INDIVIDUAL_REVIEW_REQUIRED','batch RPC cannot bypass pending item reviews');
+select throws_ok($$update public.barbers set max_booking_days=31 where id='ec090000-0000-4000-8000-000000000301'$$,'P0001','AVAILABILITY_INDIVIDUAL_REVIEW_REQUIRED','direct table update cannot bypass pending item reviews');
+reset role;
+select is((select requested_value->>'start' from private.availability_requests where id=current_setting('granular.breakA')::uuid),'12:00','original break request preserved');
+select is((select approved_value->>'start' from private.availability_requests where id=current_setting('granular.breakA')::uuid),'12:15','modified approval recorded separately');
+select is((select status from private.availability_requests where id=current_setting('granular.vacA')::uuid),'pending','blocked vacation still awaits its own decision');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.latest',public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')::text,true);
+select is(current_setting('granular.latest')::jsonb->'draft'->'time_offs'->0->>'start','12:15','barber draft retains manager-modified approved break');
+select is(jsonb_array_length(current_setting('granular.latest')::jsonb->'draft'->'vacations'),2,'barber draft includes approved and still-pending vacations');
+select throws_ok($$select public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',3,'draft_token','old-draft','proposal',current_setting('granular.latest')::jsonb->'draft'))$$,'P0001','AVAILABILITY_STALE','stale draft token cannot overwrite pending changes');
+select set_config('granular.changed',jsonb_set(current_setting('granular.latest')::jsonb->'draft','{time_offs,0,start}','"12:30"')::text,true);
+select set_config('granular.updated',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',3,'proposal',current_setting('granular.changed')::jsonb))::text,true);
+select is(jsonb_array_length(current_setting('granular.updated')::jsonb->'created'),1,'new break modification creates only one new request');
+reset role;
+select set_config('granular.oldBreak',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and category='break' and target_key='break-a' and status='pending'),true);
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.updated',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',3,'proposal',jsonb_set(current_setting('granular.changed')::jsonb,'{time_offs,0,start}','"12:45"')))::text,true);
+reset role;
+select is((select status from private.availability_requests where id=current_setting('granular.oldBreak')::uuid),'superseded','editing a pending break replaces only that break request');
+select is((select status from private.availability_requests where id=current_setting('granular.vacA')::uuid),'pending','unmodified pending vacation is not replaced');
+select is((select count(*) from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and status='pending' and target_key='break-a'),1::bigint,'only one pending request per component');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+update public.bookings set status='cancelled',staff_cancellation='{"reason":"Explicit test resolution"}' where barber_id='ec090000-0000-4000-8000-000000000301';
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.vacA')))->'request'->>'status','approved','vacation approves after explicit appointment resolution');
+reset role;
+select is((select count(*) from private.availability_writes),0::bigint,'no write permit is left behind');
+select set_config('granular.newBreak',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='break-a' and status='pending'),true);
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.newBreak')))->'request'->>'status','approved','remaining break approves without reverting the independently approved vacation');
+select is((select jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),2,'both approved vacations retained after break approval');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.remove',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',5,'proposal',jsonb_set(public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'draft','{time_offs}','[]')))::text,true);
+select is(jsonb_array_length(current_setting('granular.remove')::jsonb->'requests'),1,'removing approved break creates one removal request');
+select is((select jsonb_array_length(time_offs) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),1,'pending removal keeps approved break active');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.remove')::jsonb->'requests'->0->>'id'))->'request'->>'status','approved','manager can approve removal of that break');
+select is((select jsonb_array_length(time_offs) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),0,'only approved break removal takes effect');
+select is((select jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),2,'break removal never removes vacations');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select is((public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',6,'proposal',public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'draft'))->>'no_changes')::boolean,true,'no-op submission reports no new changes');
+reset role;
+-- New barber: approving a break first must not publish unapproved working hours.
+select set_config('request.jwt.claims','{}',true);
+insert into auth.users(id,email,raw_app_meta_data) values('ec090000-0000-4000-8000-000000000005','granular-new-barber@example.test','{"role":"barber"}');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+insert into public.barbers(id,branch_id,user_id,name,service_ids) values('ec090000-0000-4000-8000-000000000302','ec090000-0000-4000-8000-000000000101','ec090000-0000-4000-8000-000000000005','New Granular Barber',array['ec090000-0000-4000-8000-000000000201']::uuid[]);
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000005","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.new',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000302','base_revision',0,'proposal',current_setting('granular.proposal')::jsonb||'{"vacations":[],"time_offs":[{"id":"new-break","type":"recurring","day":"monday","start":"12:00","end":"13:00"}]}'))::text,true);
+select is(jsonb_array_length(current_setting('granular.new')::jsonb->'requests'),2,'new barber submits hours and break independently');
+reset role;
+select set_config('granular.newHours',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000302' and category='hours' and status='pending'),true);
+select set_config('granular.newBreak',(select id::text from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000302' and category='break' and status='pending'),true);
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.newBreak')))->'request'->>'status','approved','new barber break can be approved first');
+select ok((select availability_approved_at is null from public.barbers where id='ec090000-0000-4000-8000-000000000302'),'break approval does not publish unapproved hours');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.newHours')))->'request'->>'status','approved','new barber hours can be approved after its break');
+select ok((select availability_approved_at is not null and jsonb_array_length(time_offs)=1 from public.barbers where id='ec090000-0000-4000-8000-000000000302'),'hours become approved and retain the separately approved break');
+select throws_ok($$select public.barber_availability('get',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','request_id',current_setting('granular.newHours')))$$,'42501','NOT_AUTHORIZED','item cannot be shown under a different barber identifier');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.base',public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')::text,true);
+select throws_ok($$select public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',6,'proposal',(current_setting('granular.base')::jsonb->'draft')||'{"time_offs":[{"id":"same","type":"recurring","day":"monday","start":"12:00","end":"13:00"},{"id":"same","type":"recurring","day":"tuesday","start":"12:00","end":"13:00"}]}'))$$,'P0001','INVALID_BARBER_HOURS','duplicate item identifiers are rejected');
+select set_config('granular.two',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',6,'proposal',(current_setting('granular.base')::jsonb->'draft')||'{"time_offs":[{"id":"withdraw-a","type":"recurring","day":"monday","start":"12:00","end":"13:00"},{"id":"keep-b","type":"recurring","day":"tuesday","start":"12:00","end":"13:00"}]}'))::text,true);
+select set_config('granular.kept',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',6,'proposal',(current_setting('granular.base')::jsonb->'draft')||'{"time_offs":[{"id":"keep-b","type":"recurring","day":"tuesday","start":"12:00","end":"13:00"}]}'))::text,true);
+select is(jsonb_array_length(current_setting('granular.kept')::jsonb->'requests'),1,'withdrawal removes only one pending break');
+reset role;
+select is((select status from private.availability_requests where barber_id='ec090000-0000-4000-8000-000000000301' and target_key='withdraw-a'),'superseded','withdrawn break remains in history');
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.kept')::jsonb->'requests'->0->>'id','value','{"id":"foreign-key","type":"recurring","day":"tuesday","start":"12:00","end":"13:00"}'::jsonb))$$,'P0001','INVALID_REQUEST','review value cannot target another break');
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.kept')::jsonb->'requests'->0->>'id'))->'request'->>'status','approved','remaining break still approves normally');
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select set_config('granular.hoursChange',public.barber_availability('submit',jsonb_build_object('barber_id','ec090000-0000-4000-8000-000000000301','base_revision',7,'proposal',jsonb_set(public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')->'draft','{max_booking_days}','31')))::text,true);
+reset role;
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+set local role authenticated;
+select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('granular.hoursChange')::jsonb->'requests'->0->>'id','value',(current_setting('granular.hoursChange')::jsonb->'requests'->0->'requested_value')||'{"vacations":[],"time_offs":[]}'))->'request'->>'status','approved','hours approval ignores unrelated fields in the review value');
+select is((select jsonb_array_length(vacations) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),2,'forged hours review cannot remove vacations');
+select is((select jsonb_array_length(time_offs) from public.barbers where id='ec090000-0000-4000-8000-000000000301'),1,'forged hours review cannot remove breaks');
+reset role;
+select set_config('request.jwt.claims','{}',true);
+update auth.users set raw_app_meta_data='{"role":"customer"}' where id='ec090000-0000-4000-8000-000000000002';
+select set_config('request.jwt.claims','{"sub":"ec090000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+set local role authenticated;
+select throws_ok($$select public.barber_availability('get','{"barber_id":"ec090000-0000-4000-8000-000000000301"}')$$,'42501','NOT_AUTHORIZED','live role revocation wins over an old barber JWT');
+reset role;
+
+select * from finish();
+rollback;
