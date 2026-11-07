@@ -208,14 +208,14 @@
     "registrationNotVerified": "Your email is not verified yet. Open the latest verification email, confirm your address, then check again.",
     "registrationResent": "A new verification email has been sent. Use the link in the latest email.",
     "registrationVerifiedTitle": "Email verified",
-    "registrationVerified": "Your email is verified. Sign in to continue setting up your shop.",
+    "registrationVerified": "Your email is verified. Sign in to your workspace to create your shop.",
     "registrationCheckFailed": "We could not complete this request. Please try again.",
     "registrationRateLimited": "Please wait a moment before trying again.",
     "registrationExpired": "This verification page has expired. Sign in if you have verified your email, or register again to request a fresh confirmation link.",
     "registrationEmailLinked": "This email is already linked to an account. Use Google, Apple or your existing sign-in method instead.",
     "registrationExistingSignIn": "Go to team sign-in",
     "registrationNextTitle": "Finish setting up your account",
-    "registrationConfirmNext": "Check your email and verify your account, then sign in. Already registered? Sign in with your existing account.",
+    "registrationConfirmNext": "Verify your email, then sign in to create your first shop.",
     "registrationSignInNext": "Sign in to continue setting up your shop.",
     "login": "Login",
     "logout": "Logout",
@@ -1976,7 +1976,6 @@
     "signIn": "Sign in",
     "customerSignIn": "Customer sign in",
     "teamSignIn": "Team sign in",
-    "registerShop": "Register your shop",
     "myAccount": "My account",
     "myAppointments": "My appointments",
     "workspace": "Open workspace",
@@ -2245,5 +2244,12 @@
     "declineReason": "Reason for declining",
     "refresh": "Refresh",
     "filters": "Filters"
+  },
+  "managerOnboarding": {
+    "signupIntro": "Create your manager account. Set up your shop after verifying your email.",
+    "countryCode": "Country code",
+    "openWorkspace": "Open workspace",
+    "welcome": "Welcome to your workspace",
+    "firstShopIntro": "Start by creating your first shop."
   }
 }

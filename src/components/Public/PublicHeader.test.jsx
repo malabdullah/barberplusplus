@@ -68,7 +68,8 @@ describe('simple public navigation', () => {
     expect(header().getByRole('link', { name: 'Book appointment', exact: true })).toHaveAttribute('href', '/book');
     const shops = openShops();
     expect(within(shops).getByRole('link', { name: 'Team sign in' })).toHaveAttribute('href', '/login');
-    expect(within(shops).getByRole('link', { name: 'Register your shop' })).toHaveAttribute('href', '/signup');
+    expect(within(shops).queryByRole('link', { name: 'Register your shop' })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/signup"]')).not.toBeInTheDocument();
     fireEvent.click(header().getByRole('link', { name: 'Customer sign in' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('/customer/sign-in');
     expect(screen.getByRole('status')).toHaveTextContent('/book');
@@ -116,12 +117,12 @@ describe('simple public navigation', () => {
     expect(mobile).toHaveAttribute('aria-hidden', 'true');
     expect(header().queryByRole('group', { name: 'Customers' })).not.toBeInTheDocument();
   });
-  it('shows both audience groups and all four mobile links without nested disclosures', () => {
+  it('shows customer actions and team sign-in without public shop registration', () => {
     mount(); fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const customers = header().getByRole('group', { name: 'Customers' });
     const shops = header().getByRole('group', { name: 'Shops' });
     expect(within(customers).getAllByRole('link')).toHaveLength(2);
-    expect(within(shops).getAllByRole('link')).toHaveLength(2);
+    expect(within(shops).getAllByRole('link')).toHaveLength(1);
     expect(within(customers).queryByRole('button')).not.toBeInTheDocument();
     expect(within(shops).queryByRole('button')).not.toBeInTheDocument();
   });

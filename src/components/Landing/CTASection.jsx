@@ -15,8 +15,8 @@ export default function CTASection() {
         <p className="cta-subtitle">
           {t('landing.cta.subtitle')}
         </p>
-        <Link to="/signup" className="cta-button">
-          {t('landing.cta.button')}
+        <Link to="/login" className="cta-button">
+          {t('managerOnboarding.openWorkspace')}
           <ArrowRight size={18} strokeWidth={2} />
         </Link>
       </div>

@@ -82,7 +82,7 @@ const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch } = useApp();
+  const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch, branches, userRole } = useApp();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
   const today = new Date().toISOString().split('T')[0];
@@ -111,6 +111,18 @@ export default function Dashboard() {
       ['confirmed', 'pending'].includes(b.status)
     ),
     [todayBookings]
+  );
+
+  if (userRole === 'manager' && branches.length === 0) return (
+    <div className="dashboard">
+      <section className="manager-first-shop" aria-labelledby="first-shop-title">
+        <h1 id="first-shop-title">{t('managerOnboarding.welcome')}</h1>
+        <p>{t('managerOnboarding.firstShopIntro')}</p>
+        <Link to="/dashboard/branches/new" className="btn btn-primary">
+          <Plus size={18} aria-hidden="true" />{t('branches.addFirstBranch')}
+        </Link>
+      </section>
+    </div>
   );
 
   return (
