@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
-import { validateBooking } from '../utils/schemaValidation';
 import logger from '../utils/logger';
 
 // Helper to check if a booking should be included based on filters
@@ -20,6 +19,7 @@ const toFrontend = (booking) => {
     branchId: booking.branch_id,
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
+    serviceSnapshot: booking.service_snapshot || [],
     customerId: booking.customer_id,
     barberName: booking.barber?.name || null,
     // Customer data from joined customers table
@@ -69,6 +69,11 @@ const toDatabase = (data) => {
   if (data.modifiedByUserId !== undefined) result.modified_by_user_id = data.modifiedByUserId;
   return result;
 };
+
+const staffPayload = data => ({
+  ...toDatabase(data), customer_name: data.customerName,
+  customer_country_code: data.customerCountryCode, customer_phone: data.customerPhone,
+});
 
 export const bookingsService = {
   /**
@@ -124,17 +129,13 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   create: async (bookingData) => {
-    // SECURITY: Validate booking data before database operation
-    const validation = validateBooking(bookingData);
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-    }
+    const { data, error } = await supabase.rpc('staff_save_booking', { p_id: null, p_data: staffPayload(bookingData) });
+    if (error) throw error;
+    return toFrontend(data);
+  },
 
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert([toDatabase(bookingData)])
-      .select('*, customer:customers(id, name, country_code, phone)')
-      .single();
+  saveAppointment: async (id, bookingData) => {
+    const { data, error } = await supabase.rpc('staff_save_booking', { p_id: id, p_data: staffPayload(bookingData) });
     if (error) throw error;
     return toFrontend(data);
   },

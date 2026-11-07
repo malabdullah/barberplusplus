@@ -1,5 +1,5 @@
 import React, { useState, memo, useMemo, useCallback, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Users,
@@ -38,7 +38,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 
   const handleScheduleClick = (e) => {
     e.stopPropagation();
-    // View schedule - could navigate to schedule page
+    navigate(barber.managerChair ? '/dashboard/my-chair?view=hours' : `/dashboard/barbers/${barber.id}/schedule`);
   };
 
   const handleDeleteClick = (e) => {
@@ -176,6 +176,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
 });
 
 export default function Barbers() {
+  const location = useLocation();
   const { t } = useTranslation();
   const {
     branchBarbers,
@@ -245,6 +246,7 @@ export default function Barbers() {
 
   return (
     <div className="barbers-page">
+      {location.state?.imageWarning && <p role="alert">{t('managerAudit.imageWarning')}</p>}
       {/* Toast Notification */}
       {toast && (
         <div className={`barbers-toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>

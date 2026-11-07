@@ -7,7 +7,7 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import AddBarber from './AddBarber';
 
-const state = vi.hoisted(() => ({ addBarber: vi.fn(), selectedBranch: { id: 'shop', name: 'QA Shop' }, selectedBranchId: 'shop', branchServices: [] }));
+const state = vi.hoisted(() => ({ addBarber: vi.fn(), selectedBranch: { id: 'shop', name: 'QA Shop' }, selectedBranchId: 'shop', branchServices: [{ id: 'service', name: 'Haircut', price: 3, status: 'active' }] }));
 vi.mock('../context/AppContext', () => ({ useApp: () => state }));
 vi.mock('../hooks/useGeoLocation', () => ({ useGeoLocation: () => ({ dialCode: '+965' }) }));
 let i18n;
@@ -22,6 +22,7 @@ function mount() {
   return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={['/dashboard/barbers/new']}><Routes><Route path="/dashboard/barbers/new" element={<AddBarber />} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>);
 }
 function fill() {
+  fireEvent.click(screen.getByRole('checkbox', { name: /Haircut/ }));
   fireEvent.change(screen.getByLabelText(en.common.fullName), { target: { value: '  QA Barber  ' } });
   fireEvent.change(screen.getByLabelText(en.common.email), { target: { value: ' QA@example.test ' } });
   fireEvent.change(screen.getByLabelText(en.common.phone), { target: { value: '59998721' } });

@@ -18,8 +18,8 @@ export default function AddBranch() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await addBranch(data);
-      navigate('/dashboard/branches');
+      const created = await addBranch(data);
+      navigate('/dashboard/branches', { state: { imageWarning: created?.imageWarning } });
     } catch (err) {
       logErrorSafely(err, 'AddBranch');
       setError(getErrorMessage(err, t('errors.createBranchFailed'), t));

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, Camera, Building2 } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { DAYS, DEFAULT_SCHEDULE } from '../../constants/time';
+import { validateImageFile } from '../../utils/imageValidation';
+import { getErrorMessage } from '../../utils/errorMessages';
 import { locationsService } from '../../services';
 import { validateUrl } from '../../utils/validation';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
@@ -28,6 +30,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
     imageFile: null, // New file to upload
   });
 
+  const formRef = useRef(null);
   const [errors, setErrors] = useState({});
   const [governorates, setGovernorates] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -117,6 +120,8 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      try { validateImageFile(file); } catch (error) { setErrors(previous => ({ ...previous, image: getErrorMessage(error, t('common.error'), t) })); e.target.value = ''; return; }
+      setErrors(previous => ({ ...previous, image: null }));
       // Create object URL for preview
       const previewUrl = URL.createObjectURL(file);
       setFormData((prev) => ({
@@ -131,26 +136,23 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('validation.branchNameRequired');
 
-    // Validate location URL (required and must be valid http/https URL)
-    if (!formData.locationUrl.trim()) {
-      newErrors.locationUrl = t('validation.locationUrlRequired');
-    } else {
+    if (formData.locationUrl.trim()) {
       const urlValidation = validateUrl(formData.locationUrl, true);
-      if (!urlValidation.valid) {
-        newErrors.locationUrl = urlValidation.error;
-      }
+      if (!urlValidation.valid) newErrors.locationUrl = t('validation.invalidLocationUrl');
     }
     if (!formData.governorateId) newErrors.governorateId = t('validation.governorateRequired');
     if (!formData.areaId) newErrors.areaId = t('validation.areaRequired');
-    if (!formData.phone.trim()) {
-      newErrors.phone = t('validation.phoneRequired');
-    } else {
+    if (formData.phone.trim()) {
       const country = GCC_COUNTRIES.find(c => c.code === formData.countryCode);
       if (country && !country.pattern.test(formData.phone.replace(/\s/g, ''))) {
         newErrors.phone = t('validation.invalidPhone');
       }
     }
+    for (const hours of Object.values(formData.openingHours)) {
+      if (hours.open && (!hours.close || hours.open >= hours.close)) newErrors.openingHours = t('managerAudit.invalidHours');
+    }
     setErrors(newErrors);
+    if (Object.keys(newErrors).length) requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
     return Object.keys(newErrors).length === 0;
   };
 
@@ -162,7 +164,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
       const selectedArea = areas.find(a => a.id === formData.areaId);
 
       onSubmit({
-        ...formData,
+        ...formData, name: formData.name.trim(), phone: formData.phone.trim() || null, locationUrl: formData.locationUrl.trim() || null,
         governorateName: selectedGovernorate?.name_en || '',
         governorateNameAr: selectedGovernorate?.name_ar || '',
         areaName: selectedArea?.name_en || '',
@@ -172,7 +174,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
   };
 
   return (
-    <form className="form" onSubmit={handleSubmit}>
+    <form ref={formRef} className="form" onSubmit={handleSubmit}>
       <div className="form-section">
         <h4 className="form-section-title">{t('branches.image')}</h4>
 
@@ -191,7 +193,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
             {t('branches.uploadImage')}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
@@ -199,27 +201,35 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         </div>
       </div>
 
+      {errors.image && <p role="alert">{errors.image}</p>}
+      <p className="form-hint">{t('managerAudit.shopReadiness')}</p>
       <div className="form-section">
         <h4 className="form-section-title">{t('branches.basicInfo')}</h4>
 
         <div className="form-group">
-          <label className="form-label">{t('branches.name')}</label>
+          <label className="form-label" htmlFor="shop-name">{t('branches.name')}</label>
           <input
             type="text"
             name="name"
+              id="shop-name" maxLength={120} aria-required="true"
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? "shop-name-error" : undefined}
             value={formData.name}
             onChange={handleChange}
             className={`form-input ${errors.name ? 'error' : ''}`}
             placeholder={t('branches.namePlaceholder')}
           />
-          {errors.name && <span className="form-error">{errors.name}</span>}
+          {errors.name && <span id="shop-name-error" className="form-error" role="alert">{errors.name}</span>}
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('branches.nameAr')}</label>
+          <label className="form-label" htmlFor="shop-nameAr">{t('branches.nameAr')}</label>
           <input
             type="text"
             name="nameAr"
+              id="shop-nameAr"
+              aria-invalid={Boolean(errors.nameAr)}
+              aria-describedby={errors.nameAr ? "shop-nameAr-error" : undefined}
             value={formData.nameAr}
             onChange={handleChange}
             className="form-input"
@@ -229,23 +239,29 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('branches.locationUrl')}</label>
+          <label className="form-label" htmlFor="shop-locationUrl">{t('branches.locationUrl')}</label>
           <input
             type="url"
             name="locationUrl"
+              id="shop-locationUrl"
+              aria-invalid={Boolean(errors.locationUrl)}
+              aria-describedby={errors.locationUrl ? "shop-locationUrl-error" : undefined}
             value={formData.locationUrl}
             onChange={handleChange}
             className={`form-input ${errors.locationUrl ? 'error' : ''}`}
             placeholder="https://maps.google.com/..."
           />
-          {errors.locationUrl && <span className="form-error">{errors.locationUrl}</span>}
+          {errors.locationUrl && <span id="shop-locationUrl-error" className="form-error" role="alert">{errors.locationUrl}</span>}
         </div>
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">{t('branches.governorate')}</label>
+            <label className="form-label" htmlFor="shop-governorateId">{t('branches.governorate')}</label>
             <select
               name="governorateId"
+              id="shop-governorateId" aria-required="true"
+              aria-invalid={Boolean(errors.governorateId)}
+              aria-describedby={errors.governorateId ? "shop-governorateId-error" : undefined}
               value={formData.governorateId}
               onChange={handleChange}
               className={`form-input form-select ${errors.governorateId ? 'error' : ''}`}
@@ -258,13 +274,16 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                 </option>
               ))}
             </select>
-            {errors.governorateId && <span className="form-error">{errors.governorateId}</span>}
+            {errors.governorateId && <span id="shop-governorateId-error" className="form-error" role="alert">{errors.governorateId}</span>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t('branches.area')}</label>
+            <label className="form-label" htmlFor="shop-areaId">{t('branches.area')}</label>
             <select
               name="areaId"
+              id="shop-areaId" aria-required="true"
+              aria-invalid={Boolean(errors.areaId)}
+              aria-describedby={errors.areaId ? "shop-areaId-error" : undefined}
               value={formData.areaId}
               onChange={handleChange}
               className={`form-input form-select ${errors.areaId ? 'error' : ''}`}
@@ -277,15 +296,15 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
                 </option>
               ))}
             </select>
-            {errors.areaId && <span className="form-error">{errors.areaId}</span>}
+            {errors.areaId && <span id="shop-areaId-error" className="form-error" role="alert">{errors.areaId}</span>}
           </div>
         </div>
 
         <div className="form-group">
-          <label className="form-label">{t('common.phone')}</label>
+          <label className="form-label" htmlFor="shop-phone">{t('common.phone')}</label>
           <div className="phone-input-group">
             <select
-              name="countryCode"
+              name="countryCode" aria-label={t('common.countryCode')}
               value={formData.countryCode}
               onChange={handleChange}
               className="form-input form-select country-code-select"
@@ -299,32 +318,25 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
             <input
               type="tel"
               name="phone"
+              id="shop-phone"
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={errors.phone ? "shop-phone-error" : undefined}
               value={formData.phone}
               onChange={handleChange}
               className={`form-input phone-number-input ${errors.phone ? 'error' : ''}`}
               placeholder="XXXX XXXX"
             />
           </div>
-          {errors.phone && <span className="form-error">{errors.phone}</span>}
+          {errors.phone && <span id="shop-phone-error" className="form-error" role="alert">{errors.phone}</span>}
         </div>
 
-        <div className="form-group">
-          <label className="form-label">{t('branches.numberOfBarbers')}</label>
-          <input
-            type="number"
-            name="numberOfBarbers"
-            value={formData.numberOfBarbers}
-            onChange={handleChange}
-            className="form-input"
-            min="1"
-            placeholder={t('branches.numberOfBarbersPlaceholder')}
-          />
-        </div>
+
       </div>
 
       <div className="form-section">
         <h4 className="form-section-title">{t('branches.operatingHours')}</h4>
 
+        {errors.openingHours && <p role="alert">{errors.openingHours}</p>}
         <div className="hours-editor">
           {DAYS.map(({ key }) => {
             const dayHours = formData.openingHours[key];

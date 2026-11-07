@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { validatePhoneNumber } from '../utils/validation';
 import { customersService } from '../services/customers.service';
 
-const MIN_PHONE_LENGTH = 6;
 const DEFAULT_DEBOUNCE_MS = 400;
 
 /**
@@ -39,7 +39,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
     const cleanPhone = phone?.replace(/\s/g, '') || '';
 
     // Don't search if phone is too short
-    if (!cleanPhone || cleanPhone.length < MIN_PHONE_LENGTH) {
+    if (!cleanPhone || !validatePhoneNumber(cleanPhone, countryCode).valid) {
       setCustomer(null);
       setIsNewCustomer(false);
       setLoading(false);

@@ -2107,5 +2107,31 @@
       "AUTH_REQUIRED": "Sign in again to continue.",
       "SESSION_ENDED": "Your session ended. Please sign in again."
     }
+  },
+  "managerAudit": {
+    "archiveService": "Archive service",
+    "archiveConfirm": "Archive {{name}}? Existing appointment details will be kept.",
+    "firstShop": "Create your first shop to start setting up your team and appointments.",
+    "shopReadiness": "Shop contact number, map link and logo are optional. Your shop appears to customers once an active barber has available hours and an assigned service.",
+    "invalidHours": "Closing time must be after opening time on every working day.",
+    "servicesRequired": "Choose at least one active service from this shop before making the barber bookable.",
+    "notFinished": "This appointment has not finished yet. Mark it completed after its end time.",
+    "customerRequired": "Customer details could not be saved. Your appointment has not been created. Check the name and mobile number, then retry.",
+    "customerChanged": "The selected customer no longer matches this phone number. Look up the number again.",
+    "nameLength": "Enter a name between 2 and 120 characters.",
+    "pricesChanged": "Service details have changed. Refresh the services and try again.",
+    "invalidBooking": "Check the customer, services, duration and price before saving.",
+    "archiveRequired": "This service has appointment history. Archive it to preserve those details.",
+    "dateUnavailable": "Choose a future date within this barber’s booking window.",
+    "slotUnavailable": "This time is no longer available. Check working hours, time off and other appointments.",
+    "invalidService": "Enter a service name, a duration of 5–480 minutes and a price from 0–10,000 KWD.",
+    "affectedTitle": "Existing appointments are affected",
+    "affectedMessage": "These appointments conflict with the new availability: {{appointments}}. They will remain booked. Save the availability and contact the customers to arrange any changes?",
+    "saveAvailability": "Save availability",
+    "profileSaved": "Your profile has been saved.",
+    "uploadHint": "PNG, JPEG, WebP or GIF, up to 5 MB.",
+    "setup": "Setting up",
+    "active": "Active",
+    "imageWarning": "The record was created, but its image could not be saved. Open Edit to upload the image again."
   }
 }

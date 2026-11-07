@@ -53,19 +53,36 @@ Deno.serve(createCustomerBookingHandler({
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services, ratingResult] = await Promise.all([
-      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').order('name'),
-      admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days').eq('status', 'active').order('name'),
+      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').order('name'),
+      admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days,availability').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
       admin.rpc('customer_catalog_ratings'),
     ]);
     if (branches.error || barbers.error || services.error) throw Error('Catalog unavailable');
-    const branchIds = new Set(branches.data.map(branch => branch.id));
+    const serviceIds = new Set(services.data.map(service => service.id));
+    const readyBarbers = barbers.data.filter(barber => {
+      const shop = branches.data.find(shop => shop.id === barber.branch_id);
+      const offered = services.data.filter(service => service.branch_id === barber.branch_id && barber.service_ids?.includes(service.id) && serviceIds.has(service.id));
+      if (!shop || !offered.length) return false;
+      const schedule = (barber.availability || {}) as Record<string, { enabled?: boolean; available?: boolean; start?: string; end?: string }>;
+      const shopHours = (shop.working_hours || {}) as Record<string, { open?: string; close?: string }>;
+      const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+      return Object.entries(schedule).some(([day, hours]) => {
+        const opening = shopHours[day];
+        if (!(hours.enabled ?? hours.available) || !hours.start || !hours.end || !opening?.open || !opening.close) return false;
+        const available = Math.min(minutes(hours.end), minutes(opening.close)) - Math.max(minutes(hours.start), minutes(opening.open));
+        return offered.some(service => service.duration <= available);
+      });
+    });
+    const readyShopIds = new Set(readyBarbers.map(barber => barber.branch_id));
+    const readyBranches = branches.data.filter(branch => readyShopIds.has(branch.id));
+    const branchIds = new Set(readyBranches.map(branch => branch.id));
     if (ratingResult.error) console.warn('Catalog ratings unavailable', ratingResult.error.code);
     const ratings = ratingResult.error ? undefined : ratingResult.data;
     return {
-      branches: branches.data.map(branch => ({ ...branch, rating: ratings ? ratings.shops[branch.id] ?? null : undefined })),
-      barbers: barbers.data.filter(barber => branchIds.has(barber.branch_id))
-        .map(barber => ({ ...barber, rating: ratings ? ratings.barbers[barber.id] ?? null : undefined })),
+      branches: readyBranches.map(({ working_hours: _hours, ...branch }) => ({ ...branch, rating: ratings ? ratings.shops[branch.id] ?? null : undefined })),
+      barbers: readyBarbers.filter(barber => branchIds.has(barber.branch_id))
+        .map(({ availability: _hours, ...barber }) => ({ ...barber, rating: ratings ? ratings.barbers[barber.id] ?? null : undefined })),
       services: services.data.filter(service => branchIds.has(service.branch_id)),
     };
   },

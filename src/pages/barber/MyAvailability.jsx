@@ -1,3 +1,5 @@
+import ConfirmDialog from '../../components/UI/ConfirmDialog';
+import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -604,9 +606,14 @@ function VacationsSection({ vacations, onAdd, onDelete, setHasChanges, t }) {
   );
 }
 
-export default function MyAvailability() {
+export default function MyAvailability({ targetBarber = null }) {
   const { t } = useTranslation();
-  const { currentBarber, barberBranch, updateBarber } = useApp();
+  const app = useApp();
+  const currentBarber = targetBarber || app.currentBarber;
+  const barberBranch = targetBarber ? app.branches.find(shop => shop.id === targetBarber.branchId) : app.barberBranch;
+  const { updateBarber, bookings } = app;
+  const [affected, setAffected] = useState(null);
+  const [validationError, setValidationError] = useState('');
   const [activeTab, setActiveTab] = useState('schedule');
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE);
   const [timeOffs, setTimeOffs] = useState([]);
@@ -615,7 +622,7 @@ export default function MyAvailability() {
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const initializedBarber = useRef(null);
   const saveStatusTimeoutRef = useRef(null);
 
   // Clear save status after 3 seconds (with proper cleanup)
@@ -632,16 +639,18 @@ export default function MyAvailability() {
 
   // Only initialize state from currentBarber on first load, not on every change
   useEffect(() => {
-    if (currentBarber && !isInitialized) {
+    if (currentBarber && initializedBarber.current !== currentBarber.id) {
       if (currentBarber.availability) {
         setSchedule(convertAvailabilityFormat(currentBarber.availability));
       }
       setTimeOffs(currentBarber.timeOffs || []);
       setVacations(currentBarber.vacations || []);
       setMaxBookingDays(currentBarber.maxBookingDays || 30);
-      setIsInitialized(true);
+      initializedBarber.current = currentBarber.id;
+      setHasChanges(false);
+      setAffected(null);
     }
-  }, [currentBarber, isInitialized]);
+  }, [currentBarber]);
 
   const handleDayChange = (dayKey, newSchedule) => {
     setSchedule((prev) => ({
@@ -668,7 +677,20 @@ export default function MyAvailability() {
     setVacations((prev) => prev.filter((v) => v.id !== id));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (confirmed = false) => {
+    setValidationError('');
+    if (Object.values(schedule).some(day => day.enabled && (!day.start || !day.end || day.start >= day.end))) {
+      setValidationError(t('managerAudit.invalidHours')); return;
+    }
+    if (!Number.isInteger(Number(maxBookingDays)) || maxBookingDays < 1 || maxBookingDays > 365) {
+      setValidationError(t('managerAudit.dateUnavailable')); return;
+    }
+    const next = { ...currentBarber, availability: schedule, timeOffs, vacations };
+    const conflicts = bookings.filter(booking => booking.barberId === currentBarber.id
+      && ['pending','confirmed'].includes(booking.status)
+      && new Date(`${booking.date}T${booking.time.slice(0,5)}:00+03:00`).getTime() > Date.now()
+      && checkBookingConflicts({ ...booking, barberData: next, existingBookings: [] }).hasConflict);
+    if (confirmed !== true && conflicts.length) { setAffected(conflicts); return; }
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -729,6 +751,12 @@ export default function MyAvailability() {
 
   return (
     <div className="availability-page">
+      {validationError && <p role="alert">{validationError}</p>}
+      <ConfirmDialog isOpen={Boolean(affected)} onClose={() => setAffected(null)}
+        onConfirm={() => handleSave(true)} variant="warning"
+        title={t('managerAudit.affectedTitle')}
+        message={t('managerAudit.affectedMessage', { appointments: affected?.map(booking => `${booking.date} ${booking.time.slice(0,5)} — ${booking.customerName || booking.id.slice(0,8)}`).join(', ') })}
+        confirmText={t('managerAudit.saveAvailability')} cancelText={t('common.cancel')} />
       <div className="page-header animate-fade-in">
         <div className="page-header-content">
           <h2 className="page-title">{t('availability.myAvailability')}</h2>
@@ -745,7 +773,7 @@ export default function MyAvailability() {
           )}
           <button
             className={`btn btn-primary ${!hasChanges || isSubmitting ? 'disabled' : ''}`}
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={!hasChanges || isSubmitting}
           >
             {isSubmitting ? (

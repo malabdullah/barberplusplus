@@ -59,22 +59,8 @@ export const customersService = {
     try {
       const cleanPhone = phone.replace(/\s/g, '');
 
-      const { data, error } = await supabase
-        .from('customers')
-        .select(`
-          *,
-          staff_details:customer_staff_details(notes,tags),
-          preferred_barber:barbers!preferred_barber_id(id, name)
-        `)
-        .eq('country_code', countryCode)
-        .eq('phone', cleanPhone)
-        .eq('status', 'active')
-        .single();
-
-      // PGRST116 means no rows found - not an error
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      const { data, error } = await supabase.rpc('staff_customer_lookup', { p_country_code: countryCode, p_phone: cleanPhone });
+      if (error) throw error;
 
       return data ? toFrontend(data) : null;
     } catch (error) {
