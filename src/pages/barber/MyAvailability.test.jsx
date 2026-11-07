@@ -26,9 +26,38 @@ it('submits a barber proposal instead of directly changing approved availability
   render(<MemoryRouter><MyAvailability /></MemoryRouter>);
   const horizon = await screen.findByRole('spinbutton', { name: 'availability.bookingWindow' });
   fireEvent.change(horizon, { target: { value: '31' } });
-  fireEvent.click(screen.getByRole('button', { name: 'availabilityApproval.submit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'availabilityCompact.submit' }));
   await waitFor(() => expect(state.call).toHaveBeenCalledWith('submit', expect.objectContaining({ barber_id: 'staff', base_revision: 2, proposal: expect.objectContaining({ max_booking_days: 31 }) })));
   expect(state.app.updateBarber).not.toHaveBeenCalled();
+});
+it('keeps the compact barber screen free of guidance and restores an unsent edit on reset', async () => {
+  state.app.userRole = 'barber';
+  state.call.mockImplementation(async action => action === 'get' ? { ...detail, requests: [] } : {});
+  render(<MemoryRouter><MyAvailability /></MemoryRouter>);
+  const horizon = await screen.findByRole('spinbutton', { name: 'availability.bookingWindow' });
+  expect(screen.queryByText('availabilityApproval.barberHelp')).not.toBeInTheDocument();
+  expect(screen.queryByText('availability.tips')).not.toBeInTheDocument();
+  expect(screen.queryByText('availability.bookingWindowDesc')).not.toBeInTheDocument();
+  expect(screen.queryByText('availability.workingDays')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'availabilityCompact.hours' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'availabilityCompact.submit' })).toBeDisabled();
+  fireEvent.change(horizon, { target: { value: '40' } });
+  expect(screen.getByRole('button', { name: 'availabilityCompact.submit' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'common.reset' }));
+  expect(horizon).toHaveValue(30);
+  expect(screen.getByRole('button', { name: 'availabilityCompact.submit' })).toBeDisabled();
+  expect(state.call.mock.calls.every(([action]) => action === 'get')).toBe(true);
+});
+it('keeps pending items and the manager decision reason accessible without approval help paragraphs', async () => {
+  state.app.userRole = 'barber';
+  const pending = { id: 'break-a', category: 'break', status: 'pending', requested_value: { type: 'recurring', day: 'monday', start: '12:00', end: '13:00' } };
+  state.call.mockResolvedValue({ ...detail, pending_items: [pending], requests: [{ ...pending, id: 'declined', status: 'declined', review_note: 'Choose a later break.' }] });
+  render(<MemoryRouter><MyAvailability /></MemoryRouter>);
+  await screen.findByRole('spinbutton', { name: 'availability.bookingWindow' });
+  expect(screen.getByText('availabilityItems.pending (1)')).toBeInTheDocument();
+  expect(screen.queryByText('availabilityItems.pendingHelp')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('availabilityCompact.history'));
+  expect(screen.getByText('Choose a later break.')).toBeVisible();
 });
 it('clears a previous decision message when opening a different request', async () => {
   state.call.mockImplementation(async action => action === 'get' ? detail : {});
