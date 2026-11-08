@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "designSystemVersion": "1.2",
-  "updated": "2026-10-31",
+  "designSystemVersion": "1.3",
+  "updated": "2026-11-08",
   "approval": {
     "status": "owner-approved-direction",
     "date": "2026-10-31",
@@ -80,7 +80,7 @@
   "variants": [
     {
       "id": "horizontal",
-      "composition": "Symbol left, wordmark right",
+      "composition": "B-shaped mark as the initial B, followed by arber++",
       "use": [
         "Desktop header",
         "Expanded sidebar",
@@ -101,11 +101,9 @@
     },
     {
       "id": "stacked",
-      "composition": "Symbol above centered wordmark",
+      "composition": "Legacy filename alias to inline B-shaped mark + arber++",
       "use": [
-        "Welcome and sign-in compositions",
-        "Brand introductions",
-        "Spacious marketing placements"
+        "Legacy URL compatibility only"
       ],
       "treatments": [
         "full-color-light",
@@ -118,7 +116,8 @@
         "production-logo/barber-stacked-light.png",
         "production-logo/barber-stacked-dark.svg",
         "production-logo/barber-stacked-dark.png"
-      ]
+      ],
+      "status": "retired-stacked-composition"
     },
     {
       "id": "symbol",
@@ -304,5 +303,16 @@
     "arabicWordmarkApproved": false,
     "accessibleName": "Barber++"
   },
-  "productionAssets": "production-logo/README.md"
+  "productionAssets": "production-logo/README.md",
+  "combinedLockup": {
+    "rule": "The mark is the initial B, followed by arber++. Do not duplicate the text B.",
+    "accessibleName": "Barber++",
+    "direction": "ltr",
+    "masterSize": [
+      506.2794,
+      104
+    ],
+    "opticalGap": 8,
+    "standaloneAssetsUnchanged": true
+  }
 }
