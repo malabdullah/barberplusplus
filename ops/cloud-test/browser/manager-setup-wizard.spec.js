@@ -46,7 +46,7 @@ if(engine==='chromium') test('new manager completes resumable shop setup through
 });
 for(const language of ['en','ar'])for(const theme of ['light','dark'])test('wizard layout '+language+' '+theme,async({page})=>{
  const fixture=JSON.parse(fs.readFileSync(fixturePath));test.skip(!fixture.complete, 'Complete the synthetic setup journey first.');await page.setViewportSize({width:360,height:800});await page.addInitScript(({language,theme})=>{localStorage.setItem('barber-language',language);localStorage.setItem('barber-theme',theme);},{language,theme});await signIn(page,fixture.managerEmail);
- await page.goto('/dashboard/setup?shop='+fixture.shopId+'&step=review');await expect(page.locator('#shop-setup-progress')).toHaveAttribute('value','4');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.goto('/dashboard/setup?shop='+fixture.shopId+'&step=review');await expect(page.locator('#shop-setup-progress')).toHaveAttribute('value','4');await expect(page.locator('.sidebar-nav-item[aria-current="page"]')).toHaveCount(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.screenshot({path:'.cloud-test/wizard-'+engine+'-'+language+'-'+theme+'.png',fullPage:true,animations:'disabled'});
  await page.goto('/dashboard/setup?shop='+fixture.shopId+'&step=shop');await expect(page.locator('#shop-name')).toHaveValue(fixture.shopName);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.goto('/dashboard/setup?shop=10000000-0000-4000-8000-000000000001');await expect(panel(page).getByRole('alert')).toBeVisible();await expect(page.locator('#shop-name')).toHaveCount(0);

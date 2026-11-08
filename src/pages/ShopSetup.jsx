@@ -82,7 +82,7 @@ export default function ShopSetup() {
   const reviewMember = barber => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=hours' : '/dashboard/availability-requests?barber=' + barber.id, id, 'hours');
   const memberName = barber => i18n.language === 'ar' && barber.nameAr || barber.name;
   const pager = items.length > 8 && <nav className="setup-pagination" aria-label={tr('pages')}><button type="button" className="btn btn-secondary" disabled={busy || currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('common.previous')}</button><span>{tr('page', { page: currentPage + 1, count: pageCount })}</span><button type="button" className="btn btn-secondary" disabled={busy || currentPage + 1 === pageCount} onClick={() => setPage(currentPage + 1)}>{t('common.next')}</button></nav>;
-  const continueButton = (next, enabled = true) => <button type="button" className="btn btn-primary" disabled={busy || loading || Boolean(error) || !enabled} onClick={() => go(next)}>{tr('continue')}<ArrowRight size={17} aria-hidden="true" /></button>;
+  const continueButton = (next, enabled = true) => <button type="button" className="btn btn-primary" disabled={busy || loading || Boolean(error) || !enabled} onClick={() => go(next)}>{tr('continue')}<ArrowRight size={17} className="setup-next-icon" aria-hidden="true" /></button>;
   if (!permitted) return <div className="shop-setup"><h1>{tr('title')}</h1><p role="alert">{tr('notFound')}</p><Link className="btn btn-secondary" to="/dashboard/setup">{tr('chooseShop')}</Link></div>;
   return <div className="shop-setup">
     <header className="setup-header"><div><h1>{tr('title')}</h1><p>{shop ? i18n.language === 'ar' && shop.nameAr || shop.name : tr('newShop')}</p></div><div className="setup-header-actions">

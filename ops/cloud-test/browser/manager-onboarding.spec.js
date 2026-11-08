@@ -108,7 +108,7 @@ if (engine === 'chromium') test('new manager verifies email, creates a shop and 
   await expect(page.locator('.dashboard').getByRole('link', { name: 'New Booking', exact: true })).toHaveCount(0);
   await page.screenshot({ path: screenshot('first-workspace'), fullPage: true });
   await page.locator('.manager-first-shop a').click();
-  await expect(page).toHaveURL(/\/dashboard\/branches\/new$/);
+  await expect(page).toHaveURL(/\/dashboard\/setup\?shop=new$/);
   await page.locator('form.form button[type="submit"]').click();
   await expect(page.locator('#shop-name')).toHaveAttribute('aria-invalid', 'true');
   await page.locator('#shop-name').fill(shopName);
@@ -118,9 +118,10 @@ if (engine === 'chromium') test('new manager verifies email, creates a shop and 
   const area = await areas.nth(1).getAttribute('value'); await page.locator('#shop-areaId').selectOption(area);
   await expect(page.locator('#shop-phone')).toBeEmpty();
   await page.locator('form.form button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/dashboard\/branches$/);
-  await expect(page.locator('.branch-card-name')).toHaveText(shopName);
-  await page.reload(); await expect(page.locator('.branch-card-name')).toHaveText(shopName);
+  await expect(page).toHaveURL(/\/dashboard\/setup.*step=services/);
+  await expect(page.locator('.setup-header p')).toHaveText(shopName);
+  await page.reload(); await expect(page.locator('.setup-header p')).toHaveText(shopName);
+  await page.goto('/dashboard/branches'); await expect(page.locator('.branch-card-name')).toHaveText(shopName);
 
   const login = await signIn(email, password); expect(login.ok()).toBe(true);
   const session = await login.json(); expect(session.user.app_metadata.role).toBe('manager');
