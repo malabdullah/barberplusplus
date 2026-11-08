@@ -11,6 +11,7 @@ import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { bookingCityGroups } from '../utils/bookingCityGroups';
+import BookingFinder from '../components/Customer/BookingFinder';
 import CityPicker from '../components/Customer/CityPicker';
 import CatalogRating from '../components/Customer/CatalogRating';
 import BookingImage from '../components/Customer/BookingImage';
@@ -42,7 +43,7 @@ function favouritesFirst(options, favourites, kind) {
   return [...options].sort((a, b) => Number(saved.has(b.id)) - Number(saved.has(a.id)));
 }
 
-export default function CustomerBooking() {
+export function CustomerBookingCheckout({ initialDraft, scopedCatalog, onEditProvider }) {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountPending, error: accountError } = useCustomerAuth();
   const accountLoading = accountPending || accountError;
@@ -50,7 +51,7 @@ export default function CustomerBooking() {
   const location = useLocation();
   const navigate = useNavigate();
   const [returnDraft] = useState(readBookingReturnDraft);
-  const [draft] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft || readBookingDraft());
+  const [draft] = useState(() => initialDraft || location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft || readBookingDraft());
   const [rebookNotice, setRebookNotice] = useState(draft?.rebookNotice || '');
   const restoredDraft = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
@@ -59,8 +60,8 @@ export default function CustomerBooking() {
   const cityName = value => t(`customerBooking.cities.${value}`, {
     defaultValue: (isArabic && catalog.branches.find(item => item.city === value)?.cityAr) || value,
   });
-  const [catalog, setCatalog] = useState(EMPTY_CATALOG);
-  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalog, setCatalog] = useState(scopedCatalog || EMPTY_CATALOG);
+  const [catalogLoading, setCatalogLoading] = useState(!scopedCatalog);
   const [catalogError, setCatalogError] = useState(false);
   const [reload, setReload] = useState(0);
   const [panel, setPanel] = useState('city');
@@ -124,7 +125,12 @@ export default function CustomerBooking() {
     appointmentFocusRef.current = `choose-${target}-title`;
     setPanel(target);
   };
-  const editSection = target => { setError(''); openPanel(target); };
+  const currentDraft = () => ({ ...draft, city, branchId, barberId, serviceIds, date, time, panel, details, guest, step: Math.floor(PANELS.indexOf(panel) / 2) });
+  const editSection = target => {
+    setError('');
+    if (onEditProvider && ['city', 'shop', 'barber', 'range'].includes(target)) onEditProvider(target, currentDraft());
+    else openPanel(target);
+  };
   const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); };
   const changeCity = value => {
     if (value !== city) { setCity(value); setBranchId(''); setQuery(''); clearAfterBranch(); }
@@ -146,7 +152,7 @@ export default function CustomerBooking() {
 
   const recoverUnavailableSelection = async (isCurrent = () => true) => {
     try {
-      const latest = await customerBookingService.getCatalog();
+      const latest = scopedCatalog ? await customerBookingService.selection({ barberId, mode: draft?.bookingMode || 'shop', date, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd }) : await customerBookingService.getCatalog();
       if (!isCurrent()) return;
       setCatalog(latest);
       setTime('');
@@ -206,6 +212,7 @@ export default function CustomerBooking() {
   useEffect(() => {
     if (receipt) saveBookingDraft(null);
     else if (draftRestored && city) saveBookingDraft({
+      bookingMode: draft?.bookingMode, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd,
       city, branchId, barberId, serviceIds, date, time, panel, query,
       step: Math.floor(PANELS.indexOf(panel) / 2),
       rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
@@ -219,7 +226,7 @@ export default function CustomerBooking() {
   useEffect(() => {
     let active = true;
     setCatalogLoading(true); setCatalogError(false); setError('');
-    customerBookingService.getCatalog().then(data => { if (active) setCatalog(data); })
+    (scopedCatalog ? Promise.resolve(scopedCatalog) : customerBookingService.getCatalog()).then(data => { if (active) setCatalog(data); })
       .catch(() => { if (active) { setError('UNAVAILABLE'); setCatalogError(true); } })
       .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
@@ -245,11 +252,12 @@ export default function CustomerBooking() {
     let active = true;
     setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
-      .then(result => { if (active) { setSlots(result.slots); setBookingPolicy(result.booking_policy || null); setTime(current => result.slots.includes(current) ? current : ''); if (time && !result.slots.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setBookingPolicy(result.booking_policy || null); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active) return;
         setError(failure.message);
-        if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection(() => active);
+        if (failure.message === 'INVALID_SELECTION' && onEditProvider) editSection('barber');
+        else if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection(() => active);
         else { setSlotError(true); setTime(''); openPanel('time'); }
       })
       .finally(() => { if (active) setSlotsLoading(false); });
@@ -267,6 +275,7 @@ export default function CustomerBooking() {
   const fullPhone = details.countryCode + details.phone.replace(/[\s()-]/g, '');
   useEffect(() => {
     if (!customer?.ownBarberIds?.includes(barberId)) return;
+    if (onEditProvider) { editSection('barber'); return; }
     setBarberId(''); setServiceIds([]); setTime(''); setPanel('barber'); setError('SELF_BOOKING_NOT_ALLOWED');
   }, [customer?.id, customer?.ownBarberIds?.join(','), barberId]);
 
@@ -452,24 +461,24 @@ export default function CustomerBooking() {
           <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.reload(); }}>{tr('anotherBooking')}</button></div>
         </div> : <>
           <FavouriteFeedback />
-          <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => openPanel('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
+          <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => editSection('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
             <div className="cb-city-step"><CityPicker groups={cityGroups} value={city} onChange={changeCity} cityName={cityName} governorateName={governorateName} disabled={busy || !cities.length} />{cities.length === 0 && !error && <p className="cb-empty">{tr('noCities')}</p>}</div>
           </BookingSection>
-          <BookingSection feedback={panel === 'shop' && !catalogError ? bookingError : null} id="choose-shop" title={tr('titles.branch')} summary={name(branch)} open={panel === 'shop' && Boolean(city)} onEdit={() => openPanel('shop')} onDone={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
+          <BookingSection feedback={panel === 'shop' && !catalogError ? bookingError : null} id="choose-shop" title={tr('titles.branch')} summary={name(branch)} open={panel === 'shop' && Boolean(city)} onEdit={() => editSection('shop')} onDone={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>
               <label className="cb-field-label" htmlFor="branch-search">{tr('searchLabel')}</label><div className="cb-search"><Search size={23} aria-hidden="true" /><input id="branch-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr('searchPlaceholder')} /></div><p className="cb-result-count" aria-live="polite">{tr('branchesCount', { count: branches.length })}</p>
               <fieldset className="cb-options"><legend className="sr-only">{tr('titles.branch')}</legend>{branches.map(item => <div key={item.id} className="cf-select-row"><label className={`cb-option ${branchId === item.id ? 'selected' : ''}`}><input type="radio" name="branch" value={item.id} checked={branchId === item.id} onClick={() => { if (branchId === item.id) openPanel('barber'); }} onChange={() => selectBranch(item.id)} /><BookingImage src={item.logoUrl} name={name(item)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{(isArabic ? item.areaAr : item.area) || item.address || item.city}</span><CatalogRating rating={item.rating} /></span><span className="cb-radio" aria-hidden="true">{branchId === item.id && <Check size={17} />}</span></label><FavouriteButton kind="shop" targetId={item.id} name={name(item)} disabled={busy} /></div>)}</fieldset>
               {branches.length === 0 && <div className="cb-empty"><Store size={28} aria-hidden="true" /><h2>{tr('noBranches')}</h2><p>{tr('noBranchesHint')}</p>{query && <button type="button" className="cb-text-button" onClick={() => setQuery('')}>{tr('clearSearch')}</button>}</div>}
           </BookingSection>
-          <BookingSection feedback={panel === 'barber' && !catalogError ? bookingError : null} id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber'} onEdit={() => openPanel('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('services')} disabled={busy}>
+          <BookingSection feedback={panel === 'barber' && !catalogError ? bookingError : null} id="choose-barber" title={tr('titles.barber')} summary={name(barber)} open={panel === 'barber'} onEdit={() => editSection('barber')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('services')} disabled={busy}>
               <fieldset className="cb-options"><legend className="sr-only">{tr('titles.barber')}</legend>{barbers.map(item => <div key={item.id} className="cf-select-row"><label className={`cb-option ${barberId === item.id ? 'selected' : ''}`}><input type="radio" name="barber" checked={barberId === item.id} onClick={() => { if (barberId === item.id) openPanel('services'); }} onChange={() => selectBarber(item.id)} /><BookingImage src={item.avatarUrl} name={name(item)} person /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('servicesCount', { count: getBarberServices(catalog, branchId, item.id).length })}</span><CatalogRating rating={item.rating} /></span><span className="cb-radio" aria-hidden="true">{barberId === item.id && <Check size={17} />}</span></label><FavouriteButton kind="barber" targetId={item.id} name={name(item)} disabled={busy} /></div>)}</fieldset>
               {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{ownShopProfile ? t('accountMode.noOtherBarbers') : tr('noBarbers')}</h2><p>{ownShopProfile ? t('accountMode.chooseOtherShop') : tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
           </BookingSection>
           <BookingSection feedback={panel === 'services' && !catalogError ? bookingError : null} id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' && Boolean(barber)} onEdit={() => openPanel('services')} editLabel={tr('edit')} disabled={busy}>
-                <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
-                <p className="cb-helper"><Clock size={17} aria-hidden="true" />{tr('serviceHint')}</p>
+                <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" disabled={draft?.bookingMode === 'time' && !serviceIds.includes(item.id) && duration + item.duration > (catalog.maxDuration || 480)} checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
+                {draft?.bookingMode === 'time' && <p className="cb-helper">{t('bookingFinder.serviceFit')} <button type="button" className="cb-text-button" onClick={() => editSection('range')}>{t('bookingFinder.changeRange')}</button></p>}<p className="cb-helper"><Clock size={17} aria-hidden="true" />{tr('serviceHint')}</p>
           </BookingSection>
           <BookingSection feedback={panel === 'time' && !catalogError ? bookingError : null} id="choose-time" title={tr('steps.time')} summary={time ? `${dateLabel(date)} · ${timeLabel(time)}` : ''} open={panel === 'time'} onEdit={() => openPanel('time')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('details')} disabled={busy || !appointmentReady}>
-                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><div className="cb-date-field"><input className="cb-input cb-date" id="booking-date" type="date" value={date} min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /></div><p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
+                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><div className="cb-date-field"><input className="cb-input cb-date" id="booking-date" type="date" readOnly={draft?.bookingMode === 'time'} value={date} min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /></div>{draft?.bookingMode === 'time' && <button className="cb-text-button" type="button" onClick={() => editSection('range')}>{t('bookingFinder.changeRange')} <bdi>{draft.rangeStart}–{draft.rangeEnd}</bdi></button>}<p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
                 {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('details'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
                 {checkingAvailability && !slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
           </BookingSection>
@@ -539,4 +548,8 @@ export default function CustomerBooking() {
       </main>
     </div>
   </div>;
+}
+
+export default function CustomerBooking() {
+  return <BookingFinder checkout={CustomerBookingCheckout} />;
 }

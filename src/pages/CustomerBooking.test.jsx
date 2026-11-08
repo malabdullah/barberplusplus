@@ -6,7 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
-import CustomerBooking from './CustomerBooking';
+import { CustomerBookingCheckout as CustomerBooking } from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
 import { rebookingDraft } from '../utils/customerRebooking';
