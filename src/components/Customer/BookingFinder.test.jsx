@@ -21,7 +21,7 @@ async function open() {
   render(<I18nextProvider i18n={i18n}><MemoryRouter><BookingFinder checkout={Checkout}/></MemoryRouter></I18nextProvider>);
 }
 beforeEach(()=>{
-  vi.resetAllMocks(); localStorage.clear();sessionStorage.clear();props=null;
+  vi.resetAllMocks(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); localStorage.clear();sessionStorage.clear();props=null;
   service.filters.mockResolvedValue({cities:[{city:'Sharq'}]});
   service.search.mockResolvedValue({items:[{id:'barber',name:'Omar',city:'Sharq',shop_name:'Seafront'}],kind:'barber',nextCursor:null});
   service.selection.mockResolvedValue({branches:[{id:'shop',city:'Sharq'}],barbers:[{id:'barber'}],services:[],maxDuration:60});

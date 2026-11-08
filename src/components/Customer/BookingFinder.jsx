@@ -97,7 +97,9 @@ export default function BookingFinder({ checkout: Checkout }) {
     return () => { live = false; clearTimeout(timer); };
     // All search inputs are scalar; stale responses never replace a newer page.
   }, [mode, stage, catalog, draft.city, draft.branchId, draft.date, draft.rangeStart, draft.rangeEnd, query, cursor, authLoading, customer?.id, favouriteKey, retry]);
-  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [mode, stage]);
+  useEffect(() => {
+    if (!catalog) { heading.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }
+  }, [mode, stage, catalog]);
   if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} onEditProvider={edit} />;
   const validRange = draft.date >= getKuwaitDate() && draft.date <= addBookingDays(getKuwaitDate(), 365)
     && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeStart || '') && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeEnd || '') && draft.rangeStart <= draft.rangeEnd;

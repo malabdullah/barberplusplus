@@ -37,7 +37,7 @@ for(const language of ['en','ar'])for(const theme of ['light','dark'])for(const 
   await page.locator('#finder-search').fill(chosen.name);
   await page.locator(`[data-provider-id="${chosen.id}"]`).click();
   await expect(page.locator('#choose-services')).toHaveClass(/is-open/);
-  await page.locator('#choose-services input[type=checkbox]:not(:disabled)').first().check();
+  await page.locator('#choose-services .cb-service:has(input[type=checkbox]:not(:disabled))').first().click();
   await page.locator('#booking-next').click();
   if(mode!=='time')await page.locator('#booking-date').fill(date);
   await expect(page.locator('.cb-time-options label').first()).toBeVisible();
@@ -51,6 +51,9 @@ for(const language of ['en','ar'])for(const theme of ['light','dark'])for(const 
   for(const field of ['city','branchId','barberId','date','time','bookingMode','rangeStart','rangeEnd'])expect(after[field]).toEqual(before[field]);expect(after.serviceIds).toEqual(before.serviceIds);
   await checkOverflow(page);expect(actions).not.toContain('catalog');expect(errors).toEqual([]);
   await page.screenshot({path:`.cloud-test/discovery-${engine}-${mode}-${language}-${theme}-checkout.png`,fullPage:true});
+  await page.locator('#choose-city .cb-section-heading button').click();
+  await expect(page.locator('#booking-city')).toBeInViewport();
+  if(mode==='time'){const edited=await page.evaluate(()=>JSON.parse(localStorage.getItem('barber-customer-booking-draft')));expect(edited.rangeStart).toBe('09:00');expect(edited.date).toBe(date);}
  });
 }
 test('barber search pages contain no duplicates, reset after a filter change, and preserve privacy',async({request,page})=>{
@@ -66,7 +69,7 @@ test('personal sign-in returns to the selected time-first appointment',async({pa
  const user=JSON.parse(fs.readFileSync('.cloud-test/customer-demo-credentials.json'));
  await page.goto('/book');await page.locator('[data-booking-mode=time]').click();await page.locator('#finder-date').fill(date);
  await page.locator('.bf-range button[type=submit]').click();await chooseBookingCity(page,'Sharq');await page.locator('#finder-search').fill(chosen.name);await page.locator(`[data-provider-id="${chosen.id}"]`).click();
- await page.locator('#choose-services input[type=checkbox]:not(:disabled)').first().check();await page.locator('#booking-next').click();await page.locator('.cb-time-options label').first().click();
+ await page.locator('#choose-services .cb-service:has(input[type=checkbox]:not(:disabled))').first().click();await page.locator('#booking-next').click();await page.locator('.cb-time-options label').first().click();
  const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('barber-customer-booking-draft')));
  await page.locator('#choose-details .cb-account-choice a[href^="/customer/sign-in"]').click();
  await page.locator('#customer-auth-email').fill(user.email);await page.locator('#password').fill(user.password);await page.locator('.ca-panel button[type=submit]').click();
