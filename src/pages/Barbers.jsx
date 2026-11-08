@@ -11,7 +11,6 @@ import {
   Search,
   Star,
   Calendar,
-  RefreshCw,
   Send,
   CheckCircle,
   AlertCircle,
@@ -21,10 +20,10 @@ import { useApp } from '../context/AppContext';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Barbers.css';
+import PendingInvitations from '../components/Invitations/PendingInvitations';
 
-const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, onResendInvite, t }) {
+const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, t }) {
   const navigate = useNavigate();
-  const [isResending, setIsResending] = useState(false);
   const initials = barber.name?.split(' ').map((n) => n[0]).join('') || '??';
 
   const handleCardClick = () => {
@@ -46,16 +45,6 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
     onDelete(barber);
   };
 
-  const handleResendInvite = async (e) => {
-    e.stopPropagation();
-    setIsResending(true);
-    try {
-      await onResendInvite(barber.id);
-    } finally {
-      setIsResending(false);
-    }
-  };
-
   const getInviteStatusDisplay = () => {
     switch (barber.inviteStatus) {
       case 'accepted':
@@ -70,7 +59,6 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
   };
 
   const inviteStatus = getInviteStatusDisplay();
-  const showResendButton = barber.inviteStatus && barber.inviteStatus !== 'accepted';
 
   const avatarUrl = barber.profilePicture || barber.avatarUrl;
 
@@ -91,7 +79,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
         {!barber.availabilityApprovedAt && <p>{t('availabilityApproval.initial')}</p>}
         <div className="barber-status-row">
           <div className={`barber-status ${barber.status}`}>
-            {barber.status === 'active' ? t('common.active') : t('barbers.away')}
+            {barber.inviteStatus === 'accepted' && (!barber.services.length || !barber.availabilityApprovedAt) ? t('barberInvitations.setupNeeded') : barber.status === 'active' ? t('common.active') : t('barbers.away')}
           </div>
           {inviteStatus && (
             <div className={`invite-status ${inviteStatus.className}`}>
@@ -134,17 +122,6 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, o
             <span>{todayBookings} {t('barbers.bookingsToday')}</span>
           </div>
           <div className="barber-actions">
-            {showResendButton && (
-              <button
-                className="action-btn"
-                onClick={handleResendInvite}
-                title={t('barbers.resendInvite')}
-                aria-label={t('barbers.resendInvite')}
-                disabled={isResending}
-              >
-                <RefreshCw size={16} strokeWidth={1.5} className={isResending ? 'spinning' : ''} aria-hidden="true" />
-              </button>
-            )}
             <button
               className="action-btn"
               onClick={handleEditClick}
@@ -184,7 +161,6 @@ export default function Barbers() {
     branchBookings,
     selectedBranch,
     deleteBarber,
-    resendBarberInvite,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,15 +211,6 @@ export default function Barbers() {
     }
   }, [deletingBarber, deleteBarber, t]);
 
-  const handleResendInvite = useCallback(async (barberId) => {
-    try {
-      await resendBarberInvite(barberId);
-      setToast({ type: 'success', message: t('barbers.inviteResent') });
-    } catch (error) {
-      logErrorSafely(error, 'Barbers.resendInvite');
-      setToast({ type: 'error', message: getErrorMessage(error, t('barbers.inviteResendFailed')) });
-    }
-  }, [resendBarberInvite, t]);
 
   return (
     <div className="barbers-page">
@@ -272,11 +239,14 @@ export default function Barbers() {
         </div>
         <Link to="/dashboard/barbers/new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
-          {t('barbers.addBarber')}
+          {t('barberInvitations.invite')}
         </Link>
       </div>
 
       <Link className="btn btn-secondary" to="/dashboard/availability-requests">{t('availabilityApproval.requests')}</Link>
+
+      {location.state?.invitationNotice && <p role={location.state.invitationNotice === 'deliveryFailed' ? 'alert' : 'status'}>{t('barberInvitations.' + location.state.invitationNotice)}</p>}
+      <PendingInvitations branchId={selectedBranch?.id} />
 
       {/* Search Bar */}
       <div className="barbers-toolbar animate-fade-in-up stagger-1">
@@ -304,7 +274,6 @@ export default function Barbers() {
               barber={barber}
               todayBookings={barberTodayBookingsMap[barber.id] || 0}
               onDelete={handleDelete}
-              onResendInvite={handleResendInvite}
               t={t}
             />
           ))}
@@ -326,7 +295,7 @@ export default function Barbers() {
           <p>{t('barbers.addFirst')}</p>
           <Link to="/dashboard/barbers/new" className="btn btn-primary">
             <Plus size={18} strokeWidth={2} />
-            {t('barbers.addFirstBarber')}
+            {t('barberInvitations.invite')}
           </Link>
         </div>
       )}

@@ -1,0 +1,10 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { shopSetupService } from './shopSetup.service';
+const api=vi.hoisted(()=>({shop:vi.fn(),barbers:vi.fn(),services:vi.fn()}));
+vi.mock('./branches.service',()=>({branchesService:{getById:api.shop}}));
+vi.mock('./barbers.service',()=>({barbersService:{getAll:api.barbers}}));
+vi.mock('./services.service',()=>({servicesService:{getAll:api.services}}));
+beforeEach(()=>{vi.clearAllMocks();api.shop.mockResolvedValue({id:'shop',managerId:'manager'});api.barbers.mockResolvedValue([]);api.services.mockResolvedValue([]);});
+it('loads staff and services only for the verified owned shop',async()=>{await shopSetupService.get('shop','manager');expect(api.barbers).toHaveBeenCalledWith('shop');expect(api.services).toHaveBeenCalledWith('shop');});
+it('rejects an ownership mismatch before loading staff details',async()=>{await expect(shopSetupService.get('shop','other')).rejects.toThrow('SHOP_NOT_FOUND');expect(api.barbers).not.toHaveBeenCalled();expect(api.services).not.toHaveBeenCalled();});
+it('keeps read failures visible instead of returning an empty successful setup',async()=>{api.services.mockRejectedValue(new Error('network'));await expect(shopSetupService.get('shop','manager')).rejects.toThrow('network');});

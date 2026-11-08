@@ -1,0 +1,12 @@
+.barber-invitations { margin-block: var(--space-xl); padding-block: var(--space-lg); border-block: 1px solid var(--border-color); }
+.invitation-heading, .invitation-row, .invitation-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.invitation-heading, .invitation-row { justify-content: space-between; }
+.invitation-heading h3 { margin: 0; font-size: 18px; }
+.invitation-row { padding-block: 16px; border-bottom: 1px solid var(--border-color); }
+.invitation-copy { display: grid; gap: 6px; min-width: 0; }
+.invitation-copy strong { overflow-wrap: anywhere; }
+.invitation-copy span { font-size: 13px; color: var(--text-secondary); }
+.invitation-email { overflow-wrap: anywhere; color: var(--booking-text); }
+.invitation-result { display: grid; gap: 16px; }
+.invitation-form { max-width: 560px; }
+@media (max-width: 480px) { .invitation-actions .btn { min-height: 44px; } }

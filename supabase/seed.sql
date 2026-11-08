@@ -140,7 +140,8 @@ insert into public.branches (
   email,
   governorate_id,
   area_id,
-  number_of_barbers
+  number_of_barbers,
+  publication_state
 )
 values
   (
@@ -155,7 +156,8 @@ values
     'branch@barber.test',
     9001,
     9001,
-    1
+    1,
+    'published'
   ),
   (
     '10000000-0000-4000-8000-000000000002',
@@ -169,7 +171,8 @@ values
     'other-branch@barber.test',
     9001,
     9001,
-    0
+    0,
+    'published'
   );
 
 insert into public.services (

@@ -17,6 +17,7 @@ import { adminService } from '../../services/admin.service';
 import Modal from '../../components/UI/Modal';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import './AdminPages.css';
+import ShopPublication from '../../components/Setup/ShopPublication';
 
 export default function ManagersList() {
   const { t } = useTranslation();
@@ -287,7 +288,7 @@ export default function ManagersList() {
               {managerDetails.branches?.length > 0 ? (
                 <div className="admin-branches-list">
                   {managerDetails.branches.map((branch) => (
-                    <div key={branch.id} className="admin-branch-item">
+                    <div key={branch.id}><div className="admin-branch-item">
                       <div className="admin-branch-info">
                         <span className="admin-branch-name">{branch.name}</span>
                         <span className="admin-branch-address">
@@ -297,7 +298,7 @@ export default function ManagersList() {
                       <span className={`status-badge small ${branch.isActive ? 'active' : 'inactive'}`}>
                         {branch.isActive ? t('common.active') : t('common.inactive')}
                       </span>
-                    </div>
+                    </div><ShopPublication branchId={branch.id} name={branch.name} admin /></div>
                   ))}
                 </div>
               ) : (

@@ -1,4 +1,6 @@
 begin;
+-- These legacy authorization fixtures represent already-published shops.
+alter table public.branches alter column publication_state set default 'published';
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 select plan(36);

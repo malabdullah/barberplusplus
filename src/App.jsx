@@ -16,6 +16,7 @@ import AccountEmails from './pages/admin/AccountEmails';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
 import Dashboard from './pages/Dashboard';
+import ShopSetup from './pages/ShopSetup';
 import Branches from './pages/Branches';
 import AddBranch from './pages/AddBranch';
 import EditBranch from './pages/EditBranch';
@@ -132,7 +133,8 @@ function AppRoutes() {
   // Email verification establishes a staff session before its callback settles.
   // Keep that public callback mounted while staff data loads: its one-time URL
   // has already been cleared, so remounting would report a false expired link.
-  if (loading && location.pathname !== '/customer/email-callback') {
+  // Invitation acceptance also refreshes the role/session while its callback settles.
+  if (loading && !['/customer/email-callback', '/accept-invite'].includes(location.pathname)) {
     return (
       <div style={{
         display: 'flex',
@@ -205,6 +207,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="setup" element={<ShopSetup />} />
         <Route path="branches" element={<Branches />} />
         <Route path="branches/new" element={<AddBranch />} />
         <Route path="branches/:branchId/edit" element={<EditBranch />} />

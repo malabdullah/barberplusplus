@@ -15,7 +15,7 @@ export default function PublicLayout() {
   // A lazy route can otherwise leave their sign-in guards racing navigation.
   useEffect(() => { setSigningOut(false); }, [location.key]);
   useEffect(() => {
-    const titleKeys = { '/': 'publicNav.pageTitle', '/login': 'publicNav.teamSignIn', '/signup': 'publicNav.registerShop', '/forgot-password': 'auth.forgotPassword', '/reset-password': 'auth.resetPassword' };
+    const titleKeys = { '/': 'publicNav.pageTitle', '/login': 'publicNav.teamSignIn', '/signup': 'auth.createManagerAccount', '/forgot-password': 'auth.forgotPassword', '/reset-password': 'auth.resetPassword' };
     if (titleKeys[location.pathname]) document.title = `${t(titleKeys[location.pathname])} | Barber++`;
   }, [location.pathname, t]);
 
