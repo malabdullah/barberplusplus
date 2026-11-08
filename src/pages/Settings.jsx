@@ -15,7 +15,9 @@ import {
   ShieldAlert,
   FileText,
   Scissors,
+  CalendarCheck,
 } from 'lucide-react';
+import AutoConfirmBookings from '../components/BookingPolicy/AutoConfirmBookings';
 import ManagerSocialAccounts from '../components/Customer/ManagerSocialAccounts';
 import SignOutCard from '../components/UI/SignOutCard';
 import { useApp } from '../context/AppContext';
@@ -36,7 +38,7 @@ function SettingsSection({ icon: Icon, title, description, children }) {
         </div>
         <div className="settings-section-info">
           <h3>{title}</h3>
-          <p>{description}</p>
+          {description && <p>{description}</p>}
         </div>
       </div>
       <div className="settings-section-content">{children}</div>
@@ -92,7 +94,7 @@ const parsePhone = (fullPhone) => {
 export default function Settings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, userRole, saveWorkProfile, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
+  const { user, userRole, currentBarber, barberProfileError, saveWorkProfile, theme, setTheme, language, setLanguage, notificationPreferences, setNotificationPreferences, notificationsLoading, reloadNotifications } = useApp();
 
   const parsedPhone = parsePhone(user?.user_metadata?.phone);
   // Use cached geolocation hook instead of direct API call
@@ -184,6 +186,13 @@ export default function Settings() {
       </div>
 
       <div className="settings-grid">
+        {userRole === 'barber' && (
+          <SettingsSection icon={CalendarCheck} title={t('autoConfirmation.preferences')}>
+            {currentBarber ? <AutoConfirmBookings barberId={currentBarber.id} embedded /> : (
+              <p role={barberProfileError ? 'alert' : 'status'}>{t(barberProfileError ? 'autoConfirmation.failed' : 'common.loading')}</p>
+            )}
+          </SettingsSection>
+        )}
         {/* Profile Section - Only show for managers (barbers have dedicated profile page) */}
         {userRole === 'manager' && (
           <SettingsSection

@@ -11,7 +11,7 @@ import MyProfile from './barber/MyProfile';
 import './MyChair.css';
 
 const pageSize = 20;
-const views = ['upcoming', 'history', 'profile', 'hours'];
+const views = ['upcoming', 'history', 'profile', 'hours', 'preferences'];
 const errors = {
   CHAIR_SHOP_NOT_ALLOWED: 'chair.shopUnavailable',
   CHAIR_SERVICES_REQUIRED: 'chair.servicesRequired',
@@ -168,14 +168,19 @@ export default function MyChair() {
               onClick={() => save(() => updateBarber(chair.id, { status: active ? 'inactive' : 'active' }), active ? 'chair.stopped' : 'chair.started')}
             >{t(active ? 'chair.stop' : 'chair.start')}</button>
           </section>
-          <AutoConfirmBookings barberId={chair.id} />
           <nav className="chair-nav" aria-label={t('chair.title')}>
             {views.map(item => (
               <Link key={item} to={viewUrl(item)} className={`btn ${view === item ? 'btn-primary' : 'btn-secondary'}`} aria-current={view === item ? 'page' : undefined}>
-                {t(`chair.${item}`)}
+                {t(item === 'preferences' ? 'autoConfirmation.preferences' : `chair.${item}`)}
               </Link>
             ))}
           </nav>
+          {view === 'preferences' && (
+            <section className="chair-card" aria-labelledby="chair-booking-preferences-title">
+              <h2 id="chair-booking-preferences-title">{t('autoConfirmation.preferences')}</h2>
+              <AutoConfirmBookings barberId={chair.id} embedded />
+            </section>
+          )}
           {view === 'profile' && <MyProfile chair />}
           {view === 'hours' && <MyAvailability />}
           {(view === 'upcoming' || view === 'history') && <ChairAppointments key={view} chair={chair} history={view === 'history'} />}

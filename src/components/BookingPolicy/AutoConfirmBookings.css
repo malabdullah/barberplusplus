@@ -1,6 +1,7 @@
 .auto-confirm-card { padding: 1.25rem; margin-block-end: 1.5rem; border: 1px solid var(--accent-border); border-radius: var(--radius-lg); background: var(--bg-secondary); }
 .auto-confirm-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.auto-confirm-card h2 { font-family: inherit; font-size: 1rem; margin: 0 0 .4rem; }
+.auto-confirm-card--embedded { padding: 0; margin: 0; border: 0; background: transparent; }
+.auto-confirm-label { display: block; font-family: inherit; font-size: 1rem; margin: 0 0 .4rem; }
 .auto-confirm-card p { margin: 0; color: var(--text-secondary); font-size: .9rem; }
 .auto-confirm-card .toggle { display: inline-block; width: 52px; height: 28px; min-width: 52px; min-height: 28px; padding: 0; background: rgba(120, 120, 120, .3); border: none; border-radius: 14px; position: relative; cursor: pointer; transition: background var(--transition-fast); flex-shrink: 0; box-sizing: border-box; appearance: none; }
 .auto-confirm-card .toggle.active { background: var(--accent-primary); }

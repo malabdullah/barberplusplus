@@ -1,4 +1,3 @@
-import AutoConfirmBookings from '../../components/BookingPolicy/AutoConfirmBookings';
 import StaffCancelBookingDialog from '../../components/BookingPolicy/StaffCancelBookingDialog';
 import React, { useState, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
@@ -226,7 +225,6 @@ export default function BarberDashboard() {
         </div>
       </div>
 
-      <AutoConfirmBookings barberId={currentBarber.id} />
       {actionError && <p role="alert">{t('autoConfirmation.actionFailed')}</p>}
 
       {/* Metrics Grid */}

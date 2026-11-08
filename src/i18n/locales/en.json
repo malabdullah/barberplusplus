@@ -2407,6 +2407,7 @@
     "serviceFit": "Choose services that fit the available time in your range."
   },
   "autoConfirmation": {
+    "preferences": "Booking preferences",
     "label": "Auto-confirm customer bookings",
     "on": "New bookings are confirmed automatically.",
     "off": "New bookings need your confirmation.",
