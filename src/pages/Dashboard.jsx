@@ -246,7 +246,7 @@ export default function Dashboard() {
                 </div>
                 <span>{t('services.addService')}</span>
               </Link>
-              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/branches/new'} className="quick-action-btn">
+              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/setup?shop=new'} className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>

@@ -86,6 +86,7 @@ export default function ShopSetup() {
   if (!permitted) return <div className="shop-setup"><h1>{tr('title')}</h1><p role="alert">{tr('notFound')}</p><Link className="btn btn-secondary" to="/dashboard/setup">{tr('chooseShop')}</Link></div>;
   return <div className="shop-setup">
     <header className="setup-header"><div><h1>{tr('title')}</h1><p>{shop ? i18n.language === 'ar' && shop.nameAr || shop.name : tr('newShop')}</p></div><div className="setup-header-actions">
+      {!creating && <Link className="btn btn-secondary" to="/dashboard/setup?shop=new"><Plus size={17} aria-hidden="true" />{tr('newShop')}</Link>}
       {!creating && <button type="button" className="btn btn-secondary" onClick={reload} disabled={busy || loading}><RefreshCw size={17} aria-hidden="true" />{t('common.refresh')}</button>}
       <Link className="btn btn-ghost" to="/dashboard">{tr('exit')}</Link>
     </div></header>
