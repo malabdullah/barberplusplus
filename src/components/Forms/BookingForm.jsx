@@ -29,7 +29,9 @@ import { getErrorMessage } from '../../utils/errorMessages';
  * @param {Function} props.onSubmit - Callback when form is submitted
  * @param {Function} props.onCancel - Callback when form is cancelled
  */
-function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
+const EMPTY_BOOKINGS = [];
+
+function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = EMPTY_BOOKINGS, onSubmit, onCancel }) {
   const { t } = useTranslation();
   const formRef = useRef(null);
 
@@ -56,7 +58,13 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
   const [offers, setOffers] = useState([]);
   const [offerLoading, setOfferLoading] = useState(false);
   const [offerFailure, setOfferFailure] = useState(false);
-  const [historicalOffer, setHistoricalOffer] = useState(booking?.packageSnapshot ? mapPackage({ ...booking.packageSnapshot, id: booking.packageOfferId }) : null);
+  const [historicalOffer, setHistoricalOffer] = useState(() => {
+    if (!booking?.packageSnapshot) return null;
+    const included = (booking.serviceSnapshot || []).filter(line => booking.packageSnapshot.service_ids.includes(line.id));
+    return mapPackage({ ...booking.packageSnapshot, id: booking.packageOfferId,
+      duration: included.reduce((sum, line) => sum + Number(line.duration), 0),
+      regular_price: included.reduce((sum, line) => sum + Number(line.price), 0) });
+  });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -441,7 +449,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         <div className="form-group">
           {offerLoading && <p role="status">{t('common.loading')}</p>}
           {offerFailure && formData.packageOfferId && <p className="form-error-banner" role="alert">{t('packages.errors.PACKAGE_UNAVAILABLE')}</p>}
-          <PackagePicker offers={historicalOffer && historicalOffer.serviceIds.every(id => selectedBarber?.services?.includes(id)) && !offers.some(item => item.id === historicalOffer.id) ? [historicalOffer, ...offers] : offers} selected={formData.packageOfferId} services={calculatedServices} onChange={selectOffer} disabled={saving || offerLoading} />
+          <PackagePicker offers={historicalOffer && historicalOffer.serviceIds.every(id => selectedBarber?.services?.includes(id)) ? [historicalOffer, ...offers.filter(item => item.id !== historicalOffer.id)] : offers} selected={formData.packageOfferId} services={calculatedServices} onChange={selectOffer} disabled={saving || offerLoading} />
           <label className="form-label">{t('bookings.services')}</label>
           {services.length > 0 ? (
             <>
