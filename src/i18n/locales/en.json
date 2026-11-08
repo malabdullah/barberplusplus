@@ -2375,6 +2375,7 @@
   },
   "bookingFinder": {
     "title": "How would you like to book?",
+    "finishIntro": "Choose your services and appointment time.",
     "timeTitle": "Choose a time",
     "timeDescription": "Find someone available when it suits you.",
     "barberTitle": "Choose a barber",

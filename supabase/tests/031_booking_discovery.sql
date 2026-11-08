@@ -23,6 +23,7 @@ select public.manage_shop_publication('fa160000-0000-4000-8000-000000000101','pu
 select set_config('request.jwt.claims','{}',true);
 select set_config('discovery.day',(((current_timestamp at time zone 'Asia/Kuwait')::date)+(8-extract(isodow from current_timestamp at time zone 'Asia/Kuwait')::int))::text,true);
 select set_config('discovery.input',jsonb_build_object('mode','time','city','Discovery QA City','barber_id','fa160000-0000-4000-8000-000000000301','date',current_setting('discovery.day'),'range_start','12:25','range_end','12:25')::text,true);
+select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.input')::jsonb||'{"cursor":null}')->'items'),1,'an empty cursor loads the first page');
 select ok(not has_function_privilege('anon','public.customer_booking_discovery(text,jsonb)','EXECUTE'),'anon cannot bypass the Edge gateway');
 select ok(not has_function_privilege('authenticated','private.booking_start_windows(uuid,date,time,time,uuid)','EXECUTE'),'raw schedules stay private');
 select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.input')::jsonb)->'items'),1,'a start inside the range may finish after the range');
@@ -39,6 +40,21 @@ select is(jsonb_array_length(public.customer_booking_discovery('search',current_
 select throws_ok($$select public.customer_booking('book',current_setting('discovery.book')::jsonb||jsonb_build_object('id',gen_random_uuid()))$$,'P0001','SLOT_UNAVAILABLE','competing checkout cannot take the same start');
 select is((public.customer_booking('appointment-slots',current_setting('discovery.book')::jsonb||jsonb_build_object('booked_duration',30,'booked_price',3,'exclude_booking_id',current_setting('discovery.book')::jsonb->>'id'))->'slots') ? '10:40',true,'reschedule excludes its own booking');
 select is((public.customer_booking('slots',current_setting('discovery.book')::jsonb)->'slots') ? '11:10',true,'a start exactly at the previous booking end is free');
+-- A saved barber remains first even when the ordinary name order spans pages.
+insert into private.customer_accounts(user_id,customer_id)
+select 'fa160000-0000-4000-8000-000000000002',customer_id from public.bookings where id=(current_setting('discovery.book')::jsonb->>'id')::uuid;
+insert into public.barbers(branch_id,name,service_ids,availability)
+select 'fa160000-0000-4000-8000-000000000101','Discovery QA Page '||lpad(n::text,2,'0'),array['fa160000-0000-4000-8000-000000000201']::uuid[],'{"monday":{"enabled":true,"start":"09:00","end":"18:00"}}' from generate_series(1,25) n;
+select set_config('discovery.saved',(select id::text from public.barbers where name='Discovery QA Page 25'),true);
+insert into private.customer_favourites(customer_id,barber_id,saved_barber_branch_id)
+select customer_id,current_setting('discovery.saved')::uuid,'fa160000-0000-4000-8000-000000000101' from private.customer_accounts where user_id='fa160000-0000-4000-8000-000000000002';
+select set_config('discovery.personal',jsonb_build_object('mode','barber','query','Discovery QA Page','account_user_id','fa160000-0000-4000-8000-000000000002','session_id','fa160000-0000-4000-8000-000000000012')::text,true);
+select set_config('discovery.page1',public.customer_booking_discovery('search',current_setting('discovery.personal')::jsonb)::text,true);
+select is(current_setting('discovery.page1')::jsonb->'items'->0->>'id',current_setting('discovery.saved'),'favourites rank ahead of all ordinary pages');
+select is(jsonb_array_length(current_setting('discovery.page1')::jsonb->'items'),20,'search pages are bounded to 20');
+select set_config('discovery.page2',public.customer_booking_discovery('search',current_setting('discovery.personal')::jsonb||jsonb_build_object('cursor',current_setting('discovery.page1')::jsonb->'nextCursor'))::text,true);
+select is(jsonb_array_length(current_setting('discovery.page2')::jsonb->'items'),5,'keyset cursor returns the remaining matching page');
+select ok(not exists(select 1 from jsonb_array_elements(current_setting('discovery.page1')::jsonb->'items') a join jsonb_array_elements(current_setting('discovery.page2')::jsonb->'items') b on a->>'id'=b->>'id'),'pages do not duplicate barbers');
 update public.barbers set vacations=jsonb_build_array(jsonb_build_object('startDate',current_setting('discovery.day'),'endDate',current_setting('discovery.day'))) where id='fa160000-0000-4000-8000-000000000301';
 select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.input')::jsonb)->'items'),0,'inclusive vacation dates are excluded');
 update public.barbers set vacations='[]' where id='fa160000-0000-4000-8000-000000000301';

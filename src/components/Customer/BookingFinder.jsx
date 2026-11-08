@@ -29,7 +29,7 @@ export default function BookingFinder({ checkout: Checkout }) {
   const [stage, setStage] = useState(initial?.finderStage || (initial?.barberId ? 'restore' : initial?.branchId ? 'results' : initial?.city ? 'results' : 'city'));
   const [catalog, setCatalog] = useState(receipt ? emptyCatalog : null);
   const [filters, setFilters] = useState([]); const [filterError, setFilterError] = useState(false);
-  const [query, setQuery] = useState(''); const [items, setItems] = useState([]); const [kind, setKind] = useState('');
+  const [query, setQuery] = useState(typeof initial?.query === 'string' ? initial.query : ''); const [items, setItems] = useState([]); const [kind, setKind] = useState('');
   const [cursor, setCursor] = useState(null); const [history, setHistory] = useState([]); const [next, setNext] = useState(null);
   const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [retry, setRetry] = useState(0);
   const heading = useRef(null); const requestVersion = useRef(0);
@@ -101,21 +101,21 @@ export default function BookingFinder({ checkout: Checkout }) {
   if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} onEditProvider={edit} />;
   const validRange = draft.date >= getKuwaitDate() && draft.date <= addBookingDays(getKuwaitDate(), 365)
     && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeStart || '') && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeEnd || '') && draft.rangeStart <= draft.rangeEnd;
-  return <div className="customer-booking bf-page"><a className="cb-skip" href="#booking-content">{t('customerBooking.skipToBooking')}</a><main id="booking-content" className="cb-main">
+  return <div className="customer-booking bf-page" dir={arabic ? 'rtl' : 'ltr'}><div className="cb-layout"><main id="booking-content" className="cb-main">
     <h1 ref={heading} tabIndex={-1}>{!mode ? tr('title') : tr(`${mode}Title`)}</h1>
     {!mode ? <div className="bf-methods">{[['time', Calendar], ['barber', UserRound], ['shop', Store]].map(([value, Icon]) => <button key={value} type="button" className="bf-method" onClick={() => chooseMode(value)} data-booking-mode={value}><Icon size={26} aria-hidden="true" /><span><strong>{tr(`${value}Title`)}</strong><span>{tr(`${value}Description`)}</span></span><ArrowRight size={20} aria-hidden="true" /></button>)}</div> : <>
       <div className="bf-toolbar"><button className="cb-text-button" type="button" onClick={() => { requestVersion.current++; setMode(''); setLoading(false); }}><ArrowLeft size={16} />{tr('changeMethod')}</button>
         {mode === 'time' && stage !== 'range' && <button className="cb-text-button" type="button" onClick={() => setStage('range')}><Clock size={16} /><bdi>{draft.date} · {draft.rangeStart}–{draft.rangeEnd}</bdi></button>}
       </div>
       <FavouriteFeedback />
-      {error && <p className="cb-alert" role="alert">{tr(error)} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('common.retry')}</button></p>}
+      {error && <p className="cb-alert" role="alert">{tr(error)} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p>}
       {stage === 'range' && <form className="bf-range" onSubmit={event => { event.preventDefault(); if (validRange) { setStage(draft.city ? 'results' : 'city'); patch({ time: '' }); } }}>
         <label htmlFor="finder-date">{t('customerBooking.dateLabel')}</label><input className="cb-input cb-date" id="finder-date" type="date" required min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(),365)} value={draft.date} onChange={event => patch({ date: event.target.value, time: '' })} />
         <fieldset className="bf-range-times"><legend>{tr('startRange')}</legend><label>{tr('from')}<input className="cb-input" type="time" required value={draft.rangeStart || ''} onChange={event => patch({ rangeStart: event.target.value, time: '' })} /></label><label>{tr('to')}<input className="cb-input" type="time" required value={draft.rangeEnd || ''} onChange={event => patch({ rangeEnd: event.target.value, time: '' })} /></label></fieldset>
         <p className="cb-helper">{tr('rangeHint')}</p><p className="cb-helper">{t('customerBooking.kuwaitTime')}</p><button className="cb-primary" type="submit" disabled={!validRange}>{tr('chooseCity')}<ArrowRight size={18} /></button>
       </form>}
       {['city','results'].includes(stage) && <>
-        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('common.retry')}</button></p> : <div className="bf-city"><CityPicker groups={groups} value={draft.city} cityName={cityName} governorateName={governorateName} onChange={value => { setStage(mode === 'barber' || value ? 'results' : 'city'); setQuery(''); patch({ city: value, branchId: '', barberId: '', serviceIds: [], time: '' }); }} />{mode === 'barber' && draft.city && <button className="cb-text-button" type="button" onClick={() => patch({ city: '', branchId: '' })}>{tr('allCities')}</button>}</div>}
+        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p> : <div className="bf-city"><CityPicker groups={groups} value={draft.city} cityName={cityName} governorateName={governorateName} onChange={value => { setStage(mode === 'barber' || value ? 'results' : 'city'); setQuery(''); patch({ city: value, branchId: '', barberId: '', serviceIds: [], time: '' }); }} />{mode === 'barber' && draft.city && <button className="cb-text-button" type="button" onClick={() => patch({ city: '', branchId: '' })}>{tr('allCities')}</button>}</div>}
         {stage === 'results' && <section aria-label={tr(kind === 'shop' ? 'shops' : 'barbers')}>
           {mode === 'shop' && draft.branchId && <button type="button" className="cb-text-button" onClick={() => { patch({ branchId: '', barberId: '' }); setQuery(''); }}>{tr('changeShop')}</button>}
           <label className="cb-field-label" htmlFor="finder-search">{tr(mode === 'shop' && !draft.branchId ? 'searchShops' : 'searchBarbers')}</label><div className="cb-search"><Search size={22} aria-hidden="true" /><input id="finder-search" type="search" value={query} maxLength={120} onChange={event => { setQuery(event.target.value); resetPage(); }} autoComplete="off" /></div>
@@ -127,5 +127,5 @@ export default function BookingFinder({ checkout: Checkout }) {
       </>}
       {stage === 'restore' && <p className="cb-loading" role="status"><Loader2 className="cb-spinner" size={22} />{t('customerBooking.loading')}</p>}
     </>}
-  </main></div>;
+  </main></div></div>;
 }
