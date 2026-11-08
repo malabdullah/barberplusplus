@@ -4,6 +4,7 @@ import { customerIdentity } from '../_shared/customer-session.ts';
 import { createCustomerBookingHandler } from './handler.ts';
 import { confirmGooglePhone, startGoogleTestPhone } from './google-phone.ts';
 import { bookingMonth } from './statistics.ts';
+import { bookingRPC, recoveredServiceNames } from './native-compatibility.ts';
 
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -17,6 +18,12 @@ const phone = enabled && /^[a-z][a-z0-9-]{4,29}$/.test(projectId) && apiKey && a
   ? { projectId, apiKey, appId, ...(cloudTest ? { testPhones } : {}) } : undefined;
 if (enabled && !phone) throw Error('Checkout phone verification is enabled but not configured');
 
+type RecoveryRow = {
+  id: string; date: string; time: string; duration: number; price: number; status: string;
+  service_ids: string[]; service_snapshot: unknown; created_at: string;
+  branches: { name: string; name_ar: string | null; address: string | null; location_url: string | null };
+  barbers: { name: string; name_ar: string | null };
+};
 Deno.serve(createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
   productionEnabled: Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED') === 'true',
@@ -96,8 +103,34 @@ Deno.serve(createCustomerBookingHandler({
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
     return result.data;
   },
+  ...(cloudTest ? {
+  close: async (id: string) => {
+    const result = await admin.rpc('native_close_booking_attempt', { p_booking: id });
+    if (result.error) throw Error('Resolution unavailable');
+    return result.data;
+  },
+  recover: async (proof: { id: string }) => {
+    const { data: b, error } = await admin.from('bookings')
+      .select('id,date,time,duration,price,status,service_ids,service_snapshot,created_at,branches!inner(name,name_ar,address,location_url),barbers!inner(name,name_ar)')
+      .eq('id', proof.id).returns<RecoveryRow[]>().maybeSingle();
+    if (error) throw Error('Recovery unavailable');
+    // The signed random ID is the receipt capability. Later canonical contact
+    // edits must not hide an already committed result from its original holder.
+    if (!b) return null;
+    const serviceNames = await recoveredServiceNames(b.service_snapshot, b.service_ids, async ids => {
+      const services = await admin.from('services').select('id,name,name_ar').in('id', ids);
+      if (services.error) throw Error('Recovery unavailable');
+      return services.data;
+    });
+    return { id: b.id, reference: b.id.replaceAll('-', '').slice(0, 10).toUpperCase(),
+      date: b.date, time: b.time.slice(0, 5), duration: b.duration, price: b.price, status: b.status,
+      branch_name: b.branches.name, branch_name_ar: b.branches.name_ar, address: b.branches.address,
+      location_url: b.branches.location_url, barber_name: b.barbers.name, barber_name_ar: b.barbers.name_ar,
+      service_names: serviceNames, created_at: b.created_at };
+  },
+  } : {}),
   booking: async (action, data) => {
-    const result = await admin.rpc('customer_booking', { p_action: action, p_data: data });
+    const result = await admin.rpc(bookingRPC(action, cloudTest), { p_action: action, p_data: data });
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
     return result.data;
   },

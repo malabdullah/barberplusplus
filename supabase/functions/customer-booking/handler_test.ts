@@ -234,3 +234,96 @@ Deno.test('discovery validates ranges and pagination and derives identity from t
   const invalid = make({customer:async()=>null, discovery:async()=>{throw Error('must not reach database');}});
   assert((await invalid(rejectedReq)).status === 401);
 });
+
+Deno.test('expired booking proofs recover only their own receipt and never write', async () => {
+  const now = Date.now; const started = now(); let writes = 0; let recoveredID = '';
+  const handler = make({
+    booking: async () => { writes++; return {}; },
+    recover: async (proof: {id: string}) => { recoveredID = proof.id; return { id: proof.id, reference: 'RECOVERED', created_at: new Date(started).toISOString() }; },
+  });
+  const signed = await (await handler(request({action:'guest-proof',name:'Guest',countryCode:'+965',phone:'50000099'}))).json();
+  try {
+    Date.now = () => started + 11 * 60_000;
+    assert((await handler(request({action:'book',...selection,verification:signed.verification}))).status === 401);
+    const response = await handler(request({action:'recover-booking',verification:signed.verification,bookingId:'untrusted-id'}));
+    const value = await response.json();
+    assert(response.status === 200 && value.found && value.receipt.id === recoveredID);
+    assert(typeof value.receipt.claimToken === 'string' && !('created_at' in value.receipt));
+    assert(writes === 0);
+    assert((await handler(request({action:'recover-booking',verification:signed.verification+'tampered'}))).status === 403);
+    Date.now = () => started + 61 * 60_000;
+    const late = await (await handler(request({action:'recover-booking',verification:signed.verification}))).json();
+    assert(late.found && !late.receipt.claimToken, 'Recovery cannot extend the guest claim window');
+    Date.now = () => started + 25 * 60 * 60_000;
+    assert((await handler(request({action:'recover-booking',verification:signed.verification}))).status === 403);
+  } finally { Date.now = now; }
+});
+
+Deno.test('account result recovery requires a live session for the same account', async () => {
+  let identity = 'first'; let reads = 0;
+  const handler = make({customer: async () => ({id:identity,session_id:'new-session',name:'Customer',phone:'50000099',countryCode:'+965'}),
+    recover: async () => {reads++;return null;}});
+  const authorized = (body: unknown) => {const r=request(body);r.headers.set('Authorization','Bearer live');return r;};
+  const signed = await (await handler(authorized({action:'account-proof'}))).json();
+  identity = 'other';
+  assert((await handler(authorized({action:'recover-booking',verification:signed.verification}))).status === 401);
+  assert(reads === 0);
+  identity = 'first';
+  const r = await handler(authorized({action:'recover-booking',verification:signed.verification}));
+  assert(r.status === 200 && (await r.json()).found === false && reads === 1);
+});
+
+Deno.test('native price guards are optional for web clients and validated before booking', async () => {
+  const handler = make({booking: async (_action: string, data: Record<string,unknown>) => {
+    if (data.expected_price === '1') throw Error('PRICE_CHANGED');
+    return {id:data.id};
+  }});
+  const p = await (await handler(request({action:'guest-proof',name:'Guest',countryCode:'+965',phone:'50000099'}))).json();
+  const base = {action:'book',...selection,verification:p.verification};
+  assert((await handler(request({...base,expectedPrice:'1',expectedDuration:'30'}))).status === 409);
+  assert((await handler(request({...base,expectedPrice:'NaN',expectedDuration:'30'}))).status === 400);
+  assert((await handler(request(base))).status === 200);
+});
+
+Deno.test('repeated successful guest responses keep the original receipt deadline', async () => {
+  const createdAt = Date.now() - 20 * 60_000;
+  const handler = make({ recover: async (proof: { id: string }) => ({ id: proof.id, created_at: new Date(createdAt).toISOString() }) });
+  const proof = await (await handler(request({ action: 'guest-proof', name: 'Native Guest', phone: '55501234', countryCode: '+965' }))).json();
+  const first = await (await handler(request({ action: 'book', ...selection, verification: proof.verification }))).json();
+  const repeated = await (await handler(request({ action: 'book', ...selection, verification: proof.verification }))).json();
+  const payload = (token: string) => JSON.parse(atob(token.split('.')[0].replaceAll('-', '+').replaceAll('_', '/')));
+  assert(payload(first.claimToken).expires === createdAt + 60 * 60_000);
+  assert(payload(repeated.claimToken).expires === payload(first.claimToken).expires);
+});
+
+Deno.test('resolution closes only the signed absent key and returns an existing receipt instead of closing it', async () => {
+  let closed = '';
+  let found = false;
+  const handler = make({ close: async (id: string) => { closed = id; return { found, closed: !found }; },
+    recover: async (proof: { id: string }) => ({ id: proof.id, reference: 'ORIGINAL', created_at: new Date().toISOString() }) });
+  const proof = await (await handler(request({ action: 'guest-proof', name: 'Native Guest', phone: '55501234', countryCode: '+965' }))).json();
+  const absent = await (await handler(request({ action: 'resolve-booking', ...proof, bookingId: 'attacker-choice' }))).json();
+  assert(absent.closed === true && absent.found === false);
+  const original = JSON.parse(atob(proof.verification.split('.')[0].replaceAll('-', '+').replaceAll('_', '/')));
+  assert(closed === original.id);
+  found = true;
+  const committed = await (await handler(request({ action: 'resolve-booking', ...proof }))).json();
+  assert(committed.found === true && committed.receipt.id === original.id && committed.receipt.claimToken);
+  assert((await handler(request({ action: 'resolve-booking', verification: proof.verification + 'bad' }))).status === 403);
+});
+
+Deno.test('account resolution requires a live session for the original account and closed attempts have a stable error', async () => {
+  let account = { id: 'account-a', session_id: 'session-a', name: 'Account', phone: '55501234', countryCode: '+965' };
+  let calls = 0;
+  const handler = make({ customer: async () => account, close: async () => { calls++; return { found: false, closed: true }; },
+    booking: async () => { throw Error('P0001 ATTEMPT_CLOSED'); } });
+  const auth = (body: unknown) => new Request('http://127.0.0.1:55321/functions/v1/customer-booking', { method: 'POST', headers: { Origin: 'http://localhost:5173', Authorization: 'Bearer live', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const proof = await (await handler(auth({ action: 'account-proof' }))).json();
+  account = { ...account, id: 'different-account' };
+  assert((await handler(auth({ action: 'resolve-booking', ...proof }))).status === 401 && calls === 0);
+  account = { ...account, id: 'account-a', session_id: 'new-live-session' };
+  assert((await handler(auth({ action: 'resolve-booking', ...proof }))).status === 200 && calls === 1);
+  const guest = await (await handler(request({ action: 'guest-proof', name: 'Guest', phone: '55501234', countryCode: '+965' }))).json();
+  const rejected = await handler(request({ action: 'book', ...selection, ...guest }));
+  assert(rejected.status === 409 && (await rejected.json()).error === 'ATTEMPT_CLOSED');
+});
