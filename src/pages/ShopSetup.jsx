@@ -21,11 +21,17 @@ export default function ShopSetup() {
   const creating = id === 'new'; const permitted = creating || isSetupId(id) && owned.some(shop => shop.id === id);
   const [snapshot, setSnapshot] = useState(null); const [loading, setLoading] = useState(!creating);
   const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0); const [editor, setEditor] = useState(); const [inviteOpen, setInviteOpen] = useState(false);
   const currentId = useRef(id); currentId.current = id; const heading = useRef(null);
   const progress = getShopSetup(snapshot?.shop, snapshot?.services, snapshot?.barbers);
   const step = creating ? 'shop' : SETUP_STEPS.includes(params.get('step')) ? params.get('step') : progress.next;
   const shop = snapshot?.shop;
+  const items = step === 'services' ? progress.services : progress.barbers;
+  const pageCount = Math.max(1, Math.ceil(items.length / 8));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleServices = progress.services.slice(currentPage * 8, currentPage * 8 + 8);
+  const visibleBarbers = progress.barbers.slice(currentPage * 8, currentPage * 8 + 8);
   const reload = useCallback(() => setRevision(value => value + 1), []);
   useEffect(() => {
     setSnapshot(null); setError(''); setNotice(''); setEditor(undefined); setInviteOpen(false); setBusy(false);
@@ -48,7 +54,7 @@ export default function ShopSetup() {
   useEffect(() => {
     if (snapshot && (!params.has('shop') || !SETUP_STEPS.includes(params.get('step')))) navigate(shopSetupUrl(id, progress.next), { replace: true });
   }, [snapshot, id, navigate, params, progress.next]);
-  useEffect(() => { setError(''); setNotice(''); heading.current?.focus({ preventScroll: true }); }, [step]);
+  useEffect(() => { setPage(0); setError(''); setNotice(''); heading.current?.focus({ preventScroll: true }); }, [step]);
   const go = next => navigate(shopSetupUrl(id, next));
   const saveShop = async data => {
     if (busy) return; const scope = id; setBusy(true); setError('');
@@ -75,6 +81,7 @@ export default function ShopSetup() {
   const editMember = (barber, returnStep = 'team') => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=profile' : '/dashboard/barbers/' + barber.id + '/edit', id, returnStep);
   const reviewMember = barber => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=hours' : '/dashboard/availability-requests?barber=' + barber.id, id, 'hours');
   const memberName = barber => i18n.language === 'ar' && barber.nameAr || barber.name;
+  const pager = items.length > 8 && <nav className="setup-pagination" aria-label={tr('pages')}><button type="button" className="btn btn-secondary" disabled={busy || currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('common.previous')}</button><span>{tr('page', { page: currentPage + 1, count: pageCount })}</span><button type="button" className="btn btn-secondary" disabled={busy || currentPage + 1 === pageCount} onClick={() => setPage(currentPage + 1)}>{t('common.next')}</button></nav>;
   const continueButton = (next, enabled = true) => <button type="button" className="btn btn-primary" disabled={busy || loading || Boolean(error) || !enabled} onClick={() => go(next)}>{tr('continue')}<ArrowRight size={17} aria-hidden="true" /></button>;
   if (!permitted) return <div className="shop-setup"><h1>{tr('title')}</h1><p role="alert">{tr('notFound')}</p><Link className="btn btn-secondary" to="/dashboard/setup">{tr('chooseShop')}</Link></div>;
   return <div className="shop-setup">
@@ -97,12 +104,14 @@ export default function ShopSetup() {
         {(creating || snapshot?.shop.id === id) && <>
           {step === 'shop' && <BranchForm key={id} branch={shop || null} onSubmit={saveShop} onCancel={() => navigate('/dashboard')} isSubmitting={busy || loading} submitText={tr('saveContinue')} />}
           {step === 'services' && <>
-            <div className="setup-service-list">{progress.services.map(service => <div className="setup-row" key={service.id}><div><strong>{service.name}</strong><span>{service.duration} {t('common.min')} · {service.price.toFixed(3)} {t('common.currency')}</span></div><button className="btn btn-ghost" disabled={busy} onClick={() => setEditor(service)}>{t('common.edit')}</button></div>)}</div>
+            <div className="setup-service-list">{visibleServices.map(service => <div className="setup-row" key={service.id}><div><strong>{service.name}</strong><span>{service.duration} {t('common.min')} · {service.price.toFixed(3)} {t('common.currency')}</span></div><button className="btn btn-ghost" disabled={busy} onClick={() => setEditor(service)}>{t('common.edit')}</button></div>)}</div>
+            {pager}
             {editor || !progress.services.length ? <ServiceForm key={editor?.id || id + '-new'} service={editor?.id ? editor : null} onSubmit={saveService} onCancel={() => setEditor(undefined)} isSubmitting={busy} /> : <button className="btn btn-secondary" onClick={() => setEditor({})}><Plus size={17} aria-hidden="true" />{t('services.addService')}</button>}
             <div className="setup-footer">{continueButton('team', progress.complete.services)}</div>
           </>}
           {step === 'team' && <>
-            <div className="setup-team">{progress.barbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.assigned(barber) ? 'servicesAssigned' : 'assignServices')}</span></div><Link className="btn btn-secondary" to={editMember(barber)}>{tr('assignServices')}</Link></div>)}</div>
+            <div className="setup-team">{visibleBarbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.assigned(barber) ? 'servicesAssigned' : 'assignServices')}</span></div><Link className="btn btn-secondary" to={editMember(barber)}>{tr('assignServices')}</Link></div>)}</div>
+            {pager}
             {inviteOpen ? <div className="setup-invite"><h3>{t('barberInvitations.invite')}</h3><InviteBarberForm branch={shop} onSent={result => { setNotice(t('barberInvitations.' + (result.delivered ? 'sent' : 'deliveryFailed'))); setInviteOpen(false); reload(); }} /></div> : <button className="btn btn-primary" onClick={() => setInviteOpen(true)}><Plus size={17} aria-hidden="true" />{t('barberInvitations.invite')}</button>}
             {(!managerChair || managerChair.branchId === id) && <Link className="btn btn-ghost setup-chair" to={setupActionUrl('/dashboard/my-chair?view=profile', id, 'team')}>{tr('myChair')}</Link>}
             <PendingInvitations branchId={id} reloadKey={revision} />
@@ -110,7 +119,8 @@ export default function ShopSetup() {
           </>}
           {step === 'hours' && <>
             {!progress.barbers.length && <Link className="btn btn-primary" to={shopSetupUrl(id, 'team')}>{t('barberInvitations.invite')}</Link>}
-            {progress.barbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.hours(barber) ? 'hoursApproved' : 'hoursNeeded')}</span>{barber.status !== 'active' && <span>{tr('inactiveBarber')}</span>}</div><div className="setup-row-actions"><Link className="btn btn-secondary" to={reviewMember(barber)}>{tr(barber.managerChair ? 'setHours' : 'reviewRequests')}</Link>{barber.status !== 'active' && <Link className="btn btn-ghost" to={editMember(barber, 'hours')}>{tr('activateBarber')}</Link>}</div></div>)}
+            {visibleBarbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.hours(barber) ? 'hoursApproved' : 'hoursNeeded')}</span>{barber.status !== 'active' && <span>{tr('inactiveBarber')}</span>}</div><div className="setup-row-actions"><Link className="btn btn-secondary" to={reviewMember(barber)}>{tr(barber.managerChair ? 'setHours' : 'reviewRequests')}</Link>{barber.status !== 'active' && <Link className="btn btn-ghost" to={editMember(barber, 'hours')}>{tr('activateBarber')}</Link>}</div></div>)}
+            {pager}
             <div className="setup-footer">{continueButton('review')}</div>
           </>}
           {step === 'review' && <>

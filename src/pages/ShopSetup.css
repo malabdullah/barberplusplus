@@ -47,3 +47,4 @@
  .setup-entry { align-items: flex-start; flex-direction: column; padding: 16px; }
  .setup-chair { display: flex; margin: 10px 0 0; }
 }
+.setup-pagination { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-block: 18px; font-size: 14px; color: var(--text-secondary); }

@@ -36,3 +36,9 @@ it('keeps the wizard on shop creation failure and supports a successful retry',a
  state.branches=[];state.selectedBranchId=null;state.addBranch.mockRejectedValueOnce(new Error('save'));mount('/dashboard/setup?shop=new');fireEvent.click(screen.getByRole('button',{name:'Save shop'}));expect(await screen.findByRole('alert')).toHaveTextContent(en.shopSetup.saveFailed);
  state.addBranch.mockImplementation(async()=>{state.branches=[shop];return shop;});fireEvent.click(screen.getByRole('button',{name:'Save shop'}));await screen.findByLabelText(en.services.name);expect(state.addBranch).toHaveBeenCalledTimes(2);
 });
+it('does not create a service if the selected shop changed before saving',async()=>{
+ state.selectedBranchId='other';mount();await screen.findByLabelText(en.services.name);fireEvent.change(screen.getByLabelText(en.services.name),{target:{value:'Haircut'}});fireEvent.click(screen.getByRole('button',{name:'Add Service',exact:true}));expect(await screen.findByRole('alert')).toBeVisible();expect(api.create).not.toHaveBeenCalled();
+});
+it('paginates a long service catalog without losing setup progress',async()=>{
+ const services=Array.from({length:11},(_,i)=>({id:'service-'+i,branchId:id,name:'Service '+i,duration:30,price:3,status:'active'}));api.get.mockResolvedValue({shop,services,barbers:[]});mount('/dashboard/setup?shop='+id+'&step=services');await screen.findByText('Service 0');expect(screen.queryByText('Service 8')).toBe(null);fireEvent.click(screen.getByRole('button',{name:en.common.next,exact:true}));expect(await screen.findByText('Service 8')).toBeVisible();expect(screen.queryByText('Service 0')).toBe(null);expect(screen.getByRole('button',{name:'Continue',exact:true})).toBeEnabled();
+});

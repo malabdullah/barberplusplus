@@ -2372,6 +2372,8 @@
     "readyBarbers_few": "{{count}} حلاقين جاهزين",
     "readyBarbers_many": "{{count}} حلاقاً جاهزاً",
     "readyBarbers_other": "{{count}} حلاق جاهز",
-    "viewShop": "عرض الصالون"
+    "viewShop": "عرض الصالون",
+    "pages": "صفحات قائمة الإعداد",
+    "page": "{{page}} من {{count}}"
   }
 }
