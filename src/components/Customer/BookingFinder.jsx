@@ -45,7 +45,7 @@ export default function BookingFinder({ checkout: Checkout }) {
   const patch = values => { setDraft(current => ({ ...current, ...values })); resetPage(); };
   const edit = (target, current) => {
     requestVersion.current++; setCatalog(null); setError(''); setQuery(''); resetPage();
-    setDraft(current); setMode(current.bookingMode || mode || 'shop');
+    setDraft(current); setMode(target === 'method' ? '' : current.bookingMode || mode || 'shop');
     setStage(target === 'range' ? 'range' : target === 'city' ? 'city' : 'results');
     if (target === 'city' || target === 'shop') setDraft(value => ({ ...value, branchId: '', barberId: '' }));
   };
@@ -100,7 +100,7 @@ export default function BookingFinder({ checkout: Checkout }) {
   useEffect(() => {
     if (!catalog) { heading.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }
   }, [mode, stage, catalog]);
-  if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} onEditProvider={edit} />;
+  if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} cityMetadata={filters} onEditProvider={edit} />;
   const validRange = draft.date >= getKuwaitDate() && draft.date <= addBookingDays(getKuwaitDate(), 365)
     && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeStart || '') && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeEnd || '') && draft.rangeStart <= draft.rangeEnd;
   return <div className="customer-booking bf-page" dir={arabic ? 'rtl' : 'ltr'}><div className="cb-layout"><main id="booking-content" className="cb-main">

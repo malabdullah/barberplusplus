@@ -43,7 +43,7 @@ function favouritesFirst(options, favourites, kind) {
   return [...options].sort((a, b) => Number(saved.has(b.id)) - Number(saved.has(a.id)));
 }
 
-export function CustomerBookingCheckout({ initialDraft, scopedCatalog, onEditProvider }) {
+export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetadata = [], onEditProvider }) {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountPending, error: accountError } = useCustomerAuth();
   const accountLoading = accountPending || accountError;
@@ -58,7 +58,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, onEditPro
   const isArabic = i18n.language.startsWith('ar');
   const name = item => shopWording(isArabic && item?.nameAr ? item.nameAr : item?.name || '');
   const cityName = value => t(`customerBooking.cities.${value}`, {
-    defaultValue: (isArabic && catalog.branches.find(item => item.city === value)?.cityAr) || value,
+    defaultValue: (isArabic && (catalog.branches.find(item => item.city === value)?.cityAr || cityMetadata.find(item => item.city === value)?.city_ar)) || value,
   });
   const [catalog, setCatalog] = useState(scopedCatalog || EMPTY_CATALOG);
   const [catalogLoading, setCatalogLoading] = useState(!scopedCatalog);
@@ -128,7 +128,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, onEditPro
   const currentDraft = () => ({ ...draft, city, branchId, barberId, serviceIds, date, time, panel, details, guest, step: Math.floor(PANELS.indexOf(panel) / 2) });
   const editSection = target => {
     setError('');
-    if (onEditProvider && ['city', 'shop', 'barber', 'range'].includes(target)) onEditProvider(target, currentDraft());
+    if (onEditProvider && ['city', 'shop', 'barber', 'range', 'method'].includes(target)) onEditProvider(target, currentDraft());
     else openPanel(target);
   };
   const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); };
@@ -437,6 +437,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, onEditPro
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
         <p className="cb-intro">{receipt ? tr('successIntro') : draft?.rebooking ? tr('rebooking.intro') : scopedCatalog ? t('bookingFinder.finishIntro') : tr('onePage.intro')}</p>
+        {!receipt && onEditProvider && <button className="cb-text-button" type="button" disabled={busy} onClick={() => editSection('method')}>{t('bookingFinder.changeMethod')}</button>}
         {accountError && <p className="cb-alert" role="alert">{t('accountMode.loadFailed')} <button type="button" className="cb-text-button" onClick={refresh}>{t('common.retry')}</button></p>}
         {!receipt && ['shopUnavailable', 'barberUnavailable'].includes(rebookNotice) && <p className="cb-alert" role="status">{tr(`rebooking.${rebookNotice}`)}</p>}
         {catalogError && bookingError}
