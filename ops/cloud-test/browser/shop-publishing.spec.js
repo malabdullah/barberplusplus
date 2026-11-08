@@ -48,10 +48,17 @@ if (engine === 'chromium') test('new manager shop remains draft with publishing 
   fs.writeFileSync('.cloud-test/publishing-fixture.json', JSON.stringify({ shopId: id, name, retainedForReview: true }, null, 2), { mode: 0o600 });
 });
 for (const language of ['en', 'ar']) for (const theme of ['light', 'dark']) test('publishing layout ' + language + ' ' + theme, async ({ page }) => {
-  await page.addInitScript(({ language, theme }) => { localStorage.setItem('i18nextLng', language); localStorage.setItem('theme', theme); }, { language, theme });
+  await page.addInitScript(({ language, theme }) => { localStorage.setItem('barber-language', language); localStorage.setItem('barber-theme', theme); }, { language, theme });
   await page.setViewportSize({ width: 360, height: 800 }); await signIn(page);
   await page.goto('/dashboard/setup?shop=' + f.shopId + '&step=review');
   await expect(page.locator('.shop-publication button')).toBeEnabled();
+  if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.topbar .preferences-selector').nth(1).locator('button').click();
+  if (await page.locator('html').getAttribute('dir') !== (language === 'ar' ? 'rtl' : 'ltr')) {
+    await page.locator('.topbar .preferences-selector').first().locator('button').first().click();
+    await page.locator('.preferences-option').filter({ hasText: language === 'ar' ? String.fromCodePoint(1575,1604,1593,1585,1576,1610,1577) : 'English' }).click();
+  }
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await expect(page.locator('html')).toHaveAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: '.cloud-test/publishing-' + engine + '-' + language + '-' + theme + '.png', fullPage: true });
 });

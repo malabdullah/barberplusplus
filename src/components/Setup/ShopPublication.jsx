@@ -39,8 +39,10 @@ export default function ShopPublication({ branchId, name, admin = false, onChang
     {!admin && state === 'paused' && <p>{tr(data.paused_manual_booking_allowed ? 'manualAllowed' : 'manualBlocked')}</p>}
     {error && <div><p className="error-banner" role="alert">{error}</p><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setRevision(value => value + 1)}>{t('common.refresh')}</button></div>}
     <Modal isOpen={Boolean(confirm)} onClose={() => { if (!busy) setConfirm(null); }} title={confirm ? tr(confirm) : ''}>
+      <div role="dialog" aria-modal="true" aria-label={confirm ? tr(confirm) : ''}>
       <p>{name}</p><p>{confirm ? tr(confirm + 'Confirm') : ''}</p>
       <div className="shop-publication-row"><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setConfirm(null)}>{t('common.cancel')}</button><button type="button" className="btn btn-primary" disabled={busy} onClick={() => act(confirm)}>{confirm ? tr(confirm) : ''}</button></div>
+      </div>
     </Modal>
   </section>;
 }
