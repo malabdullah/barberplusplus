@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, Calendar, Clock, Loader2, Search, Store, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Clock, Loader2, Search, Store, UserRound, RotateCcw } from 'lucide-react';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
 import { useCustomerFavourites } from '../../context/CustomerFavouritesContext';
 import { customerBookingService } from '../../services/customerBooking.service';
-import { readBookingDraft, readBookingReceipt, readBookingReturnDraft, saveBookingDraft, saveBookingReceipt } from '../../utils/customerBookingDraft';
+import { readBookingDraft, readBookingReceipt, readBookingReturnDraft, saveBookingDraft, saveBookingReceipt, forgetBookingReturn } from '../../utils/customerBookingDraft';
 import { getKuwaitDate, addBookingDays } from '../../utils/customerBooking';
 import { bookingCityGroups } from '../../utils/bookingCityGroups';
 import { shopWording } from '../../utils/customerTerminology';
@@ -21,7 +21,7 @@ const emptyCatalog = { branches: [], barbers: [], services: [] };
 export default function BookingFinder({ checkout: Checkout }) {
   const { t, i18n } = useTranslation(); const tr = (key, values) => t(`bookingFinder.${key}`, values);
   const { customer, loading: authLoading } = useCustomerAuth(); const { items: favourites } = useCustomerFavourites();
-  const location = useLocation();
+  const location = useLocation(); const navigate = useNavigate();
   const [initial] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || readBookingReturnDraft() || readBookingDraft());
   const [draft, setDraft] = useState(() => ({ ...empty, ...initial }));
   const [receipt] = useState(() => !initial && readBookingReceipt());
@@ -48,6 +48,14 @@ export default function BookingFinder({ checkout: Checkout }) {
     setDraft(current); setMode(target === 'method' ? '' : current.bookingMode || mode || 'shop');
     setStage(target === 'range' ? 'range' : target === 'city' ? 'city' : 'results');
     if (target === 'city' || target === 'shop') setDraft(value => ({ ...value, branchId: '', barberId: '' }));
+  };
+  const clearSelection = () => {
+    // Invalidate pending searches/selections before removing the saved journey.
+    requestVersion.current++;
+    saveBookingDraft(null); forgetBookingReturn(); saveBookingReceipt(null);
+    setDraft({ ...empty }); setMode(''); setStage('city'); setCatalog(null);
+    setQuery(''); setItems([]); setKind(''); setLoading(false); setError(''); resetPage();
+    if (location.state?.bookingDraft || location.state?.rebookingDraft) navigate(location.pathname, { replace: true, state: null });
   };
   const chooseMode = value => {
     requestVersion.current++; setMode(value); setStage(value === 'time' ? 'range' : value === 'barber' ? 'results' : 'city');
@@ -100,13 +108,16 @@ export default function BookingFinder({ checkout: Checkout }) {
   useEffect(() => {
     if (!catalog) { heading.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }
   }, [mode, stage, catalog]);
-  if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} cityMetadata={filters} onEditProvider={edit} />;
+  if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} cityMetadata={filters} onEditProvider={edit} onClearSelection={clearSelection} />;
+  const hasSelection = Boolean(mode || draft.city || draft.branchId || draft.barberId || draft.date || query);
+  const resetButton = <button className="cb-text-button" type="button" onClick={clearSelection} data-clear-booking><RotateCcw size={16} aria-hidden="true" />{tr('clearSelection')}</button>;
   const validRange = draft.date >= getKuwaitDate() && draft.date <= addBookingDays(getKuwaitDate(), 365)
     && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeStart || '') && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeEnd || '') && draft.rangeStart <= draft.rangeEnd;
   return <div className="customer-booking bf-page" dir={arabic ? 'rtl' : 'ltr'}><div className="cb-layout"><main id="booking-content" className="cb-main">
     <h1 ref={heading} tabIndex={-1}>{!mode ? tr('title') : tr(`${mode}Title`)}</h1>
-    {!mode ? <div className="bf-methods">{[['time', Calendar], ['barber', UserRound], ['shop', Store]].map(([value, Icon]) => <button key={value} type="button" className="bf-method" onClick={() => chooseMode(value)} data-booking-mode={value}><Icon size={26} aria-hidden="true" /><span><strong>{tr(`${value}Title`)}</strong><span>{tr(`${value}Description`)}</span></span><ArrowRight size={20} aria-hidden="true" /></button>)}</div> : <>
+    {!mode ? <>{hasSelection && resetButton}<div className="bf-methods">{[['time', Calendar], ['barber', UserRound], ['shop', Store]].map(([value, Icon]) => <button key={value} type="button" className="bf-method" onClick={() => chooseMode(value)} data-booking-mode={value}><Icon size={26} aria-hidden="true" /><span><strong>{tr(`${value}Title`)}</strong><span>{tr(`${value}Description`)}</span></span><ArrowRight size={20} aria-hidden="true" /></button>)}</div></> : <>
       <div className="bf-toolbar"><button className="cb-text-button" type="button" onClick={() => { requestVersion.current++; setMode(''); setLoading(false); }}><ArrowLeft size={16} />{tr('changeMethod')}</button>
+        {resetButton}
         {mode === 'time' && stage !== 'range' && <button className="cb-text-button" type="button" onClick={() => setStage('range')}><Clock size={16} /><bdi>{draft.date} · {draft.rangeStart}–{draft.rangeEnd}</bdi></button>}
       </div>
       <FavouriteFeedback />

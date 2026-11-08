@@ -2374,6 +2374,7 @@
     "page": "{{page}} of {{count}}"
   },
   "bookingFinder": {
+    "clearSelection": "Clear selection",
     "title": "How would you like to book?",
     "finishIntro": "Choose your services and appointment time.",
     "timeTitle": "Choose a time",

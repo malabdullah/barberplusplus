@@ -2402,6 +2402,7 @@
     "page": "{{page}} من {{count}}"
   },
   "bookingFinder": {
+    "clearSelection": "مسح الاختيارات",
     "title": "كيف تود الحجز؟",
     "finishIntro": "اختر خدماتك ووقت موعدك.",
     "timeTitle": "اختر الوقت",

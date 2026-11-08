@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound } from 'lucide-react';
+import { ArrowRight, Calendar, Check, CheckCircle2, Clock, Download, Loader2, Search, ShieldCheck, Store, UserRound, RotateCcw } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { useCustomerFavourites } from '../context/CustomerFavouritesContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
@@ -43,7 +43,7 @@ function favouritesFirst(options, favourites, kind) {
   return [...options].sort((a, b) => Number(saved.has(b.id)) - Number(saved.has(a.id)));
 }
 
-export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetadata = [], onEditProvider }) {
+export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetadata = [], onEditProvider, onClearSelection }) {
   const { t, i18n } = useTranslation();
   const { customer, refresh, updateProfile, loading: accountPending, error: accountError } = useCustomerAuth();
   const accountLoading = accountPending || accountError;
@@ -437,7 +437,10 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
         <p className="cb-intro">{receipt ? tr('successIntro') : draft?.rebooking ? tr('rebooking.intro') : scopedCatalog ? t('bookingFinder.finishIntro') : tr('onePage.intro')}</p>
-        {!receipt && onEditProvider && <button className="cb-text-button" type="button" disabled={busy} onClick={() => editSection('method')}>{t('bookingFinder.changeMethod')}</button>}
+        {!receipt && (onEditProvider || onClearSelection) && <div className="bf-toolbar">
+          {onEditProvider && <button className="cb-text-button" type="button" disabled={busy} onClick={() => editSection('method')}>{t('bookingFinder.changeMethod')}</button>}
+          {onClearSelection && <button className="cb-text-button" type="button" disabled={busy} onClick={onClearSelection} data-clear-booking><RotateCcw size={16} aria-hidden="true" />{t('bookingFinder.clearSelection')}</button>}
+        </div>}
         {accountError && <p className="cb-alert" role="alert">{t('accountMode.loadFailed')} <button type="button" className="cb-text-button" onClick={refresh}>{t('common.retry')}</button></p>}
         {!receipt && ['shopUnavailable', 'barberUnavailable'].includes(rebookNotice) && <p className="cb-alert" role="status">{tr(`rebooking.${rebookNotice}`)}</p>}
         {catalogError && bookingError}
