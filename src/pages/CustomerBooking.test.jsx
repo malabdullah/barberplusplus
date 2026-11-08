@@ -459,3 +459,11 @@ it('limits exact starts to the chosen range and prevents a service combination t
   expect(screen.queryByRole('radio',{name:/10:30/})).not.toBeInTheDocument();
   expect(screen.getByLabelText('Select a date')).toHaveAttribute('readonly');
 });
+
+it('shows pending confirmation before checkout and on the receipt', async () => {
+  customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00', '10:30'], confirmation_required: true });
+  customerBookingService.book.mockResolvedValue({ ...receipt, status: 'pending' });
+  await chooseAppointment();expect(screen.getByText('This booking needs confirmation from the shop.')).toBeVisible();
+  await requestVerification();click('Confirm booking');await screen.findByText('TESTREF');
+  expect(heading()).toHaveTextContent('Booking request sent');expect(screen.getByText('Awaiting confirmation from the shop. Your time is reserved.')).toBeVisible();
+});

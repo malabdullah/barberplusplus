@@ -147,6 +147,13 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   update: async (id, bookingData) => {
+    // Confirmation is atomic: a stale screen must not revive a cancelled request.
+    if (bookingData.status === 'confirmed' && Object.keys(bookingData).every(key => ['status', 'modifiedByType', 'modifiedByUserId'].includes(key))) {
+      const { data, error } = await supabase.rpc('confirm_pending_booking', { p_booking_id: id });
+      if (error) throw error;
+      return toFrontend(data);
+    }
+
     // SECURITY: Validate booking data (partial validation for updates)
     // Only validate fields that are present in the update
     const fieldsToValidate = {};

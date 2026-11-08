@@ -1,3 +1,4 @@
+import AutoConfirmBookings from '../components/BookingPolicy/AutoConfirmBookings';
 import { bookingServices } from '../utils/bookingServices';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -167,6 +168,7 @@ export default function MyChair() {
               onClick={() => save(() => updateBarber(chair.id, { status: active ? 'inactive' : 'active' }), active ? 'chair.stopped' : 'chair.started')}
             >{t(active ? 'chair.stop' : 'chair.start')}</button>
           </section>
+          <AutoConfirmBookings barberId={chair.id} />
           <nav className="chair-nav" aria-label={t('chair.title')}>
             {views.map(item => (
               <Link key={item} to={viewUrl(item)} className={`btn ${view === item ? 'btn-primary' : 'btn-secondary'}`} aria-current={view === item ? 'page' : undefined}>

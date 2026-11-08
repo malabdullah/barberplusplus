@@ -8,6 +8,7 @@ const toFrontend = (barber) => {
     id: barber.id,
     userId: barber.user_id,
     managerChair: barber.manager_chair === true,
+    autoConfirmBookings: barber.auto_confirm_bookings !== false,
     branchId: barber.branch_id,
     name: barber.name,
     nameAr: barber.name_ar,

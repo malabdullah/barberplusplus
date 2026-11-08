@@ -34,3 +34,8 @@ describe('customer booking', () => {
     expect(calendar).toContain('LOCATION:Test\\nShop');
   });
 });
+
+it('exports pending bookings as tentative calendar events', () => {
+  const calendar = bookingCalendar({ id: 'pending', reference: 'PENDING', status: 'pending', date: '2099-01-01', time: '10:00', duration: 30, services: [{ name: 'Cut' }] });
+  expect(calendar).toContain('STATUS:TENTATIVE');
+});

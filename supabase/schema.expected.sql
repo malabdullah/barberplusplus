@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     "manager_chair" boolean DEFAULT false NOT NULL,
     "availability_revision" integer DEFAULT 0 NOT NULL,
     "availability_approved_at" timestamp with time zone DEFAULT "now"(),
+    "auto_confirm_bookings" boolean DEFAULT true NOT NULL,
     CONSTRAINT "barbers_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text", 'on_leave'::"text"]))),
     CONSTRAINT "max_booking_days_range" CHECK ((("max_booking_days" >= 1) AND ("max_booking_days" <= 365)))
 );
@@ -418,6 +419,24 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."count_users_by_role"("role_filter" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.bookings%rowtype; actor text:=private.live_staff_role(); contact jsonb;
+begin
+ if actor is null then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ select * into b from public.bookings where id=p_booking_id for update;
+ if b.id is null or not (actor='admin' or actor='manager' and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
+  or actor='barber' and exists(select 1 from public.barbers where id=b.barber_id and user_id=auth.uid() and not manager_chair)) then
+  raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if b.status<>'pending' then raise exception 'BOOKING_NOT_PENDING';end if;
+ if b.date+b.time <= (clock_timestamp() at time zone 'Asia/Kuwait') then raise exception 'BOOKING_ALREADY_STARTED';end if;
+ update public.bookings set status='confirmed',modified_by_type=actor,modified_by_user_id=auth.uid() where id=b.id returning * into b;
+ select jsonb_build_object('id',id,'name',name,'country_code',country_code,'phone',phone) into contact from public.customers where id=b.customer_id;
+ return to_jsonb(b)||jsonb_build_object('customer',contact);
+end $$;
+ALTER FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."create_booking_reminder"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -581,7 +600,7 @@ begin
     if p_action in ('slots','appointment-slots') then
       return jsonb_build_object('slots', v_slots, 'duration', v_duration, 'price', v_price,
         'today', v_today, 'last_date', v_today + v_barber.max_booking_days,
-        'booking_policy',public.shop_booking_policy(v_branch.id));
+        'confirmation_required',not v_barber.auto_confirm_bookings,'booking_policy',public.shop_booking_policy(v_branch.id));
     end if;
     v_time := (p_data ->> 'time')::time;
     if v_time is null or not v_slots ? to_char(v_date + v_time, 'HH24:MI') then
@@ -600,7 +619,7 @@ begin
     insert into public.bookings (id, branch_id, barber_id, service_ids, customer_id, date, time,
       duration, price, status, notes, added_by_type)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
-      v_duration, v_price, 'confirmed', nullif(trim(p_data ->> 'notes'), ''), 'customer') returning * into v_booking;
+      v_duration, v_price, case when v_barber.auto_confirm_bookings then 'confirmed' else 'pending' end, nullif(trim(p_data ->> 'notes'), ''), 'customer') returning * into v_booking;
     if p_data ? 'booking_policy' and p_data->'booking_policy' is distinct from jsonb_build_object(
       'cancel_minutes',v_booking.cancel_notice_minutes,'reschedule_minutes',v_booking.reschedule_notice_minutes
     ) then raise exception 'BOOKING_POLICY_CHANGED'; end if;
@@ -1255,6 +1274,21 @@ begin
  return person.raw_user_meta_data;
 end $_$;
 ALTER FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.barbers%rowtype; actor text:=private.live_staff_role();
+begin
+ if p_enabled is null then raise exception 'INVALID_REQUEST';end if;
+ select * into b from public.barbers where id=p_barber_id for update;
+ if actor is null or b.user_id is distinct from auth.uid() or not (
+  actor='barber' and not b.manager_chair or actor='manager' and b.manager_chair and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
+ ) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ update public.barbers set auto_confirm_bookings=p_enabled where id=b.id;
+ return jsonb_build_object('auto_confirm_bookings',p_enabled);
+end $$;
+ALTER FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -1908,6 +1942,7 @@ CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifica
 CREATE INDEX "services_discovery_active" ON "public"."services" USING "btree" ("branch_id", "id") INCLUDE ("duration") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();
+CREATE OR REPLACE TRIGGER "a_barber_confirmation_preference" BEFORE UPDATE OF "auto_confirm_bookings" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_barber_confirmation_preference"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
 CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
@@ -2201,6 +2236,8 @@ GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."count_users_by_role"("role_filter" "text") FROM PUBLIC;
@@ -2284,6 +2321,8 @@ GRANT ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "
 REVOKE ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
