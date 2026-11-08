@@ -21,13 +21,14 @@ import BranchForm from '../components/Forms/BranchForm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BackLink from '../components/UI/BackLink';
 import './BranchDetails.css';
+import ShopPublication from '../components/Setup/ShopPublication';
 import { shopSetupUrl } from '../utils/shopSetup';
 
 export default function BranchDetails() {
   const { t, i18n } = useTranslation();
   const { branchId } = useParams();
   const navigate = useNavigate();
-  const { branches, barbers, services, bookings, updateBranch, deleteBranch, setSelectedBranchId } = useApp();
+  const { branches, barbers, services, bookings, updateBranch, deleteBranch, setSelectedBranchId, reloadData } = useApp();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -118,6 +119,8 @@ export default function BranchDetails() {
           </button>
         </div>
       </div>
+
+      <ShopPublication key={branchId} branchId={branchId} name={branch.name} onChanged={reloadData} />
 
       {/* Stats Row */}
       <div className="branch-stats-row animate-fade-in-up stagger-1">

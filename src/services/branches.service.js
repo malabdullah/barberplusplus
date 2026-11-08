@@ -23,6 +23,8 @@ const toFrontend = (branch) => {
     email: branch.email,
     numberOfBarbers: branch.number_of_barbers,
     status: branch.status,
+    publicationState: branch.publication_state,
+    pausedManualBookingAllowed: branch.paused_manual_booking_allowed,
     openingHours: branch.working_hours,
     imageUrl: branch.image_url,
     createdAt: branch.created_at,

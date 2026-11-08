@@ -20,9 +20,19 @@ approval. Data loads fail visibly and do not create empty records or mark setup
 complete. Queries retain current RLS, with an additional live owner check before
 loading a shop's service and barber details.
 
-This phase is a guide, not a publishing permission check. **Setup ready** does
-not publish or activate a shop, approve availability, assign services, change a
-subscription or grant manual-booking permissions. Dedicated publish/pause and
-admin booking-permission controls follow in the next phase. Existing shop status
-behavior is preserved. There are no migrations, new tables, Functions or secrets.
-Main, dev, production, iOS and the protected admin stay unchanged until approval.
+The review step and shop details now include explicit Publish/Pause controls.
+New shops start as drafts. Publishing checks saved location, active services and
+an accepted active barber with approved hours long enough for a service. The
+server rechecks ownership, live session and readiness; changing browser values
+cannot skip those checks. Existing shops retain their prior visibility.
+
+Pausing hides the shop from the customer catalog and rejects new public and
+manual reservations. Existing appointments remain saved and staff can manage
+them. In Admin > Managers > manager details, the admin can allow or disable manual
+bookings for a paused shop; public booking stays off. Republishing clears that
+exception. Admin suspension remains separate from publishing. This does not add
+paid subscriptions or change their future billing policy.
+
+Publishing and permission changes are audited. The Test-only release includes
+versioned migrations and the customer-booking catalog Function. Main, dev,
+production, iOS and the protected admin remain unchanged until approval.

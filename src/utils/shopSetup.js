@@ -1,6 +1,7 @@
 import { DAY_KEYS } from '../constants/time';
 export const SETUP_STEPS = ['shop', 'services', 'team', 'hours', 'review'];
 export const isSetupId = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
+const minutes = value => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
 const time = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '');
 export const shopSetupUrl = (id, step) => '/dashboard/setup?' + new URLSearchParams({ shop: id, ...(SETUP_STEPS.includes(step) ? { step } : {}) });
 export function setupActionUrl(path, id, step) {
@@ -18,7 +19,9 @@ export function getShopSetup(shop, allServices = [], allBarbers = []) {
   const assigned = b => b.services?.some(id => serviceIds.has(id));
   const hours = b => Boolean(b.availabilityApprovedAt) && DAY_KEYS.some(day => {
     const h = b.availability?.[day]; const open = shop?.openingHours?.[day];
-    return h?.enabled && time(h.start) && time(h.end) && h.start < h.end && open && time(open.open) && time(open.close) && h.start < open.close && h.end > open.open;
+    if (!h?.enabled || !time(h.start) || !time(h.end) || h.start >= h.end || !time(open?.open) || !time(open?.close)) return false;
+    const overlap = Math.min(minutes(h.end), minutes(open.close)) - Math.max(minutes(h.start), minutes(open.open));
+    return services.some(service => b.services?.includes(service.id) && service.duration <= overlap);
   });
   const readyBarbers = barbers.filter(b => b.status === 'active' && assigned(b) && hours(b));
   const shopHours = DAY_KEYS.some(day => { const h = shop?.openingHours?.[day]; return time(h?.open) && time(h?.close) && h.open < h.close; });

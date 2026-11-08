@@ -1,0 +1,5 @@
+.shop-publication { margin-block: 22px; padding: 18px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); color: var(--text-primary); min-width: 0; }
+.shop-publication-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.shop-publication p { margin-block: 12px 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.shop-publication .shop-publication-row + .shop-publication-row { margin-top: 22px; }
+.shop-publication .error-banner { color: var(--error-color, #c0392b); }

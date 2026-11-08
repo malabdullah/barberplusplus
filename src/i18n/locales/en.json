@@ -1,4 +1,28 @@
 {
+  "shopPublication": {
+    "title": "Shop publishing",
+    "permissions": "Booking permissions",
+    "draft": "Draft",
+    "published": "Published",
+    "paused": "Paused",
+    "publish": "Publish shop",
+    "pause": "Pause shop",
+    "allow-manual": "Allow manual bookings",
+    "block-manual": "Disable manual bookings",
+    "publishConfirm": "Customers will be able to book this shop.",
+    "pauseConfirm": "New bookings will stop. Existing appointments will stay booked.",
+    "allow-manualConfirm": "Allow the shop team to add bookings while this shop is paused. Public booking stays off.",
+    "block-manualConfirm": "Stop new manual bookings while this shop is paused. Existing appointments stay booked.",
+    "notReady": "Complete the shop setup before publishing.",
+    "manualAllowed": "Manual bookings allowed by admin.",
+    "manualBlocked": "New bookings are paused.",
+    "failed": "Could not update shop publishing. Please refresh and try again.",
+    "notReadyError": "The shop is not ready. Check services, active barbers and approved hours.",
+    "forbidden": "You do not have permission to change this shop.",
+    "adminOnly": "Only the admin can change manual booking permissions.",
+    "stale": "The shop status has changed. Refresh before trying again.",
+    "bookingBlocked": "This shop is not accepting new bookings. Publish it or ask the admin about manual booking access."
+  },
   "chair": {
     "title": "My Chair",
     "settingsDescription": "Take appointments at one of the shops you manage, using your existing account.",

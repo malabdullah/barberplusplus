@@ -504,7 +504,7 @@ begin
   if v_booking.id is null then
     select * into v_barber from public.barbers where id = (p_data ->> 'barber_id')::uuid
       and status = 'active' for share;
-    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' for share;
+    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' and publication_state = 'published' for share;
     if v_barber.id is null or v_branch.id is null
        or v_branch.id is distinct from (p_data ->> 'branch_id')::uuid then
       raise exception 'INVALID_SELECTION';
@@ -1172,6 +1172,11 @@ begin
 end
 $_$;
 ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text" DEFAULT 'get'::"text", "p_expected" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select shop_publishing.manage_shop_publication(p_branch,p_action,p_expected);$$;
+ALTER FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text", "p_expected" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."manager_can_create_shop"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1590,6 +1595,9 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
     "country_code" "text" DEFAULT '+965'::"text",
     "number_of_barbers" integer,
     "image_url" "text",
+    "publication_state" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "paused_manual_booking_allowed" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "branches_publication_state_check" CHECK (("publication_state" = ANY (ARRAY['draft'::"text", 'published'::"text", 'paused'::"text"]))),
     CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
 );
 ALTER TABLE "public"."branches" OWNER TO "postgres";
@@ -1903,6 +1911,7 @@ CREATE INDEX "idx_whatsapp_messages_session" ON "public"."whatsapp_messages" USI
 CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifications" USING "btree" ("event_id", "recipient_user_id") WHERE ("event_id" IS NOT NULL);
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();
+CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
 CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
 CREATE OR REPLACE TRIGGER "bookings_updated_at" BEFORE UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
@@ -1919,6 +1928,7 @@ CREATE OR REPLACE TRIGGER "guard_bookings_against_new_overlaps" AFTER INSERT OR 
 CREATE OR REPLACE TRIGGER "guard_customer_account_email" BEFORE UPDATE OF "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_account_contact_email"();
 CREATE OR REPLACE TRIGGER "guard_manager_chair" BEFORE INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair"();
 CREATE OR REPLACE TRIGGER "guard_manager_chair_booking" AFTER INSERT OR UPDATE OF "barber_id", "branch_id", "date", "time", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_chair_booking"();
+CREATE OR REPLACE TRIGGER "guard_shop_publication" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_publication"();
 CREATE OR REPLACE TRIGGER "link_staff_customer_booking_owner" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."link_staff_customer_booking_owner"();
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
 CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "phone", "country_code" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."normalize_contact_phone"();
@@ -2260,6 +2270,8 @@ GRANT ALL ON FUNCTION "public"."is_manager"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text", "p_expected" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text", "p_expected" "text") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."manager_can_create_shop"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "service_role";

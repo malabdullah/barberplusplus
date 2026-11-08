@@ -11,6 +11,7 @@ import { shopSetupService } from '../services/shopSetup.service';
 import { getErrorMessage } from '../utils/errorMessages';
 import { getShopSetup, isSetupId, SETUP_STEPS, shopSetupUrl, setupActionUrl } from '../utils/shopSetup';
 import './ShopSetup.css';
+import ShopPublication from '../components/Setup/ShopPublication';
 
 export default function ShopSetup() {
   const { t, i18n } = useTranslation(); const tr = (key, options) => t('shopSetup.' + key, options);
@@ -125,6 +126,7 @@ export default function ShopSetup() {
             <div className="setup-footer">{continueButton('review')}</div>
           </>}
           {step === 'review' && <>
+            <ShopPublication key={id + '-' + revision} branchId={id} name={shop.name} onChanged={reload} />
             <div className={'setup-readiness' + (progress.ready ? ' is-ready' : '')}><strong>{tr(progress.ready ? 'ready' : 'unfinished')}</strong><span>{tr('readyBarbers', { count: progress.readyBarbers.length })}</span></div>
             <div className="setup-review">{SETUP_STEPS.filter(name => name !== 'review').map(name => <div className="setup-row" key={name}><div><strong>{tr('stepsLabels.' + name)}</strong><span>{tr(progress.complete[name] ? 'done' : 'needed')}</span></div><button className="btn btn-secondary" onClick={() => go(name)}>{tr(progress.complete[name] ? 'edit' : 'finish')}</button></div>)}</div>
             <div className="setup-footer">{!progress.ready && continueButton(progress.next)}<Link className="btn btn-secondary" to={'/dashboard/branches/' + id}>{tr('viewShop')}</Link></div>

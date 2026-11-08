@@ -8,6 +8,7 @@ import en from '../i18n/locales/en.json';
 import ShopSetup from './ShopSetup';
 const id='10000000-0000-4000-8000-000000000001';
 const state=vi.hoisted(()=>({}));const api=vi.hoisted(()=>({get:vi.fn(),create:vi.fn(),update:vi.fn()}));
+vi.mock('../components/Setup/ShopPublication',()=>({default:()=>null}));
 vi.mock('../context/AppContext',()=>({useApp:()=>state}));
 vi.mock('../services/shopSetup.service',()=>({shopSetupService:{get:api.get}}));
 vi.mock('../services/services.service',()=>({servicesService:{create:api.create,update:api.update}}));

@@ -37,8 +37,8 @@ Deno.serve(createCustomerBookingHandler({
     const month = bookingMonth();
     // Return counts only; no staff contacts, customer identities or booking rows.
     const [shops, barbers, bookings] = await Promise.all([
-      admin.from('branches').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      admin.from('barbers').select('id,branches!inner(status)', { count: 'exact', head: true }).eq('status', 'active').eq('branches.status', 'active'),
+      admin.from('branches').select('id', { count: 'exact', head: true }).eq('status', 'active').eq('publication_state', 'published'),
+      admin.from('barbers').select('id,branches!inner(status,publication_state)', { count: 'exact', head: true }).eq('status', 'active').eq('branches.status', 'active').eq('branches.publication_state', 'published'),
       admin.from('bookings').select('id', { count: 'exact', head: true }).gte('date', month.start).lt('date', month.end).not('status', 'in', '(cancelled,no_show)'),
     ]);
     if ([shops, barbers, bookings].some(result => result.error || result.count === null)) throw Error('Statistics unavailable');
@@ -53,7 +53,7 @@ Deno.serve(createCustomerBookingHandler({
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services, ratingResult] = await Promise.all([
-      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').order('name'),
+      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').eq('publication_state', 'published').order('name'),
       admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days,availability').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
       admin.rpc('customer_catalog_ratings'),
