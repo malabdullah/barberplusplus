@@ -1647,6 +1647,7 @@
     "barberNext": "Choose your barber next.",
     "entry": "Book an appointment",
     "phoneVerification": {
+      "waiting": "Waiting for phone verification…",
       "cancel": "Cancel verification",
       "title": "Verify your mobile number",
       "hint": "We’ll ask for a six-digit code if this number hasn’t been verified for this booking.",
