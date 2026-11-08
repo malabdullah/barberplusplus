@@ -31,7 +31,7 @@ export const bookingCalendar = booking => {
   const end = new Date(start.getTime() + booking.duration * 60000);
   const stamp = date => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const escape = text => String(text || '').replaceAll('\\', '\\\\').replace(/\r\n?|\n/g, '\\n').replaceAll(',', '\\,').replaceAll(';', '\\;');
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Barber++//Customer booking//EN', 'BEGIN:VEVENT',
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Barber++//Customer booking//EN', 'BEGIN:VEVENT', `STATUS:${booking.status === 'pending' ? 'TENTATIVE' : 'CONFIRMED'}`,
     `UID:${booking.id}@barber.test`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
     `SUMMARY:${escape(booking.services.map(service => service.name).join(', '))}`,
     `LOCATION:${escape([booking.branchName, booking.address].filter(Boolean).join(', '))}`,

@@ -62,7 +62,7 @@ function BookingStatusBadge({ status, t }) {
   );
 }
 
-const TodayBookingItem = memo(function TodayBookingItem({ booking, onComplete, onCancel, t }) {
+const TodayBookingItem = memo(function TodayBookingItem({ booking, onComplete, onCancel, busy, t }) {
   const canTakeAction = ['confirmed', 'pending'].includes(booking.status);
 
   return (
@@ -81,13 +81,15 @@ const TodayBookingItem = memo(function TodayBookingItem({ booking, onComplete, o
           <div className="today-booking-btns">
             <button
               className="booking-action-btn complete"
-              onClick={() => onComplete(booking.id)}
-              title={t('bookings.markCompleted')}
+              disabled={busy}
+              aria-label={t(booking.status === 'pending' ? 'autoConfirmation.confirm' : 'bookings.markCompleted')}
+              onClick={() => onComplete(booking.id, booking.status)}
+              title={t(booking.status === 'pending' ? 'autoConfirmation.confirm' : 'bookings.markCompleted')}
             >
               <Check size={14} strokeWidth={2} />
             </button>
             <button
-              className="booking-action-btn cancel"
+              className="booking-action-btn cancel" disabled={busy}
               onClick={() => onCancel(booking.id)}
               title={t('bookings.cancelBooking')}
             >
@@ -148,8 +150,14 @@ export default function BarberDashboard() {
   );
 
   // Event handlers (not hooks, can be defined anywhere)
-  const handleComplete = (bookingId) => {
-    updateBooking(bookingId, { status: 'completed' });
+  const [actionError, setActionError] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const handleComplete = async (bookingId, status) => {
+    if (actionBusy) return;
+    setActionBusy(true); setActionError(false);
+    try { await updateBooking(bookingId, { status: status === 'pending' ? 'confirmed' : 'completed' }); }
+    catch { setActionError(true); }
+    finally { setActionBusy(false); }
   };
 
   const [cancellingBooking, setCancellingBooking] = useState(null);
@@ -217,6 +225,8 @@ export default function BarberDashboard() {
         </div>
       </div>
 
+      {actionError && <p role="alert">{t('autoConfirmation.actionFailed')}</p>}
+
       {/* Metrics Grid */}
       <div className="dashboard-metrics">
         <MetricCard
@@ -279,7 +289,7 @@ export default function BarberDashboard() {
                   <TodayBookingItem
                     key={booking.id}
                     booking={booking}
-                    onComplete={handleComplete}
+                    busy={actionBusy} onComplete={handleComplete}
                     onCancel={handleCancel}
                     t={t}
                   />

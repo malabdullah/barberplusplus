@@ -2405,5 +2405,17 @@
     "page": "Page {{number}}",
     "changeRange": "Change date or range",
     "serviceFit": "Choose services that fit the available time in your range."
+  },
+  "autoConfirmation": {
+    "preferences": "Booking preferences",
+    "label": "Auto-confirm customer bookings",
+    "on": "New bookings are confirmed automatically.",
+    "off": "New bookings need your confirmation.",
+    "failed": "Could not save or load this setting. Please try again.",
+    "confirm": "Confirm booking",
+    "requestSent": "Booking request sent",
+    "awaiting": "Awaiting confirmation from the shop. Your time is reserved.",
+    "beforeBooking": "This booking needs confirmation from the shop.",
+    "actionFailed": "Could not update this booking. Refresh and try again."
   }
 }

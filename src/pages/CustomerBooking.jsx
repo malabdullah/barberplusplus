@@ -75,6 +75,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [time, setTime] = useState(draft?.time || '');
   const [slots, setSlots] = useState([]);
   const [bookingPolicy, setBookingPolicy] = useState(null);
+  const [confirmationRequired, setConfirmationRequired] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
@@ -250,9 +251,9 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   useEffect(() => {
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
-    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setSlotError(false);
+    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
-      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setBookingPolicy(result.booking_policy || null); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active) return;
         setError(failure.message);
@@ -404,7 +405,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     </button>
   );
   const panelIndex = PANELS.indexOf(panel);
-  const title = receipt ? tr('successTitle') : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
+  const awaitingConfirmation = receipt?.status === 'pending';
+  const title = receipt ? (awaitingConfirmation ? t('autoConfirmation.requestSent') : tr('successTitle')) : tr(draft?.rebooking ? 'rebooking.title' : 'onePage.title');
   const downloadCalendar = () => {
     downloadBookingCalendar(receipt);
   };
@@ -434,9 +436,9 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
           <span>{tr('onePage.sectionOf', { current: panelIndex + 1, total: PANELS.length })}</span>
           <div className="cb-progress-track" aria-hidden="true"><span style={{ width: `${(panelIndex + 1) / PANELS.length * 100}%` }} /></div>
         </div>}
-        {receipt && <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />}
+        {receipt && (awaitingConfirmation ? <Clock size={46} className="cb-success-icon" aria-hidden="true" /> : <CheckCircle2 size={46} className="cb-success-icon" aria-hidden="true" />)}
         <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
-        <p className="cb-intro">{receipt ? tr('successIntro') : draft?.rebooking ? tr('rebooking.intro') : scopedCatalog ? t('bookingFinder.finishIntro') : tr('onePage.intro')}</p>
+        <p className="cb-intro">{receipt ? (awaitingConfirmation ? t('autoConfirmation.awaiting') : tr('successIntro')) : draft?.rebooking ? tr('rebooking.intro') : scopedCatalog ? t('bookingFinder.finishIntro') : tr('onePage.intro')}</p>
         {!receipt && (onEditProvider || onClearSelection) && <div className="bf-toolbar">
           {onEditProvider && <button className="cb-text-button" type="button" disabled={busy} onClick={() => editSection('method')}>{t('bookingFinder.changeMethod')}</button>}
           {onClearSelection && <button className="cb-text-button" type="button" disabled={busy} onClick={onClearSelection} data-clear-booking><RotateCcw size={16} aria-hidden="true" />{t('bookingFinder.clearSelection')}</button>}
@@ -530,6 +532,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                   {phoneChallenge && <button type="button" className="cb-secondary"
                     onClick={() => phoneChallenge.abort()}>{tr('phoneVerification.cancel')}</button>}
                 </form>}
+                {confirmationRequired && time && <p className="cb-alert" role="status">{t('autoConfirmation.beforeBooking')}</p>}
                 {bookingPolicy && time && <div className="cb-account-choice">
                   <h3>{t('bookingPolicy.checkoutTitle')}</h3>
                   <p>{policyDeadline(bookingPolicy.cancel_minutes, 'cancel')}</p>
