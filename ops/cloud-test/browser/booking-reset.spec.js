@@ -50,5 +50,5 @@ test(`${engine}: clear keeps the customer signed in`,async({page})=>{
  await page.goto('/customer/sign-in');await page.locator('#customer-auth-email').fill(user.email);await page.locator('#password').fill(user.password);await page.locator('.ca-panel button[type=submit]').click();
  await expect(page).toHaveURL(/\/customer\/account$/);await expect(page.locator('.ca-profile-details')).toBeVisible();const before=await page.locator('.ca-profile-details').innerText();
  await page.goto('/book');await page.locator('[data-booking-mode=barber]').click();await page.locator('#finder-search').fill(chosen.name);await page.locator(`[data-provider-id="${chosen.id}"]`).click();await expect(page.locator('#choose-services')).toHaveClass(/is-open/);
- await page.locator('[data-clear-booking]').click();await expectReset(page);await page.goto('/customer/account');await expect(page).toHaveURL(/\/customer\/account$/);await expect(page.locator('.ca-profile-details')).toHaveText(before);
+ await page.locator('[data-clear-booking]').click();await expectReset(page);await page.goto('/customer/account');await expect(page).toHaveURL(/\/customer\/account$/);await expect(page.locator('.ca-profile-details')).toHaveText(before,{useInnerText:true});
 });
