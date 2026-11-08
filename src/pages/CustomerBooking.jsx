@@ -83,10 +83,12 @@ export default function CustomerBooking() {
   const [accountPhoneCheck, setAccountPhoneCheck] = useState(null);
   const [phoneSession, setPhoneSession] = useState(null);
   const [phoneChallenge, setPhoneChallenge] = useState(null);
+  const phoneChallengeRef = useRef(null);
   const [phoneCode, setPhoneCode] = useState('');
   const [resendIn, setResendIn] = useState(0);
   const captchaRef = useRef(null);
   const phoneCodeRef = useRef(null);
+  useEffect(() => () => phoneChallengeRef.current?.abort(), []);
   const [receipt, setReceipt] = useState(() => (location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft) ? null : readBookingReceipt());
   const [guest, setGuest] = useState(draft?.guest === true);
   const [claimBusy, setClaimBusy] = useState(false);
@@ -305,11 +307,13 @@ export default function CustomerBooking() {
       session = await customerBookingService.startTestPhone(fullPhone);
     } else {
       const challenge = new AbortController();
+      phoneChallengeRef.current = challenge;
       setPhoneChallenge(challenge);
       try {
         const { sendCheckoutPhoneCode } = await import('../services/checkoutPhone.service');
         session = await sendCheckoutPhoneCode(config, fullPhone, captchaRef.current, isArabic ? 'ar' : 'en', challenge.signal);
       } finally {
+        phoneChallengeRef.current = null;
         setPhoneChallenge(null);
       }
     }
@@ -386,7 +390,7 @@ export default function CustomerBooking() {
   const bookingSubmit = (label, disabled = false) => (
     <button id="booking-next" type="submit" form="booking-confirm-form" className="cb-primary"
       disabled={!canContinue || busy || catalogError || disabled}>
-      {busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr('working') : label}
+      {busy && <Loader2 size={19} className="cb-spinner" />}{busy ? tr(phoneChallenge ? 'phoneVerification.waiting' : 'working') : label}
       {!busy && <ArrowRight size={20} className="cb-directional" />}
     </button>
   );

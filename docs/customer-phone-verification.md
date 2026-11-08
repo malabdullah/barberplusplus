@@ -20,6 +20,15 @@ not a spending cap.
 
 ## Production acceptance and activation
 
+The web challenge has no application deadline while a customer completes
+Google's security check. Firebase still bounds its network requests. Canceling
+or leaving checkout resets the widget, rejects the pending operation, and
+prevents a late CAPTCHA token from starting an SMS request. The code-entry
+session is retained when Google accepts a request after a longer challenge.
+The standard web flow uses invisible reCAPTCHA; Google can still require an
+interactive challenge. Never use the fictional-number testing bypass in
+production.
+
 On 5 November 2026 a diagnostic on the actual production domain completed a live
 SMS send and code redemption. The recipient entered the code in the browser;
 no code was put in chat. Its newly created Google verification identity and the
