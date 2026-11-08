@@ -572,23 +572,10 @@ begin
       v_end := least((v_schedule ->> 'end')::time, (v_hours ->> 'close')::time);
       if v_start is not null and v_end is not null and v_end > v_start
          and v_hours ->> 'open' is not null and v_hours ->> 'close' is not null then
-        select coalesce(jsonb_agg(to_char(s, 'HH24:MI') order by s), '[]'::jsonb) into v_slots
-        from generate_series(v_date + v_start, v_date + v_end - v_duration * interval '1 minute', interval '15 minutes') s
-        where s at time zone 'Asia/Kuwait' > current_timestamp
-          and not exists (
-            select 1 from public.bookings b where b.barber_id = v_barber.id and b.date = v_date
-              and b.status not in ('cancelled','no_show')
-              and (p_action<>'appointment-slots' or b.id is distinct from (p_data->>'exclude_booking_id')::uuid)
-              and tsrange(b.date + b.time, b.date + b.time + b.duration * interval '1 minute', '[)')
-                && tsrange(s, s + v_duration * interval '1 minute', '[)')
-          )
-          and not exists (
-            select 1 from jsonb_array_elements(coalesce(v_barber.time_offs, '[]')) x
-            where ((x ->> 'type' = 'one-time' and x ->> 'date' = v_date::text)
-              or (x ->> 'type' = 'recurring' and x ->> 'day' = v_day))
-              and tsrange(v_date + (x ->> 'start')::time, v_date + (x ->> 'end')::time, '[)')
-                && tsrange(s, s + v_duration * interval '1 minute', '[)')
-          );
+        select coalesce(jsonb_agg(to_char(v_date + w.start_time, 'HH24:MI') order by w.start_time), '[]'::jsonb) into v_slots
+        from private.booking_start_windows(v_barber.id, v_date, '00:00'::time, '23:59'::time,
+          case when p_action='appointment-slots' then (p_data->>'exclude_booking_id')::uuid else null end) w
+        where w.free_minutes >= v_duration;
       end if;
     end if;
     if p_action in ('slots','appointment-slots') then
@@ -634,6 +621,11 @@ begin
 end;
 $_$;
 ALTER FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
+    AS $$select private.customer_booking_discovery(p_action,p_data);$$;
+ALTER FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1844,8 +1836,12 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
     ADD CONSTRAINT "whatsapp_logs_pkey" PRIMARY KEY ("id");
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_pkey" PRIMARY KEY ("id");
+CREATE INDEX "barbers_discovery_name" ON "public"."barbers" USING "gin" ("lower"((("name" || ' '::"text") || COALESCE("name_ar", ''::"text"))) "extensions"."gin_trgm_ops") WHERE ("status" = 'active'::"text");
+CREATE INDEX "barbers_discovery_order" ON "public"."barbers" USING "btree" ("lower"("name"), "id") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
 CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
+CREATE INDEX "branches_discovery_city" ON "public"."branches" USING "btree" ("city", "name", "id") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
+CREATE INDEX "branches_discovery_name" ON "public"."branches" USING "gin" ("lower"((((("name" || ' '::"text") || COALESCE("name_ar", ''::"text")) || ' '::"text") || COALESCE("city", ''::"text"))) "extensions"."gin_trgm_ops") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
 CREATE INDEX "idx_admin_settings_category" ON "public"."admin_settings" USING "btree" ("category");
 CREATE INDEX "idx_admin_settings_key" ON "public"."admin_settings" USING "btree" ("setting_key");
 CREATE INDEX "idx_areas_governorate" ON "public"."areas" USING "btree" ("governorate_id");
@@ -1909,6 +1905,7 @@ CREATE INDEX "idx_whatsapp_logs_level" ON "public"."whatsapp_logs" USING "btree"
 CREATE INDEX "idx_whatsapp_logs_phone" ON "public"."whatsapp_logs" USING "btree" ("phone_number");
 CREATE INDEX "idx_whatsapp_messages_session" ON "public"."whatsapp_messages" USING "btree" ("conversation_id", "session_id", "created_at" DESC);
 CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifications" USING "btree" ("event_id", "recipient_user_id") WHERE ("event_id" IS NOT NULL);
+CREATE INDEX "services_discovery_active" ON "public"."services" USING "btree" ("branch_id", "id") INCLUDE ("duration") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
@@ -2216,6 +2213,8 @@ REVOKE ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_dat
 GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) FROM PUBLIC;

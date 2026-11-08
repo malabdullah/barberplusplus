@@ -6,7 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
-import CustomerBooking from './CustomerBooking';
+import { CustomerBookingCheckout as CustomerBooking } from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
 import { rebookingDraft } from '../utils/customerRebooking';
@@ -446,4 +446,16 @@ it('returns to barber selection and keeps guest details when a chair closes at c
   click('Continue to date & time');
   fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
   expect(screen.getByLabelText('Your name')).toHaveValue('Test Customer');
+});
+
+it('limits exact starts to the chosen range and prevents a service combination that cannot fit', async () => {
+  cleanup();
+  const initialDraft={city:'Kuwait City',branchId:'branch',barberId:'omar',serviceIds:[],date:getKuwaitDate(),time:'',step:1,panel:'services',bookingMode:'time',rangeStart:'10:00',rangeEnd:'10:15'};
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking initialDraft={initialDraft} scopedCatalog={{...catalog,maxDuration:35}} onEditProvider={vi.fn()}/></MemoryRouter></I18nextProvider>);
+  const hair=await screen.findByRole('checkbox',{name:/Haircut/});fireEvent.click(hair);
+  expect(screen.getByRole('checkbox',{name:/Hair wash/})).toBeDisabled();
+  click('Continue to date & time');
+  expect(await screen.findByRole('radio',{name:/10:00/})).toBeVisible();
+  expect(screen.queryByRole('radio',{name:/10:30/})).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Select a date')).toHaveAttribute('readonly');
 });

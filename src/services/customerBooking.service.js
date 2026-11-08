@@ -5,7 +5,7 @@ import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
-  const token = action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'claim-booking' ? await customerToken() : '';
+  const token = action.startsWith('discovery-') || action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'claim-booking' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -17,16 +17,7 @@ const request = async (action, body = {}) => {
   return result;
 };
 
-export const customerBookingService = {
-  async getStatistics() {
-    const totals = await request('statistics');
-    const counts = { shops: totals.shops, monthlyBookings: totals.monthlyBookings, barbers: totals.barbers };
-    if (Object.values(counts).some(value => !Number.isSafeInteger(value) || value < 0)) throw new Error('UNAVAILABLE');
-    return counts;
-  },
-  async getCatalog() {
-    const result = await request('catalog');
-    return {
+export const mapCatalog = result => ({
       branches: result.branches.map(branch => ({
         id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar),
         city: branch.city?.trim() || branch.areas?.name_en || '',
@@ -46,7 +37,24 @@ export const customerBookingService = {
         id: service.id, branchId: service.branch_id, name: service.name, nameAr: service.name_ar,
         description: service.description, duration: service.duration, price: Number(service.price),
       })),
-    };
+    });
+
+export const customerBookingService = {
+  async getStatistics() {
+    const totals = await request('statistics');
+    const counts = { shops: totals.shops, monthlyBookings: totals.monthlyBookings, barbers: totals.barbers };
+    if (Object.values(counts).some(value => !Number.isSafeInteger(value) || value < 0)) throw new Error('UNAVAILABLE');
+    return counts;
+  },
+  async getCatalog() {
+    const result = await request('catalog');
+    return mapCatalog(result);
+  },
+  filters: () => request('discovery-filters'),
+  search: data => request('discovery-search', data),
+  async selection(data) {
+    const result = await request('discovery-selection', data);
+    return { ...mapCatalog(result), maxDuration: result.maxDuration };
   },
   claim: claimToken => request('claim-booking', { claimToken }),
   phoneConfig: async () => (await request('phone-config')).phone,

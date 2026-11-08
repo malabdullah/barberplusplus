@@ -40,8 +40,8 @@ export function readBookingReturnDraft() {
 }
 export function saveBookingDraft(selection) {
   if (!selection) { remove(KEY); return; }
-  const { city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest, details, query } = selection;
-  write(KEY, { city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest: guest === true, query: typeof query === 'string' ? query.slice(0, 120) : undefined,
+  const { city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest, details, query, bookingMode, rangeStart, rangeEnd, finderStage } = selection;
+  write(KEY, { bookingMode, rangeStart, rangeEnd, finderStage, city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest: guest === true, query: typeof query === 'string' ? query.slice(0, 120) : undefined,
     details: details ? { name: String(details.name || '').slice(0, 120), countryCode: String(details.countryCode || '+965').slice(0, 4), phone: String(details.phone || '').slice(0, 20), notes: String(details.notes || '').slice(0, 500) } : undefined });
 }
 export function saveBookingReceipt(receipt) { write(RECEIPT_KEY, receipt); }

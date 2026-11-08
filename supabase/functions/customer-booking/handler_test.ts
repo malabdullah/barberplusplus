@@ -217,3 +217,20 @@ Deno.test('checkout persists only verified account numbers and rejects stale pro
   phone = '50000099';
   assert((await call({ action: 'account-proof' })).status === 428);
 });
+
+Deno.test('discovery validates ranges and pagination and derives identity from the live session', async () => {
+  const identity = { id: '10000000-0000-4000-8000-000000000099', session_id: '20000000-0000-4000-8000-000000000099' };
+  let received: Record<string,unknown> = {};
+  const handler = make({ customer: async () => identity, discovery: async (_action: string, data: Record<string,unknown>) => { received=data; return {items:[]}; } });
+  const input = {action:'discovery-search',mode:'time',date:'2026-11-09',rangeStart:'09:00',rangeEnd:'10:00',city:'Sharq'};
+  assert((await handler(request(input))).status === 200);
+  for (const patch of [{rangeEnd:'08:00'},{rangeStart:'25:00'},{query:'a'.repeat(121)},{cursor:[]},{barberId:'invalid'}]) {
+    assert((await handler(request({...input,...patch}))).status === 400);
+  }
+  const req = request({...input,account_user_id:'forged',session_id:'forged'}); req.headers.set('Authorization','Bearer verified');
+  const rejectedReq = req.clone();
+  assert((await handler(req)).status === 200);
+  assert(received.account_user_id === identity.id && received.session_id === identity.session_id);
+  const invalid = make({customer:async()=>null, discovery:async()=>{throw Error('must not reach database');}});
+  assert((await invalid(rejectedReq)).status === 401);
+});

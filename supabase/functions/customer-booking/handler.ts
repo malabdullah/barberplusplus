@@ -10,6 +10,7 @@ type Dependencies = {
   publicUrl: string;
   secret: string;
   catalog: () => Promise<unknown>;
+  discovery?: (action: string, data: Body) => Promise<unknown>;
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
   customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
   phone?: GooglePhoneConfig;
@@ -141,6 +142,28 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (phoneConfig && (!account.phone || !await isAccountPhoneVerified(account))) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (!account.phone || !patterns[account.countryCode]?.test(account.phone)) return reply(400, {error:'INVALID_DETAILS'});
         return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,phone_verified:Boolean(phoneConfig),name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
+      }
+      if (['discovery-filters', 'discovery-search', 'discovery-selection'].includes(String(body.action))) {
+        if (!deps.discovery) return reply(503, { error: 'UNAVAILABLE' });
+        const action = String(body.action).slice('discovery-'.length);
+        const mode = body.mode ?? 'shop';
+        const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
+        if (!['shop', 'barber', 'time'].includes(String(mode))
+          || ['city', 'query'].some(field => body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 120))
+          || ['branchId', 'barberId'].some(field => body[field] !== undefined && body[field] !== '' && !uuid.test(String(body[field])))
+          || (action === 'selection' && !uuid.test(String(body.barberId)))
+          || (mode === 'time' && (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)
+            || !clock.test(String(body.rangeStart)) || !clock.test(String(body.rangeEnd)) || String(body.rangeStart) > String(body.rangeEnd)))
+          || (body.cursor !== undefined && body.cursor !== null && (typeof body.cursor !== 'object' || Array.isArray(body.cursor) || JSON.stringify(body.cursor).length > 1000))) {
+          return reply(400, { error: 'INVALID_REQUEST' });
+        }
+        const account = await readAccount();
+        if (token && !account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
+        return reply(200, await deps.discovery(action, {
+          mode, city: body.city, query: body.query, branch_id: body.branchId, barber_id: body.barberId,
+          date: body.date, range_start: body.rangeStart, range_end: body.rangeEnd, cursor: body.cursor,
+          ...(account ? { account_user_id: account.id, session_id: account.session_id } : {}),
+        }));
       }
       if (body.action === 'catalog') return reply(200, await deps.catalog());
       if (body.action === 'statistics') {
