@@ -8,14 +8,13 @@ import ServiceForm from '../components/Forms/ServiceForm';
 import InviteBarberForm from '../components/Invitations/InviteBarberForm';
 import PendingInvitations from '../components/Invitations/PendingInvitations';
 import { shopSetupService } from '../services/shopSetup.service';
-import { servicesService } from '../services/services.service';
 import { getErrorMessage } from '../utils/errorMessages';
 import { getShopSetup, isSetupId, SETUP_STEPS, shopSetupUrl, setupActionUrl } from '../utils/shopSetup';
 import './ShopSetup.css';
 
 export default function ShopSetup() {
   const { t, i18n } = useTranslation(); const tr = (key, options) => t('shopSetup.' + key, options);
-  const { user, branches, selectedBranchId, setSelectedBranchId, addBranch, updateBranch, managerChair, reloadData } = useApp();
+  const { user, branches, selectedBranchId, setSelectedBranchId, addBranch, updateBranch, managerChair, reloadData, addService, updateService } = useApp();
   const [params] = useSearchParams(); const navigate = useNavigate(); const location = useLocation();
   const owned = branches.filter(shop => shop.managerId === user?.id);
   const id = params.get('shop') || (owned.some(shop => shop.id === selectedBranchId) ? selectedBranchId : owned[0]?.id) || 'new';
@@ -67,7 +66,8 @@ export default function ShopSetup() {
   const saveService = async data => {
     if (busy || !shop) return; const scope = id; setBusy(true); setError('');
     try {
-      const saved = editor?.id ? await servicesService.update(editor.id, data) : await servicesService.create({ ...data, branchId: id });
+      if (selectedBranchId !== id) throw new Error('SHOP_REQUIRED');
+      const saved = editor?.id ? await updateService(editor.id, data) : await addService({ ...data, branchId: id });
       if (currentId.current === scope) { setSnapshot(previous => ({ ...previous, services: editor?.id ? previous.services.map(service => service.id === saved.id ? saved : service) : [...previous.services, saved] })); setEditor(undefined); void reloadData(); }
     } catch (failure) { if (currentId.current === scope) setError(getErrorMessage(failure, tr('saveFailed'), t)); }
     finally { if (currentId.current === scope) setBusy(false); }

@@ -17,7 +17,7 @@ vi.mock('../components/Invitations/InviteBarberForm',()=>({default:()=>null}));
 const shop={id,name:'QA Shop',managerId:'manager',governorateId:'gov',areaId:'area',openingHours:{monday:{open:'09:00',close:'18:00'}}};
 let i18n;
 beforeEach(async()=>{
- vi.clearAllMocks();Object.assign(state,{user:{id:'manager'},branches:[shop],selectedBranchId:id,setSelectedBranchId:vi.fn(),addBranch:vi.fn().mockResolvedValue(shop),updateBranch:vi.fn().mockResolvedValue(shop),reloadData:vi.fn()});
+ vi.clearAllMocks();Object.assign(state,{user:{id:'manager'},branches:[shop],selectedBranchId:id,setSelectedBranchId:vi.fn(),addBranch:vi.fn().mockResolvedValue(shop),updateBranch:vi.fn().mockResolvedValue(shop),reloadData:vi.fn(),addService:api.create,updateService:api.update});
  api.get.mockResolvedValue({shop,services:[],barbers:[]});api.create.mockResolvedValue({id:'service',branchId:id,name:'Haircut',duration:30,price:3,status:'active'});
  i18n=i18next.createInstance();await i18n.init({lng:'en',resources:{en:{translation:en}}});
 });
