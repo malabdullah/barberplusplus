@@ -145,7 +145,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
             {!!services.length && <p>{services.map(service => service.name).join(arabic ? '، ' : ', ')}</p>}
             <p>{tr('rescheduleInfo')}</p>
             <label className="cb-field-label" htmlFor={`${id}-date`}>{tr('newDate')}</label>
-            <input className="cb-input ca-appointment-date-input" id={`${id}-date`} type="date" value={date} min={getKuwaitDate()} max={availability?.last_date} onChange={changeDate} disabled={busy || unavailable} required />
+            <input className="cb-input ca-appointment-date-input" id={`${id}-date`} type="date" value={date} min={getKuwaitDate()} max={[availability?.last_date, booking.package?.ends_on].filter(Boolean).sort()[0]} onChange={changeDate} disabled={busy || unavailable} required />
             {loading && <p role="status">{t('customerAuth.loading')}</p>}
             {!!slots.length && <fieldset className="cb-time-options" disabled={busy}>
               <legend className="cb-field-label">{tr('newTime')}</legend>

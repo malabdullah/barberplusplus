@@ -178,10 +178,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     return () => { active = false; };
   }, [branchId, barberId, packageRetry, draft?.bookingMode, draft?.bookingMode === 'time' ? date : null, receipt]);
 
-  const recoverUnavailableSelection = async (isCurrent = () => true) => {
+  const recoverUnavailableSelection = async (isCurrent = () => true, reloadPackages = false) => {
     try {
       const latest = scopedCatalog ? await customerBookingService.selection({ barberId, mode: draft?.bookingMode || 'shop', date, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd }) : await customerBookingService.getCatalog();
       if (!isCurrent()) return;
+      if (reloadPackages) setPackageRetry(value => value + 1);
       setCatalog(latest);
       setTime('');
       setSlots([]);
@@ -280,7 +281,13 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     let active = true;
     setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
-      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+      .then(async result => { if (active) {
+        if (packageOfferId && (!result.package_quote || Math.abs(Number(result.package_quote.price) - price) > 0.0005 || Number(result.package_quote.duration) !== duration)) {
+          setPackageQuote(null); setTime(''); setError('PACKAGE_CHANGED');
+          await recoverUnavailableSelection(() => active, true);
+          return;
+        }
+        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active) return;
         setError(failure.message);

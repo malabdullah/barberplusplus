@@ -508,3 +508,19 @@ it('restores a package after reload and requires removing an unavailable offer e
   expect(screen.getByRole('checkbox', { name: /Haircut/ })).not.toBeChecked();
   expect(screen.getByRole('checkbox', { name: /Haircut/ })).toBeEnabled();
 });
+
+it('requires reviewing a changed package total before offering appointment times', async () => {
+  const offer = { id: 'fa180000-0000-4000-8000-000000000601', name: 'Haircut and wash', serviceIds: ['hair', 'wash'], price: 6, regularPrice: 7, duration: 45, startsOn: getKuwaitDate(), endsOn: addBookingDays(getKuwaitDate(), 6) };
+  customerBookingService.packages.mockResolvedValueOnce([offer]).mockResolvedValue([{ ...offer, price: 5 }]);
+  customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00'], package_quote: { price: 5, duration: 45 } });
+  changeCity('Kuwait City'); fireEvent.click(screen.getByRole('radio', { name: /Seafront/ })); fireEvent.click(screen.getByRole('radio', { name: /Omar/ }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Haircut and wash/ }));
+  click('Continue to date & time');
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(en.packages.errors.PACKAGE_CHANGED));
+  expect(section('Services')).toHaveClass('is-open');
+  expect(customerBookingService.book).not.toHaveBeenCalled();
+  await waitFor(() => expect(document.querySelector('.package-choice-price strong')).toHaveTextContent('5.000'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time' })).toBeEnabled());
+  click('Continue to date & time');
+  expect(await screen.findByRole('radio', { name: /10:00/ })).toBeVisible();
+});

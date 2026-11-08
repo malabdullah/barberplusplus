@@ -345,6 +345,7 @@ export default function Bookings() {
   };
 
   const handleAdd = () => {
+    if (!selectedBranch?.id) return;
     setEditingBooking(null);
     setIsFormOpen(true);
   };
@@ -383,7 +384,7 @@ export default function Bookings() {
             {t('bookings.manageAppointments', { branch: selectedBranch?.name })}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={handleAdd}>
+        <button className="btn btn-primary" onClick={handleAdd} disabled={!selectedBranch?.id}>
           <Plus size={18} strokeWidth={2} />
           {t('bookings.newBooking')}
         </button>

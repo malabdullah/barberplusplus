@@ -46,11 +46,13 @@ select throws_ok($$select public.manage_service_packages('list','fa180000-0000-4
 select throws_ok($$select public.manage_service_packages('pause','fa180000-0000-4000-8000-000000000101',current_setting('packages.saved')::jsonb)$$,'42501','NOT_AUTHORIZED','other manager cannot pause offer');
 select set_config('request.jwt.claims','{}',true);
 select set_config('packages.book',jsonb_build_object('id','fa180000-0000-4000-8000-000000000501','branch_id','fa180000-0000-4000-8000-000000000101','barber_id','fa180000-0000-4000-8000-000000000301','package_offer_id',current_setting('packages.offer'),'service_ids',jsonb_build_array('fa180000-0000-4000-8000-000000000201','fa180000-0000-4000-8000-000000000202','fa180000-0000-4000-8000-000000000203','fa180000-0000-4000-8000-000000000204'),'date',current_setting('packages.day'),'time','09:00','name','Package QA Guest','country_code','+965','phone','56988701','package_quote',jsonb_build_object('price',12,'duration',105))::text,true);
+set local role service_role;
 select is(public.customer_booking('slots',current_setting('packages.book')::jsonb)->>'price','12.000','package plus wash costs 12 KWD');
 select is(public.customer_booking('slots',current_setting('packages.book')::jsonb)->>'duration','105','full package and extra duration');
 select throws_ok($$select public.customer_booking('book',current_setting('packages.book')::jsonb||'{"package_quote":{"price":1,"duration":105}}')$$,'P0001','PACKAGE_CHANGED','forged quote rejected');
 select throws_ok($$select public.customer_booking('slots',current_setting('packages.book')::jsonb||'{"service_ids":["fa180000-0000-4000-8000-000000000201","fa180000-0000-4000-8000-000000000202"]}')$$,'P0001','INVALID_PACKAGE_SELECTION','cannot omit included service');
 select is(public.customer_booking('book',current_setting('packages.book')::jsonb)->>'price','12.000','booking commits agreed price');
+reset role;
 insert into private.customer_booking_owners(booking_id,account_user_id) values('fa180000-0000-4000-8000-000000000501','fa180000-0000-4000-8000-000000000004');
 select is((select package_snapshot->>'name' from public.bookings where id='fa180000-0000-4000-8000-000000000501'),'QA Grooming','booking stores package name');
 select is((select jsonb_array_length(service_snapshot) from public.bookings where id='fa180000-0000-4000-8000-000000000501'),4,'component history includes extras');
