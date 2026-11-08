@@ -1,6 +1,19 @@
 # Barber++ — Bright Minimal
 
-Design system · Version 1.2 · Updated 31 October 2026
+## Canonical combined lockup — 8 November 2026
+
+The B-shaped mark replaces the first **B** of **Barber++**. Follow it immediately
+with **arber++** using the approved outlined artwork and an 8-unit optical gap.
+Never place the mark beside the full “Barber++” lettering. Keep one accessible
+name, “Barber++”, and keep the artwork LTR in Arabic. Standalone text, wordmarks,
+symbols and app icons remain unchanged. The stacked mark-above-full-wordmark
+arrangement and older presentation-board lockups are retired for future use.
+All new examples must follow [the canonical rule](../docs/logo-lockup.md) and use
+the refreshed horizontal SVG/PNG masters. Legacy stacked export names now alias
+the inline lockup for compatibility.
+
+
+Design system · Version 1.3 · Updated 8 November 2026
 
 ## Direction and scope
 
@@ -90,11 +103,11 @@ Every form below has a light and dark presentation. Single-color treatments use 
 
 | Form | Composition | Primary use | Visual reference |
 | --- | --- | --- | --- |
-| Horizontal | Symbol at left, wordmark at right | Desktop header, expanded sidebar, website navigation | [Logo sheet — Horizontal row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
-| Stacked | Symbol above the centered wordmark | Brand introductions, sign-in or welcome compositions, spacious marketing placements | [Logo sheet — Stacked row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
+| Horizontal | B-shaped mark followed by arber++ | Desktop header, expanded sidebar, website navigation | [Logo sheet — Horizontal row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
+| Stacked | Retired; use the inline B-shaped mark + arber++ | Brand introductions, sign-in or welcome compositions, spacious marketing placements | [Logo sheet — Stacked row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
 | Symbol only | B with two plus cutouts; no wordmark | Compact navigation and spaces where the brand is already established | [Logo sheet — Symbol row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
 | Wordmark only | Barber++ lettering; no separate B | Secondary signatures and text-led brand placements | [Logo sheet — Wordmark row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
-| Monochrome | Symbol and wordmark in one ink | Single-color print and reversed use | [Logo sheet — Monochrome row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
+| Monochrome | B-shaped mark + arber++ in one ink | Single-color print and reversed use | [Logo sheet — Monochrome row](approved-b-plus-logo-system-2026-10-31/01-logo-variations.png) |
 | App icon | Symbol centered on a light or dark square field with safe padding | App-icon presentation and future platform-specific icon exports | [Compact-use sheet — App icons](approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png) |
 | Favicon | Symbol only at small browser-tab scale | Browser tabs and bookmark icons | [Compact-use sheet — Favicons](approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png) |
 | Compact header | Horizontal form adapted to the available header space | Mobile booking-page header and compact navigation | [Compact-use sheet — Header lockups](approved-b-plus-logo-system-2026-10-31/04-app-icon-favicon.png) |
@@ -126,7 +139,7 @@ The [desktop sheet](approved-b-plus-logo-system-2026-10-31/02-desktop-light-dark
 
 ### Arabic and accessible naming
 
-Keep the B and the Latin **Barber++** lettering in their original orientation in both locales. Surrounding navigation follows RTL layout; the logo itself is not mirrored or manually reordered. An Arabic wordmark has not been approved.
+Keep the B-shaped mark and Latin **arber++** lettering in their original orientation in both locales. Surrounding navigation follows RTL layout; the logo itself is not mirrored or manually reordered. An Arabic wordmark has not been approved.
 
 Use “Barber++” as the accessible name of an informative logo. A home-link logo should have a localized accessible name such as “Barber++ home” / “الصفحة الرئيسية لـ Barber++”. Avoid duplicate announcements when an icon and wordmark form one link: expose one accessible name for the complete brand link.
 
