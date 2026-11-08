@@ -19,6 +19,7 @@ import logger from '../utils/logger';
 import i18n from '../i18n';
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
 import { resolveTheme } from '../utils/theme';
+import { getLogSessionId } from '../utils/sessionLogId';
 
 const AppContext = createContext(null);
 
@@ -429,20 +430,19 @@ export function AppProvider({ children }) {
 
   // Set logging context when user/role/branch changes
   useEffect(() => {
+    let current = true;
     const updateLoggingContext = async () => {
       if (user && userRole) {
         // SECURITY: Get session ID for audit trail
         let sessionId = null;
         try {
           const { data: { session } } = await supabase.auth.getSession();
-          // Use the session's access token jti (JWT ID) if available, or generate from session
-          sessionId = session?.access_token
-            ? session.access_token.split('.')[1]?.slice(0, 36) // Use part of token as session identifier
-            : null;
+          sessionId = getLogSessionId(session?.access_token);
         } catch {
           // Ignore session fetch errors
         }
 
+        if (!current) return;
         loggingService.setContext({
           userId: user.id,
           userRole,
@@ -456,6 +456,7 @@ export function AppProvider({ children }) {
     };
 
     updateLoggingContext();
+    return () => { current = false; };
   }, [user, userRole, selectedBranchId, barberProfile]);
 
   const notificationRequest = useRef(0);
