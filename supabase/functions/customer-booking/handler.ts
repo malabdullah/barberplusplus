@@ -10,6 +10,7 @@ type Dependencies = {
   publicUrl: string;
   secret: string;
   catalog: () => Promise<unknown>;
+  packages?: (shop: string, barber: string, date: string | null) => Promise<unknown>;
   discovery?: (action: string, data: Body) => Promise<unknown>;
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
   customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
@@ -84,6 +85,11 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       const readAccount = () => token && deps.customer ? deps.customer(token) : null;
       const isAccountPhoneVerified = async (account: NonNullable<Awaited<ReturnType<typeof readAccount>>>) =>
         Boolean(account.customerId && await deps.accountPhone?.(account.customerId, account.countryCode, account.phone, false));
+      if (body.action === 'packages') {
+        if (!uuid.test(String(body.branchId)) || !uuid.test(String(body.barberId)) || (body.date != null && (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)))) return reply(400, { error: 'INVALID_SELECTION' });
+        if (!deps.packages) return reply(503, { error: 'UNAVAILABLE' });
+        return reply(200, { packages: await deps.packages(String(body.branchId), String(body.barberId), typeof body.date === 'string' ? body.date : null) });
+      }
       if (body.action === 'phone-config') {
         const config = phoneConfig?.testPhones
           ? { projectId: phoneConfig.projectId, testPhones: phoneConfig.testPhones }
@@ -203,8 +209,15 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         || !Array.isArray(body.serviceIds) || body.serviceIds.length < 1 || body.serviceIds.length > 10
         || body.serviceIds.some(id => typeof id !== 'string' || !uuid.test(id))
         || typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) return reply(400, { error: 'INVALID_SELECTION' });
-      const data: Body = { branch_id: body.branchId, barber_id: body.barberId, service_ids: body.serviceIds, date: body.date };
+      if (body.packageOfferId != null && body.packageOfferId !== '' && !uuid.test(String(body.packageOfferId))) return reply(400, { error: 'INVALID_PACKAGE_SELECTION' });
+      const data: Body = { branch_id: body.branchId, barber_id: body.barberId, service_ids: body.serviceIds, date: body.date,
+        ...(body.packageOfferId ? { package_offer_id: body.packageOfferId } : {}) };
       if (body.action === 'book') {
+        if (body.packageOfferId) {
+          const quote = body.packageQuote as Body | undefined;
+          if (!quote || typeof quote.price !== 'number' || !Number.isFinite(quote.price) || quote.price <= 0 || typeof quote.duration !== 'number' || !Number.isInteger(quote.duration) || quote.duration < 5 || quote.duration > 480) return reply(400, { error: 'PACKAGE_CHANGED' });
+          data.package_quote = { price: quote.price, duration: quote.duration };
+        }
         const proof = await verify(body.verification, 'verified');
         if (!proof) return reply(401, { error: 'VERIFICATION_REQUIRED' });
         if (phoneConfig && !proof.phone_verified) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
@@ -244,6 +257,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       return reply(200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
+      const packageFailure = message.match(/INVALID_PACKAGE_SELECTION|PACKAGE_(?:UNAVAILABLE|DATE_UNAVAILABLE|CHANGED)/)?.[0];
+      if (packageFailure) return reply(409, { error: packageFailure });
       if (/SELF_BOOKING_NOT_ALLOWED/.test(message)) return reply(409, { error: 'SELF_BOOKING_NOT_ALLOWED' });
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });

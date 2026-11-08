@@ -6,7 +6,7 @@ import { downloadBookingCalendar, getKuwaitDate, safeBookingUrl } from '../../ut
 import { appointmentDate } from '../../utils/customerRebooking';
 import { shopWording } from '../../utils/customerTerminology';
 
-const actionErrors = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
+const actionErrors = ['PACKAGE_DATE_UNAVAILABLE', 'BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
 
 export default function UpcomingBookingActions({ booking, onChange, onRefresh }) {
   const { t, i18n } = useTranslation();
@@ -98,7 +98,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     setMessage('');
     try {
       if (navigator.share) {
-        await navigator.share({ title: tr('shareTitle'), text: appointment });
+        await navigator.share({ title: tr('shareTitle'), text: [appointment, booking.package?.name].filter(Boolean).join('\n') });
         return;
       }
       await navigator.clipboard.writeText(appointment);
@@ -110,7 +110,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
 
   const calendar = () => downloadBookingCalendar({
     id: booking.id, reference: booking.id, date: booking.date, time: booking.time.slice(0, 5),
-    duration: booking.duration, services, branchName: shop, address: booking.shop_address, description: appointment,
+    duration: booking.duration, services, package: booking.package, branchName: shop, address: booking.shop_address, description: appointment,
   });
   const unavailable = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED'].includes(error);
 
@@ -161,7 +161,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
             </fieldset>}
             {!loading && availability && !alternatives.length && <p>{tr('noTimes')}</p>}
           </>}
-          {error && <p className="cb-alert" role="alert">{tr(`errors.${error}`)}</p>}
+          {error && <p className="cb-alert" role="alert">{error === 'PACKAGE_DATE_UNAVAILABLE' ? t('packages.errors.PACKAGE_DATE_UNAVAILABLE') : tr(`errors.${error}`)}</p>}
         </div>
         <div className="ca-appointment-dialog-actions">
           <button className="cb-secondary" type="button" disabled={busy} onClick={() => setAction('')}>{tr(action === 'cancel' ? 'keep' : 'close')}</button>

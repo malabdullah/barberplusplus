@@ -6,6 +6,8 @@ import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 import Services from './Services';
+import { MemoryRouter } from 'react-router-dom';
+vi.mock('../services/packages.service', () => ({ packagesService: { list: vi.fn(), manage: vi.fn() } }));
 
 const state = vi.hoisted(() => ({ branchServices: [], selectedBranch: { id: 'shop', name: 'My Shop' }, selectedBranchId: 'shop', addService: vi.fn(), updateService: vi.fn(), deleteService: vi.fn() }));
 vi.mock('../context/AppContext', () => ({ useApp: () => state }));
@@ -20,7 +22,7 @@ afterEach(cleanup);
 async function mount(language = 'en') {
   const i18n = i18next.createInstance();
   await i18n.init({ lng: language, resources: { en: { translation: en }, ar: { translation: ar } }, interpolation: { escapeValue: false } });
-  render(<I18nextProvider i18n={i18n}><Services /></I18nextProvider>);
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><Services /></MemoryRouter></I18nextProvider>);
 }
 function submit(language = 'en') {
   const text = language === 'en' ? en : ar;

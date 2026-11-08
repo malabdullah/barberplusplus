@@ -14,6 +14,9 @@ import { bookingCityGroups } from '../utils/bookingCityGroups';
 import BookingFinder from '../components/Customer/BookingFinder';
 import CityPicker from '../components/Customer/CityPicker';
 import CatalogRating from '../components/Customer/CatalogRating';
+import PackagePicker from '../components/Packages/PackagePicker';
+import { packageErrors, packageError } from '../utils/servicePackages';
+import { packageSelection, packageTotals } from '../utils/servicePackages';
 import BookingImage from '../components/Customer/BookingImage';
 import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
@@ -71,6 +74,13 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [branchId, setBranchId] = useState(draft?.branchId || '');
   const [barberId, setBarberId] = useState(draft?.barberId || '');
   const [serviceIds, setServiceIds] = useState(draft?.serviceIds || []);
+  const [packageOfferId, setPackageOfferId] = useState(draft?.packageOfferId || '');
+  const [cachedPackage, setCachedPackage] = useState(draft?.packageOffer || null);
+  const [packages, setPackages] = useState([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesError, setPackagesError] = useState(false);
+  const [packageRetry, setPackageRetry] = useState(0);
+  const [packageQuote, setPackageQuote] = useState(null);
   const [date, setDate] = useState(draft?.date || getKuwaitDate());
   const [time, setTime] = useState(draft?.time || '');
   const [slots, setSlots] = useState([]);
@@ -114,9 +124,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const barbers = favouritesFirst(eligibleBarbers, favourites, 'barber');
   const services = getBarberServices(catalog, branchId, barberId);
   const selectedServices = services.filter(item => serviceIds.includes(item.id));
-  const duration = selectedServices.reduce((sum, item) => sum + item.duration, 0);
-  const price = selectedServices.reduce((sum, item) => sum + item.price, 0);
-  const selection = { branchId, barberId, serviceIds, date };
+  const availablePackage = packages.find(item => item.id === packageOfferId);
+  const selectedPackage = packageOfferId ? availablePackage || cachedPackage : null;
+  const packageInvalid = Boolean(packageOfferId && (!availablePackage || !selectedPackage?.serviceIds.every(id => serviceIds.includes(id)) || date < selectedPackage.startsOn || date > selectedPackage.endsOn));
+  const { duration, price } = packageTotals(services, serviceIds, selectedPackage);
+  const selection = { branchId, barberId, serviceIds, date, ...(packageOfferId ? { packageOfferId } : {}) };
   const locale = isArabic ? 'ar-KW' : 'en-KW';
   const money = value => new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD' }).format(value);
   const dateLabel = value => new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeZone: 'Asia/Kuwait' }).format(new Date(`${value}T12:00:00+03:00`));
@@ -126,13 +138,13 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     appointmentFocusRef.current = `choose-${target}-title`;
     setPanel(target);
   };
-  const currentDraft = () => ({ ...draft, city, branchId, barberId, serviceIds, date, time, panel, details, guest, step: Math.floor(PANELS.indexOf(panel) / 2) });
+  const currentDraft = () => ({ ...draft, city, branchId, barberId, serviceIds, packageOfferId, packageOffer: selectedPackage, date, time, panel, details, guest, step: Math.floor(PANELS.indexOf(panel) / 2) });
   const editSection = target => {
     setError('');
     if (onEditProvider && ['city', 'shop', 'barber', 'range', 'method'].includes(target)) onEditProvider(target, currentDraft());
     else openPanel(target);
   };
-  const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setTime(''); setSlots([]); };
+  const clearAfterBranch = () => { setBarberId(''); setServiceIds([]); setPackageOfferId(''); setCachedPackage(null); setTime(''); setSlots([]); };
   const changeCity = value => {
     if (value !== city) { setCity(value); setBranchId(''); setQuery(''); clearAfterBranch(); }
     openPanel(value ? 'shop' : 'city'); setError(''); setRebookNotice('');
@@ -142,14 +154,29 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     openPanel('barber'); setError(''); setRebookNotice('');
   };
   const selectBarber = id => {
-    if (id !== barberId) { setBarberId(id); setServiceIds([]); setTime(''); setSlots([]); }
+    if (id !== barberId) { setBarberId(id); setServiceIds([]); setPackageOfferId(''); setCachedPackage(null); setTime(''); setSlots([]); }
     openPanel('services'); setError(''); setRebookNotice('');
   };
   const toggleService = id => {
+    if (selectedPackage?.serviceIds.includes(id)) return;
     setServiceIds(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
     setTime(''); setSlots([]); setError('');
   };
-  const errorText = value => tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
+  const errorText = value => packageErrors.includes(value) ? packageError({ message: value }, t) : tr(`errors.${ERROR_CODES.includes(value) ? value : 'UNAVAILABLE'}`);
+  const selectPackage = offer => {
+    setServiceIds(current => packageSelection(current, selectedPackage, offer));
+    setPackageOfferId(offer?.id || ''); setCachedPackage(offer); setTime(''); setSlots([]); setPackageQuote(null); setError('');
+    if (offer && (date < offer.startsOn || date > offer.endsOn)) setDate(getKuwaitDate());
+  };
+  useEffect(() => {
+    if (!branchId || !barberId || receipt) return;
+    let active = true;
+    setPackagesLoading(true); setPackagesError(false);
+    customerBookingService.packages(branchId, barberId, draft?.bookingMode === 'time' ? date : null).then(items => {
+      if (active) { setPackages(items); const selected = items.find(item => item.id === packageOfferId); if (selected) setCachedPackage(selected); }
+    }).catch(() => { if (active) { setPackages([]); setPackagesError(true); } }).finally(() => { if (active) setPackagesLoading(false); });
+    return () => { active = false; };
+  }, [branchId, barberId, packageRetry, draft?.bookingMode, draft?.bookingMode === 'time' ? date : null, receipt]);
 
   const recoverUnavailableSelection = async (isCurrent = () => true) => {
     try {
@@ -214,11 +241,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (receipt) saveBookingDraft(null);
     else if (draftRestored && city) saveBookingDraft({
       bookingMode: draft?.bookingMode, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd,
-      city, branchId, barberId, serviceIds, date, time, panel, query,
+      city, branchId, barberId, serviceIds, packageOfferId, packageOffer: selectedPackage, date, time, panel, query,
       step: Math.floor(PANELS.indexOf(panel) / 2),
       rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
     });
-  }, [draftRestored, city, branchId, barberId, serviceIds, date, time, panel, query, receipt, rebookNotice, guest, details]);
+  }, [draftRestored, city, branchId, barberId, serviceIds, packageOfferId, selectedPackage, date, time, panel, query, receipt, rebookNotice, guest, details]);
   useEffect(() => {
     const previous = document.title;
     document.title = t('customerBooking.pageTitle');
@@ -252,8 +279,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
     setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setSlotError(false);
-    customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date })
-      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+    customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
+      .then(result => { if (active) { const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active) return;
         setError(failure.message);
@@ -263,7 +290,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       })
       .finally(() => { if (active) setSlotsLoading(false); });
     return () => { active = false; };
-  }, [checkingAvailability, branchId, barberId, serviceKey, date, slotRetry, receipt, customer?.id]);
+  }, [checkingAvailability, branchId, barberId, serviceKey, packageOfferId, packageRetry, date, slotRetry, receipt, customer?.id]);
 
   const validGuestDetails = () => {
     const errors = {};
@@ -369,11 +396,12 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         }
       }
       setVerification(proof);
-      const result = await customerBookingService.book({ ...selection, time, verification: proof, notes: details.notes, bookingPolicy: bookingPolicy || undefined });
+      const result = await customerBookingService.book({ ...selection, time, verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
       if (failure.message === 'PHONE_CANCELLED') return;
+      if (packageErrors.includes(failure.message)) { setPackageRetry(value => value + 1); setSlotRetry(value => value + 1); openPanel('services'); }
       setError(failure.message);
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
       if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
@@ -386,9 +414,9 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       if (failure.message === 'VERIFICATION_REQUIRED') { setVerification(''); if (customer) await refresh(); }
     } finally { setBusy(false); }
   };
-  const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError);
+  const appointmentReady = Boolean(branch && barber && selectedServices.length && time && !slotsLoading && !slotError && !packagesLoading && !packageInvalid && (!packageOfferId || packageQuote));
   const finalDetails = panel === 'details';
-  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
+  const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length && !packagesLoading && !packageInvalid) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
   const phoneCheckPending = accountPhoneKey && accountPhoneCheck?.key !== accountPhoneKey;
   const showPhoneVerification = phoneConfig && !verification
     && (activePhoneSession || !accountPhoneKey || (!phoneCheckPending && accountPhoneCheck?.required));
@@ -413,6 +441,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const renderSummary = (data = null) => <dl className="cb-review-list">
     <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => editSection('shop')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>
     <div><dt>{tr('steps.barber')}</dt><dd>{data ? (isArabic && data.barberNameAr || data.barberName) : name(barber)}{!data && <button type="button" onClick={() => editSection('barber')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.barber')}`}>{tr('edit')}</button>}</dd></div>
+    {(data?.package || selectedPackage) && <div><dt>{t('packages.title')}</dt><dd>{name(data?.package || selectedPackage)}</dd></div>}
     <div><dt>{tr('steps.services')}</dt><dd>{(data?.services || selectedServices).map(name).join(isArabic ? '، ' : ', ')}{!data && <button type="button" onClick={() => editSection('services')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.services')}`}>{tr('edit')}</button>}</dd></div>
     <div><dt>{tr('steps.time')}</dt><dd>{dateLabel(data?.date || date)}<br />{timeLabel(data?.time || time)} · {tr('minutes', { count: data?.duration || duration })}{!data && <button type="button" onClick={() => editSection('time')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.time')}`}>{tr('edit')}</button>}</dd></div>
     <div className="cb-total"><dt>{tr('total')}</dt><dd>{money(data?.price ?? price)}</dd></div>
@@ -480,11 +509,15 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
               {branch && !barbers.length && <div className="cb-empty"><UserRound size={28} /><h2>{ownShopProfile ? t('accountMode.noOtherBarbers') : tr('noBarbers')}</h2><p>{ownShopProfile ? t('accountMode.chooseOtherShop') : tr('noBarbersHint')}</p><button type="button" className="cb-text-button" onClick={() => editSection('shop')}>{tr('changeBranch')}</button></div>}
           </BookingSection>
           <BookingSection feedback={panel === 'services' && !catalogError ? bookingError : null} id="choose-services" title={tr('steps.services')} summary={selectedServices.map(name).join(isArabic ? '، ' : ', ')} open={panel === 'services' && Boolean(barber)} onEdit={() => openPanel('services')} editLabel={tr('edit')} disabled={busy}>
-                <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" disabled={!serviceIds.includes(item.id) && (serviceIds.length >= 10 || duration + item.duration > (draft?.bookingMode === 'time' ? catalog.maxDuration || 480 : 480))} checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
+                {packagesLoading && <p role="status">{tr('loading')}</p>}
+                {packagesError && <p className="cb-alert" role="alert">{t('packages.errors.UNAVAILABLE')} <button className="cb-text-button" type="button" onClick={() => setPackageRetry(value => value + 1)}>{tr('retry')}</button></p>}
+                {!packagesLoading && packageInvalid && <p className="cb-alert" role="alert">{t(`packages.errors.${availablePackage ? 'PACKAGE_DATE_UNAVAILABLE' : 'PACKAGE_UNAVAILABLE'}`)}</p>}
+                <PackagePicker offers={selectedPackage && !availablePackage ? [{ ...selectedPackage, unavailable: true }, ...packages] : packages} selected={packageOfferId} services={services} onChange={selectPackage} disabled={busy || packagesLoading} />
+                <fieldset className="cb-options" disabled={!barber}><legend className="sr-only">{tr('titles.services')}</legend>{services.map(item => <label key={item.id} className={`cb-option cb-service ${serviceIds.includes(item.id) ? 'selected' : ''}`}><input type="checkbox" disabled={selectedPackage?.serviceIds.includes(item.id) || (!serviceIds.includes(item.id) && (serviceIds.length >= 10 || duration + item.duration > (draft?.bookingMode === 'time' ? catalog.maxDuration || 480 : 480)))} checked={serviceIds.includes(item.id)} onChange={() => toggleService(item.id)} /><span className="cb-option-copy"><strong>{name(item)}</strong><span>{tr('minutes', { count: item.duration })}</span></span><strong className="cb-service-price">{selectedPackage?.serviceIds.includes(item.id) ? t('packages.included') : money(item.price)}</strong><span className="cb-radio cb-checkbox" aria-hidden="true">{serviceIds.includes(item.id) && <Check size={17} />}</span></label>)}</fieldset>
                 {draft?.bookingMode === 'time' && <p className="cb-helper">{t('bookingFinder.serviceFit')} <button type="button" className="cb-text-button" onClick={() => editSection('range')}>{t('bookingFinder.changeRange')}</button></p>}<p className="cb-helper"><Clock size={17} aria-hidden="true" />{tr('serviceHint')}</p>
           </BookingSection>
           <BookingSection feedback={panel === 'time' && !catalogError ? bookingError : null} id="choose-time" title={tr('steps.time')} summary={time ? `${dateLabel(date)} · ${timeLabel(time)}` : ''} open={panel === 'time'} onEdit={() => openPanel('time')} editLabel={tr('edit')} doneLabel={tr('guided.done')} onDone={() => openPanel('details')} disabled={busy || !appointmentReady}>
-                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><div className="cb-date-field"><input className="cb-input cb-date" id="booking-date" type="date" readOnly={draft?.bookingMode === 'time'} value={date} min={getKuwaitDate()} max={addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /></div>{draft?.bookingMode === 'time' && <button className="cb-text-button" type="button" onClick={() => editSection('range')}>{t('bookingFinder.changeRange')} <bdi>{draft.rangeStart}–{draft.rangeEnd}</bdi></button>}<p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
+                <label htmlFor="booking-date" className="cb-field-label">{tr('dateLabel')}</label><div className="cb-date-field"><input className="cb-input cb-date" id="booking-date" type="date" readOnly={draft?.bookingMode === 'time'} value={date} min={getKuwaitDate()} max={selectedPackage ? [selectedPackage.endsOn, addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)].sort()[0] : addBookingDays(getKuwaitDate(), barber?.maxBookingDays || 30)} onChange={event => { setDate(event.target.value); setTime(''); setPanel('time'); setError(''); }} required /></div>{draft?.bookingMode === 'time' && <button className="cb-text-button" type="button" onClick={() => editSection('range')}>{t('bookingFinder.changeRange')} <bdi>{draft.rangeStart}–{draft.rangeEnd}</bdi></button>}<p className="cb-helper">{tr('kuwaitTime')}</p><h3 className="cb-time-heading">{tr('timeLabel')}</h3>
                 {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('details'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
                 {checkingAvailability && !slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
           </BookingSection>

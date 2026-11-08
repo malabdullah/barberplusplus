@@ -20,6 +20,8 @@ const toFrontend = (booking) => {
     barberId: booking.barber_id,
     serviceIds: booking.service_ids || [],
     serviceSnapshot: booking.service_snapshot || [],
+    packageOfferId: booking.package_offer_id || '',
+    packageSnapshot: booking.package_snapshot || null,
     customerId: booking.customer_id,
     barberName: booking.barber?.name || null,
     // Customer data from joined customers table
@@ -54,6 +56,7 @@ const toDatabase = (data) => {
   const result = {};
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.barberId !== undefined) result.barber_id = data.barberId;
+  if (data.packageOfferId !== undefined) result.package_offer_id = data.packageOfferId || null;
   if (data.serviceIds !== undefined) result.service_ids = data.serviceIds;
   if (data.customerId !== undefined) result.customer_id = data.customerId;
   // Customer name/phone/countryCode removed - stored in customers table only

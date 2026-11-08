@@ -55,6 +55,11 @@ Deno.serve(createCustomerBookingHandler({
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
     return result.data;
   },
+  packages: async (shop, barber, date) => {
+    const result = await admin.rpc('customer_package_catalog', { p_shop: shop, p_barber: barber, p_date: date });
+    if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
+    return result.data;
+  },
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services, ratingResult] = await Promise.all([

@@ -1,3 +1,4 @@
+import { mapPackage } from '../utils/servicePackages';
 import { shopWording } from '../utils/customerTerminology';
 import { customerToken } from './customerAuth.service';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
@@ -50,6 +51,7 @@ export const customerBookingService = {
     const result = await request('catalog');
     return mapCatalog(result);
   },
+  packages: async (branchId, barberId, date) => (await request('packages', { branchId, barberId, date: date || null })).packages.map(mapPackage),
   filters: () => request('discovery-filters'),
   search: data => request('discovery-search', data),
   async selection(data) {
@@ -69,6 +71,7 @@ export const customerBookingService = {
     const result = await request('book', data);
     return {
       ...result,
+      package: result.package ? mapPackage(result.package) : null,
       branchName: shopWording(result.branch_name), branchNameAr: shopWording(result.branch_name_ar),
       barberName: result.barber_name, barberNameAr: result.barber_name_ar,
       locationUrl: result.location_url,

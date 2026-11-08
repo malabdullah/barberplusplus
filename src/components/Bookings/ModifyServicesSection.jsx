@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Settings2, Check, AlertTriangle, Plus, Minus } from 'lucide-react';
+import { getErrorMessage } from '../../utils/errorMessages';
+import { bookedPackageTotals } from '../../utils/servicePackages';
 import { getMaxAllowedDuration } from '../../utils/bookingConflicts';
 
 /**
@@ -85,6 +87,7 @@ export default function ModifyServicesSection({
 
   // Current booking's totals (from original serviceIds)
   const currentDuration = useMemo(() => {
+    if (booking?.packageSnapshot) return booking.duration;
     if (!booking?.serviceIds || !services) return 0;
     return booking.serviceIds
       .map(id => services.find(s => s.id === id)?.duration || 0)
@@ -92,6 +95,7 @@ export default function ModifyServicesSection({
   }, [booking?.serviceIds, services]);
 
   const currentPrice = useMemo(() => {
+    if (booking?.packageSnapshot) return booking.price;
     if (!booking?.serviceIds || !services) return 0;
     return booking.serviceIds
       .map(id => services.find(s => s.id === id)?.price || 0)
@@ -100,18 +104,20 @@ export default function ModifyServicesSection({
 
   // New selected totals (from counts)
   const newDuration = useMemo(() => {
+    if (booking?.packageSnapshot) return bookedPackageTotals(booking, getIdsFromCounts(selectedCounts), services).duration;
     return Object.entries(selectedCounts).reduce((sum, [id, count]) => {
       const service = services?.find(s => s.id === id);
       return sum + (service?.duration || 0) * count;
     }, 0);
-  }, [selectedCounts, services]);
+  }, [selectedCounts, services, booking]);
 
   const newPrice = useMemo(() => {
+    if (booking?.packageSnapshot) return bookedPackageTotals(booking, getIdsFromCounts(selectedCounts), services).price;
     return Object.entries(selectedCounts).reduce((sum, [id, count]) => {
       const service = services?.find(s => s.id === id);
       return sum + (service?.price || 0) * count;
     }, 0);
-  }, [selectedCounts, services]);
+  }, [selectedCounts, services, booking]);
 
   // Total count of services
   const totalServiceCount = useMemo(() => {
@@ -131,6 +137,7 @@ export default function ModifyServicesSection({
   }
 
   const increment = (serviceId) => {
+    if (booking?.packageSnapshot && selectedCounts[serviceId]) return;
     const service = services?.find(s => s.id === serviceId);
     if (!service || service.status === 'inactive' || (barberData?.services && !barberData.services.includes(serviceId))) return;
 
@@ -148,6 +155,7 @@ export default function ModifyServicesSection({
   };
 
   const decrement = (serviceId) => {
+    if (booking?.packageSnapshot?.service_ids.includes(serviceId)) return;
     setSelectedCounts(prev => {
       const currentCount = prev[serviceId] || 0;
       if (currentCount <= 0) return prev;
@@ -165,6 +173,7 @@ export default function ModifyServicesSection({
   };
 
   const canAdd = (serviceId) => {
+    if (booking?.packageSnapshot && selectedCounts[serviceId]) return false;
     const service = services?.find(s => s.id === serviceId);
     if (!service || service.status === 'inactive' || (barberData?.services && !barberData.services.includes(serviceId))) return false;
     return newDuration + service.duration <= maxAllowedDuration;
@@ -182,7 +191,7 @@ export default function ModifyServicesSection({
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err, t));
     } finally {
       setIsSaving(false);
     }
@@ -196,6 +205,7 @@ export default function ModifyServicesSection({
 
   return (
     <div className="modify-services-section">
+      {booking?.packageSnapshot && <p className="package-badge">{booking.packageSnapshot.name}</p>}
       {/* Header */}
       <div className="modify-services-header">
         <Settings2 size={16} />
@@ -221,14 +231,14 @@ export default function ModifyServicesSection({
               <div className="modify-service-info">
                 <span className="modify-service-name">{service.name}</span>
                 <span className="modify-service-details">
-                  {service.duration} {t('common.min')} | {service.price} {t('common.currency')}
+                  {service.duration} {t('common.min')} | {booking?.packageSnapshot?.service_ids.includes(service.id) ? t('packages.included') : `${service.price} ${t('common.currency')}`}
                 </span>
               </div>
               <div className="modify-service-controls">
                 <button
                   className="qty-btn decrement"
                   onClick={() => decrement(service.id)}
-                  disabled={isSaving || count === 0}
+                  disabled={isSaving || count === 0 || booking?.packageSnapshot?.service_ids.includes(service.id)}
                   aria-label={t('bookings.modifyServices.remove')}
                 >
                   <Minus size={14} />
