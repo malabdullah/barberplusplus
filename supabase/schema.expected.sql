@@ -70,6 +70,32 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     CONSTRAINT "max_booking_days_range" CHECK ((("max_booking_days" >= 1) AND ("max_booking_days" <= 365)))
 );
 ALTER TABLE "public"."barbers" OWNER TO "postgres";
+CREATE TABLE IF NOT EXISTS "public"."branches" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "manager_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "address" "text",
+    "city" "text",
+    "country" "text" DEFAULT 'Kuwait'::"text",
+    "phone" "text",
+    "email" "text",
+    "status" "text" DEFAULT 'active'::"text",
+    "working_hours" "jsonb" DEFAULT '{"friday": {"open": "14:00", "close": "21:00"}, "monday": {"open": "09:00", "close": "21:00"}, "sunday": {"open": "09:00", "close": "21:00"}, "tuesday": {"open": "09:00", "close": "21:00"}, "saturday": {"open": "09:00", "close": "21:00"}, "thursday": {"open": "09:00", "close": "21:00"}, "wednesday": {"open": "09:00", "close": "21:00"}}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "name_ar" "text",
+    "governorate_id" integer,
+    "area_id" integer,
+    "location_url" "text",
+    "country_code" "text" DEFAULT '+965'::"text",
+    "number_of_barbers" integer,
+    "image_url" "text",
+    "publication_state" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "paused_manual_booking_allowed" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "branches_publication_state_check" CHECK (("publication_state" = ANY (ARRAY['draft'::"text", 'published'::"text", 'paused'::"text"]))),
+    CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
+);
+ALTER TABLE "public"."branches" OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -1575,32 +1601,6 @@ CREATE TABLE IF NOT EXISTS "public"."booking_reminders" (
     CONSTRAINT "booking_reminders_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'sent'::"text", 'failed'::"text", 'cancelled'::"text"])))
 );
 ALTER TABLE "public"."booking_reminders" OWNER TO "postgres";
-CREATE TABLE IF NOT EXISTS "public"."branches" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "manager_id" "uuid" NOT NULL,
-    "name" "text" NOT NULL,
-    "address" "text",
-    "city" "text",
-    "country" "text" DEFAULT 'Kuwait'::"text",
-    "phone" "text",
-    "email" "text",
-    "status" "text" DEFAULT 'active'::"text",
-    "working_hours" "jsonb" DEFAULT '{"friday": {"open": "14:00", "close": "21:00"}, "monday": {"open": "09:00", "close": "21:00"}, "sunday": {"open": "09:00", "close": "21:00"}, "tuesday": {"open": "09:00", "close": "21:00"}, "saturday": {"open": "09:00", "close": "21:00"}, "thursday": {"open": "09:00", "close": "21:00"}, "wednesday": {"open": "09:00", "close": "21:00"}}'::"jsonb",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"(),
-    "name_ar" "text",
-    "governorate_id" integer,
-    "area_id" integer,
-    "location_url" "text",
-    "country_code" "text" DEFAULT '+965'::"text",
-    "number_of_barbers" integer,
-    "image_url" "text",
-    "publication_state" "text" DEFAULT 'draft'::"text" NOT NULL,
-    "paused_manual_booking_allowed" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "branches_publication_state_check" CHECK (("publication_state" = ANY (ARRAY['draft'::"text", 'published'::"text", 'paused'::"text"]))),
-    CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
-);
-ALTER TABLE "public"."branches" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."customer_staff_details" (
     "customer_id" "uuid" NOT NULL,
     "notes" "text",
@@ -2173,6 +2173,9 @@ GRANT ALL ON TABLE "public"."bookings" TO "service_role";
 GRANT ALL ON TABLE "public"."barbers" TO "anon";
 GRANT ALL ON TABLE "public"."barbers" TO "authenticated";
 GRANT ALL ON TABLE "public"."barbers" TO "service_role";
+GRANT ALL ON TABLE "public"."branches" TO "anon";
+GRANT ALL ON TABLE "public"."branches" TO "authenticated";
+GRANT ALL ON TABLE "public"."branches" TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) FROM PUBLIC;
@@ -2328,9 +2331,6 @@ GRANT ALL ON TABLE "public"."booking_reminders" TO "service_role";
 GRANT SELECT("booking_id"),INSERT("booking_id") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
 GRANT INSERT("scheduled_at") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
 GRANT SELECT("status"),UPDATE("status") ON TABLE "public"."booking_reminders" TO "barber_reminder_writer";
-GRANT ALL ON TABLE "public"."branches" TO "anon";
-GRANT ALL ON TABLE "public"."branches" TO "authenticated";
-GRANT ALL ON TABLE "public"."branches" TO "service_role";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "authenticated";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."customer_staff_details" TO "service_role";
 GRANT ALL ON TABLE "public"."governorates" TO "anon";
