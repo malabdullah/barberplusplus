@@ -19,6 +19,7 @@ import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
+  { path: '/dashboard/setup', icon: Building2, labelKey: 'shopSetup.menu' },
   { path: '/dashboard/branches', icon: Building2, labelKey: 'nav.branches' },
   { path: '/dashboard/services', icon: Scissors, labelKey: 'nav.services' },
   { path: '/dashboard/barbers', icon: Users, labelKey: 'nav.barbers' },

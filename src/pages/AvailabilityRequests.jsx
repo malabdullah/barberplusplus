@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { availabilityService } from '../services/availability.service';
@@ -10,6 +10,7 @@ import { getErrorMessage } from '../utils/errorMessages';
 import '../components/Availability/AvailabilityApproval.css';
 export default function AvailabilityRequests() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const { selectedBranchId, branches, barbers, reloadData } = useApp();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || 'pending';
@@ -71,7 +72,7 @@ export default function AvailabilityRequests() {
           <p className={groups.length ? 'text-muted' : undefined}>{request.category === 'break' && value ? <><bdi>{value.type === 'recurring' ? t(`days.${value.day}`) : value.date}</bdi> · <bdi dir="ltr">{value.start}–{value.end}</bdi></> : <bdi dir={request.category === 'vacation' ? 'ltr' : undefined}>{availabilityItemSummary({ ...request, requested_value: value, approved_value: value }, t)}</bdi>}</p>
           {value?.reason && <p className="text-muted">{value.reason}</p>}
           {request.review_note && <p>{request.review_note}</p>}
-          <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}`}>{t('availabilityItems.details')}</Link>
+          <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}${location.search}`}>{t('availabilityItems.details')}</Link>
         </div>
         {request.status === 'pending' && <AvailabilityQuickActions item={request} onDecided={decided} onAction={() => setNotice(null)} />}
       </article>;

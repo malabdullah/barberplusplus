@@ -16,6 +16,7 @@ import AccountEmails from './pages/admin/AccountEmails';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
 import Dashboard from './pages/Dashboard';
+import ShopSetup from './pages/ShopSetup';
 import Branches from './pages/Branches';
 import AddBranch from './pages/AddBranch';
 import EditBranch from './pages/EditBranch';
@@ -206,6 +207,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="setup" element={<ShopSetup />} />
         <Route path="branches" element={<Branches />} />
         <Route path="branches/new" element={<AddBranch />} />
         <Route path="branches/:branchId/edit" element={<EditBranch />} />
