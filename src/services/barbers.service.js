@@ -1,9 +1,5 @@
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
 import { supabase } from '../lib/supabase';
-import { logErrorDev } from '../utils/security';
-
-// SECURITY: Timeout for Edge Function calls (prevents hanging requests)
-const EDGE_FUNCTION_TIMEOUT_MS = 30000; // 30 seconds
 
 // Convert snake_case DB columns to camelCase for frontend
 const toFrontend = (barber) => {
@@ -189,97 +185,6 @@ export const barbersService = {
     return toFrontend(data);
   },
 
-  /**
-   * Send invite email to barber via Edge Function
-   * SECURITY: Implements timeout and sanitized error messages
-   * @param {string} barberId
-   * @param {string} email
-   * @param {string} name
-   * @param {string} branchId
-   * @param {boolean} isResend - If true, deletes existing user and re-invites
-   * @returns {Promise<{success: boolean, userId?: string, error?: string}>}
-   */
-  sendInvite: async (barberId, email, name, branchId, isResend = false) => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error('Not authenticated');
-    }
-
-    try {
-      const { data, error, response } = await supabase.functions.invoke('invite-barber', {
-        body: { barberId, email, name, branchId, isResend },
-        timeout: EDGE_FUNCTION_TIMEOUT_MS,
-      });
-
-      if (error) {
-        if (error.context?.name === 'AbortError') {
-          throw error;
-        }
-
-        let functionError = null;
-        try {
-          functionError = response ? await response.clone().json() : null;
-        } catch {
-          // The function may return a non-JSON error response.
-        }
-
-        // SECURITY: Log raw error for debugging, throw sanitized message
-        logErrorDev('Edge Function error:', functionError?.error || error);
-        // Map specific known errors to user-friendly messages
-        if (response?.status === 401) {
-          throw new Error('Session expired. Please log in again.');
-        } else if (response?.status === 403) {
-          throw new Error('You do not have permission to perform this action.');
-        } else if (response?.status === 429) {
-          throw new Error('Too many requests. Please try again later.');
-        }
-        // Generic error for unknown cases (don't expose raw API errors)
-        throw new Error('Failed to send invite. Please try again.');
-      }
-
-      return data;
-    } catch (error) {
-      // Handle timeout specifically
-      if (error.name === 'AbortError' || error.context?.name === 'AbortError') {
-        throw new Error('Request timed out. Please try again.', { cause: error });
-      }
-
-      // Re-throw known errors (already sanitized above)
-      if (error.message.includes('Please')) {
-        throw error;
-      }
-
-      // SECURITY: Sanitize unexpected errors
-      logErrorDev('Unexpected Edge Function error:', error);
-      throw new Error('Failed to send invite. Please try again.', { cause: error });
-    }
-  },
-
-  /**
-   * Resend invite to an existing barber
-   * @param {string} barberId
-   * @returns {Promise<{success: boolean}>}
-   */
-  resendInvite: async (barberId) => {
-    const { data: barber, error } = await supabase
-      .from('barbers')
-      .select('email, name, branch_id')
-      .eq('id', barberId)
-      .single();
-
-    if (error) throw error;
-    if (!barber) throw new Error('Barber not found');
-
-    // Pass isResend=true to delete existing user and send fresh invite
-    return barbersService.sendInvite(
-      barberId,
-      barber.email,
-      barber.name,
-      barber.branch_id,
-      true
-    );
-  },
 };
 
 export default barbersService;

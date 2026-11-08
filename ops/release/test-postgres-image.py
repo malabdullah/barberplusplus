@@ -33,7 +33,7 @@ def main():
     # Auth triggers and Storage policies below. Keep only platform role setup.
     roles = ('\n'.join(line for line in roles.decode().splitlines() if not re.match(r'^(CREATE|ALTER) ROLE "?barber_reminder_writer"?(?:\s|;)',line))+'\n').encode()
     # These schemas and the migration ledger are created during the replay.
-    replayed_schemas = ('public', 'secure', 'private', 'shop_handover', 'supabase_migrations')
+    replayed_schemas = ('public', 'secure', 'private', 'shop_handover', 'shop_publishing', 'supabase_migrations')
     platform = docker(
         'exec', source, 'pg_dump', '-U', 'supabase_admin', '-d', 'postgres',
         '--format=custom', '--schema-only', '--no-owner',

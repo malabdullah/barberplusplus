@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { availabilityService } from '../services/availability.service';
@@ -9,6 +9,7 @@ import { getErrorMessage } from '../utils/errorMessages';
 import '../components/Availability/AvailabilityApproval.css';
 export default function AvailabilityRequestReview() {
   const { requestId } = useParams();
+  const { search } = useLocation();
   const { t, i18n } = useTranslation();
   const { reloadData, barbers, branches } = useApp();
   const [detail, setDetail] = useState(null);
@@ -31,7 +32,7 @@ export default function AvailabilityRequestReview() {
   const barber = barbers.find(person => person.id === detail?.barber.id);
   const shop = branches.find(branch => branch.id === detail?.barber.branch_id);
   return <div className="availability-item-review">
-    <Link className="availability-back" to="/dashboard/availability-requests">{t('availabilityItems.back')}</Link>
+    <Link className="availability-back" to={'/dashboard/availability-requests' + search}>{t('availabilityItems.back')}</Link>
     {loading && <p role="status">{t('common.loading')}</p>}
     {error && <p className="form-error" role="alert">{getErrorMessage(error, t('common.error'), t)}</p>}
     {notice && <p className="availability-decision-notice" role="status">{t(`availabilityItems.${notice}Notice`)}</p>}

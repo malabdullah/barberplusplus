@@ -76,7 +76,6 @@ export default function PublicHeader() {
   </> : <NavigationLink to="/customer/sign-in" state={{ returnTo }} aria-current={location.pathname === '/customer/sign-in' ? 'page' : undefined}>{t('publicNav.customerSignIn')}</NavigationLink>;
   const shopLinks = <>
     <NavigationLink to="/login">{t('publicNav.teamSignIn')}</NavigationLink>
-    <NavigationLink to="/signup">{t('publicNav.registerShop')}</NavigationLink>
   </>;
   const bookLink = <NavigationLink to="/book" className="public-book-link" aria-current={location.pathname === '/book' ? 'page' : undefined}>{t('publicNav.book')}</NavigationLink>;
   const dropdown = (id, label, content) => <div className="public-nav-disclosure" ref={element => { dropdownRefs.current[id] = element; }} onBlur={event => {

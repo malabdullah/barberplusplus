@@ -1,0 +1,26 @@
+import fs from 'node:fs';
+import { test, expect } from './fixtures.js';
+const c=JSON.parse(fs.readFileSync('.cloud-test/credentials.json'));
+const m=JSON.parse(fs.readFileSync('.cloud-test/manager-review-fixture.json'));
+test('existing customer confirms and joins the same identity without signup',async({page,request,context})=>{
+ test.setTimeout(180000);const phone=String(59997000+Math.floor(Math.random()*300));const email='invitation-customer-'+Date.now()+'@example.test';
+ const text=await(await request.get('/runtime-config.js')).text();const cfg=JSON.parse(text.match(/Object\.freeze\((.*)\);/)[1]);expect(cfg.cloudTestProjectRef).toBe('qvkucvcjmojjbphlzlks');
+ const apiHeaders={Origin:c.appUrl,apikey:cfg.supabasePublishableKey,'Content-Type':'application/json'};
+ const call=async(action,data={},token)=>{const r=await request.post('/test-api/customer-auth',{headers:{...apiHeaders,...(token?{Authorization:'Bearer '+token}:{})},data:{action,...data}});expect(r.ok()).toBe(true);return r.json();};
+ await call('email-signup',{email,name:'Existing Customer Invitation QA',password:c.staffPassword});
+ const inbox=await(await request.get('/test-inbox?format=json')).json();const mail=inbox.find(x=>x.recipient===email&&x.payload?.email_data?.token_hash);expect(mail).toBeTruthy();
+ const verified=await request.post(cfg.supabaseUrl+'/auth/v1/verify',{headers:apiHeaders,data:{type:'signup',token_hash:mail.payload.email_data.token_hash}});expect(verified.ok()).toBe(true);const customer=await verified.json();
+ await call('email-ensure',{},customer.access_token);await call('update-profile',{name:'Existing Customer Invitation QA',countryCode:'+965',phone},customer.access_token);
+ await page.goto('/login');await page.locator('#email').fill(m.email);await page.locator('#password').fill(c.staffPassword);await page.locator('button[type="submit"]').click();await expect(page).toHaveURL(/\/dashboard$/);
+ await page.goto('/dashboard/barbers/new');await page.locator('#invite-email').fill(email);await page.locator('form button[type="submit"]').click();
+ const dialog=page.getByRole('alertdialog');await expect(dialog).toContainText('same account');await dialog.getByRole('button',{name:'Send invitation',exact:true}).click();await expect(page).toHaveURL(/\/dashboard\/barbers$/);
+ const messages=await(await request.get('/test-inbox?format=json')).json();const invite=messages.find(x=>x.recipient===email&&x.link?.includes('/accept-invite?'));expect(invite).toBeTruthy();
+ const recipient=await context.browser().newContext({baseURL:c.appUrl,httpCredentials:{username:'tester',password:c.accessPassword,origin:c.appUrl}});await recipient.addCookies((await context.cookies()).filter(x=>x.name==='barber_test_access'));
+ const p=await recipient.newPage();await p.goto(invite.link);await expect(p.locator('#join-password')).toBeVisible();await expect(p.locator('#join-confirmPassword')).toHaveCount(0);
+ await p.locator('#join-password').fill(c.staffPassword);await p.locator('form button[type="submit"]').click();await expect(p.locator('#join-name')).toHaveValue('Existing Customer Invitation QA');await expect(p.locator('#join-phone')).toHaveValue(phone);
+ await p.getByRole('button',{name:'Accept invitation',exact:true}).click();await expect(p).toHaveURL(/\/barber\/availability$/);
+ const token=await request.post(cfg.supabaseUrl+'/auth/v1/token?grant_type=password',{headers:apiHeaders,data:{email,password:c.staffPassword}});expect(token.ok()).toBe(true);const staff=await token.json();expect(staff.user.id).toBe(customer.user.id);expect(staff.user.app_metadata.role).toBe('barber');
+ const profile=await call('profile',{},staff.access_token);expect(profile.profile.phone).toBe(phone);
+ await p.goto('/customer/account');await expect(p.locator('.ca-profile-panel')).toBeVisible();await p.screenshot({path:'.cloud-test/invitation-same-customer-account.png',fullPage:true});
+ fs.writeFileSync('.cloud-test/invitation-customer-fixture.json',JSON.stringify({email,userId:staff.user.id,phone,retainedForReview:true},null,2),{mode:0o600});await recipient.close();
+});

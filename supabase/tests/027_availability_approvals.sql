@@ -1,4 +1,6 @@
 begin;
+-- These legacy authorization fixtures represent already-published shops.
+alter table public.branches alter column publication_state set default 'published';
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
@@ -77,8 +79,12 @@ set local role authenticated;
 select throws_ok($$select public.barber_availability('decline',jsonb_build_object('request_id',current_setting('availability.third')::jsonb->'request'->>'id','note',''))$$,'P0001','AVAILABILITY_REASON_REQUIRED','declining requires a reason');
 select is(public.barber_availability('decline',jsonb_build_object('request_id',current_setting('availability.third')::jsonb->'request'->>'id','note','Please choose different dates'))->'request'->>'status','declined','manager can decline with a clear reason');
 select is((select availability_revision from public.barbers where id='ec080000-0000-4000-8000-000000000301'),2,'decline does not alter approved availability');
-insert into public.barbers(id,branch_id,name,service_ids,availability) values('ec080000-0000-4000-8000-000000000302','ec080000-0000-4000-8000-000000000101','Pending new barber',array['ec080000-0000-4000-8000-000000000201']::uuid[],'{"monday":{"enabled":true,"start":"09:00","end":"18:00"}}');
-select ok((select availability_approved_at is null and availability='{}' from public.barbers where id='ec080000-0000-4000-8000-000000000302'),'new manager-added barbers start without approved public hours');
+select throws_ok($$insert into public.barbers(id,branch_id,name,service_ids,availability) values('ec080000-0000-4000-8000-000000000302','ec080000-0000-4000-8000-000000000101','Pending new barber',array['ec080000-0000-4000-8000-000000000201']::uuid[],'{"monday":{"enabled":true,"start":"09:00","end":"18:00"}}')$$,'42501','INVITATION_REQUIRED','manager must invite a new barber instead of inserting one');
+reset role;
+select set_config('request.jwt.claims','{}',true);
+-- Fixture matches the inactive profile produced by invitation acceptance.
+insert into public.barbers(id,branch_id,name,service_ids,availability,availability_approved_at) values('ec080000-0000-4000-8000-000000000302','ec080000-0000-4000-8000-000000000101','Pending new barber',array['ec080000-0000-4000-8000-000000000201']::uuid[],'{}',null);
+select ok((select availability_approved_at is null and availability='{}' from public.barbers where id='ec080000-0000-4000-8000-000000000302'),'new invited barbers start without approved public hours');
 reset role;
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"customer"}}',true);
 set local role authenticated;

@@ -6,6 +6,11 @@
 
 // Common Supabase/PostgreSQL error patterns
 const ERROR_PATTERNS = {
+  'SHOP_NOT_READY': 'shopPublication.notReadyError',
+  'SHOP_PUBLICATION_FORBIDDEN': 'shopPublication.forbidden',
+  'SHOP_PERMISSION_ADMIN_ONLY': 'shopPublication.adminOnly',
+  'SHOP_STATE_CHANGED': 'shopPublication.stale',
+  'SHOP_BOOKINGS_PAUSED': 'shopPublication.bookingBlocked',
   'AVAILABILITY_INDIVIDUAL_REVIEW_REQUIRED': 'availabilityItems.individualRequired',
   'AVAILABILITY_STALE': 'availabilityApproval.stale',
   'AVAILABILITY_APPROVAL_REQUIRED': 'availabilityApproval.approvalRequired',

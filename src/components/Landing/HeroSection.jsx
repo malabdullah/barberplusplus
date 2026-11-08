@@ -46,7 +46,7 @@ export default function HeroSection() {
               {t('publicNav.book')}
               <ArrowRight size={18} strokeWidth={2} />
             </Link>
-            <Link to="/signup" className="hero-btn-secondary">
+            <Link to="/login" className="hero-btn-secondary">
               {t('publicNav.hero.shopCta')}
             </Link>
           </div>

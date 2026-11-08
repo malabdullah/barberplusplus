@@ -34,6 +34,6 @@ export default function Login() {
       <Link to="/forgot-password" className="cb-text-button ca-forgot">{t('auth.forgotPassword')}</Link>
       <button type="submit" className="cb-primary ca-submit" disabled={isLoading}>{isLoading && <Loader2 className="cb-spinner" size={18} aria-hidden="true" />}{t('auth.signIn')}</button>
     </fieldset></form>
-    <p className="ca-switch">{t('auth.noAccount')} <Link to="/signup">{t('publicNav.registerShop')}</Link></p>
+    <p className="ca-switch">{t('auth.noAccount')} <Link to="/signup">{t('auth.createManagerAccount')}</Link></p>
   </CustomerAuthLayout>;
 }

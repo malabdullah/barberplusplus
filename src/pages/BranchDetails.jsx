@@ -21,12 +21,14 @@ import BranchForm from '../components/Forms/BranchForm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BackLink from '../components/UI/BackLink';
 import './BranchDetails.css';
+import ShopPublication from '../components/Setup/ShopPublication';
+import { shopSetupUrl } from '../utils/shopSetup';
 
 export default function BranchDetails() {
   const { t, i18n } = useTranslation();
   const { branchId } = useParams();
   const navigate = useNavigate();
-  const { branches, barbers, services, bookings, updateBranch, deleteBranch, setSelectedBranchId } = useApp();
+  const { branches, barbers, services, bookings, updateBranch, deleteBranch, setSelectedBranchId, reloadData } = useApp();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -106,6 +108,7 @@ export default function BranchDetails() {
         </div>
 
         <div className="branch-details-actions">
+          <Link className="btn btn-secondary" to={shopSetupUrl(branchId)}>{t('shopSetup.menu')}</Link>
           <button className="btn btn-secondary" onClick={() => navigate(`/dashboard/branches/${branchId}/edit`)}>
             <Edit size={16} strokeWidth={1.5} />
             {t('common.edit')}
@@ -116,6 +119,8 @@ export default function BranchDetails() {
           </button>
         </div>
       </div>
+
+      <ShopPublication key={branchId} branchId={branchId} name={branch.name} onChanged={reloadData} />
 
       {/* Stats Row */}
       <div className="branch-stats-row animate-fade-in-up stagger-1">
@@ -186,8 +191,8 @@ export default function BranchDetails() {
           ) : (
             <div className="empty-section">
               <p>{t('branches.noBarbersAssigned')}</p>
-              <Link to="/dashboard/barbers" className="btn btn-sm btn-primary">
-                <Plus size={14} /> {t('barbers.addBarber')}
+              <Link to="/dashboard/barbers/new" className="btn btn-sm btn-primary">
+                <Plus size={14} /> {t('barberInvitations.invite')}
               </Link>
             </div>
           )}

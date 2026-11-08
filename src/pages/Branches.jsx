@@ -165,7 +165,7 @@ export default function Branches() {
             {t('branches.subtitle')}
           </p>
         </div>
-        <Link to="/dashboard/branches/new" className="btn btn-primary">
+        <Link to="/dashboard/setup?shop=new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
           {t('branches.addBranch')}
         </Link>
@@ -185,7 +185,7 @@ export default function Branches() {
           ))}
 
           {/* Add Branch Card */}
-          <Link to="/dashboard/branches/new" className="add-branch-card animate-fade-in-up">
+          <Link to="/dashboard/setup?shop=new" className="add-branch-card animate-fade-in-up">
             <div className="add-branch-icon">
               <Plus size={32} strokeWidth={1.5} />
             </div>
@@ -199,7 +199,7 @@ export default function Branches() {
           </div>
           <h3>{t('branches.noBranches')}</h3>
           <p>{t('branches.createFirst')}</p>
-          <Link to="/dashboard/branches/new" className="btn btn-primary">
+          <Link to="/dashboard/setup?shop=new" className="btn btn-primary">
             <Plus size={18} strokeWidth={2} />
             {t('branches.addFirstBranch')}
           </Link>

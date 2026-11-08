@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import SetupReturnLink from '../Setup/SetupReturnLink';
 import TopBar from './TopBar';
 import NotificationToast from '../UI/NotificationToast';
 import { useApp } from '../../context/AppContext';
@@ -24,6 +25,7 @@ export default function Layout() {
       <div className="layout-main">
         <TopBar onMenuClick={handleMenuToggle} />
         <main className="layout-content">
+          <SetupReturnLink />
           <Outlet />
         </main>
       </div>

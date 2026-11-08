@@ -1,44 +1,9 @@
-/* Signup-specific styles */
-.signup-container {
-  max-width: 480px;
-}
-
-.signup-phone-wrapper {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.signup-country-select {
-  width: 140px;
-  padding: var(--space-md);
-  background: var(--bg-tertiary);
-  border: 1px solid rgba(212, 168, 83, 0.1);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.signup-country-select:focus {
-  border-color: var(--accent-primary);
-  background: var(--bg-elevated);
-  outline: none;
-}
-
-.signup-phone-input {
-  flex: 1;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .signup-phone-wrapper {
-    flex-direction: column;
-  }
-
-  .signup-country-select {
-    width: 100%;
-  }
+.signup-phone-wrapper { display: flex; gap: 10px; min-width: 0; }
+.signup-phone-wrapper .signup-country-select { width: 44%; flex: 0 0 44%; padding-inline: 10px; }
+.signup-phone-wrapper .signup-phone-input { min-width: 0; flex: 1; width: 0; }
+@media (max-width: 420px) {
+  .signup-phone-wrapper { flex-direction: column; }
+  .signup-phone-wrapper .signup-country-select, .signup-phone-wrapper .signup-phone-input { width: 100%; flex: auto; }
 }
 .signup-error p { margin: 0; }
 .signup-error a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: inherit; font-weight: 600; text-decoration: underline; }
@@ -47,8 +12,6 @@
 .signup-verification { display: grid; gap: 12px; }
 .signup-verification-email { margin: 0 0 8px; text-align: center; overflow-wrap: anywhere; color: var(--text-primary); }
 .signup-verification-status { margin: 0; padding: 12px; border-radius: 8px; background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; line-height: 1.6; }
-.signup-resend { min-height: 48px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: transparent; color: var(--text-primary); font: 500 14px/1.5 var(--font-body); cursor: pointer; }
-.signup-resend:disabled { opacity: .6; cursor: not-allowed; }
 .signup-sign-in { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; color: var(--text-primary); text-decoration: underline; }
 .signup-verification :is(button,a):focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
 .registration-email-correction { display: grid; gap: 12px; text-align: start; }

@@ -12,7 +12,7 @@ import './Forms.css';
 
 const DEFAULT_HOURS = DEFAULT_SCHEDULE;
 
-export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = false }) {
+export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = false, submitText }) {
   const { t, i18n } = useTranslation();
   // Use cached geolocation hook instead of direct API call
   const { dialCode: detectedCountryCode } = useGeoLocation(branch?.countryCode);
@@ -395,7 +395,7 @@ export default function BranchForm({ branch, onSubmit, onCancel, isSubmitting = 
           {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? t('common.loading') : (branch ? t('common.saveChanges') : t('branches.createBranch'))}
+          {isSubmitting ? t('common.loading') : (submitText || (branch ? t('common.saveChanges') : t('branches.createBranch')))}
         </button>
       </div>
     </form>

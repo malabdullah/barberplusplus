@@ -35,6 +35,15 @@ it.each(['en', 'ar'])('shows a focused existing-account error and sign-in link i
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 afterEach(cleanup);
+it('names the manager account, provides a sign-in return and rejects an invalid phone before signup', async () => {
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><Signup /></MemoryRouter></I18nextProvider>);
+  expect(screen.getByRole('heading', { name: en.auth.createManagerAccount })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: en.auth.backToLogin })).toHaveAttribute('href', '/login');
+  for (const [id, value] of Object.entries({ name: 'QA Manager', email: 'manager-qa@example.test', phone: '123', password: 'Synthetic12!', confirmPassword: 'Synthetic12!' })) fireEvent.change(document.getElementById(id), { target: { value } });
+  fireEvent.click(screen.getByRole('button', { name: en.auth.createAccount }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.validation.invalidPhone);
+  expect(signup).not.toHaveBeenCalled();
+});
 it('explains email confirmation and sign-in instead of opening the manager dashboard', async () => {
   render(<I18nextProvider i18n={i18n}><MemoryRouter><Signup /></MemoryRouter></I18nextProvider>);
   for (const [id, value] of Object.entries({ name: 'QA Manager', email: 'manager-qa@example.test', phone: '59998723', password: 'Synthetic12!', confirmPassword: 'Synthetic12!' })) {

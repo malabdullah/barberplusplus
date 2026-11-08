@@ -19,6 +19,8 @@ import { useApp } from '../context/AppContext';
 import { format, isToday, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import './Dashboard.css';
+import './ShopSetup.css';
+import { shopSetupUrl } from '../utils/shopSetup';
 
 const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
   return (
@@ -82,7 +84,7 @@ const TodayBookingItem = memo(function TodayBookingItem({ booking }) {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch } = useApp();
+  const { metrics, branchBookings, branchBarbers, branchServices, selectedBranch, branches, userRole } = useApp();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
   const today = new Date().toISOString().split('T')[0];
@@ -113,6 +115,18 @@ export default function Dashboard() {
     [todayBookings]
   );
 
+  if (userRole === 'manager' && branches.length === 0) return (
+    <div className="dashboard">
+      <section className="manager-first-shop" aria-labelledby="first-shop-title">
+        <h1 id="first-shop-title">{t('managerOnboarding.welcome')}</h1>
+        <p>{t('managerOnboarding.firstShopIntro')}</p>
+        <Link to="/dashboard/setup?shop=new" className="btn btn-primary">
+          <Plus size={18} aria-hidden="true" />{t('branches.addFirstBranch')}
+        </Link>
+      </section>
+    </div>
+  );
+
   return (
     <div className="dashboard">
       {/* Welcome Section */}
@@ -130,6 +144,8 @@ export default function Dashboard() {
           <div className="dashboard-date-full">{format(new Date(), 'MMMM d, yyyy', { locale: dateLocale })}</div>
         </div>
       </div>
+
+      {selectedBranch && <section className="setup-entry"><h2>{t('shopSetup.menu')}</h2><Link className="btn btn-secondary" to={shopSetupUrl(selectedBranch.id)}>{t('shopSetup.resume')}<ArrowRight size={17} aria-hidden="true" /></Link></section>}
 
       {/* Metrics Grid */}
       <div className="dashboard-metrics">
@@ -218,11 +234,11 @@ export default function Dashboard() {
                 </div>
                 <span>{t('bookings.newBooking')}</span>
               </Link>
-              <Link to="/dashboard/barbers" className="quick-action-btn">
+              <Link to="/dashboard/barbers/new" className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Users size={24} strokeWidth={1.5} />
                 </div>
-                <span>{t('barbers.addBarber')}</span>
+                <span>{t('barberInvitations.invite')}</span>
               </Link>
               <Link to="/dashboard/services" className="quick-action-btn">
                 <div className="quick-action-icon">
@@ -230,7 +246,7 @@ export default function Dashboard() {
                 </div>
                 <span>{t('services.addService')}</span>
               </Link>
-              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/branches/new'} className="quick-action-btn">
+              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/setup?shop=new'} className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>
