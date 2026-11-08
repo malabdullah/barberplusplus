@@ -39,3 +39,12 @@ The `Barber++-production-logo-assets.zip` archive contains this export package.
 
 Validation includes transparent-pixel checks for all four symbol treatments,
 required project checks, and hosted theme/locale/responsive browser checks.
+
+## Combined lockup update — 8 November 2026
+
+Use the B-shaped mark as the initial B, followed by outlined **arber++**, with an
+8-unit optical gap in the 506.2794 × 104 master. Keep one accessible name,
+**Barber++**, and LTR order in Arabic. Standalone wordmarks, icons and symbols are
+unchanged. The old stacked mark-plus-full-wordmark arrangement is retired; its
+legacy filenames now export the canonical inline artwork. Historical boards
+are references only. See [the canonical rule](../../docs/logo-lockup.md).
