@@ -63,6 +63,7 @@ function ChairAppointments({ chair, history }) {
                     <div>
                       <strong>{booking.customerName || t('chair.appointment')}</strong>
                       <p>{dateFormat.format(new Date(`${booking.date}T${booking.time.slice(0, 5)}:00+03:00`))}</p>
+                      {booking.packageSnapshot && <p className="package-badge">{i18n.language.startsWith('ar') && booking.packageSnapshot.name_ar || booking.packageSnapshot.name}</p>}
                       {names.length > 0 && <p>{names.join(t('chair.separator'))}</p>}
                       <p>{t(`bookings.status.${status}`)}</p>
                     </div>

@@ -130,6 +130,7 @@ const BookingDetails = memo(function BookingDetails({
       </div>
 
       <div className="booking-details-section">
+        {booking.packageSnapshot && <div className="booking-detail-row"><Scissors size={18} strokeWidth={1.5} /><div><span className="detail-label">{t('packages.package')}</span><span className="detail-value">{i18n.language.startsWith('ar') && booking.packageSnapshot.name_ar || booking.packageSnapshot.name}</span></div></div>}
         <div className="booking-detail-row">
           <Scissors size={18} strokeWidth={1.5} />
           <div>

@@ -2493,6 +2493,7 @@
       "PACKAGE_EXTENSION_INVALID": "Choose an end date later than the current expiry date.",
       "PACKAGE_HAS_BOOKINGS": "Booked appointments fall outside these dates. Keep dates that cover those appointments.",
       "UNAVAILABLE": "Could not save or load packages. Please try again."
-    }
+    },
+    "package": "Package"
   }
 }

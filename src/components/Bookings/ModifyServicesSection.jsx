@@ -205,7 +205,6 @@ export default function ModifyServicesSection({
 
   return (
     <div className="modify-services-section">
-      {booking?.packageSnapshot && <p className="package-badge">{booking.packageSnapshot.name}</p>}
       {/* Header */}
       <div className="modify-services-header">
         <Settings2 size={16} />

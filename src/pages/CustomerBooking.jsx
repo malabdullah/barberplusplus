@@ -448,7 +448,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const renderSummary = (data = null) => <dl className="cb-review-list">
     <div><dt>{tr('steps.branch')}</dt><dd>{data ? (isArabic && data.branchNameAr || data.branchName) : name(branch)}{!data && <button type="button" onClick={() => editSection('shop')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.branch')}`}>{tr('edit')}</button>}</dd></div>
     <div><dt>{tr('steps.barber')}</dt><dd>{data ? (isArabic && data.barberNameAr || data.barberName) : name(barber)}{!data && <button type="button" onClick={() => editSection('barber')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.barber')}`}>{tr('edit')}</button>}</dd></div>
-    {(data?.package || selectedPackage) && <div><dt>{t('packages.title')}</dt><dd>{name(data?.package || selectedPackage)}</dd></div>}
+    {(data?.package || selectedPackage) && <div><dt>{t('packages.package')}</dt><dd>{name(data?.package || selectedPackage)}</dd></div>}
     <div><dt>{tr('steps.services')}</dt><dd>{(data?.services || selectedServices).map(name).join(isArabic ? '، ' : ', ')}{!data && <button type="button" onClick={() => editSection('services')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.services')}`}>{tr('edit')}</button>}</dd></div>
     <div><dt>{tr('steps.time')}</dt><dd>{dateLabel(data?.date || date)}<br />{timeLabel(data?.time || time)} · {tr('minutes', { count: data?.duration || duration })}{!data && <button type="button" onClick={() => editSection('time')} disabled={busy} aria-label={`${tr('edit')}: ${tr('steps.time')}`}>{tr('edit')}</button>}</dd></div>
     <div className="cb-total"><dt>{tr('total')}</dt><dd>{money(data?.price ?? price)}</dd></div>
