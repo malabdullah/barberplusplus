@@ -108,5 +108,9 @@ select set_config('packages.republished',public.manage_service_packages('republi
 select is(jsonb_array_length(public.customer_package_catalog('fa180000-0000-4000-8000-000000000101','fa180000-0000-4000-8000-000000000301')),0,'republishing archived package does not revive older offers');
 select set_config('request.jwt.claims','{}',true);
 select throws_ok($$select public.staff_package_terms('fa180000-0000-4000-8000-000000000501')$$,'42501','NOT_AUTHORIZED','unauthenticated staff terms denied');
+set local role service_role;
+select is((select item->'package'->>'price' from jsonb_array_elements(public.customer_account_api('bookings',current_setting('packages.owner')::jsonb)) item where item->>'id'='fa180000-0000-4000-8000-000000000501'),'10.000','gateway role can read original purchased package terms');
+select is((select item->'package'->>'ends_on' from jsonb_array_elements(public.customer_account_api('bookings',current_setting('packages.owner')::jsonb)) item where item->>'id'='fa180000-0000-4000-8000-000000000501'),(current_setting('packages.today')::date+13)::text,'gateway history reflects extended dates without direct private-table access');
+reset role;
 select * from finish();
 rollback;

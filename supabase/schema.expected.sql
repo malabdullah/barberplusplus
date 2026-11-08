@@ -477,13 +477,11 @@ begin
 select case
     when p_action='bookings' then coalesce((
       select jsonb_agg(item || jsonb_build_object(
-        'location_url', br.location_url,'package',case when b.package_offer_id is null then null else b.package_snapshot||coalesce((select jsonb_build_object('starts_on',starts_on,'ends_on',ends_on) from private.package_offers where id=b.package_offer_id),'{}') end, 'shop_address',br.address,
+        'location_url', br.location_url,'package',case when b.package_offer_id is null then null else private.package_history_terms(b.id) end, 'shop_address',br.address,
         'cancellation_cutoff', case when item->>'status' in ('confirmed','pending')
           then ((b.date+b.time) at time zone 'Asia/Kuwait')-make_interval(mins=>b.cancel_notice_minutes) end,
         'reschedule_cutoff', case when item->>'status' in ('confirmed','pending')
           then ((b.date+b.time) at time zone 'Asia/Kuwait')-make_interval(mins=>b.reschedule_notice_minutes) end,
-        'cancelled_at',case when b.status='cancelled' then coalesce(b.cancelled_at,
-          case when b.staff_cancellation->>'at' ~ '^\d{4}-\d{2}-\d{2}T' then (b.staff_cancellation->>'at')::timestamptz end,b.updated_at,b.created_at) end,
         'staff_cancellation', case when item->>'status'='cancelled' and b.staff_cancellation is not null
           then b.staff_cancellation - 'user_id' end
       ) order by ordinal)
