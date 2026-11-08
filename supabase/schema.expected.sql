@@ -373,6 +373,24 @@ BEGIN
 END;
 $$;
 ALTER FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.bookings%rowtype; actor text:=private.live_staff_role(); contact jsonb;
+begin
+ if actor is null then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ select * into b from public.bookings where id=p_booking_id for update;
+ if b.id is null or not (actor='admin' or actor='manager' and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
+  or actor='barber' and exists(select 1 from public.barbers where id=b.barber_id and user_id=auth.uid() and not manager_chair)) then
+  raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if b.status<>'pending' then raise exception 'BOOKING_NOT_PENDING';end if;
+ if b.date+b.time <= (clock_timestamp() at time zone 'Asia/Kuwait') then raise exception 'BOOKING_ALREADY_STARTED';end if;
+ update public.bookings set status='confirmed',modified_by_type=actor,modified_by_user_id=auth.uid() where id=b.id returning * into b;
+ select jsonb_build_object('id',id,'name',name,'country_code',country_code,'phone',phone) into contact from public.customers where id=b.customer_id;
+ return to_jsonb(b)||jsonb_build_object('customer',contact);
+end $$;
+ALTER FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."correct_registration_email"("p_email" "text", "p_new_email" "text", "p_password" "text", "p_audience" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -419,24 +437,6 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."count_users_by_role"("role_filter" "text") OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-declare b public.bookings%rowtype; actor text:=private.live_staff_role(); contact jsonb;
-begin
- if actor is null then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
- select * into b from public.bookings where id=p_booking_id for update;
- if b.id is null or not (actor='admin' or actor='manager' and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
-  or actor='barber' and exists(select 1 from public.barbers where id=b.barber_id and user_id=auth.uid() and not manager_chair)) then
-  raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
- if b.status<>'pending' then raise exception 'BOOKING_NOT_PENDING';end if;
- if b.date+b.time <= (clock_timestamp() at time zone 'Asia/Kuwait') then raise exception 'BOOKING_ALREADY_STARTED';end if;
- update public.bookings set status='confirmed',modified_by_type=actor,modified_by_user_id=auth.uid() where id=b.id returning * into b;
- select jsonb_build_object('id',id,'name',name,'country_code',country_code,'phone',phone) into contact from public.customers where id=b.customer_id;
- return to_jsonb(b)||jsonb_build_object('customer',contact);
-end $$;
-ALTER FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."create_booking_reminder"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
