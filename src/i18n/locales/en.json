@@ -2304,5 +2304,48 @@
       "LEGACY_INVITE": "Use the new Invite barber flow. Existing accounts are kept.",
       "UNAVAILABLE": "We could not complete this request. Please try again."
     }
+  },
+  "shopSetup": {
+    "title": "Set up your shop",
+    "menu": "Shop setup",
+    "newShop": "New shop",
+    "exit": "Workspace",
+    "steps": "Shop setup steps",
+    "stepsLabels": {
+      "shop": "Shop & hours",
+      "services": "Services",
+      "team": "Team",
+      "hours": "Approvals",
+      "review": "Review"
+    },
+    "progress": "{{count}} of 4 complete",
+    "continue": "Continue",
+    "saveContinue": "Save and continue",
+    "back": "Back to shop setup",
+    "resume": "Continue setup",
+    "chooseShop": "Choose your shop",
+    "notFound": "This shop is not available in your workspace.",
+    "loadFailed": "Could not load shop setup. Try again.",
+    "saveFailed": "Could not save your changes. Try again.",
+    "done": "Complete",
+    "needed": "Needs attention",
+    "edit": "Edit",
+    "finish": "Finish",
+    "assignServices": "Assign services",
+    "servicesAssigned": "Services assigned",
+    "hoursApproved": "Working hours approved",
+    "hoursNeeded": "Working hours not approved",
+    "inactiveBarber": "Inactive — not accepting bookings",
+    "activateBarber": "Activate barber",
+    "reviewRequests": "Review requests",
+    "setHours": "Set working hours",
+    "myChair": "I also work as a barber",
+    "ready": "Setup ready",
+    "unfinished": "Finish your setup",
+    "readyBarbers_one": "{{count}} barber ready",
+    "readyBarbers_other": "{{count}} barbers ready",
+    "viewShop": "View shop",
+    "pages": "Setup list pages",
+    "page": "{{page}} of {{count}}"
   }
 }

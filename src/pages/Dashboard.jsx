@@ -19,6 +19,8 @@ import { useApp } from '../context/AppContext';
 import { format, isToday, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import './Dashboard.css';
+import './ShopSetup.css';
+import { shopSetupUrl } from '../utils/shopSetup';
 
 const MetricCard = memo(function MetricCard({ icon: Icon, label, value, subValue, trend, color, delay }) {
   return (
@@ -118,7 +120,7 @@ export default function Dashboard() {
       <section className="manager-first-shop" aria-labelledby="first-shop-title">
         <h1 id="first-shop-title">{t('managerOnboarding.welcome')}</h1>
         <p>{t('managerOnboarding.firstShopIntro')}</p>
-        <Link to="/dashboard/branches/new" className="btn btn-primary">
+        <Link to="/dashboard/setup?shop=new" className="btn btn-primary">
           <Plus size={18} aria-hidden="true" />{t('branches.addFirstBranch')}
         </Link>
       </section>
@@ -142,6 +144,8 @@ export default function Dashboard() {
           <div className="dashboard-date-full">{format(new Date(), 'MMMM d, yyyy', { locale: dateLocale })}</div>
         </div>
       </div>
+
+      {selectedBranch && <section className="setup-entry"><h2>{t('shopSetup.menu')}</h2><Link className="btn btn-secondary" to={shopSetupUrl(selectedBranch.id)}>{t('shopSetup.resume')}<ArrowRight size={17} aria-hidden="true" /></Link></section>}
 
       {/* Metrics Grid */}
       <div className="dashboard-metrics">
@@ -242,7 +246,7 @@ export default function Dashboard() {
                 </div>
                 <span>{t('services.addService')}</span>
               </Link>
-              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/branches/new'} className="quick-action-btn">
+              <Link to={selectedBranch ? '/dashboard/bookings' : '/dashboard/setup?shop=new'} className="quick-action-btn">
                 <div className="quick-action-icon">
                   <Calendar size={24} strokeWidth={1.5} />
                 </div>

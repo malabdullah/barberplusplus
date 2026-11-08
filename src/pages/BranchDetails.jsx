@@ -21,6 +21,7 @@ import BranchForm from '../components/Forms/BranchForm';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import BackLink from '../components/UI/BackLink';
 import './BranchDetails.css';
+import { shopSetupUrl } from '../utils/shopSetup';
 
 export default function BranchDetails() {
   const { t, i18n } = useTranslation();
@@ -106,6 +107,7 @@ export default function BranchDetails() {
         </div>
 
         <div className="branch-details-actions">
+          <Link className="btn btn-secondary" to={shopSetupUrl(branchId)}>{t('shopSetup.menu')}</Link>
           <button className="btn btn-secondary" onClick={() => navigate(`/dashboard/branches/${branchId}/edit`)}>
             <Edit size={16} strokeWidth={1.5} />
             {t('common.edit')}

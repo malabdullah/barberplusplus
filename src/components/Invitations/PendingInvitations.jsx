@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { barberInvitationsService as api } from '../../services/barberInvitations.service';
 import ConfirmDialog from '../UI/ConfirmDialog';
 import './Invitations.css';
-export default function PendingInvitations({ branchId }) {
+export default function PendingInvitations({ branchId, reloadKey }) {
   const { t } = useTranslation(); const tr = (key, options) => t('barberInvitations.' + key, options);
   const [rows, setRows] = useState([]); const [offset, setOffset] = useState(0); const [error, setError] = useState('');
   const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(false); const [notice, setNotice] = useState('');
@@ -19,7 +19,7 @@ export default function PendingInvitations({ branchId }) {
     finally { if (request === generation.current) setLoading(false); }
   }, [branchId, offset]);
   useEffect(() => { setRows([]); setOffset(0); setCancelling(null); setNotice(''); }, [branchId]);
-  useEffect(() => { load(); return () => { generation.current += 1; }; }, [load]);
+  useEffect(() => { load(); return () => { generation.current += 1; }; }, [load, reloadKey]);
   const act = async (action, row) => {
     if (busy) return; const request = generation.current; setBusy(true); setNotice(''); setError('');
     try { const result = await api[action](row.id); if (request !== generation.current) return; setNotice(action === 'cancel' ? 'cancelled' : result.delivered ? 'sent' : 'deliveryFailed'); setCancelling(null); await load(); }

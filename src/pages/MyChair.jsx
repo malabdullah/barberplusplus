@@ -92,7 +92,7 @@ export default function MyChair() {
   const { user, branches, loading, managerChair: chair, createManagerChair, updateBarber } = useApp();
   const [params] = useSearchParams();
   const view = views.includes(params.get('view')) ? params.get('view') : 'upcoming';
-  const [branchId, setBranchId] = useState('');
+  const [branchId, setBranchId] = useState(() => { const requested = params.get('setup'); return branches.some(shop => shop.id === requested && shop.managerId === user?.id && shop.status === 'active') ? requested : ''; });
   const [name, setName] = useState(user?.user_metadata?.name || '');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -101,6 +101,7 @@ export default function MyChair() {
   const chairShop = branches.find(branch => branch.id === chair?.branchId && branch.managerId === user?.id);
   const shopName = shop => (i18n.language === 'ar' && shop?.nameAr) || shop?.name;
   const active = chair?.status === 'active';
+  const viewUrl = item => { const next = new URLSearchParams(params); next.set('view', item); return '?' + next.toString(); };
 
   const save = async (action, success) => {
     setPending(true);
@@ -168,7 +169,7 @@ export default function MyChair() {
           </section>
           <nav className="chair-nav" aria-label={t('chair.title')}>
             {views.map(item => (
-              <Link key={item} to={`?view=${item}`} className={`btn ${view === item ? 'btn-primary' : 'btn-secondary'}`} aria-current={view === item ? 'page' : undefined}>
+              <Link key={item} to={viewUrl(item)} className={`btn ${view === item ? 'btn-primary' : 'btn-secondary'}`} aria-current={view === item ? 'page' : undefined}>
                 {t(`chair.${item}`)}
               </Link>
             ))}

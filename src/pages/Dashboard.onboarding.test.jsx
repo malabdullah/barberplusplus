@@ -22,7 +22,7 @@ it.each(['en', 'ar'])('directs a new manager to shop creation before booking con
   await i18n.changeLanguage(language); mount();
   const copy = language === 'ar' ? ar : en;
   expect(screen.getByRole('heading', { name: copy.managerOnboarding.welcome })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: copy.branches.addFirstBranch })).toHaveAttribute('href', '/dashboard/branches/new');
+  expect(screen.getByRole('link', { name: copy.branches.addFirstBranch })).toHaveAttribute('href', '/dashboard/setup?shop=new');
   expect(screen.queryByRole('link', { name: copy.bookings.newBooking })).not.toBeInTheDocument();
 });
 it('retains the normal dashboard once a manager has a shop', () => {

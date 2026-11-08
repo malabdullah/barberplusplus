@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
@@ -53,6 +53,7 @@ const TopBar = memo(function TopBar({
     userRole,
   } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [branchSearchQuery, setBranchSearchQuery] = useState('');
@@ -109,9 +110,10 @@ const TopBar = memo(function TopBar({
 
   const handleBranchSelect = useCallback((branchId) => {
     setSelectedBranchId(branchId);
+    if (location.pathname === '/dashboard/setup' || new URLSearchParams(location.search).has('setup')) navigate('/dashboard/setup?shop=' + encodeURIComponent(branchId));
     setBranchDropdownOpen(false);
     setBranchSearchQuery('');
-  }, [setSelectedBranchId]);
+  }, [setSelectedBranchId, location.pathname, location.search, navigate]);
 
   const handleNotificationClick = useCallback(async (notification) => {
     if (!notification.isRead) {
