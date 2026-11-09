@@ -6,7 +6,7 @@
 .service-picker-row:hover { background:var(--bg-secondary); }
 .service-picker-row.is-selected { background:var(--accent-glow); }
 .service-picker-row input { position:absolute; inline-size:1px; block-size:1px; opacity:0; margin:0; }
-.service-picker-check { display:flex; align-items:center; justify-content:center; inline-size:20px; block-size:20px; border:1px solid var(--text-muted); border-radius:5px; color:var(--bg-primary); }
+.service-picker-check { display:flex; align-items:center; justify-content:center; inline-size:20px; block-size:20px; border:1px solid var(--text-secondary); border-radius:5px; color:var(--bg-primary); }
 .is-selected > .service-picker-check { background:var(--accent-primary); border-color:var(--accent-primary); color:var(--text-on-accent,#171717); }
 .service-picker-row:has(input:focus-visible) { outline:2px solid var(--accent-primary); outline-offset:-3px; }
 .service-picker-copy { display:grid; gap:3px; min-width:0; }
