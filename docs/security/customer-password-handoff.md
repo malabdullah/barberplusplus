@@ -1,7 +1,18 @@
 # Customer password security and native handoff
 
-Status: implementation on hosted Test is in progress. **Not a production-complete
-handoff. The iOS agent must wait for explicit production verification.**
+Status updated 2026-11-09: the shared website password flow is released to
+production. PR #64 published the security flow; the currently served production
+runtime is `d0de7dde212fd0cfda0ddc950783a0bed3dfe514`. Read-only inspection of
+its actual JavaScript confirms the current-password, password-status,
+password-change and verified email password-setup contracts. The owner has now
+authorized the iOS agent to implement the corresponding native screens and
+security handling on Test. The older Test-only hold below is historical.
+
+Do not equate website publication with native-device acceptance: native recovery
+v2 callback/session compatibility must still be verified against production
+before enabling that native path there. Preserve the independently deployed
+native Test compatibility layer. Do not deploy or overwrite native backend
+helpers based only on this document; reconcile the actual installed contract.
 
 The owner requested website/shared-backend changes first, then an iOS adaptation
 with consistent UX. Production starting point is c5a23f7. Current hosted Test
@@ -57,12 +68,12 @@ Test schemes/credentials must not be enabled in production. The final document
 will list precise API fields, errors, versions and live verification evidence
 before authorizing iOS work.
 
-## Hosted Test contract (2026-11-06, awaiting owner review)
+## Shared API contract (original Test verification, 2026-11-06)
 
 Website: https://barber-test.alabdullah-cs.workers.dev/customer/password
 Test project: qvkucvcjmojjbphlzlks only. customer-auth v20, admin-password-reset
-v5, invite-barber v4, cloud-test-inbox v4. These are **Test versions**, not a
-production-complete handoff. The iOS implementation must still wait.
+v5, invite-barber v4, cloud-test-inbox v4. These are historical **Test version numbers**, not production versions.
+The iOS implementation is now authorized on Test; see the updated status above.
 
 - `password-status` uses the live shared identity and returns `hasPassword`,
   `providers`, `email`, `canVerifyEmail`. Do not infer capability from last login.

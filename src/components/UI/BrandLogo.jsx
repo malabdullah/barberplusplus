@@ -10,7 +10,7 @@ export default function BrandLogo({ tone = 'auto', size = 'default', tagline, de
       <span className="brand-logo-artwork">
         {['light', 'dark'].map(tone => <picture key={tone}>
           {symbolOnSmallScreens && <source media="(max-width: 600px)" srcSet={`/brand/barber-symbol-${tone}.svg`} width="260" height="304" />}
-          <img className={`brand-logo-${tone}`} src={`/brand/barber-${symbolOnly ? 'symbol' : 'horizontal'}-${tone}.svg`} width={symbolOnly ? 260 : 506.2794} height={symbolOnly ? 304 : 104} alt="" decoding="async" />
+          <img className={`brand-logo-${tone}`} src={`/brand/barber-${symbolOnly ? 'symbol' : 'horizontal'}-${tone}.svg`} width={symbolOnly ? 260 : 506.2794} height={symbolOnly ? 304 : 106} alt="" decoding="async" />
         </picture>)}
       </span>
       {tagline && <span className="brand-logo-tagline" dir="auto">{tagline}</span>}

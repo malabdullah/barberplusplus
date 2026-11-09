@@ -268,3 +268,7 @@ This mapping is a future handoff only, not a change to the current theme or a re
 | 1.0 | 17 September 2026 | Established the Bright Minimal interface direction, tokens and component proposal. |
 
 | 1.2 | 31 October 2026 | Added production SVG/transparent PNG assets, outlined font license, native browser/app icons and shared application branding. |
+
+Shared baseline correction (8 November 2026): use the 506.2794 × 106 combined
+master. Align the mark bottom and outlined text baseline at y=104, preserving
+the original paths, 8-unit optical gap and natural curve overshoot.

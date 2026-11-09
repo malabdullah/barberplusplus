@@ -234,3 +234,26 @@ Deno.test('discovery validates ranges and pagination and derives identity from t
   const invalid = make({customer:async()=>null, discovery:async()=>{throw Error('must not reach database');}});
   assert((await invalid(rejectedReq)).status === 401);
 });
+
+Deno.test('package catalogue validates provider IDs and the optional date before querying', async () => {
+  const calls: unknown[] = [];
+  const handler = make({ packages: async (...args: unknown[]) => { calls.push(args); return [{ id: 'offer' }]; } });
+  assert((await handler(request({ action: 'packages', branchId: 'bad', barberId: selection.barberId }))).status === 400);
+  assert((await handler(request({ action: 'packages', ...selection, date: 'tomorrow' }))).status === 400);
+  const response = await handler(request({ action: 'packages', ...selection }));
+  assert(response.status === 200 && (await response.json()).packages[0].id === 'offer');
+  assert(JSON.stringify(calls) === JSON.stringify([[selection.branchId, selection.barberId, selection.date]]));
+});
+Deno.test('package booking forwards a reviewed quote while database changes return a recoverable error', async () => {
+  const offer = 'fa180000-0000-4000-8000-000000000601'; let received: Record<string, unknown> = {};
+  const handler = make({ booking: async (_action: string, data: Record<string, unknown>) => { received = data; return { id: data.id }; } });
+  const original = await verifiedRequest(handler); const body = await (original()).json();
+  assert((await handler(request({ ...body, packageOfferId: offer }))).status === 400);
+  assert((await handler(request({ ...body, packageOfferId: 'bad', packageQuote: { price: 10, duration: 90 } }))).status === 400);
+  assert((await handler(request({ ...body, packageOfferId: offer, packageQuote: { price: 10, duration: 90 }, price: 1 }))).status === 200);
+  assert(received.package_offer_id === offer && JSON.stringify(received.package_quote) === JSON.stringify({ price: 10, duration: 90 }) && !('price' in received));
+  for (const code of ['PACKAGE_CHANGED', 'PACKAGE_DATE_UNAVAILABLE', 'PACKAGE_UNAVAILABLE', 'INVALID_PACKAGE_SELECTION']) {
+    const response = await make({ booking: async () => { throw Error('P0001 ' + code); } })(request({ action: 'slots', ...selection, packageOfferId: offer }));
+    assert(response.status === 409 && (await response.json()).error === code);
+  }
+});

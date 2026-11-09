@@ -62,7 +62,10 @@
     "alreadyCreated": "A chair is already set up for this account. Reload the page to open it.",
     "reschedule": "Reassign or reschedule"
   },
-  "environment": { "testBanner": "TEST — synthetic data", "testInbox": "Test email inbox" },
+  "environment": {
+    "testBanner": "TEST — synthetic data",
+    "testInbox": "Test email inbox"
+  },
   "common": {
     "brandHome": "Barber++ home",
     "navigation": "Navigation",
@@ -533,7 +536,13 @@
     "time": "Time",
     "duration": "Duration",
     "price": "Price",
-    "status": "Status",
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "noShow": "No Show"
+    },
     "notes": "Notes",
     "confirmed": "Confirmed",
     "pending": "Pending",
@@ -549,7 +558,7 @@
     "selectBarber": "Select Barber",
     "selectService": "Select Service",
     "selectDate": "Select Date",
-    "selectTime": "Select Time",
+    "selectTime": "Select time...",
     "availableSlots": "Available Slots",
     "noSlotsAvailable": "No slots available for this date",
     "bookingCreated": "Booking created successfully",
@@ -585,16 +594,8 @@
       "dateRequired": "Date is required",
       "timeRequired": "Time is required"
     },
-    "status": {
-      "confirmed": "Confirmed",
-      "pending": "Pending",
-      "completed": "Completed",
-      "cancelled": "Cancelled",
-      "noShow": "No Show"
-    },
     "selectBarberFirst": "Select a barber first",
     "selectDateFirst": "Select a date first",
-    "selectTime": "Select time...",
     "timeReasons": {
       "beforeWorkingHours": "Before working hours",
       "afterWorkingHours": "After working hours",
@@ -1038,7 +1039,28 @@
         "unavailable": "The transfer could not be completed. Refresh the list before trying again."
       }
     },
-    "passwordReset": {"title":"Reset a user password","description":"Set a temporary password for a non-admin account.","account":"User account","select":"Select an account","previous":"Previous","next":"Next","page":"Page {{page}}","password":"New password","confirm":"Confirm password","guidance":"Share the password securely. The user can change it from Settings after signing in; the change is not forced automatically.","rules":"Use at least 12 characters, including uppercase, lowercase, a number and a symbol.","invalid":"Select an account and enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","loadError":"Could not load user accounts.","failed":"The reset could not be confirmed. Do not retry; contact the system administrator to check its status.","success":"Password changed. Share it privately with the user.","submit":"Reset password","auditWarning":"Password changed, but its completion audit could not be recorded. Contact the system administrator.","ownInvalid":"Enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).","ownFailed":"The password could not be changed. Please try again.","ownSuccess":"Your password has been changed."},
+    "passwordReset": {
+      "title": "Reset a user password",
+      "description": "Set a temporary password for a non-admin account.",
+      "account": "User account",
+      "select": "Select an account",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "password": "New password",
+      "confirm": "Confirm password",
+      "guidance": "Share the password securely. The user can change it from Settings after signing in; the change is not forced automatically.",
+      "rules": "Use at least 12 characters, including uppercase, lowercase, a number and a symbol.",
+      "invalid": "Select an account and enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).",
+      "loadError": "Could not load user accounts.",
+      "failed": "The reset could not be confirmed. Do not retry; contact the system administrator to check its status.",
+      "success": "Password changed. Share it privately with the user.",
+      "submit": "Reset password",
+      "auditWarning": "Password changed, but its completion audit could not be recorded. Contact the system administrator.",
+      "ownInvalid": "Enter matching strong passwords (12–72 bytes, uppercase, lowercase, number and symbol).",
+      "ownFailed": "The password could not be changed. Please try again.",
+      "ownSuccess": "Your password has been changed."
+    },
     "searchPlatform": "Search platform...",
     "comingSoon": "Coming Soon",
     "comingSoonDesc": "This feature is currently under development and will be available soon.",
@@ -1403,7 +1425,15 @@
       "subtitle": "Manage branches, barbers, and appointments from one dashboard designed for your barbershop.",
       "cta": "Start Free",
       "secondaryCta": "Sign In",
-      "preview": {"alt": "Booking dashboard illustration", "eyebrow": "Your barbershop", "title": "Your day at a glance", "appointments": "Appointments", "manage": "Review and manage bookings", "team": "Your team", "branches": "Manage barbers and branches"},
+      "preview": {
+        "alt": "Booking dashboard illustration",
+        "eyebrow": "Your barbershop",
+        "title": "Your day at a glance",
+        "appointments": "Appointments",
+        "manage": "Review and manage bookings",
+        "team": "Your team",
+        "branches": "Manage barbers and branches"
+      },
       "stats": {
         "barbershops": "Active shops",
         "bookings": "Appointments this month",
@@ -2219,6 +2249,8 @@
     "blocked": "Approval blocked"
   },
   "availabilityItems": {
+    "submitted": "Submitted",
+    "requestsPagination": "Availability requests pages",
     "hours": "Working hours",
     "break": "Break",
     "vacation": "Vacation",
@@ -2417,5 +2449,53 @@
     "awaiting": "Awaiting confirmation from the shop. Your time is reserved.",
     "beforeBooking": "This booking needs confirmation from the shop.",
     "actionFailed": "Could not update this booking. Refresh and try again."
+  },
+  "packages": {
+    "title": "Packages",
+    "catalogue": "Services and packages",
+    "create": "Create package",
+    "edit": "Edit package",
+    "republish": "Republish",
+    "extend": "Extend validity",
+    "save": "Save package",
+    "name": "Package name",
+    "nameAr": "Arabic name (optional)",
+    "price": "Package price (KWD)",
+    "regularPrice": "Separate services",
+    "validity": "Validity",
+    "custom": "Custom dates",
+    "week": "One week",
+    "month": "One month",
+    "startsOn": "Start date",
+    "endsOn": "End date",
+    "until": "Until {{date}}",
+    "remove": "Remove package",
+    "included": "Included",
+    "available": "Available",
+    "scheduled": "Scheduled",
+    "paused": "Paused",
+    "expired": "Expired",
+    "archived": "Archived",
+    "pause": "Pause",
+    "resume": "Resume",
+    "archive": "Archive",
+    "archiveConfirm": "Archive {{name}}? Existing appointments will be kept.",
+    "empty": "No packages",
+    "search": "Search packages",
+    "pagination": "Package pages",
+    "previous": "Previous",
+    "next": "Next",
+    "errors": {
+      "INVALID_PACKAGE": "Choose 2–10 active shop services, valid dates, and a price above zero that does not exceed their separate total. Maximum duration is 8 hours.",
+      "INVALID_PACKAGE_SELECTION": "This barber cannot provide the selected package. Review your services.",
+      "PACKAGE_UNAVAILABLE": "This package is no longer available. Choose another package or remove it.",
+      "PACKAGE_DATE_UNAVAILABLE": "Choose an appointment date within this package’s offer dates. Your original booking has not been changed.",
+      "PACKAGE_CHANGED": "The package price or duration changed. Review the updated total before confirming.",
+      "PACKAGE_PERIOD_OVERLAP": "These dates overlap another offer for this package. Choose a different period.",
+      "PACKAGE_EXTENSION_INVALID": "Choose an end date later than the current expiry date.",
+      "PACKAGE_HAS_BOOKINGS": "Booked appointments fall outside these dates. Keep dates that cover those appointments.",
+      "UNAVAILABLE": "Could not save or load packages. Please try again."
+    },
+    "package": "Package"
   }
 }

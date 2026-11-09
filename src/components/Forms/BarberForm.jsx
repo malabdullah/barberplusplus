@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
 import { GCC_COUNTRIES } from '../../constants/countries';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
+import ServicePicker from './ServicePicker';
 import './Forms.css';
 
 export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false, submissionError = null, onClearError, disabledReason = '' }) {
@@ -231,26 +232,12 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
       </div>
 
       <div className="form-section">
-        <h4 className="form-section-title">{t('barbers.assignedServices')}</h4>
-        {errors.services && <p role="alert" className="form-error">{errors.services}</p>}
-
+        {errors.services && <p id="barber-services-error" role="alert" className="form-error">{errors.services}</p>}
         {services.length > 0 ? (
-          <div className="services-select">
-            {services.filter(service => service.status !== 'inactive').map((service) => (
-              <label key={service.id} className="service-checkbox">
-                <input
-                  type="checkbox"
-                  checked={formData.services.includes(service.id)}
-                  onChange={() => toggleService(service.id)}
-                />
-                <span>{service.name}</span>
-                <span className="service-price">{service.price} {t('common.currency')}</span>
-              </label>
-            ))}
-          </div>
-        ) : (
-          <span className="form-hint">{t('barbers.noServicesAvailable')}</span>
-        )}
+          <ServicePicker label={t('barbers.assignedServices')} services={services.filter(service => service.status !== 'inactive')}
+            selectedIds={formData.services} onToggle={toggleService} disabled={isSubmitting} invalid={Boolean(errors.services)} describedBy={errors.services ? 'barber-services-error' : undefined} />
+        ) : <span className="form-hint">{t('barbers.noServicesAvailable')}</span>}
+
       </div>
 
       {disabledReason && <p className="error-banner" role="alert">{disabledReason}</p>}

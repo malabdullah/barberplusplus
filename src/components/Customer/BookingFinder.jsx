@@ -16,7 +16,7 @@ import FavouriteButton from './FavouriteButton';
 import FavouriteFeedback from './FavouriteFeedback';
 import './BookingFinder.css';
 
-const empty = { city: '', branchId: '', barberId: '', serviceIds: [], date: '', time: '', step: 0 };
+const empty = { city: '', branchId: '', barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, date: '', time: '', step: 0 };
 const emptyCatalog = { branches: [], barbers: [], services: [] };
 export default function BookingFinder({ checkout: Checkout }) {
   const { t, i18n } = useTranslation(); const tr = (key, values) => t(`bookingFinder.${key}`, values);
@@ -60,7 +60,7 @@ export default function BookingFinder({ checkout: Checkout }) {
   const chooseMode = value => {
     requestVersion.current++; setMode(value); setStage(value === 'time' ? 'range' : value === 'barber' ? 'results' : 'city');
     setCatalog(null); setError(''); setQuery(''); resetPage();
-    patch({ bookingMode: value, branchId: '', barberId: '', serviceIds: [], time: '', date: draft.date || getKuwaitDate(), rangeStart: draft.rangeStart || '09:00', rangeEnd: draft.rangeEnd || '18:00' });
+    patch({ bookingMode: value, branchId: '', barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, time: '', date: draft.date || getKuwaitDate(), rangeStart: draft.rangeStart || '09:00', rangeEnd: draft.rangeEnd || '18:00' });
   };
   useEffect(() => {
     let live = true; setFilterError(false);
@@ -80,13 +80,13 @@ export default function BookingFinder({ checkout: Checkout }) {
       const shop = result.branches[0];
       const same = id === draft.barberId;
       const selected = { ...draft, bookingMode: mode || 'shop', finderStage: undefined, city: shop.city,
-        branchId: shop.id, barberId: id, serviceIds: same ? draft.serviceIds : [], time: same ? draft.time : '',
+        branchId: shop.id, barberId: id, serviceIds: same ? draft.serviceIds : [], packageOfferId: same ? draft.packageOfferId : '', packageOffer: same ? draft.packageOffer : null, time: same ? draft.time : '',
         panel: restoring ? draft.panel : same && draft.serviceIds.length ? draft.panel : 'services', step: 1 };
       saveBookingDraft(selected); setDraft(selected); setCatalog(result);
     } catch (failure) {
       if (version !== requestVersion.current) return;
       setError(['INVALID_SELECTION', 'SLOT_UNAVAILABLE'].includes(failure.message) ? 'changed' : 'failed');
-      if (restoring) { setStage('results'); patch({ barberId: '', serviceIds: [], time: '' }); }
+      if (restoring) { setStage('results'); patch({ barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, time: '' }); }
     } finally { if (version === requestVersion.current) setLoading(false); }
   };
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function BookingFinder({ checkout: Checkout }) {
         <p className="cb-helper">{tr('rangeHint')}</p><p className="cb-helper">{t('customerBooking.kuwaitTime')}</p><button className="cb-primary" type="submit" disabled={!validRange}>{tr('chooseCity')}<ArrowRight size={18} /></button>
       </form>}
       {['city','results'].includes(stage) && <>
-        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p> : <div className="bf-city"><CityPicker groups={groups} value={draft.city} cityName={cityName} governorateName={governorateName} onChange={value => { setStage(mode === 'barber' || value ? 'results' : 'city'); setQuery(''); patch({ city: value, branchId: '', barberId: '', serviceIds: [], time: '' }); }} />{mode === 'barber' && draft.city && <button className="cb-text-button" type="button" onClick={() => patch({ city: '', branchId: '' })}>{tr('allCities')}</button>}</div>}
+        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p> : <div className="bf-city"><CityPicker groups={groups} value={draft.city} cityName={cityName} governorateName={governorateName} onChange={value => { setStage(mode === 'barber' || value ? 'results' : 'city'); setQuery(''); patch({ city: value, branchId: '', barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, time: '' }); }} />{mode === 'barber' && draft.city && <button className="cb-text-button" type="button" onClick={() => patch({ city: '', branchId: '' })}>{tr('allCities')}</button>}</div>}
         {stage === 'results' && <section aria-label={tr(kind === 'shop' ? 'shops' : 'barbers')}>
           {mode === 'shop' && draft.branchId && <button type="button" className="cb-text-button" onClick={() => { patch({ branchId: '', barberId: '' }); setQuery(''); }}>{tr('changeShop')}</button>}
           <label className="cb-field-label" htmlFor="finder-search">{tr(mode === 'shop' && !draft.branchId ? 'searchShops' : 'searchBarbers')}</label><div className="cb-search"><Search size={22} aria-hidden="true" /><input id="finder-search" type="search" value={query} maxLength={120} onChange={event => { setQuery(event.target.value); resetPage(); }} autoComplete="off" /></div>

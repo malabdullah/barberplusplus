@@ -27,6 +27,8 @@ function write(key, value) {
 function validBookingDraft(value) {
   if (!value || !Array.isArray(value.serviceIds) || value.serviceIds.length > 10 || value.serviceIds.some(id => typeof id !== 'string' || id.length > 120) || ![0, 1, 2].includes(value.step)) return null;
   if (['city', 'branchId', 'barberId', 'date', 'time'].some(key => typeof value[key] !== 'string' || value[key].length > 120)) return null;
+  if (value.packageOfferId && (typeof value.packageOfferId !== 'string' || !/^[0-9a-f-]{36}$/i.test(value.packageOfferId))) return null;
+  if (value.packageOffer && (!Array.isArray(value.packageOffer.serviceIds) || value.packageOffer.serviceIds.length > 10 || !Number.isFinite(Number(value.packageOffer.price)) || typeof value.packageOffer.name !== 'string' || typeof value.packageOffer.startsOn !== 'string' || typeof value.packageOffer.endsOn !== 'string')) return null;
   if (value.details && ['name', 'countryCode', 'phone', 'notes'].some(key => typeof value.details[key] !== 'string')) return null;
   return value;
 }
@@ -40,8 +42,8 @@ export function readBookingReturnDraft() {
 }
 export function saveBookingDraft(selection) {
   if (!selection) { remove(KEY); return; }
-  const { city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest, details, query, bookingMode, rangeStart, rangeEnd, finderStage } = selection;
-  write(KEY, { bookingMode, rangeStart, rangeEnd, finderStage, city, branchId, barberId, serviceIds, date, time, panel, step, rebooking, favourite, rebookNotice, guest: guest === true, query: typeof query === 'string' ? query.slice(0, 120) : undefined,
+  const { city, branchId, barberId, serviceIds, packageOfferId, packageOffer, date, time, panel, step, rebooking, favourite, rebookNotice, guest, details, query, bookingMode, rangeStart, rangeEnd, finderStage } = selection;
+  write(KEY, { bookingMode, rangeStart, rangeEnd, finderStage, city, branchId, barberId, serviceIds, packageOfferId: typeof packageOfferId === 'string' ? packageOfferId.slice(0, 36) : '', packageOffer: packageOffer ? { id: packageOffer.id, name: packageOffer.name, nameAr: packageOffer.nameAr, serviceIds: packageOffer.serviceIds, price: packageOffer.price, regularPrice: packageOffer.regularPrice, duration: packageOffer.duration, startsOn: packageOffer.startsOn, endsOn: packageOffer.endsOn } : null, date, time, panel, step, rebooking, favourite, rebookNotice, guest: guest === true, query: typeof query === 'string' ? query.slice(0, 120) : undefined,
     details: details ? { name: String(details.name || '').slice(0, 120), countryCode: String(details.countryCode || '+965').slice(0, 4), phone: String(details.phone || '').slice(0, 20), notes: String(details.notes || '').slice(0, 500) } : undefined });
 }
 export function saveBookingReceipt(receipt) { write(RECEIPT_KEY, receipt); }

@@ -1,3 +1,4 @@
+import { bookedPackageTotals } from '../utils/servicePackages';
 import { setTerminologyRole } from '../utils/customerTerminology';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
@@ -1002,10 +1003,11 @@ export function AppProvider({ children }) {
       const barber = barbers.find(b => b.id === booking.barberId);
 
       // Calculate new values FIRST (before conflict check)
+      if (booking.packageSnapshot && booking.serviceIds.includes(additionalServiceId)) throw new Error('INVALID_PACKAGE_SELECTION');
       const newServiceIds = [...(booking.serviceIds || []), additionalServiceId];
       const allSelectedServices = newServiceIds.map(id => services.find(service => service.id === id)).filter(Boolean);
-      const newTotalDuration = allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
-      const newPrice = allSelectedServices.reduce((sum, s) => sum + s.price, 0);
+      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).duration : allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const newPrice = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).price : allSelectedServices.reduce((sum, s) => sum + s.price, 0);
 
       // Check if extension is possible using the FULL new duration
       const conflictResult = checkExtensionConflicts({
@@ -1069,11 +1071,11 @@ export function AppProvider({ children }) {
       const barber = barbers.find(b => b.id === booking.barberId);
 
       // Calculate new totals - iterate over newServiceIds to count duplicates
-      const newTotalDuration = newServiceIds.reduce((sum, id) => {
+      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).duration : newServiceIds.reduce((sum, id) => {
         const service = services.find(s => s.id === id);
         return sum + (service?.duration || 0);
       }, 0);
-      const newPrice = newServiceIds.reduce((sum, id) => {
+      const newPrice = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).price : newServiceIds.reduce((sum, id) => {
         const service = services.find(s => s.id === id);
         return sum + (service?.price || 0);
       }, 0);

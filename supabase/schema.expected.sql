@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "reschedule_notice_minutes" integer DEFAULT 0 NOT NULL,
     "staff_cancellation" "jsonb",
     "service_snapshot" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "package_offer_id" "uuid",
+    "package_snapshot" "jsonb",
     CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
     CONSTRAINT "bookings_cancel_notice_minutes_check" CHECK ((("cancel_notice_minutes" >= 0) AND ("cancel_notice_minutes" <= 525600))),
     CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
@@ -475,7 +477,7 @@ begin
 select case
     when p_action='bookings' then coalesce((
       select jsonb_agg(item || jsonb_build_object(
-        'location_url',br.location_url, 'shop_address',br.address,
+        'location_url', br.location_url,'package',case when b.package_offer_id is null then null else private.package_history_terms(b.id) end, 'shop_address',br.address,
         'cancellation_cutoff', case when item->>'status' in ('confirmed','pending')
           then ((b.date+b.time) at time zone 'Asia/Kuwait')-make_interval(mins=>b.cancel_notice_minutes) end,
         'reschedule_cutoff', case when item->>'status' in ('confirmed','pending')
@@ -514,6 +516,7 @@ declare
   v_end time;
   v_duration integer;
   v_price numeric;
+  v_package jsonb;
   v_count integer;
   v_slots jsonb := '[]'::jsonb;
   v_customer uuid;
@@ -566,6 +569,11 @@ begin
     if v_count <> cardinality(v_services) or v_duration not between 5 and 480 or v_price < 0 then
       raise exception 'INVALID_SELECTION';
     end if;
+    if nullif(p_data->>'package_offer_id','') is not null and p_action<>'appointment-slots' then
+      v_package:=private.package_quote(v_branch.id,v_barber.id,(p_data->>'package_offer_id')::uuid,v_services,(p_data->>'date')::date);
+      v_duration:=(v_package->>'duration')::integer;v_price:=(v_package->>'price')::numeric;
+      if p_action='book' and ((p_data->'package_quote'->>'price')::numeric is distinct from v_price or (p_data->'package_quote'->>'duration')::integer is distinct from v_duration) then raise exception 'PACKAGE_CHANGED';end if;
+    end if;
     -- Only the authenticated appointment manager supplies this internal action.
     if p_action='appointment-slots' then
       v_duration := (p_data->>'booked_duration')::integer;
@@ -599,7 +607,7 @@ begin
     end if;
     if p_action in ('slots','appointment-slots') then
       return jsonb_build_object('slots', v_slots, 'duration', v_duration, 'price', v_price,
-        'today', v_today, 'last_date', v_today + v_barber.max_booking_days,
+        'package',v_package->'package','package_quote',case when v_package is null then null else jsonb_build_object('price',v_price,'duration',v_duration) end,'today', v_today, 'last_date', v_today + v_barber.max_booking_days,
         'confirmation_required',not v_barber.auto_confirm_bookings,'booking_policy',public.shop_booking_policy(v_branch.id));
     end if;
     v_time := (p_data ->> 'time')::time;
@@ -617,9 +625,9 @@ begin
       if v_customer is null then raise exception 'BOOKING_UNAVAILABLE'; end if;
     end if;
     insert into public.bookings (id, branch_id, barber_id, service_ids, customer_id, date, time,
-      duration, price, status, notes, added_by_type)
+      duration, price, status, notes, added_by_type,package_offer_id)
     values (v_id, v_branch.id, v_barber.id, v_services, v_customer, v_date, v_time,
-      v_duration, v_price, case when v_barber.auto_confirm_bookings then 'confirmed' else 'pending' end, nullif(trim(p_data ->> 'notes'), ''), 'customer') returning * into v_booking;
+      v_duration, v_price, case when v_barber.auto_confirm_bookings then 'confirmed' else 'pending' end, nullif(trim(p_data ->> 'notes'), ''), 'customer',nullif(p_data->>'package_offer_id','')::uuid) returning * into v_booking;
     if p_data ? 'booking_policy' and p_data->'booking_policy' is distinct from jsonb_build_object(
       'cancel_minutes',v_booking.cancel_notice_minutes,'reschedule_minutes',v_booking.reschedule_notice_minutes
     ) then raise exception 'BOOKING_POLICY_CHANGED'; end if;
@@ -630,7 +638,7 @@ begin
   return (
     select jsonb_build_object('id', b.id, 'reference', upper(left(replace(b.id::text, '-', ''), 10)),
       'date', b.date, 'time', to_char(b.date + b.time, 'HH24:MI'), 'duration', b.duration, 'price', b.price,
-      'status', b.status, 'branch_name', br.name, 'branch_name_ar', br.name_ar,
+      'package',b.package_snapshot,'status', b.status, 'branch_name', br.name, 'branch_name_ar', br.name_ar,
       'barber_name', ba.name, 'barber_name_ar', ba.name_ar, 'address', br.address,
       'location_url', br.location_url, 'service_names', (select jsonb_agg(jsonb_build_object('name', x->>'name', 'name_ar', x->>'name_ar'))
         from jsonb_array_elements(b.service_snapshot) x))
@@ -725,6 +733,13 @@ CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text",
     SET "search_path" TO ''
     AS $$ select private.customer_favourites_api(p_action,p_data); $$;
 ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+ select case when exists(select 1 from public.branches where id=p_shop and status='active' and publication_state='published') then private.package_catalog(p_shop,p_barber,p_date) else '[]'::jsonb end;
+$$;
+ALTER FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -1209,6 +1224,64 @@ begin
 end
 $_$;
 ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare actor text:=private.live_staff_role(); p private.service_packages%rowtype;o private.package_offers%rowtype;ids uuid[];starts date;ends date;amount numeric;today date:=(clock_timestamp() at time zone 'Asia/Kuwait')::date;regular numeric;minutes integer;
+begin
+ if actor is null or not(actor='admin' or actor='manager' and exists(select 1 from public.branches where id=p_shop and manager_id=auth.uid())) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if p_action='list' then return jsonb_build_object('total',(select count(*) from private.service_packages where branch_id=p_shop and position(lower(trim(coalesce(p_data->>'search',''))) in lower(name||' '||name_ar))>0),
+ 'items',coalesce((select jsonb_agg(to_jsonb(x)) from(select pkg.*,
+  array(select service_id from private.package_services where package_id=pkg.id order by service_id) service_ids,
+  coalesce((select jsonb_agg(to_jsonb(ofr)||jsonb_build_object('duration',(select sum(duration) from public.services where id=any(ofr.service_ids)),
+   'regular_price',(select sum(price) from public.services where id=any(ofr.service_ids)),
+   'state',case when pkg.archived then 'archived' when ofr.paused then 'paused' when today<ofr.starts_on then 'scheduled' when today>ofr.ends_on then 'expired' else 'available' end) order by ofr.starts_on desc,ofr.id) from private.package_offers ofr where ofr.package_id=pkg.id),'[]') offers
+ from private.service_packages pkg where pkg.branch_id=p_shop and position(lower(trim(coalesce(p_data->>'search',''))) in lower(pkg.name||' '||pkg.name_ar))>0
+ order by pkg.name,pkg.id limit 20 offset greatest(0,least(coalesce((p_data->>'page')::integer,0),100000))*20)x),'[]'));
+ end if;
+ if p_action not in('save','republish','extend','pause','resume','archive') or p_action is null then raise exception 'INVALID_REQUEST';end if;
+ if nullif(p_data->>'id','') is not null then
+  perform pg_advisory_xact_lock(hashtextextended('service-package:'||(p_data->>'id'),0));
+  select * into p from private.service_packages where id=(p_data->>'id')::uuid and branch_id=p_shop for update;
+  if p.id is null then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ elsif p_action<>'save' then raise exception 'INVALID_REQUEST';end if;
+ if p_action='archive' then update private.service_packages set archived=true,updated_at=now() where id=p.id;update private.package_offers set paused=true,updated_at=now() where package_id=p.id;return jsonb_build_object('id',p.id);end if;
+ if nullif(p_data->>'offer_id','') is not null then
+  select * into o from private.package_offers where id=(p_data->>'offer_id')::uuid and package_id=p.id for update;
+  if o.id is null then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ end if;
+ if p_action in('pause','resume','extend') then
+  if o.id is null then raise exception 'INVALID_REQUEST';end if;
+  if p_action='extend' then
+   ends:=(p_data->>'ends_on')::date;
+   if ends is null or ends<=o.ends_on then raise exception 'PACKAGE_EXTENSION_INVALID';end if;
+   if exists(select 1 from private.package_offers where package_id=p.id and id<>o.id and starts_on<=ends and ends_on>=o.starts_on) then raise exception 'PACKAGE_PERIOD_OVERLAP';end if;
+   update private.package_offers set ends_on=ends,updated_at=now() where id=o.id;
+  else update private.package_offers set paused=(p_action='pause'),updated_at=now() where id=o.id;end if;
+  return jsonb_build_object('id',p.id,'offer_id',o.id);
+ end if;
+ starts:=(p_data->>'starts_on')::date;ends:=(p_data->>'ends_on')::date;amount:=(p_data->>'price')::numeric;
+ ids:=array(select jsonb_array_elements_text(p_data->'service_ids')::uuid);
+ if length(trim(coalesce(p_data->>'name',''))) not between 1 and 120 or length(coalesce(p_data->>'name_ar',''))>120
+ or cardinality(ids) not between 2 and 10 or cardinality(ids)<>(select count(distinct x) from unnest(ids)x)
+ or starts is null or ends is null or ends<starts or (o.id is null and starts<today) or amount is null or amount<=0 or amount>10000 or amount<>round(amount,3) then raise exception 'INVALID_PACKAGE';end if;
+ perform id from public.services where id=any(ids) order by id for share;
+ select sum(price),sum(duration) into regular,minutes from public.services where id=any(ids) and branch_id=p_shop and status='active';
+ if (select count(*) from public.services where id=any(ids) and branch_id=p_shop and status='active')<>cardinality(ids) or minutes>480 or amount>regular then raise exception 'INVALID_PACKAGE';end if;
+ if p.id is null then insert into private.service_packages(branch_id,name,name_ar) values(p_shop,trim(p_data->>'name'),coalesce(p_data->>'name_ar','')) returning * into p;
+ else update private.service_packages set name=trim(p_data->>'name'),name_ar=coalesce(p_data->>'name_ar',''),archived=false,updated_at=now() where id=p.id;end if;
+ if p_action='republish' then o.id:=null;end if;
+ if exists(select 1 from private.package_offers where package_id=p.id and id is distinct from o.id and starts_on<=ends and ends_on>=starts) then raise exception 'PACKAGE_PERIOD_OVERLAP';end if;
+ if o.id is not null and exists(select 1 from public.bookings where package_offer_id=o.id and date not between starts and ends) then raise exception 'PACKAGE_HAS_BOOKINGS';end if;
+ delete from private.package_services where package_id=p.id;
+ insert into private.package_services(package_id,service_id) select p.id,unnest(ids);
+ if o.id is null then insert into private.package_offers(package_id,name,name_ar,service_ids,price,starts_on,ends_on)
+  values(p.id,trim(p_data->>'name'),coalesce(p_data->>'name_ar',''),ids,amount,starts,ends) returning * into o;
+ else update private.package_offers set name=trim(p_data->>'name'),name_ar=coalesce(p_data->>'name_ar',''),service_ids=ids,price=amount,starts_on=starts,ends_on=ends,updated_at=now() where id=o.id;end if;
+ return jsonb_build_object('id',p.id,'offer_id',o.id);
+end $$;
+ALTER FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text" DEFAULT 'get'::"text", "p_expected" "text" DEFAULT NULL::"text") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -1456,6 +1529,33 @@ begin
  return result;
 end $$;
 ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare r text:=private.live_staff_role();
+begin
+ if r is null or not(r in('admin','agent') or r='manager' and exists(select 1 from public.branches where id=p_shop and manager_id=auth.uid())
+ or r='barber' and exists(select 1 from public.barbers where id=p_barber and branch_id=p_shop and user_id=auth.uid() and not manager_chair)) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ return private.package_catalog(p_shop,p_barber,p_date);
+end $$;
+ALTER FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_package_terms"("p_booking" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.bookings%rowtype;actor text:=private.live_staff_role();o private.package_offers%rowtype;
+begin
+ select * into b from public.bookings where id=p_booking;
+ if actor is null or b.id is null or not(actor in('admin','agent') or actor='manager' and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
+ or actor='barber' and exists(select 1 from public.barbers where id=b.barber_id and user_id=auth.uid() and not manager_chair)) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if b.package_offer_id is null then return null;end if;
+ select * into o from private.package_offers where id=b.package_offer_id;
+ return b.package_snapshot||jsonb_build_object('id',b.package_offer_id,'starts_on',o.starts_on,'ends_on',o.ends_on,
+  'duration',(select sum((x->>'duration')::integer) from jsonb_array_elements(b.service_snapshot)x where (x->>'id')::uuid=any(array(select jsonb_array_elements_text(b.package_snapshot->'service_ids')::uuid))),
+  'regular_price',(select sum((x->>'price')::numeric) from jsonb_array_elements(b.service_snapshot)x where (x->>'id')::uuid=any(array(select jsonb_array_elements_text(b.package_snapshot->'service_ids')::uuid))));
+end $$;
+ALTER FUNCTION "public"."staff_package_terms"("p_booking" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -1874,6 +1974,7 @@ CREATE INDEX "barbers_discovery_name" ON "public"."barbers" USING "gin" ("lower"
 CREATE INDEX "barbers_discovery_order" ON "public"."barbers" USING "btree" ("lower"("name"), "id") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
 CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
+CREATE INDEX "bookings_package_offer" ON "public"."bookings" USING "btree" ("package_offer_id") WHERE ("package_offer_id" IS NOT NULL);
 CREATE INDEX "branches_discovery_city" ON "public"."branches" USING "btree" ("city", "name", "id") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
 CREATE INDEX "branches_discovery_name" ON "public"."branches" USING "gin" ("lower"((((("name" || ' '::"text") || COALESCE("name_ar", ''::"text")) || ' '::"text") || COALESCE("city", ''::"text"))) "extensions"."gin_trgm_ops") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
 CREATE INDEX "idx_admin_settings_category" ON "public"."admin_settings" USING "btree" ("category");
@@ -2001,6 +2102,8 @@ ALTER TABLE ONLY "public"."bookings"
     ADD CONSTRAINT "bookings_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE SET NULL;
 ALTER TABLE ONLY "public"."bookings"
     ADD CONSTRAINT "bookings_modified_by_user_id_fkey" FOREIGN KEY ("modified_by_user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+ALTER TABLE ONLY "public"."bookings"
+    ADD CONSTRAINT "bookings_package_offer_id_fkey" FOREIGN KEY ("package_offer_id") REFERENCES "private"."package_offers"("id");
 ALTER TABLE ONLY "public"."branches"
     ADD CONSTRAINT "branches_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id");
 ALTER TABLE ONLY "public"."branches"
@@ -2260,6 +2363,8 @@ REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_session_is_live"("p_user" "uuid", "p_session" "uuid") FROM PUBLIC;
@@ -2309,6 +2414,8 @@ GRANT ALL ON FUNCTION "public"."is_manager"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text", "p_expected" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_action" "text", "p_expected" "text") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."manager_can_create_shop"() FROM PUBLIC;
@@ -2335,6 +2442,10 @@ GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "serv
 REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";

@@ -233,7 +233,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       if (message==='PASSWORD_CHANGE_IN_PROGRESS') return reply(409,{error:message});
       if (message==='PASSWORD_UPDATE_UNCERTAIN') return reply(503,{error:message});
       if (message === 'SELF_BOOKING_NOT_ALLOWED') return reply(409, { error: message });
-      if (['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'SLOT_UNAVAILABLE', 'INVALID_SELECTION'].includes(message)) return reply(409, { error: message });
+      if (['PACKAGE_DATE_UNAVAILABLE', 'BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'SLOT_UNAVAILABLE', 'INVALID_SELECTION'].includes(message)) return reply(409, { error: message });
       if (['INVALID_REQUEST', 'INVALID_DATE'].includes(message)) return reply(400, { error: message });
       if (message === 'BOOKING_NOT_RATEABLE') return reply(409, { error: message });
       if (message === 'INVALID_RATING') return reply(400, { error: message });

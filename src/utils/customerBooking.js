@@ -33,7 +33,7 @@ export const bookingCalendar = booking => {
   const escape = text => String(text || '').replaceAll('\\', '\\\\').replace(/\r\n?|\n/g, '\\n').replaceAll(',', '\\,').replaceAll(';', '\\;');
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Barber++//Customer booking//EN', 'BEGIN:VEVENT', `STATUS:${booking.status === 'pending' ? 'TENTATIVE' : 'CONFIRMED'}`,
     `UID:${booking.id}@barber.test`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
-    `SUMMARY:${escape(booking.services.map(service => service.name).join(', '))}`,
+    `SUMMARY:${escape([booking.package?.name, ...booking.services.map(service => service.name)].filter(Boolean).join(', '))}`,
     `LOCATION:${escape([booking.branchName, booking.address].filter(Boolean).join(', '))}`,
     `DESCRIPTION:${escape(booking.description || `Booking reference: ${booking.reference}`)}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 };
