@@ -14,6 +14,8 @@ import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { getErrorMessage, logErrorSafely } from '../utils/errorMessages';
 import './Services.css';
 import ServiceForm from '../components/Forms/ServiceForm';
+import PackagesPanel from '../components/Packages/PackagesPanel';
+import { useSearchParams } from 'react-router-dom';
 
 const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) {
   const handleCardClick = () => {
@@ -79,6 +81,8 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
 
 export default function Services() {
   const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const packages = params.get('view') === 'packages';
   const { branchServices, selectedBranch, selectedBranchId, addService, updateService, deleteService } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -153,12 +157,14 @@ export default function Services() {
             {t('services.subtitle')} {selectedBranch?.name}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={handleAdd} disabled={!hasSelectedShop}>
+        {!packages && <button className="btn btn-primary" onClick={handleAdd} disabled={!hasSelectedShop}>
           <Plus size={18} strokeWidth={2} />
           {t('services.addService')}
-        </button>
+        </button>}
       </div>
 
+      <div className="package-tabs" role="tablist" aria-label={t('packages.catalogue')}><button role="tab" aria-selected={!packages} onClick={() => setParams({})}>{t('services.title')}</button><button role="tab" aria-selected={packages} onClick={() => setParams({ view: 'packages' })}>{t('packages.title')}</button></div>
+      {packages ? <PackagesPanel key={selectedBranchId} shop={selectedBranchId} services={branchServices} /> : <>
       {!hasSelectedShop && <div className="form-error-banner" role="alert">{t('services.selectShopFirst')}</div>}
 
       {/* Search Bar */}
@@ -213,6 +219,7 @@ export default function Services() {
         </div>
       )}
 
+      </>}
       {/* Service Form Modal */}
       <Modal
         isOpen={isFormOpen}

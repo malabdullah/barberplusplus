@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, UserPlus, UserCheck, Loader2 } from 'lucide-react';
+import { UserPlus, UserCheck, Loader2 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { TIME_SLOTS } from '../../constants/time';
 import { getFilteredTimeSlots, getDateAvailability } from '../../utils/availabilityFiltering';
@@ -10,6 +10,11 @@ import { useCustomerLookup } from '../../hooks/useCustomerLookup';
 import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import { bookingServices } from '../../utils/bookingServices';
+import PackagePicker from '../Packages/PackagePicker';
+import ServicePicker from './ServicePicker';
+import { packagesService } from '../../services/packages.service';
+import { mapPackage } from '../../utils/servicePackages';
+import { packageSelection, packageTotals } from '../../utils/servicePackages';
 import CustomerSummaryCard from './CustomerSummaryCard';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -25,7 +30,9 @@ import { getErrorMessage } from '../../utils/errorMessages';
  * @param {Function} props.onSubmit - Callback when form is submitted
  * @param {Function} props.onCancel - Callback when form is cancelled
  */
-function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = [], onSubmit, onCancel }) {
+const EMPTY_BOOKINGS = [];
+
+function BookingForm({ booking, initialCustomer, barbers, currentBarber, services, existingBookings = EMPTY_BOOKINGS, onSubmit, onCancel }) {
   const { t } = useTranslation();
   const formRef = useRef(null);
 
@@ -43,11 +50,22 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
     customerPhone: booking?.customerPhone || initialCustomer?.phone || '',
     barberId: booking?.barberId || (currentBarber?.id || ''),
     serviceIds: booking?.serviceIds || [],
+    packageOfferId: booking?.packageOfferId || '',
     date: booking?.date || format(new Date(), 'yyyy-MM-dd'),
     time: booking?.time?.slice(0, 5) || '09:00',
     notes: booking?.notes || '',
   });
 
+  const [offers, setOffers] = useState([]);
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [offerFailure, setOfferFailure] = useState(false);
+  const [historicalOffer, setHistoricalOffer] = useState(() => {
+    if (!booking?.packageSnapshot) return null;
+    const included = (booking.serviceSnapshot || []).filter(line => booking.packageSnapshot.service_ids.includes(line.id));
+    return mapPackage({ ...booking.packageSnapshot, id: booking.packageOfferId,
+      duration: included.reduce((sum, line) => sum + Number(line.duration), 0),
+      regular_price: included.reduce((sum, line) => sum + Number(line.price), 0) });
+  });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -80,6 +98,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         // Sync booking-specific fields for edit mode
         barberId: booking.barberId || prev.barberId,
         serviceIds: booking.serviceIds || prev.serviceIds,
+        packageOfferId: booking.packageOfferId || '',
         date: booking.date || prev.date,
         time: booking.time?.slice(0, 5) || prev.time,
         notes: booking.notes || prev.notes,
@@ -112,16 +131,28 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
     return barbers.find(b => b.id === formData.barberId) || null;
   }, [isManagerView, currentBarber, barbers, formData.barberId]);
 
-  // PERFORMANCE: Memoize service calculations to avoid recomputing on every render
+  useEffect(() => {
+    if (!selectedBarber?.branchId) return;
+    let active = true;
+    setOfferLoading(true); setOfferFailure(false);
+    Promise.all([packagesService.staff(selectedBarber.branchId, selectedBarber.id, formData.date), booking?.packageOfferId ? packagesService.terms(booking.id) : Promise.resolve(null)])
+      .then(([items, historical]) => { if (active) { setOffers(items); setHistoricalOffer(historical); } })
+      .catch(() => { if (active) { setOffers([]); setOfferFailure(true); } }).finally(() => { if (active) setOfferLoading(false); });
+    return () => { active = false; };
+  }, [selectedBarber?.id, selectedBarber?.branchId, formData.date, booking?.id, booking?.packageOfferId]);
+  const selectedOffer = formData.packageOfferId ? (booking?.packageOfferId === formData.packageOfferId ? historicalOffer : offers.find(item => item.id === formData.packageOfferId)) : null;
+  const calculatedServices = selectedOffer && booking?.packageOfferId === formData.packageOfferId
+    ? services.map(service => ({ ...service, ...bookingServices(booking, services).find(item => item.id === service.id) })) : services;
   const { selectedServices, totalDuration, totalPrice } = useMemo(() => {
-    const unchanged = booking && JSON.stringify(formData.serviceIds) === JSON.stringify(booking.serviceIds);
-    const selected = unchanged ? bookingServices(booking, services) : formData.serviceIds.map(id => services.find(service => service.id === id)).filter(Boolean);
-    return {
-      selectedServices: selected,
-      totalDuration: unchanged ? booking.duration : selected.reduce((sum, s) => sum + s.duration, 0),
-      totalPrice: unchanged ? booking.price : selected.reduce((sum, s) => sum + s.price, 0),
-    };
-  }, [services, formData.serviceIds, booking]);
+    const unchanged = booking && JSON.stringify(formData.serviceIds) === JSON.stringify(booking.serviceIds) && (formData.packageOfferId || '') === (booking.packageOfferId || '');
+    const selected = unchanged ? bookingServices(booking, services) : formData.serviceIds.map(id => calculatedServices.find(service => service.id === id)).filter(Boolean);
+    const totals = packageTotals(calculatedServices, formData.serviceIds, selectedOffer);
+    return { selectedServices: selected, totalDuration: unchanged ? booking.duration : totals.duration, totalPrice: unchanged ? booking.price : totals.price };
+  }, [services, calculatedServices, formData.serviceIds, formData.packageOfferId, selectedOffer, booking]);
+  function selectOffer(offer) {
+    setFormData(current => ({ ...current, packageOfferId: offer?.id || '', serviceIds: packageSelection(current.serviceIds, selectedOffer, offer), time: '' }));
+    setSubmitError('');
+  }
 
   // Update filtered time slots when date, barber, or duration changes
   useEffect(() => {
@@ -162,6 +193,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         ...prev,
         [name]: value,
         date: format(new Date(), 'yyyy-MM-dd'),
+        serviceIds: [], packageOfferId: '',
         time: ''
       }));
       setDateError(null);
@@ -186,6 +218,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
   };
 
   const toggleService = (serviceId) => {
+    if (selectedOffer?.serviceIds.includes(serviceId)) return;
     setFormData((prev) => ({
       ...prev,
       serviceIds: prev.serviceIds.includes(serviceId)
@@ -199,6 +232,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
 
   const validate = () => {
     const newErrors = {};
+    if (formData.packageOfferId && (!selectedOffer || offerFailure)) newErrors.serviceIds = t('packages.errors.PACKAGE_UNAVAILABLE');
 
     if (!formData.customerName.trim()) {
       newErrors.customerName = t('bookings.validation.customerNameRequired');
@@ -414,35 +448,15 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
         )}
 
         <div className="form-group">
-          <label className="form-label">{t('bookings.services')}</label>
+          {offerLoading && <p role="status">{t('common.loading')}</p>}
+          {offerFailure && formData.packageOfferId && <p className="form-error-banner" role="alert">{t('packages.errors.PACKAGE_UNAVAILABLE')}</p>}
+          <PackagePicker offers={historicalOffer && historicalOffer.serviceIds.every(id => selectedBarber?.services?.includes(id)) ? [historicalOffer, ...offers.filter(item => item.id !== historicalOffer.id)] : offers} selected={formData.packageOfferId} services={calculatedServices} onChange={selectOffer} disabled={saving || offerLoading} />
           {services.length > 0 ? (
             <>
-              <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
-                {services.filter(service => (service.status !== 'inactive' && (!selectedBarber || selectedBarber.services?.includes(service.id))) || booking?.serviceIds.includes(service.id)).map((service) => {
-                  const isSelected = formData.serviceIds.includes(service.id);
-                  return (
-                    <label
-                      key={service.id}
-                      className={`service-checkbox-card ${isSelected ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleService(service.id)}
-                      />
-                      <div className="service-checkbox-content">
-                        <span className="service-checkbox-name">{service.name}</span>
-                        <span className="service-checkbox-meta">
-                          {service.duration} {t('common.min')} - {service.price} {t('common.currency')}
-                        </span>
-                      </div>
-                      <div className="service-checkbox-check">
-                        <Check size={14} strokeWidth={2} />
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
+              <ServicePicker label={t('bookings.services')}
+                services={calculatedServices.filter(service => (service.status !== 'inactive' && (!selectedBarber || selectedBarber.services?.includes(service.id))) || booking?.serviceIds.includes(service.id))}
+                selectedIds={formData.serviceIds} includedIds={selectedOffer?.serviceIds} onToggle={toggleService} disabled={saving}
+                invalid={Boolean(errors.serviceIds)} />
               {formData.serviceIds.length > 0 && (
                 <div className="services-total">
                   <span>{t('common.total')}:</span>
@@ -524,10 +538,10 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
       </div>
 
       <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving || (Boolean(formData.packageOfferId) && offerLoading)}>
           {t('common.cancel')}
         </button>
-        <button type="submit" className="btn btn-primary" disabled={saving}>
+        <button type="submit" className="btn btn-primary" disabled={saving || (Boolean(formData.packageOfferId) && offerLoading)}>
           {booking ? t('bookings.updateBooking') : t('bookings.createBooking')}
         </button>
       </div>

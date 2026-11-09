@@ -1,0 +1,22 @@
+.service-picker { min-width:0; margin:0; padding:0; border:0; }
+.service-picker legend { padding:0; margin-block-end:12px; color:var(--text-primary); font:600 1rem/1.5 var(--font-body); }
+.service-picker-options { display:grid; border:1px solid var(--surface-divider); border-radius:var(--radius-md); overflow:hidden; }
+.service-picker-row { position:relative; display:grid; grid-template-columns:20px minmax(0,1fr) auto; align-items:center; gap:14px; min-height:72px; padding:14px 16px; cursor:pointer; transition:background-color .15s ease; }
+.service-picker-row + .service-picker-row { border-block-start:1px solid var(--surface-divider); }
+.service-picker-row:hover { background:var(--bg-secondary); }
+.service-picker-row.is-selected { background:var(--accent-glow); }
+.service-picker-row input { position:absolute; inline-size:1px; block-size:1px; opacity:0; margin:0; }
+.service-picker-check { display:flex; align-items:center; justify-content:center; inline-size:20px; block-size:20px; border:1px solid var(--text-secondary); border-radius:5px; color:var(--bg-primary); }
+.is-selected > .service-picker-check { background:var(--accent-primary); border-color:var(--accent-primary); color:var(--text-on-accent,#171717); }
+.service-picker-row:has(input:focus-visible) { outline:2px solid var(--accent-primary); outline-offset:-3px; }
+.service-picker-copy { display:grid; gap:3px; min-width:0; }
+.service-picker-copy strong { font-size:.9375rem; font-weight:500; line-height:1.45; overflow-wrap:anywhere; }
+.service-picker-copy > span { font-size:.8125rem; line-height:1.4; color:var(--text-secondary); }
+.service-picker-price { font-size:.875rem; font-weight:500; text-align:end; white-space:nowrap; }
+.service-picker-price.is-included { color:var(--accent-primary); font-size:.8125rem; }
+.service-picker-row.is-locked { cursor:default; }
+.service-picker-row.is-locked:not(.is-selected), .service-picker:disabled { opacity:.55; }
+.service-picker:disabled .service-picker-row { cursor:default; }
+.service-picker-invalid .service-picker-options { border-color:var(--status-error); }
+@media(max-width:480px) { .service-picker-row { gap:10px; padding:12px; } .service-picker-price { font-size:.8125rem; } }
+@media(prefers-reduced-motion:reduce) { .service-picker-row { transition:none; } }

@@ -17,7 +17,7 @@ vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: 
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn(), phoneConfig: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
+vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { packages: vi.fn(), getCatalog: vi.fn(), phoneConfig: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
 const catalog = {
   branches: [{ id: 'branch', name: 'Seafront shop', city: 'Kuwait City', address: 'Waterfront' }, { id: 'other', name: 'Salmiya shop', city: 'Salmiya' }],
   barbers: [{ id: 'omar', branchId: 'branch', name: 'Omar', serviceIds: ['hair', 'wash'], maxBookingDays: 30 }, { id: 'ali', branchId: 'branch', name: 'Ali', serviceIds: ['beard'], maxBookingDays: 30 }],
@@ -32,6 +32,7 @@ beforeEach(async () => {
   favouritesState.items = [];
   customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  customerBookingService.packages.mockResolvedValue([]);
   customerBookingService.getCatalog.mockResolvedValue(catalog);
   customerBookingService.phoneConfig.mockResolvedValue(null);
   customerBookingService.accountProof.mockResolvedValue({ verification: 'account-proof' });
@@ -71,6 +72,7 @@ async function chooseAppointment() {
   expect(screen.queryByText('Beard trim')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('checkbox', { name: /Haircut/ }));
   expect(screen.getByLabelText('Select a date')).not.toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
   expect(heading()).toHaveTextContent('Book your appointment');
   expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
@@ -220,6 +222,7 @@ it('allows multiple services before continuing and collapses services and opens 
   fireEvent.click(screen.getByRole('checkbox', { name: /Hair wash/ }));
   expect(section('Services')).toHaveClass('is-open');
   expect(customerBookingService.getSlots).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
   expect(section('Date & time')).toHaveClass('is-open');
   expect(section('Your details & confirmation')).not.toHaveClass('is-open');
@@ -275,6 +278,7 @@ it('keeps all six section headings on one page and preserves unchanged selection
   click('Edit: Choose your shop'); click('Done');
   click('Done');
   expect(screen.getByRole('checkbox', { name: /Haircut/ })).toBeChecked();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to your details' })).toBeEnabled());
   click('Done');
@@ -443,6 +447,7 @@ it('returns to barber selection and keeps guest details when a chair closes at c
   expect(section('Choose your barber')).toHaveClass('is-open');
   fireEvent.click(screen.getByRole('radio', { name: /Ali/ }));
   fireEvent.click(screen.getByRole('checkbox', { name: /Beard trim/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
   fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
   expect(screen.getByLabelText('Your name')).toHaveValue('Test Customer');
@@ -454,6 +459,7 @@ it('limits exact starts to the chosen range and prevents a service combination t
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking initialDraft={initialDraft} scopedCatalog={{...catalog,maxDuration:35}} onEditProvider={vi.fn()}/></MemoryRouter></I18nextProvider>);
   const hair=await screen.findByRole('checkbox',{name:/Haircut/});fireEvent.click(hair);
   expect(screen.getByRole('checkbox',{name:/Hair wash/})).toBeDisabled();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
   expect(await screen.findByRole('radio',{name:/10:00/})).toBeVisible();
   expect(screen.queryByRole('radio',{name:/10:30/})).not.toBeInTheDocument();
@@ -466,4 +472,55 @@ it('shows pending confirmation before checkout and on the receipt', async () => 
   await chooseAppointment();expect(screen.getByText('This booking needs confirmation from the shop.')).toBeVisible();
   await requestVerification();click('Confirm booking');await screen.findByText('TESTREF');
   expect(heading()).toHaveTextContent('Booking request sent');expect(screen.getByText('Awaiting confirmation from the shop. Your time is reserved.')).toBeVisible();
+});
+
+
+it('prices a package once, locks its included services, and keeps extras across removal', async () => {
+  const offer = { id: 'offer', name: 'Haircut and wash', serviceIds: ['hair', 'wash'], price: 6, regularPrice: 7, duration: 45, startsOn: getKuwaitDate(), endsOn: addBookingDays(getKuwaitDate(), 6) };
+  customerBookingService.packages.mockResolvedValue([offer]);
+  customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00'], package_quote: { price: 6, duration: 45 } });
+  changeCity('Kuwait City');
+  fireEvent.click(screen.getByRole('radio', { name: /Seafront/ }));
+  fireEvent.click(screen.getByRole('radio', { name: /Omar/ }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Haircut and wash/ }));
+  expect(screen.getByRole('checkbox', { name: /Haircut/ })).toBeChecked();
+  expect(screen.getByRole('checkbox', { name: /Haircut/ })).toBeDisabled();
+  expect(screen.getByRole('checkbox', { name: /Hair wash/ })).toBeChecked();
+  click('Continue to date & time');
+  fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
+  click('Continue as guest');
+  await requestVerification();
+  click('Confirm booking');
+  await screen.findByText('TESTREF');
+  expect(customerBookingService.book).toHaveBeenCalledWith(expect.objectContaining({ packageOfferId: 'offer', serviceIds: ['hair', 'wash'], packageQuote: { price: 6, duration: 45 } }));
+});
+
+it('restores a package after reload and requires removing an unavailable offer explicitly', async () => {
+  const offer = { id: 'fa180000-0000-4000-8000-000000000601', name: 'Haircut and wash', serviceIds: ['hair', 'wash'], price: 6, regularPrice: 7, duration: 45, startsOn: getKuwaitDate(), endsOn: addBookingDays(getKuwaitDate(), 6) };
+  customerBookingService.packages.mockResolvedValue([offer]);
+  changeCity('Kuwait City'); fireEvent.click(screen.getByRole('radio', { name: /Seafront/ })); fireEvent.click(screen.getByRole('radio', { name: /Omar/ }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Haircut and wash/ }));
+  cleanup(); customerBookingService.packages.mockResolvedValue([]);
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(en.packages.errors.PACKAGE_UNAVAILABLE));
+  expect(screen.getByRole('button', { name: 'Continue to date & time' })).toBeDisabled();
+  click(en.packages.remove);
+  expect(screen.getByRole('checkbox', { name: /Haircut/ })).not.toBeChecked();
+  expect(screen.getByRole('checkbox', { name: /Haircut/ })).toBeEnabled();
+});
+
+it('requires reviewing a changed package total before offering appointment times', async () => {
+  const offer = { id: 'fa180000-0000-4000-8000-000000000601', name: 'Haircut and wash', serviceIds: ['hair', 'wash'], price: 6, regularPrice: 7, duration: 45, startsOn: getKuwaitDate(), endsOn: addBookingDays(getKuwaitDate(), 6) };
+  customerBookingService.packages.mockResolvedValueOnce([offer]).mockResolvedValue([{ ...offer, price: 5 }]);
+  customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00'], package_quote: { price: 5, duration: 45 } });
+  changeCity('Kuwait City'); fireEvent.click(screen.getByRole('radio', { name: /Seafront/ })); fireEvent.click(screen.getByRole('radio', { name: /Omar/ }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Haircut and wash/ }));
+  click('Continue to date & time');
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(en.packages.errors.PACKAGE_CHANGED));
+  expect(section('Services')).toHaveClass('is-open');
+  expect(customerBookingService.book).not.toHaveBeenCalled();
+  await waitFor(() => expect(document.querySelector('.package-choice-price strong')).toHaveTextContent('5.000'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time' })).toBeEnabled());
+  click('Continue to date & time');
+  expect(await screen.findByRole('radio', { name: /10:00/ })).toBeVisible();
 });

@@ -7,7 +7,7 @@ still reads **Barber++**; standalone symbols, favicons and app icons are unchang
 
 Use the shared `BrandLogo` component. The horizontal light/dark SVGs in
 `public/brand/` use the same outlined artwork as the native iOS canonical assets.
-The 506.2794 × 104 master keeps the original mark and Outfit Bold letter outlines,
+The 506.2794 × 106 master keeps the original mark and Outfit Bold letter outlines,
 with an 8-unit optical gap between the mark and the first a. Monochrome exports
 use identical geometry. Scale the complete artwork proportionally.
 
@@ -27,3 +27,8 @@ Historical presentation boards are reference history, not canonical exports.
 
 No database, authentication, app-icon, email-delivery or production configuration
 changes are required for this visual update.
+
+The mark bottom and outlined lettering share the y=104 baseline. Preserve the
+letter curves’ natural overshoot inside the 106-unit canvas. Do not crop or
+independently move the plus signs. This baseline correction was approved on
+8 November 2026 for both the website and native app.
