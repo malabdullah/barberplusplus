@@ -10,6 +10,24 @@ The source reconciles the exact deployed hosted Test `customer-auth` v25,
 `customer-booking` v25 and `customer-push-dispatch` v5, captured read-only before
 the change. Secure password/email/session modules remain unchanged.
 
+The self-hosted Apple credential-renewal validator also needs an operations-only
+compatibility update before appending the native Apple audience. Its optional
+`acceptedClientIds` is an exact ordered runtime allowlist, with the existing web
+Services ID first. `clientId` remains that single Services ID and remains the JWT
+subject. Unconfigured extra audiences, missing/reordered/duplicate IDs and
+unrelated configuration changes fail closed. Eighteen synthetic renewal tests
+pass, including preserving the audience list across credential rotation.
+
+This helper is not a managed Test function. No Test provider or renewal Worker
+settings changed; tests use generated synthetic keys and mocked host metadata.
+Its reviewed public script must be installed separately on the production host,
+after verifying the currently installed helper matches the reviewed baseline.
+Update only the explicit public audience-list configuration together with the
+approved Auth audience change under the existing backend lock. Preserve private
+signing keys, provider secrets, renewal state, service/timer units and schedule.
+Do not force credential rotation. The operations archive/hash is separate from
+the normal backend release archive, which does not package `ops/auth`.
+
 Three new migrations append to the accepted 68-migration production prefix:
 
 1. `20261109090930_native_checkout_recovery.sql`: service-only closure capabilities

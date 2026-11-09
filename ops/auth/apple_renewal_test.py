@@ -108,6 +108,50 @@ class RenewalTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 renewal.validate(self.old, {**self.config, field: 'different'}, self.now)
 
+    def test_native_audience_keeps_web_jwt_subject_and_survives_renewal(self):
+        self.config['acceptedClientIds'] = [self.config['clientId'], 'com.synthetic.native']
+        self.document['services']['auth']['environment']['GOTRUE_EXTERNAL_APPLE_CLIENT_ID'] = ','.join(self.config['acceptedClientIds'])
+        renewal.atomic(self.active, json.dumps(self.document).encode())
+        self.host = FakeHost(self.document)
+        self.assertEqual(renewal.renew(self.config, self.host, self.now)['status'], 'RENEWED')
+        updated = json.loads(self.active.read_bytes())
+        self.assertEqual(updated['services']['auth']['environment']['GOTRUE_EXTERNAL_APPLE_CLIENT_ID'], 'com.synthetic.test,com.synthetic.native')
+        claims = renewal.validate(updated['services']['auth']['environment'][renewal.SECRET], self.config, self.now)
+        self.assertEqual(claims['sub'], 'com.synthetic.test')
+        self.assertEqual(renewal.replace_secret(updated, self.old), self.document)
+
+    def test_invalid_reviewed_audience_configuration_cannot_rotate_credentials(self):
+        primary = self.config['clientId']
+        for values in [None, primary, [], [primary, primary], ['com.synthetic.native', primary], [primary, ''], [primary, None], [primary, 'unreviewed,combined']]:
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                renewal.renew({**self.config, 'acceptedClientIds': values}, self.host, self.now)
+        self.assertEqual(self.host.activations, 0)
+
+    def test_runtime_accepts_only_the_exact_reviewed_client_list(self):
+        primary = self.config['clientId']
+        native = 'com.synthetic.native'
+        config = {**self.config, 'authImageId': 'synthetic-image', 'composeDirectory': '/synthetic', 'composeFile': '/synthetic/compose.yml'}
+        document = {'services': {'auth': {'environment': {renewal.SECRET: 'synthetic-secret'}}}}
+        def containers(client_ids):
+            auth = {'Image': 'synthetic-image', 'Config': {'Env': [renewal.SECRET + '=synthetic-secret', 'GOTRUE_EXTERNAL_APPLE_ENABLED=true', 'GOTRUE_EXTERNAL_APPLE_CLIENT_ID=' + client_ids], 'Labels': {'com.docker.compose.config-hash': 'synthetic-hash'}}, 'State': {'Running': True, 'Health': {'Status': 'healthy'}}}
+            data = [{'Id': name, 'State': {'Running': True, 'Health': {'Status': 'healthy'}, 'StartedAt': 'unchanged'}} for name in ['db', 'functions']]
+            return [auth] + data
+        for reviewed, runtime, allowed in [
+                ({}, primary, True),
+                ({}, primary + ',' + native, False),
+                ({'acceptedClientIds': [primary, native]}, primary + ',' + native, True),
+                ({'acceptedClientIds': [primary, native]}, primary, False),
+                ({'acceptedClientIds': [primary, native]}, primary + ',com.unreviewed.app', False)]:
+            host = renewal.Host({**config, **reviewed})
+            with self.subTest(reviewed=reviewed, runtime=runtime), patch.object(host, 'inspect', return_value=containers(runtime)), patch.object(renewal, 'command', return_value=b'auth synthetic-hash') as command:
+                if allowed:
+                    result = host.preflight(document, '/synthetic/override.json')
+                    self.assertEqual(result['untouchedContainers'][0]['id'], 'db')
+                else:
+                    with self.assertRaises(ValueError):
+                        host.preflight(document, '/synthetic/override.json')
+                    command.assert_not_called()
+
     def test_clock_rollback_is_rejected(self):
         with self.assertRaises(ValueError):
             renewal.validate(self.old, self.config, self.now - 200 * 86400)
