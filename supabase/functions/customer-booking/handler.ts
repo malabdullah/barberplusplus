@@ -19,6 +19,8 @@ type Dependencies = {
   confirmPhone?: (session: string, code: string, phone: string) => Promise<boolean>;
   accountPhone?: (customerId: string, country: string, phone: string, verified: boolean) => Promise<boolean>;
   claim?: (data: Body) => Promise<unknown>;
+  close?: (id: string) => Promise<{ found: boolean; closed: boolean }>;
+  recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
 type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean };
@@ -46,13 +48,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
     const signature = await crypto.subtle.sign('HMAC', await key!, encoder.encode(payload));
     return `${payload}.${encode(new Uint8Array(signature))}`;
   };
-  const verify = async (token: unknown, purpose: string): Promise<Proof | null> => {
+  const verify = async (token: unknown, purpose: string, recoveryWindow = 0): Promise<Proof | null> => {
     if (typeof token !== 'string' || token.length > 3000) return null;
     try {
       const [payload, signature, extra] = token.split('.');
       if (extra || !payload || !signature || !await crypto.subtle.verify('HMAC', await key!, decode(signature), encoder.encode(payload))) return null;
       const proof = JSON.parse(new TextDecoder().decode(decode(payload))) as Proof;
-      return proof.purpose === purpose && proof.expires > Date.now() && uuid.test(proof.id) ? proof : null;
+      return proof.purpose === purpose && Number.isFinite(proof.expires) && proof.expires + recoveryWindow > Date.now() && uuid.test(proof.id) ? proof : null;
     } catch { return null; }
   };
   return async (req: Request): Promise<Response> => {
@@ -81,6 +83,30 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
+      if (['recover-booking', 'resolve-booking'].includes(String(body.action))) {
+        if (body.action === 'recover-booking' && !deps.recover || body.action === 'resolve-booking' && !deps.close) return reply(404, { error: 'NOT_AVAILABLE' });
+        const proof = await verify(body.verification, 'verified', 24 * 60 * 60_000);
+        if (!proof) return reply(403, { error: 'RECOVERY_UNAVAILABLE' });
+        if (proof.user_id) {
+          const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+          const account = token && deps.customer ? await deps.customer(token) : null;
+          if (!account || account.id !== proof.user_id) return reply(401, { error: 'VERIFICATION_REQUIRED' });
+        }
+        if (body.action === 'resolve-booking') {
+          if (!deps.close) throw Error('Resolution unavailable');
+          const result = await deps.close(proof.id);
+          if (!result.found && result.closed) return reply(200, result);
+          if (!result.found) throw Error('Resolution unavailable');
+        }
+        if (!deps.recover) throw Error('Recovery unavailable');
+        const receipt = await deps.recover(proof);
+        if (!receipt) return reply(200, { found: false });
+        const expires = Date.parse(String(receipt.created_at)) + 60 * 60_000;
+        const claimToken = !proof.user_id && expires > Date.now()
+          ? await sign({ ...proof, purpose: 'receipt', expires }) : undefined;
+        const { created_at: _createdAt, ...publicReceipt } = receipt;
+        return reply(200, { found: true, receipt: { ...publicReceipt, ...(claimToken ? { claimToken } : {}) } });
+      }
       const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
       const readAccount = () => token && deps.customer ? deps.customer(token) : null;
       const isAccountPhoneVerified = async (account: NonNullable<Awaited<ReturnType<typeof readAccount>>>) =>
@@ -212,6 +238,11 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (body.packageOfferId != null && body.packageOfferId !== '' && !uuid.test(String(body.packageOfferId))) return reply(400, { error: 'INVALID_PACKAGE_SELECTION' });
       const data: Body = { branch_id: body.branchId, barber_id: body.barberId, service_ids: body.serviceIds, date: body.date,
         ...(body.packageOfferId ? { package_offer_id: body.packageOfferId } : {}) };
+      if (body.action === 'book' && ('expectedPrice' in body || 'expectedDuration' in body)) {
+        if (typeof body.expectedPrice !== 'string' || !/^\d{1,8}(\.\d{1,3})?$/.test(body.expectedPrice)
+          || typeof body.expectedDuration !== 'string' || !/^\d{1,3}$/.test(body.expectedDuration)) return reply(400, { error: 'INVALID_REQUEST' });
+        data.expected_price = body.expectedPrice; data.expected_duration = body.expectedDuration;
+      }
       if (body.action === 'book') {
         if (body.packageOfferId) {
           const quote = body.packageQuote as Body | undefined;
@@ -252,7 +283,14 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         // Only a successful guest booking earns a receipt capability. It is
         // short-lived, binds exactly one booking, and never appears in a URL.
         const receipt = result as Record<string, unknown>;
-        if (proof && !proof.user_id && receipt.id === proof.id) return reply(200, { ...receipt, claimToken: await sign({ ...proof, purpose: 'receipt', expires: Date.now() + 60 * 60_000 }) });
+        if (proof && !proof.user_id && receipt.id === proof.id) {
+          // Native retries retain the original receipt deadline; a retry cannot
+          // extend the capability to attach an appointment to an account.
+          if (!deps.recover) return reply(200, { ...receipt, claimToken: await sign({ ...proof, purpose: 'receipt', expires: Date.now() + 60 * 60_000 }) });
+          const original = await deps.recover(proof);
+          const expires = original ? Date.parse(String(original.created_at)) + 60 * 60_000 : proof.expires + 50 * 60_000;
+          return reply(200, { ...receipt, ...(expires > Date.now() ? { claimToken: await sign({ ...proof, purpose: 'receipt', expires }) } : {}) });
+        }
       }
       return reply(200, result);
     } catch (error) {
@@ -263,6 +301,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
+      if (/ATTEMPT_CLOSED/.test(message)) return reply(409, { error: 'ATTEMPT_CLOSED' });
+      if (/PRICE_CHANGED/.test(message)) return reply(409, { error: 'PRICE_CHANGED' });
       if (/PHONE_IN_USE/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });
       if (/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/.test(message)) return reply(400, { error: message.match(/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/)![0] });

@@ -165,6 +165,17 @@ def other_environment(container):
     return {key: value for key, value in environment(container).items() if key != SECRET}
 
 
+def expected_client_ids(config):
+    # OAuth client-secret JWTs retain one Services ID subject. Native ID-token
+    # audiences are an explicit, ordered runtime allowlist, never JWT subjects.
+    values = config.get('acceptedClientIds', [config['clientId']])
+    if (not isinstance(values, list) or not 1 <= len(values) <= 8
+            or any(not isinstance(value, str) or not re.fullmatch(r'[a-zA-Z0-9.-]+', value) for value in values)
+            or values[0] != config['clientId'] or len(set(values)) != len(values)):
+        raise ValueError('Invalid reviewed Apple client IDs')
+    return values
+
+
 class Host:
     def __init__(self, config):
         self.c = config
@@ -186,7 +197,7 @@ class Host:
         self.check(before)
         auth = before[0]
         values = environment(auth)
-        if values.get(SECRET) != document['services']['auth']['environment'][SECRET] or values.get('GOTRUE_EXTERNAL_APPLE_CLIENT_ID') != self.c['clientId'] or values.get('GOTRUE_EXTERNAL_APPLE_ENABLED') != 'true':
+        if values.get(SECRET) != document['services']['auth']['environment'][SECRET] or values.get('GOTRUE_EXTERNAL_APPLE_CLIENT_ID') != ','.join(expected_client_ids(self.c)) or values.get('GOTRUE_EXTERNAL_APPLE_ENABLED') != 'true':
             raise ValueError('Live Apple configuration drift')
         config_hash = command(self.compose(current) + ['config', '--hash', 'auth']).decode().strip().split()[-1]
         if config_hash != auth['Config']['Labels'].get('com.docker.compose.config-hash'):
@@ -224,6 +235,7 @@ def rollback(config, host, state):
 
 
 def renew(config, host, now, force=False):
+    expected_client_ids(config)
     active = pathlib.Path(config['overrideFile'])
     directory = pathlib.Path(config['stateDirectory'])
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
