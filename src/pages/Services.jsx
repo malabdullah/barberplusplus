@@ -17,7 +17,7 @@ import ServiceForm from '../components/Forms/ServiceForm';
 import PackagesPanel from '../components/Packages/PackagesPanel';
 import { useSearchParams } from 'react-router-dom';
 
-const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) {
+const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t, arabic }) {
   const handleCardClick = () => {
     onEdit(service);
   };
@@ -41,7 +41,7 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
       </div>
 
       <div className="service-card-content">
-        <h3 className="service-name">{service.name}</h3>
+        <h3 className="service-name" dir="auto">{(arabic && service.nameAr) || service.name}</h3>
         {service.description && (
           <p className="service-description">{service.description}</p>
         )}
@@ -80,7 +80,8 @@ const ServiceCard = memo(function ServiceCard({ service, onEdit, onDelete, t }) 
 });
 
 export default function Services() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const arabic = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar');
   const [params, setParams] = useSearchParams();
   const packages = params.get('view') === 'packages';
   const { branchServices, selectedBranch, selectedBranchId, addService, updateService, deleteService } = useApp();
@@ -94,7 +95,7 @@ export default function Services() {
 
   const filteredServices = useMemo(() =>
     branchServices.filter((service) => service.status !== 'inactive').filter((service) =>
-      service.name.toLowerCase().includes(searchQuery.toLowerCase())
+      [service.name, service.nameAr].some((name) => name?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     ),
     [branchServices, searchQuery]
   );
@@ -194,6 +195,7 @@ export default function Services() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               t={t}
+              arabic={arabic}
             />
           ))}
         </div>
