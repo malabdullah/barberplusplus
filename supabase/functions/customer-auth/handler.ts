@@ -1,3 +1,4 @@
+import { customerPushAction } from './push.ts';
 import { customerPasswordAction, type PasswordDependencies } from './password.ts';
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 import { managerRegistrationAction, type RegistrationDependencies } from './registration.ts';
@@ -65,6 +66,11 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const result = await managerRegistrationAction({ action, body, ip: req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local', secret: deps.secret, appUrl: deps.appUrl,
           limit: async (value, max) => Boolean(await deps.rpc('limit', { key: await hash(value), max })), deps: deps.registration });
         return result ? reply(result.status, result.body) : reply(400, { error: 'INVALID_REQUEST' });
+      }
+      if (action.startsWith('push-')) {
+        const ip=req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local';
+        if (!await deps.rpc('limit',{key:await hash(`push:${ip}`),max:100})) return reply(429,{error:'RATE_LIMITED'});
+        return reply(200,await customerPushAction(deps,req,body));
       }
       if (deps.passwords) {
         const result = await customerPasswordAction({
@@ -148,12 +154,16 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const token = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
         const identity = await deps.identity(token);
         if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });
-        const { bookingId, shopRating, barberRating } = body;
+        const { bookingId, shopRating, barberRating, review } = body;
         if (typeof bookingId !== 'string' || !uuid.test(bookingId) ||
-          !validRating(shopRating) || !validRating(barberRating)) {
+          !validRating(shopRating) || !validRating(barberRating) ||
+          (review !== undefined && review !== null && (typeof review !== 'string' || Array.from(review.trim()).length > 1000))) {
           return reply(400, { error: 'INVALID_RATING' });
         }
-        return reply(200, await deps.rpc(action, { ...identity, booking_id: bookingId, shop_rating: shopRating, barber_rating: barberRating }));
+        return reply(200, await deps.rpc(action, {
+          ...identity, booking_id: bookingId, shop_rating: shopRating, barber_rating: barberRating,
+          ...(review !== undefined ? { review: typeof review === 'string' ? review.trim() : null } : {}),
+        }));
       }
       if(['profile','update-profile','bookings','logout'].includes(action)) {
         const token=req.headers.get('authorization')?.replace(/^Bearer /i,'') || '';
@@ -227,6 +237,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
     } catch(failure) {
       const message=failure instanceof Error ? failure.message : '';
       if (['INVALID_CODE','INVALID_DETAILS','INVALID_REQUEST','WEAK_PASSWORD','PASSWORD_MISMATCH','SAME_PASSWORD','CURRENT_PASSWORD_REQUIRED','PASSWORD_NOT_SET','PASSWORD_ALREADY_SET','NATIVE_CLIENT_UPDATE_REQUIRED'].includes(message)) return reply(400,{error:message});
+      if (message==='FORBIDDEN') return reply(403,{error:'FORBIDDEN'});
+      if (['DEVICE_REQUIRED','SUBSCRIPTION_LIMIT'].includes(message)) return reply(409,{error:message});
       if (message==='WRONG_CURRENT_PASSWORD') return reply(403,{error:message});
       if (message==='RATE_LIMITED') return reply(429,{error:message});
       if (message==='PASSWORD_PROOF_REQUIRED') return reply(403,{error:message});
