@@ -26,7 +26,7 @@ afterEach(cleanup);
 function mount(path='/dashboard/setup?shop='+id){return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[path]}><Routes><Route path="/dashboard/setup" element={<ShopSetup/>}/><Route path="/dashboard" element={<h1>Workspace</h1>}/></Routes></MemoryRouter></I18nextProvider>);}
 it('resumes from saved shop details at services, saves the service in the explicit shop and advances',async()=>{
  mount();await screen.findByLabelText(en.services.name);fireEvent.change(screen.getByLabelText(en.services.name),{target:{value:'Haircut'}});fireEvent.change(screen.getByLabelText(en.services.price+' (KWD)'),{target:{value:'3'}});
- fireEvent.click(screen.getByRole('button',{name:'Add Service',exact:true}));await screen.findByText('Haircut');expect(api.create).toHaveBeenCalledWith({name:'Haircut',description:'',duration:30,price:3,branchId:id});
+ fireEvent.click(screen.getByRole('button',{name:'Add Service',exact:true}));await screen.findByText('Haircut');expect(api.create).toHaveBeenCalledWith({name:'Haircut',nameAr:'',description:'',duration:30,price:3,branchId:id});
  fireEvent.click(screen.getByRole('button',{name:'Continue',exact:true}));expect(await screen.findByRole('button',{name:'Invite barber',exact:true})).toBeVisible();
 });
 it('does not mistake a failed load for a new shop or show completion',async()=>{

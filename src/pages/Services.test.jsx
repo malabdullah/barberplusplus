@@ -16,6 +16,8 @@ vi.mock('../components/UI/Modal', () => ({ default: ({ isOpen, children }) => is
 beforeEach(() => {
   state.selectedBranch = { id: 'shop', name: 'My Shop' };
   state.selectedBranchId = 'shop';
+  state.branchServices = [];
+  state.updateService.mockReset().mockResolvedValue({ id: 'haircut' });
   state.addService.mockReset().mockResolvedValue({ id: 'haircut' });
 });
 afterEach(cleanup);
@@ -51,7 +53,32 @@ it.each(['en', 'ar'])('shows actionable guidance if shop access changes before s
 
 it('submits the requested haircut and closes the form after it saves', async () => {
   await mount(); submit();
-  expect(state.addService).toHaveBeenCalledWith({ name: 'Haircut', description: '', duration: 30, price: 3 });
+  expect(state.addService).toHaveBeenCalledWith({ name: 'Haircut', nameAr: '', description: '', duration: 30, price: 3 });
   await screen.findByRole('button', { name: en.services.addService });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('saves an optional Arabic name and restores it when editing', async () => {
+  state.branchServices = [{ id: 'haircut', name: 'Haircut', nameAr: 'قص شعر', duration: 30, price: 3 }];
+  await mount();
+  fireEvent.click(screen.getByRole('button', { name: en.services.editService }));
+  const input = screen.getByLabelText(en.services.nameAr);
+  expect(input).toHaveValue('قص شعر');
+  expect(input).toHaveAttribute('dir', 'rtl');
+  fireEvent.change(input, { target: { value: '' } });
+  fireEvent.submit(screen.getByRole('dialog').querySelector('form'));
+  expect(state.updateService).toHaveBeenCalledWith('haircut', { name: 'Haircut', nameAr: '', description: '', duration: 30, price: 3 });
+});
+
+it.each(['en', 'ar'])('searches both service names and falls back for missing Arabic names (%s)', async language => {
+  state.branchServices = [
+    { id: 'haircut', name: 'Haircut', nameAr: 'قص شعر', duration: 30, price: 3 },
+    { id: 'beard', name: 'Beard trim', nameAr: null, duration: 15, price: 2 },
+  ];
+  await mount(language);
+  expect(screen.getByRole('heading', { name: language === 'ar' ? 'قص شعر' : 'Haircut' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Beard trim' })).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText((language === 'ar' ? ar : en).services.searchPlaceholder), { target: { value: 'قص' } });
+  expect(screen.getByRole('heading', { name: language === 'ar' ? 'قص شعر' : 'Haircut' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Beard trim' })).not.toBeInTheDocument();
 });
