@@ -49,6 +49,18 @@ files alongside the private configuration for recovery. Configure `config.json`:
 ```
 
 Confirm the actual backend state directory and pinned Auth image on installation.
+
+For a reviewed native Apple sign-in audience, keep `clientId` as the single web
+Services ID used as the OAuth JWT subject. Set optional `acceptedClientIds` to
+the exact ordered runtime list, with that Services ID first and the approved
+native bundle ID next. A missing field preserves the original single-ID guard.
+The renewal validator rejects unreviewed, missing, duplicate or reordered IDs;
+renewal preserves this list and changes only the existing Apple client secret.
+Install the reviewed helper and update this public configuration list together
+with the Auth audience change under the existing backend lock. Do not replace
+the signing key, change its JWT subject to a comma-separated list, or change
+Google/callback/session settings as part of this operation.
+
 Run the synthetic tests, inspect the current token and live model, then execute
 one `--force` renewal to verify the full live installation. This is a credential
 refresh, with no new Apple registrations or permissions. Run the service normally
