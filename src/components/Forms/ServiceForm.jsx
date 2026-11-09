@@ -6,6 +6,7 @@ export default function ServiceForm({ service, onSubmit, onCancel, isSubmitting 
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: service?.name || '',
+    nameAr: service?.nameAr || '',
     description: service?.description || '',
     duration: service?.duration || 30,
     price: service?.price || 0,
@@ -60,6 +61,21 @@ export default function ServiceForm({ service, onSubmit, onCancel, isSubmitting 
           placeholder={t('services.namePlaceholder')}
         />
         {errors.name && <span id="service-name-error" className="form-error" role="alert">{errors.name}</span>}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="service-name-ar">{t('services.nameAr')}</label>
+        <input
+          type="text"
+          name="nameAr"
+          id="service-name-ar"
+          lang="ar"
+          dir="rtl"
+          value={formData.nameAr}
+          onChange={handleChange}
+          className="form-input"
+          placeholder={t('services.nameArPlaceholder')}
+        />
       </div>
 
       <div className="form-group">

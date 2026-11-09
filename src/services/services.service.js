@@ -7,6 +7,7 @@ const toFrontend = (service) => {
     id: service.id,
     branchId: service.branch_id,
     name: service.name,
+    nameAr: service.name_ar,
     description: service.description,
     duration: service.duration,
     price: parseFloat(service.price),
@@ -21,6 +22,7 @@ const toDatabase = (data) => {
   const result = {};
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.name !== undefined) result.name = data.name;
+  if (data.nameAr !== undefined) result.name_ar = data.nameAr?.trim() || null;
   if (data.description !== undefined) result.description = data.description;
   if (data.duration !== undefined) result.duration = data.duration;
   if (data.price !== undefined) result.price = data.price;
