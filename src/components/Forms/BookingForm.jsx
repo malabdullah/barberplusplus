@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, UserPlus, UserCheck, Loader2 } from 'lucide-react';
+import { UserPlus, UserCheck, Loader2 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { TIME_SLOTS } from '../../constants/time';
 import { getFilteredTimeSlots, getDateAvailability } from '../../utils/availabilityFiltering';
@@ -11,6 +11,7 @@ import { validatePhoneNumber } from '../../utils/validation';
 import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import { bookingServices } from '../../utils/bookingServices';
 import PackagePicker from '../Packages/PackagePicker';
+import ServicePicker from './ServicePicker';
 import { packagesService } from '../../services/packages.service';
 import { mapPackage } from '../../utils/servicePackages';
 import { packageSelection, packageTotals } from '../../utils/servicePackages';
@@ -450,36 +451,12 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
           {offerLoading && <p role="status">{t('common.loading')}</p>}
           {offerFailure && formData.packageOfferId && <p className="form-error-banner" role="alert">{t('packages.errors.PACKAGE_UNAVAILABLE')}</p>}
           <PackagePicker offers={historicalOffer && historicalOffer.serviceIds.every(id => selectedBarber?.services?.includes(id)) ? [historicalOffer, ...offers.filter(item => item.id !== historicalOffer.id)] : offers} selected={formData.packageOfferId} services={calculatedServices} onChange={selectOffer} disabled={saving || offerLoading} />
-          <label className="form-label">{t('bookings.services')}</label>
           {services.length > 0 ? (
             <>
-              <div className={`services-select-grid ${errors.serviceIds ? 'error' : ''}`}>
-                {services.filter(service => (service.status !== 'inactive' && (!selectedBarber || selectedBarber.services?.includes(service.id))) || booking?.serviceIds.includes(service.id)).map((service) => {
-                  const isSelected = formData.serviceIds.includes(service.id);
-                  return (
-                    <label
-                      key={service.id}
-                      className={`service-checkbox-card ${isSelected ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        disabled={selectedOffer?.serviceIds.includes(service.id)}
-                        checked={isSelected}
-                        onChange={() => toggleService(service.id)}
-                      />
-                      <div className="service-checkbox-content">
-                        <span className="service-checkbox-name">{service.name}</span>
-                        <span className="service-checkbox-meta">
-                          {service.duration} {t('common.min')} - {selectedOffer?.serviceIds.includes(service.id) ? t('packages.included') : `${service.price} ${t('common.currency')}`}
-                        </span>
-                      </div>
-                      <div className="service-checkbox-check">
-                        <Check size={14} strokeWidth={2} />
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
+              <ServicePicker label={t('bookings.services')}
+                services={calculatedServices.filter(service => (service.status !== 'inactive' && (!selectedBarber || selectedBarber.services?.includes(service.id))) || booking?.serviceIds.includes(service.id))}
+                selectedIds={formData.serviceIds} includedIds={selectedOffer?.serviceIds} onToggle={toggleService} disabled={saving}
+                invalid={Boolean(errors.serviceIds)} />
               {formData.serviceIds.length > 0 && (
                 <div className="services-total">
                   <span>{t('common.total')}:</span>

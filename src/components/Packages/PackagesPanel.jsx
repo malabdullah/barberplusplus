@@ -5,6 +5,7 @@ import { packagesService } from '../../services/packages.service';
 import { packageError } from '../../utils/servicePackages';
 import { addBookingDays, getKuwaitDate } from '../../utils/customerBooking';
 import { packageEndDate } from '../../utils/servicePackages';
+import ServicePicker from '../Forms/ServicePicker';
 import './Packages.css';
 
 function PackageDialog({ target, services, shop, onClose, onSaved }) {
@@ -42,9 +43,9 @@ function PackageDialog({ target, services, shop, onClose, onSaved }) {
       {mode !== 'extend' && <>
         <div className="form-row"><div className="form-group"><label className="form-label" htmlFor="package-name">{tr('name')}</label><input className="form-input" id="package-name" required maxLength={120} value={data.name} onChange={e => patch({ name: e.target.value })} /></div>
           <div className="form-group"><label className="form-label" htmlFor="package-name-ar">{tr('nameAr')}</label><input className="form-input" id="package-name-ar" dir="rtl" maxLength={120} value={data.name_ar} onChange={e => patch({ name_ar: e.target.value })} /></div></div>
-        <fieldset className="package-form-services"><legend>{t('services.title')}</legend>{services.filter(s => s.status !== 'inactive' || data.service_ids.includes(s.id)).map(service => <label key={service.id}>
-          <input type="checkbox" checked={data.service_ids.includes(service.id)} disabled={!data.service_ids.includes(service.id) && data.service_ids.length >= 10} onChange={e => patch({ service_ids: e.target.checked ? [...data.service_ids, service.id] : data.service_ids.filter(id => id !== service.id) })} />
-          <span>{service.name} · {service.duration} {t('common.min')} · {Number(service.price).toFixed(3)} {t('common.currency')}</span></label>)}</fieldset>
+        <ServicePicker label={t('services.title')} services={services.filter(service => service.status !== 'inactive' || data.service_ids.includes(service.id))} selectedIds={data.service_ids} disabled={busy}
+          isOptionDisabled={service => !data.service_ids.includes(service.id) && data.service_ids.length >= 10}
+          onToggle={id => patch({ service_ids: data.service_ids.includes(id) ? data.service_ids.filter(value => value !== id) : [...data.service_ids, id] })} />
         <div className="package-form-summary"><span>{minutes} {t('common.min')}</span><span>{tr('regularPrice')}: {regular.toFixed(3)} {t('common.currency')}</span></div>
         <div className="form-group"><label className="form-label" htmlFor="package-price">{tr('price')}</label><input className="form-input" id="package-price" type="number" required step="0.001" min="0.001" max={regular || 10000} value={data.price} onChange={e => patch({ price: e.target.value })} /></div>
         <div className="form-group"><label className="form-label" htmlFor="package-period">{tr('validity')}</label><select className="form-input" id="package-period" value={period} onChange={e => { setPeriod(e.target.value); if (e.target.value !== 'custom') patch({ ends_on: packageEndDate(data.starts_on, e.target.value) }); }}>

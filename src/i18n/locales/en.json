@@ -2249,6 +2249,8 @@
     "blocked": "Approval blocked"
   },
   "availabilityItems": {
+    "submitted": "Submitted",
+    "requestsPagination": "Availability requests pages",
     "hours": "Working hours",
     "break": "Break",
     "vacation": "Vacation",

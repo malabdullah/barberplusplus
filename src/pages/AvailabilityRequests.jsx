@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { CalendarDays, Coffee, Palmtree, RefreshCw, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { availabilityService } from '../services/availability.service';
@@ -39,21 +40,21 @@ export default function AvailabilityRequests() {
     reloadData();
   };
   return <div className="availability-requests-page"><div className="page-header"><h1 className="page-title">{t('availabilityApproval.requests')}</h1>
-    <button className="btn btn-secondary" onClick={() => setRefresh(value => value + 1)}>{t('availabilityItems.refresh')}</button></div>
+    <button className="btn btn-secondary" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />{t('availabilityItems.refresh')}</button></div>
     <div className="availability-status-tabs" role="group" aria-label={t('availabilityItems.status')}>
       {['pending','approved','declined'].map(value => <button key={value} className={`btn ${status === value ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={status === value} onClick={() => { setParams(previous => { const next = new URLSearchParams(previous); next.set('status', value); return next; }); setPage(0); }}>{t(`availabilityItems.${value}`)}</button>)}
     </div>
-    <button className="btn btn-secondary availability-filter-toggle" aria-expanded={filtersOpen} aria-controls="availability-filters" onClick={() => setFiltersOpen(value => !value)}>{t('availabilityItems.filters')}</button>
+    <button className="btn btn-secondary availability-filter-toggle" aria-expanded={filtersOpen} aria-controls="availability-filters" onClick={() => setFiltersOpen(value => !value)}><SlidersHorizontal size={16} aria-hidden="true" />{t('availabilityItems.filters')}</button>
     <div id="availability-filters" className={`availability-list-filters ${filtersOpen ? 'is-open' : ''}`}>
       <label>{t('availabilityItems.shop')}<select className="form-select" value={shopId} onChange={event => { setShopId(event.target.value); setBarberId(''); setPage(0); }}><option value="">{t('availabilityItems.allShops')}</option>{branches.map(shop => <option key={shop.id} value={shop.id}>{shop.name}</option>)}</select></label>
       <label>{t('availabilityItems.barber')}<select className="form-select" value={barberId} onChange={filter(setBarberId)}><option value="">{t('availabilityItems.allBarbers')}</option>{barbers.filter(barber => !barber.managerChair && (!shopId || barber.branchId === shopId)).map(barber => <option key={barber.id} value={barber.id}>{barber.name}</option>)}</select></label>
       <label>{t('availabilityItems.type')}<select className="form-select" value={category} onChange={filter(setCategory)}><option value="">{t('availabilityItems.allTypes')}</option>{['hours','break','vacation'].map(type => <option key={type} value={type}>{t(`availabilityItems.${type}`)}</option>)}</select></label>
     </div>
     {notice && <p className="availability-list-notice" role="status">{t(`availabilityItems.${notice}`)}</p>}
-    {result.loading && <p role="status">{t('common.loading')}</p>}
+    {result.loading && <p className="availability-list-state" role="status">{t('common.loading')}</p>}
     {result.error && <p role="alert">{getErrorMessage(result.error, t('common.error'), t)}</p>}
-    {!result.loading && !result.error && result.requests.length === 0 && <p>{t('availabilityItems.empty')}</p>}
-    <div className="availability-request-list">{result.requests.slice(0,20).map(request => {
+    {!result.loading && !result.error && result.requests.length === 0 && <div className="availability-list-state"><CalendarDays size={28} strokeWidth={1.5} aria-hidden="true" /><p>{t('availabilityItems.empty')}</p></div>}
+    <div className="availability-request-list">{result.requests.length > 0 && <div className="availability-table-heading" aria-hidden="true"><span>{t('availabilityItems.barber')}</span><span>{t('availabilityItems.type')}</span><span>{t('availabilityItems.submitted')}</span><span>{t('common.actions')}</span></div>}{result.requests.slice(0,20).map(request => {
       const requested = request.status === 'approved' ? request.approved_value : request.requested_value;
       const value = requested || request.base_value;
       const groups = request.category === 'hours' && value ? DAYS.reduce((all, { key }) => {
@@ -63,22 +64,24 @@ export default function AvailabilityRequests() {
         if (existing) existing.days.push(t(`days.${key}`)); else all.push({ time, days: [t(`days.${key}`)] });
         return all;
       }, []) : [];
-      return <article className="availability-request-row" key={request.id} aria-label={`${request.barber_name} · ${t(`availabilityItems.${request.category}`)}`}>
-        <header className="availability-row-heading"><div><span className="availability-item-type">{t(`availabilityItems.${request.category}`)}</span><h2>{request.barber_name}</h2><p>{request.shop_name}</p></div>
-          <time dateTime={request.created_at}>{new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'Asia/Kuwait' }).format(new Date(request.created_at))}</time></header>
+      const Icon = request.category === 'hours' ? CalendarDays : request.category === 'break' ? Coffee : Palmtree;
+      return <article className={`availability-request-row${request.status === 'pending' ? ' is-pending' : ''}`} key={request.id} aria-label={`${request.barber_name} · ${t(`availabilityItems.${request.category}`)}`}>
+        <header className="availability-row-heading"><span className="availability-person-mark" aria-hidden="true">{request.barber_name?.trim().split(/\s+/).slice(0,2).map(part => part[0]).join('')}</span><div><h2>{request.barber_name}</h2><p>{request.shop_name}</p></div></header>
         <div className="availability-row-value">
+          <span className={`availability-item-type availability-type-${request.category}`}><Icon size={15} aria-hidden="true" />{t(`availabilityItems.${request.category}`)}</span>
           {groups.length > 0 && <dl className="availability-compact-hours">{groups.map(group => <div key={group.time}><dt>{group.days.join(i18n.language.startsWith('ar') ? '، ' : ', ')}</dt><dd><bdi>{group.time}</bdi></dd></div>)}</dl>}
           {!requested && <p className="availability-removal">{t('availabilityItems.removal')}</p>}
           <p className={groups.length ? 'text-muted' : undefined}>{request.category === 'break' && value ? <><bdi>{value.type === 'recurring' ? t(`days.${value.day}`) : value.date}</bdi> · <bdi dir="ltr">{value.start}–{value.end}</bdi></> : <bdi dir={request.category === 'vacation' ? 'ltr' : undefined}>{availabilityItemSummary({ ...request, requested_value: value, approved_value: value }, t)}</bdi>}</p>
           {value?.reason && <p className="text-muted">{value.reason}</p>}
           {request.review_note && <p>{request.review_note}</p>}
-          <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}${location.search}`}>{t('availabilityItems.details')}</Link>
         </div>
+        <time className="availability-row-date" dateTime={request.created_at} aria-label={t('availabilityItems.submitted')}>{new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeZone: 'Asia/Kuwait' }).format(new Date(request.created_at))}</time>
+        <Link className="availability-details-link" to={`/dashboard/availability-requests/${request.id}${location.search}`}>{t('availabilityItems.details')}</Link>
         {request.status === 'pending' && <AvailabilityQuickActions item={request} onDecided={decided} onAction={() => setNotice(null)} />}
       </article>;
     })}</div>
-    <div className="page-actions"><button className="btn btn-secondary" disabled={page === 0 || result.loading} onClick={() => setPage(value => value - 1)}>{t('common.previous')}</button>
+    <nav className="availability-list-pagination" aria-label={t('availabilityItems.requestsPagination')}><button className="btn btn-secondary" disabled={page === 0 || result.loading} onClick={() => setPage(value => value - 1)}><ChevronLeft size={16} aria-hidden="true" />{t('common.previous')}</button>
       <span aria-live="polite">{t('availabilityItems.page', { count: page + 1 })}</span>
-      <button className="btn btn-secondary" disabled={result.requests.length < 21 || result.loading} onClick={() => setPage(value => value + 1)}>{t('common.next')}</button></div>
+      <button className="btn btn-secondary" disabled={result.requests.length < 21 || result.loading} onClick={() => setPage(value => value + 1)}>{t('common.next')}<ChevronRight size={16} aria-hidden="true" /></button></nav>
   </div>;
 }
