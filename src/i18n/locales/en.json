@@ -1552,7 +1552,7 @@
       "signInSave": "Sign in to save this appointment",
       "save": "Save to my account",
       "saved": "This appointment is saved to your account.",
-      "claimMismatch": "We could not save this appointment to this account. Check that your account uses the same mobile number and that you are saving within one hour of booking. Your appointment is still confirmed.",
+      "claimMismatch": "Sign in with the account matching this booking’s email or verified phone number. This booking has not been added to your account.",
       "claimFailed": "We could not save this appointment. Please try again. Your appointment is still confirmed."
     },
     "pageTitle": "Book an appointment | Barber++",
@@ -1707,7 +1707,8 @@
       "SLOT_UNAVAILABLE": "That time is no longer available. Your details are saved; please choose another time.",
       "INVALID_DATE": "Choose a date within this barber's booking window.",
       "INVALID_SELECTION": "Your selection is no longer available. Please check your shop, barber and services.",
-      "BOOKING_UNAVAILABLE": "We couldn't complete this booking. Please contact the shop."
+      "BOOKING_UNAVAILABLE": "We couldn't complete this booking. Please contact the shop.",
+      "BOOKING_RATE_LIMIT": "Too many booking attempts. Please try again later."
     },
     "cities": {
       "Kuwait City": "Kuwait City",
@@ -1761,7 +1762,10 @@
       "sectionOf": "Section {{current}} of {{total}}",
       "shopFirst": "Choose a shop to see its barbers.",
       "servicesFirst": "Choose your services, then continue to see available times."
-    }
+    },
+    "emailLabel": "Email address",
+    "emailError": "Enter a valid email address.",
+    "optionalPhoneLabel": "Phone number (optional)"
   },
   "teamAuth": {
     "eyebrow": "Shop team account",

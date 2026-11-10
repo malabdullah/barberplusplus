@@ -33,6 +33,18 @@ Deno.serve(createCustomerBookingHandler({
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
   phone,
+  limitGuest: async (email, ip) => {
+    const buckets: [string,string,number][] = [['email',email,12]];
+    // An unavailable proxy address must not create one shared limit for every guest.
+    if (ip !== 'unknown' && /^[a-fA-F0-9:.]{3,64}$/.test(ip)) buckets.push(['ip',ip,30]);
+    for (const [scope, value, max] of buckets) {
+      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('guest-email:'+scope+':'+value))),x=>x.toString(16).padStart(2,'0')).join('');
+      const result = await admin.rpc('customer_account_api',{p_action:'limit',p_data:{key:hash,max}});
+      if(result.error)throw Error('UNAVAILABLE');
+      if(result.data!==true)return false;
+    }
+    return true;
+  },
   startTestPhone: number => phone && cloudTest ? startGoogleTestPhone(phone, number) : Promise.reject(Error('PHONE_UNAVAILABLE')),
   confirmPhone: (session, code, number) => phone ? confirmGooglePhone(phone, session, code, number) : Promise.resolve(false),
   accountPhone: async (customerId, country, number, verified) => {

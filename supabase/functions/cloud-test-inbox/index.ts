@@ -27,7 +27,8 @@ Deno.serve(withCloudTestGateway(async req => {
     }
     // Only links issued for this isolated app or its own Auth API are clickable.
     const safe = links.filter(link => link.url.startsWith(`${appUrl}/`) || link.url.startsWith(`${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?`));
-    return `<article><h2>${escape(mail.subject)}</h2><p>${escape(mail.recipient)}</p><time>${escape(mail.created_at)}</time><p>${safe.map(link=>`<a href="${escape(link.url)}">${escape(link.label)}</a>`).join(' · ')}</p></article>`;
+    const bookingEmail = (mail.payload as {bookingEmail?:{text?:string}})?.bookingEmail;
+    return `<article><h2>${escape(mail.subject)}</h2><p>${escape(mail.recipient)}</p><time>${escape(mail.created_at)}</time>${bookingEmail?.text ? `<pre style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit">${escape(bookingEmail.text)}</pre>` : ''}<p>${safe.map(link=>`<a href="${escape(link.url)}">${escape(link.label)}</a>`).join(' · ')}</p></article>`;
   }).join('');
   return new Response(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Barber++ Test Inbox</title><link rel="stylesheet" href="/test-inbox.css"><body><main><a href="/">← Barber++</a><h1>Test email inbox / بريد الاختبار</h1><p>Messages stay inside this test project. No email is sent. / لا يتم إرسال بريد حقيقي.</p><a href="/test-inbox">Refresh / تحديث</a>${messages || '<p>No messages yet. / لا توجد رسائل.</p>'}</main></body></html>`, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
 }));

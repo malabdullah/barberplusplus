@@ -1,3 +1,4 @@
+import BookingContact from '../components/BookingContact';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingServices } from '../utils/bookingServices';
 import { useNotificationBooking } from '../hooks/useNotificationBooking';
@@ -11,7 +12,6 @@ import {
   Clock,
   User,
   Scissors,
-  Phone,
   X,
   Check,
   AlertCircle,
@@ -120,13 +120,7 @@ const BookingDetails = memo(function BookingDetails({
             <span className="detail-value">{booking.customerName}</span>
           </div>
         </div>
-        <div className="booking-detail-row">
-          <Phone size={18} strokeWidth={1.5} />
-          <div>
-            <span className="detail-label">{t('common.phone')}</span>
-            <span className="detail-value">{booking.customerCountryCode} {booking.customerPhone}</span>
-          </div>
-        </div>
+        <BookingContact booking={booking} />
       </div>
 
       <div className="booking-details-section">

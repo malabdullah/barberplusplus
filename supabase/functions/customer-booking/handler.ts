@@ -13,7 +13,8 @@ type Dependencies = {
   packages?: (shop: string, barber: string, date: string | null) => Promise<unknown>;
   discovery?: (action: string, data: Body) => Promise<unknown>;
   statistics?: () => Promise<{ shops: number; monthlyBookings: number; barbers: number }>;
-  customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string} | null>;
+  customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string; email?: string} | null>;
+  limitGuest?: (email: string, ip: string) => Promise<boolean>;
   phone?: GooglePhoneConfig;
   startTestPhone?: (phone: string) => Promise<string>;
   confirmPhone?: (session: string, code: string, phone: string) => Promise<boolean>;
@@ -23,7 +24,7 @@ type Dependencies = {
   recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
-type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean };
+type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean; email?: string; guest_contact?: 'email'; language?: string };
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
@@ -156,8 +157,12 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (!proof || proof.user_id) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
         const account = await readAccount();
         if (!account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
-        if (account.phone !== proof.phone || account.countryCode !== proof.country_code) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
-        if (phoneConfig && (!proof.phone_verified || !account.customerId)) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        if (proof.guest_contact === 'email') {
+          if (!account.email || account.email.toLowerCase() !== proof.email) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        } else {
+          if (account.phone !== proof.phone || account.countryCode !== proof.country_code) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+          if (phoneConfig && (!proof.phone_verified || !account.customerId)) return reply(403, { error: 'CLAIM_UNAVAILABLE' });
+        }
         if (!deps.claim) throw Error('Claim unavailable');
         try { await deps.claim({ booking_id: proof.id, account_user_id: account.id, session_id: account.session_id }); }
         catch (error) {
@@ -165,7 +170,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
           throw error;
         }
         // A signed receipt from this checkout already proves phone possession.
-        if (phoneConfig && account.customerId) await deps.accountPhone?.(account.customerId, proof.country_code, proof.phone, true);
+        if (proof.phone_verified && phoneConfig && account.customerId) await deps.accountPhone?.(account.customerId, proof.country_code, proof.phone, true);
         return reply(200, { saved: true });
       }
       if (body.action === 'account-proof') {
@@ -206,10 +211,19 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, counts);
       }
       if (body.action === 'guest-proof') {
-        if (phoneConfig) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         const phone = typeof body.phone === 'string' ? body.phone.replace(/[\s()-]/g, '') : '';
         const countryCode = typeof body.countryCode === 'string' ? body.countryCode : '';
+        if (body.contactMode === 'email') {
+          const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+          if (name.length < 2 || name.length > 120 || email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)
+            || !patterns[countryCode] || (phone && !patterns[countryCode].test(phone))) return reply(400, { error: 'INVALID_DETAILS' });
+          if (deps.limitGuest && !await deps.limitGuest(email, req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown')) return reply(429, { error: 'BOOKING_RATE_LIMIT' });
+          return reply(200, { verification: await sign({ purpose:'verified',id:crypto.randomUUID(),name,phone,country_code:countryCode,
+            email,guest_contact:'email',language:body.language==='ar'?'ar':'en',phone_verified:false,expires:Date.now()+10*60_000 }) });
+        }
+        // Older native clients retain their existing phone-based contract.
+        if (phoneConfig) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (name.length < 2 || name.length > 120 || !patterns[countryCode]?.test(phone)) return reply(400, { error: 'INVALID_DETAILS' });
         return reply(200, { verification: await sign({ purpose: 'verified', id: crypto.randomUUID(), name, phone, country_code: countryCode, expires: Date.now()+10*60_000 }) });
       }
@@ -251,7 +265,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         }
         const proof = await verify(body.verification, 'verified');
         if (!proof) return reply(401, { error: 'VERIFICATION_REQUIRED' });
-        if (phoneConfig && !proof.phone_verified) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
+        if (phoneConfig && !proof.phone_verified && proof.guest_contact !== 'email') return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (proof.user_id) {
           const account = await readAccount();
           if (!account || account.id !== proof.user_id || account.session_id !== proof.session_id) return reply(401, {error:'VERIFICATION_REQUIRED'});
@@ -268,6 +282,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
           data.booking_policy = { cancel_minutes: policy.cancel_minutes, reschedule_minutes: policy.reschedule_minutes };
         }
         Object.assign(data, { id: proof.id, name: proof.name, phone: proof.phone, country_code: proof.country_code, time: body.time, notes: body.notes || '', ...(proof.user_id ? { account_user_id: proof.user_id, session_id: proof.session_id } : {}) });
+        if (proof.guest_contact === 'email') Object.assign(data, { guest_contact:'email',email:proof.email,language:proof.language });
+        else data.language = body.language === 'ar' ? 'ar' : 'en';
       }
       let result;
       try { result = await deps.booking(String(body.action), data); }
@@ -303,7 +319,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
       if (/ATTEMPT_CLOSED/.test(message)) return reply(409, { error: 'ATTEMPT_CLOSED' });
       if (/PRICE_CHANGED/.test(message)) return reply(409, { error: 'PRICE_CHANGED' });
-      if (/PHONE_IN_USE/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
+      if (/PHONE_IN_USE|23505.*customers_phone_unique/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });
       if (/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/.test(message)) return reply(400, { error: message.match(/INVALID_(SELECTION|DATE|REQUEST)|BOOKING_UNAVAILABLE/)![0] });
       return reply(503, { error: 'UNAVAILABLE' });

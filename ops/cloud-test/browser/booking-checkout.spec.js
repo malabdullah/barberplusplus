@@ -94,7 +94,7 @@ for (const language of ['en', 'ar']) for (const theme of ['light', 'dark']) {
 test('guest confirms, signs in, saves one receipt, and sees it in account history', async ({ page }) => {
   await choose(page);
   await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
-  await page.locator('#customer-name').fill('Do not overwrite the account profile'); await page.locator('#customer-phone').fill(customers[0].phone);
+  await page.locator('#customer-name').fill('Do not overwrite the account profile'); await page.locator('#guest-email').fill(customers[0].email);
   await page.locator('#booking-notes').fill('Synthetic checkout guest receipt test');
   const booked = page.waitForResponse(response => response.url().includes('customer-booking') && response.request().postDataJSON()?.action === 'book');
   await page.locator('#booking-next').click(); const result = await booked; expect(result.status()).toBe(200); const receipt = await result.json();
@@ -136,7 +136,7 @@ test('a time taken during login returns to time selection and preserves the rest
   await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
   await page.locator('#booking-notes').fill('Keep this when the slot is taken');
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem('barber-customer-booking-draft')));
-  const proof = await call(request, 'guest-proof', { name: 'Synthetic competing guest', phone: customers[1].phone, countryCode: '+965' }); expect(proof.status).toBe(200);
+  const proof = await call(request, 'guest-proof', { name: 'Synthetic competing guest', contactMode:'email',email:'competing@example.test',countryCode: '+965' }); expect(proof.status).toBe(200);
   const occupied = await call(request, 'book', { ...before, verification: proof.data.verification }); expect(occupied.status).toBe(200);
   fs.writeFileSync(`.cloud-test/checkout-${engine}-conflict-booking.json`, JSON.stringify({ id: occupied.data.id }));
   await page.getByRole('link', { name: 'Sign in', exact: true }).click(); await login(page);
