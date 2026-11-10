@@ -57,6 +57,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [draft] = useState(() => initialDraft || location.state?.bookingDraft || location.state?.rebookingDraft || returnDraft || readBookingDraft());
   const [rebookNotice, setRebookNotice] = useState(draft?.rebookNotice || '');
   const restoredDraft = useRef(false);
+  const pageLeaving = useRef(false);
   const tr = (key, values) => t(`customerBooking.${key}`, values);
   const isArabic = i18n.language.startsWith('ar');
   const name = item => shopWording(isArabic && item?.nameAr ? item.nameAr : item?.name || '');
@@ -212,6 +213,23 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   };
 
   useEffect(() => {
+    // WebKit cancels fetches before unloading. Those failures must not replace
+    // the saved journey just before the new page reads it.
+    const leave = () => { pageLeaving.current = true; };
+    const resume = event => {
+      pageLeaving.current = false;
+      if (event.persisted) setSlotRetry(value => value + 1);
+    };
+    window.addEventListener('beforeunload', leave);
+    window.addEventListener('pagehide', leave);
+    window.addEventListener('pageshow', resume);
+    return () => {
+      window.removeEventListener('beforeunload', leave);
+      window.removeEventListener('pagehide', leave);
+      window.removeEventListener('pageshow', resume);
+    };
+  }, []);
+  useEffect(() => {
     if (returnDraft && draft === returnDraft) { saveBookingDraft(returnDraft); saveBookingReceipt(null); }
     forgetBookingReturn();
     if (location.state?.bookingDraft || location.state?.rebookingDraft) { saveBookingReceipt(null); navigate(location.pathname, { replace: true, state: null }); }
@@ -239,6 +257,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     openPanel(available[requestedPanel] ? requestedPanel : nextIncomplete);
   }, [catalogLoading, catalogError, catalog]);
   useEffect(() => {
+    if (pageLeaving.current) return;
     if (receipt) saveBookingDraft(null);
     else if (draftRestored && city) saveBookingDraft({
       bookingMode: draft?.bookingMode, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd,
@@ -281,7 +300,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     let active = true;
     setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
-      .then(async result => { if (active) {
+      .then(async result => { if (active && !pageLeaving.current) {
         if (packageOfferId && (!result.package_quote || Math.abs(Number(result.package_quote.price) - price) > 0.0005 || Number(result.package_quote.duration) !== duration)) {
           setPackageQuote(null); setTime(''); setError('PACKAGE_CHANGED');
           await recoverUnavailableSelection(() => active, true);
@@ -289,13 +308,13 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         }
         const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
-        if (!active) return;
+        if (!active || pageLeaving.current) return;
         setError(failure.message);
         if (failure.message === 'INVALID_SELECTION' && onEditProvider) editSection('barber');
         else if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection(() => active);
         else { setSlotError(true); setTime(''); openPanel('time'); }
       })
-      .finally(() => { if (active) setSlotsLoading(false); });
+      .finally(() => { if (active && !pageLeaving.current) setSlotsLoading(false); });
     return () => { active = false; };
   }, [checkingAvailability, branchId, barberId, serviceKey, packageOfferId, packageRetry, date, slotRetry, receipt, customer?.id]);
 

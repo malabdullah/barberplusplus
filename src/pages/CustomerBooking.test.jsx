@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
@@ -10,7 +10,7 @@ import { CustomerBookingCheckout as CustomerBooking } from './CustomerBooking';
 import { addBookingDays, getKuwaitDate } from '../utils/customerBooking';
 import { customerBookingService } from '../services/customerBooking.service';
 import { rebookingDraft } from '../utils/customerRebooking';
-import { rememberBookingReturn, saveBookingDraft } from '../utils/customerBookingDraft';
+import { readBookingDraft, rememberBookingReturn, saveBookingDraft } from '../utils/customerBookingDraft';
 
 const favouritesState = vi.hoisted(() => ({ items: [] }));
 vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: () => ({ items: favouritesState.items, loading: false, busy: false, toggle: vi.fn() }) }));
@@ -367,6 +367,18 @@ it('keeps guest details and notes when sign-in is cancelled or the page reloads'
   expect(screen.getByLabelText('Phone number (optional)')).toHaveValue('5000-0099');
   expect(screen.getByLabelText(en.customerBooking.notesLabel)).toHaveValue('Please keep my note');
   expect(customerBookingService.book).not.toHaveBeenCalled();
+});
+
+it('does not erase the saved time when page navigation cancels an availability request', async () => {
+  await chooseAppointment(); await requestVerification();
+  cleanup();
+  let rejectSlots;
+  customerBookingService.getSlots.mockReturnValueOnce(new Promise((_, reject) => { rejectSlots = reject; }));
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await screen.findByLabelText('Email address');
+  fireEvent(window, new Event('beforeunload'));
+  await act(async () => { rejectSlots(new TypeError('Load failed')); });
+  expect(readBookingDraft()).toMatchObject({ time: '10:00', panel: 'details', details: { email: 'guest@example.test' } });
 });
 
 it('retains the shop, barber, services and notes when login returns to a taken slot', async () => {
