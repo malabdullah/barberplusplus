@@ -8,10 +8,10 @@ import { useGeoLocation } from '../../hooks/useGeoLocation';
 import ServicePicker from './ServicePicker';
 import './Forms.css';
 
-export default function BarberForm({ barber, services = [], onSubmit, onCancel, isSubmitting = false, submissionError = null, onClearError, disabledReason = '' }) {
+export default function BarberForm({ barber, managed = barber?.managerManaged === true, services = [], onSubmit, onCancel, isSubmitting = false, submissionError = null, onClearError, disabledReason = '' }) {
   const { t } = useTranslation();
   // Use cached geolocation hook instead of direct API call
-  const { dialCode: detectedCountryCode } = useGeoLocation(barber?.countryCode);
+  const { dialCode: detectedCountryCode } = useGeoLocation(barber?.countryCode || (managed ? '+965' : undefined));
   const [formData, setFormData] = useState({
     name: barber?.name || '',
     nameAr: barber?.nameAr || '',
@@ -20,7 +20,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
     phone: barber?.phone || '',
     profilePicture: barber?.profilePicture || barber?.avatarUrl || null, // Existing URL
     profilePictureFile: null, // New file to upload
-    isActive: barber?.isActive ?? true,
+    isActive: barber?.isActive ?? !managed,
     services: barber?.services || [],
   });
 
@@ -78,14 +78,15 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('validation.nameRequired');
-    if (!formData.email.trim()) {
+    else if (managed && (formData.name.trim().length < 2 || formData.name.trim().length > 120)) newErrors.name = t('managerAudit.nameLength');
+    if (!managed && !formData.email.trim()) {
       newErrors.email = t('validation.emailRequired');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    } else if (!managed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = t('validation.invalidEmail');
     }
-    if (!formData.phone.trim()) {
+    if (!managed && !formData.phone.trim()) {
       newErrors.phone = t('validation.phoneRequired');
-    } else {
+    } else if (formData.phone.trim()) {
       const country = GCC_COUNTRIES.find(c => c.code === formData.countryCode);
       if (country && !country.pattern.test(formData.phone.replace(/\s/g, ''))) {
         newErrors.phone = t('validation.invalidPhone');
@@ -100,7 +101,8 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
     e.preventDefault();
     if (isSubmitting || disabledReason) return;
     if (validate()) {
-      onSubmit({ ...formData, name: formData.name.trim(), email: formData.email.trim().toLowerCase() });
+      const { email, ...details } = formData;
+      onSubmit({ ...details, name: formData.name.trim(), ...(!managed ? { email: email.trim().toLowerCase() } : {}) });
     } else {
       requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
     }
@@ -138,7 +140,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
       <div className="form-section">
         <h4 className="form-section-title">{t('barbers.basicInfo')}</h4>
 
-        <div className="form-group">
+        {(!managed || barber?.id) && <div className="form-group">
           <label className="form-checkbox">
             <input
               type="checkbox"
@@ -149,7 +151,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             <span>{t('common.active')}</span>
           </label>
           <span className="form-hint">{t('barbers.inactiveHint')}</span>
-        </div>
+        </div>}
 
         <div className="form-group">
           <label className="form-label" htmlFor="barber-name">{t('common.fullName')}</label>
@@ -157,6 +159,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             type="text"
             name="name"
             id="barber-name"
+            maxLength={managed ? 120 : undefined}
             aria-invalid={Boolean(errors.name)}
             aria-describedby={errors.name ? 'barber-name-error' : undefined}
             value={formData.name}
@@ -173,6 +176,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
             type="text"
             name="nameAr"
             id="barber-name-ar"
+            maxLength={managed ? 120 : undefined}
             value={formData.nameAr}
             onChange={handleChange}
             className="form-input"
@@ -181,7 +185,7 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
           />
         </div>
 
-        <div className="form-group">
+        {!managed && <div className="form-group">
           <label className="form-label" htmlFor="barber-email">{t('common.email')}</label>
           <input
             type="email"
@@ -197,10 +201,10 @@ export default function BarberForm({ barber, services = [], onSubmit, onCancel, 
           />
           {errors.email && <span className="form-error" id="barber-email-error">{errors.email}</span>}
           {barber?.id && <p className="form-help">{t('accountEmail.adminOnly')}</p>}
-        </div>
+        </div>}
 
         <div className="form-group">
-          <label className="form-label" htmlFor="barber-phone">{t('common.phone')}</label>
+          <label className="form-label" htmlFor="barber-phone">{t(managed ? 'managedBarbers.phoneOptional' : 'common.phone')}</label>
           <div className="phone-input-group">
             <select
               name="countryCode"

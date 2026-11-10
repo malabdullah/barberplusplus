@@ -10,7 +10,7 @@ export type InviteDependencies = {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 const phonePattern = /^\+(965[569]\d{7}|9665\d{8}|9715\d{8}|973\d{8}|974[3567]\d{7}|968[79]\d{7})$/;
-const known = new Set(['AUTH_REQUIRED','FORBIDDEN','INVALID_EMAIL','EMAIL_UNAVAILABLE','CUSTOMER_CONFIRMATION_REQUIRED','INVITE_EXISTS','RATE_LIMITED','INVITE_INVALID','INVITE_USED','INVITE_CANCELLED','INVITE_EXPIRED','INVALID_REQUEST','INVALID_NAME','INVALID_PHONE','WEAK_PASSWORD','INVALID_LOGIN','ACCOUNT_CHANGED','PHONE_IN_USE','PHONE_REGISTRATION_CONFLICT','EMAIL_DELIVERY_FAILED','LEGACY_INVITE']);
+const known = new Set(['AUTH_REQUIRED','FORBIDDEN','INVALID_EMAIL','EMAIL_UNAVAILABLE','CUSTOMER_CONFIRMATION_REQUIRED','INVITE_EXISTS','RATE_LIMITED','INVITE_INVALID','INVITE_USED','INVITE_CANCELLED','INVITE_EXPIRED','INVALID_REQUEST','INVALID_NAME','INVALID_PHONE','WEAK_PASSWORD','INVALID_LOGIN','ACCOUNT_CHANGED','PHONE_IN_USE','PHONE_REGISTRATION_CONFLICT','EMAIL_DELIVERY_FAILED','LEGACY_INVITE','MANAGED_BARBER_UNAVAILABLE']);
 export const digest = async (s:string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),x=>x.toString(16).padStart(2,'0')).join('');
 const token = () => Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 
@@ -42,9 +42,10 @@ export function createInviteHandler(deps:InviteDependencies) {
     if(['check','send'].includes(action) && (!emailPattern.test(email) || email.length>254))return reply(400,{error:'INVALID_EMAIL'});
     if(['check','send','list'].includes(action) && !uuid.test(branch))return reply(400,{error:'INVALID_REQUEST'});
     if(['resend','cancel'].includes(action) && !uuid.test(id))return reply(400,{error:'INVALID_REQUEST'});
+    if (body.managedBarberId !== undefined && (!['check','send'].includes(action) || !uuid.test(String(body.managedBarberId)))) return reply(400,{error:'INVALID_REQUEST'});
     const secret=['send','resend'].includes(action)?token():'';
     const hash=secret?await digest(secret):undefined;
-    const result=await deps.rpc(action,{...actor,branch_id:branch || undefined,id:id || undefined,email,confirm_customer:body.confirmCustomer===true,offset:Math.max(0,Math.min(Math.trunc(Number(body.offset))||0,10000)),token_hash:hash});
+    const result=await deps.rpc(action,{...actor,branch_id:branch || undefined,id:id || undefined,email,confirm_customer:body.confirmCustomer===true,...(body.managedBarberId ? {managed_barber_id:String(body.managedBarberId)} : {}),offset:Math.max(0,Math.min(Math.trunc(Number(body.offset))||0,10000)),token_hash:hash});
     if(hash) {
      const link=new URL('/accept-invite',deps.appUrl);link.searchParams.set('invitation',String(result.id));link.hash=new URLSearchParams({token:secret}).toString();
      let delivered=true;

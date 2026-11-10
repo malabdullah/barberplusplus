@@ -15,8 +15,8 @@ export async function invitationRequest(action, data = {}) {
   return result;
 }
 export const barberInvitationsService = {
-  check: (branchId, email) => invitationRequest('check', { branchId, email }),
-  send: (branchId, email, confirmCustomer = false) => invitationRequest('send', { branchId, email, confirmCustomer }),
+  check: (branchId, email, managedBarberId) => invitationRequest('check', { branchId, email, ...(managedBarberId ? { managedBarberId } : {}) }),
+  send: (branchId, email, confirmCustomer = false, managedBarberId) => invitationRequest('send', { branchId, email, confirmCustomer, ...(managedBarberId ? { managedBarberId } : {}) }),
   list: (branchId, offset = 0) => invitationRequest('list', { branchId, offset }),
   resend: id => invitationRequest('resend', { id }),
   cancel: id => invitationRequest('cancel', { id }),

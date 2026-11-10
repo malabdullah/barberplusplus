@@ -2360,7 +2360,8 @@
       "SOCIAL_FAILED": "Social sign-in did not finish. Try again with the invited email.",
       "EMAIL_DELIVERY_FAILED": "The invitation could not be emailed. Resend it from Invitations.",
       "LEGACY_INVITE": "Use the new Invite barber flow. Existing accounts are kept.",
-      "UNAVAILABLE": "We could not complete this request. Please try again."
+      "UNAVAILABLE": "We could not complete this request. Please try again.",
+      "MANAGED_BARBER_UNAVAILABLE": "This managed barber is no longer available. Reload the profile."
     }
   },
   "shopSetup": {
@@ -2498,5 +2499,12 @@
       "UNAVAILABLE": "Could not save or load packages. Please try again."
     },
     "package": "Package"
+  },
+  "managedBarbers": {
+    "add": "Managed barber",
+    "managed": "Managed by shop",
+    "manage": "Manage barber",
+    "phoneOptional": "Phone (optional)",
+    "inviteToSignIn": "Invite to sign in"
   }
 }
