@@ -21,7 +21,10 @@ Deno.serve(withCloudTestGateway(createInviteHandler({
  },
  createUser:async(input)=>{
   const {data,error}=await admin.auth.admin.createUser({email:input.email,password:input.password,email_confirm:false,
-   app_metadata:{role:'customer',invitation_setup:input.invitation},user_metadata:{name:input.name,phone:input.phone}});
+   // The atomic acceptance routine claims the phone together with the exact
+   // managed profile. Claiming it while creating Auth would collide with that
+   // profile's existing optional number before the invitation can attach it.
+   app_metadata:{role:'customer',invitation_setup:input.invitation},user_metadata:{name:input.name}});
   if(error || !data.user)throw Error('ACCOUNT_CHANGED');return data.user.id;
  },
  mail:async(email,shop,link)=>{

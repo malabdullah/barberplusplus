@@ -1,0 +1,8 @@
+.managed-barber-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1.25rem;
+}
+.managed-barber-tabs > .btn { flex: 1 1 10rem; }
+.managed-barber-settings { max-width: 44rem; display: grid; gap: 1.5rem; }

@@ -46,6 +46,7 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, t
   };
 
   const getInviteStatusDisplay = () => {
+    if (barber.managerManaged) return { label: t('managedBarbers.managed'), className: 'not-invited' };
     switch (barber.inviteStatus) {
       case 'accepted':
         return null; // Don't show badge for accepted invites
@@ -106,14 +107,14 @@ const BarberCard = memo(function BarberCard({ barber, todayBookings, onDelete, t
         )}
 
         <div className="barber-contact">
-          <div className="contact-item">
+          {barber.phone && <div className="contact-item">
             <Phone size={14} strokeWidth={1.5} />
             <span>{barber.phone}</span>
-          </div>
-          <div className="contact-item">
+          </div>}
+          {barber.email && <div className="contact-item">
             <Mail size={14} strokeWidth={1.5} />
             <span>{barber.email}</span>
-          </div>
+          </div>}
         </div>
 
         <div className="barber-card-footer">
@@ -239,7 +240,7 @@ export default function Barbers() {
         </div>
         <Link to="/dashboard/barbers/new" className="btn btn-primary">
           <Plus size={18} strokeWidth={2} />
-          {t('barberInvitations.invite')}
+          {t('barbers.addBarber')}
         </Link>
       </div>
 
