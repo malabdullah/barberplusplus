@@ -218,7 +218,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
           const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
           if (name.length < 2 || name.length > 120 || email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)
             || !patterns[countryCode] || (phone && !patterns[countryCode].test(phone))) return reply(400, { error: 'INVALID_DETAILS' });
-          if (deps.limitGuest && !await deps.limitGuest(email, req.headers.get('x-real-ip') || 'unknown')) return reply(429, { error: 'BOOKING_RATE_LIMIT' });
+          if (deps.limitGuest && !await deps.limitGuest(email, req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown')) return reply(429, { error: 'BOOKING_RATE_LIMIT' });
           return reply(200, { verification: await sign({ purpose:'verified',id:crypto.randomUUID(),name,phone,country_code:countryCode,
             email,guest_contact:'email',language:body.language==='ar'?'ar':'en',phone_verified:false,expires:Date.now()+10*60_000 }) });
         }
