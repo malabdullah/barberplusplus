@@ -26,7 +26,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'];
+const ERROR_CODES = ['SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED', 'BOOKING_RATE_LIMIT'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -89,7 +89,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
-  const [details, setDetails] = useState(() => ({ name: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
+  const [details, setDetails] = useState(() => ({ name: '', email: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
   const [phoneConfig, setPhoneConfig] = useState(null);
   const [accountPhoneCheck, setAccountPhoneCheck] = useState(null);
@@ -302,7 +302,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const validGuestDetails = () => {
     const errors = {};
     if (details.name.trim().length < 2 || details.name.trim().length > 120) errors.name = tr('nameError');
-    if (!validatePhoneNumber(details.phone.replace(/[\s()-]/g, ''), details.countryCode).valid) errors.phone = tr('phoneError');
+    if ((customer || details.phone.trim()) && !validatePhoneNumber(details.phone.replace(/[\s()-]/g, ''), details.countryCode).valid) errors.phone = tr('phoneError');
+    if (!customer && (details.email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(details.email.trim()))) errors.email = tr('emailError');
     setFieldErrors(errors);
     if (Object.keys(errors).length) setTimeout(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus(), 0);
     return !Object.keys(errors).length;
@@ -377,13 +378,13 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (!validGuestDetails()) return;
     setBusy(true); setError('');
     try {
-      const config = phoneConfig || (customer && !customer.phone ? await customerBookingService.phoneConfig() : null);
+      const config = customer ? phoneConfig || (!customer.phone ? await customerBookingService.phoneConfig() : null) : null;
       if (!config && customer && !customer.phone) {
         await updateProfile({ name: customer.name, email: customer.email, countryCode: details.countryCode, phone: details.phone });
       }
       // Preserve the same signed booking ID across uncertain network retries.
       let proof = verification;
-      if (!proof && activePhoneSession) {
+      if (!proof && customer && activePhoneSession) {
         if (!/^\d{6}$/.test(phoneCode)) throw new Error('INVALID_CODE');
         proof = (await customerBookingService.confirmPhone({ ...details, session: activePhoneSession.session, code: phoneCode })).verification;
         setPhoneCode('');
@@ -391,7 +392,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       }
       if (!proof) {
         try {
-          proof = (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof(details)).verification;
+          proof = (customer ? await customerBookingService.accountProof() : await customerBookingService.guestProof({ ...details,contactMode:'email',language:isArabic?'ar':'en' })).verification;
         } catch (failure) {
           if (failure.message !== 'PHONE_VERIFICATION_REQUIRED') throw failure;
           const settings = config || await customerBookingService.phoneConfig();
@@ -403,7 +404,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         }
       }
       setVerification(proof);
-      const result = await customerBookingService.book({ ...selection, time, verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, bookingPolicy: bookingPolicy || undefined });
+      const result = await customerBookingService.book({ ...selection, time, verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, language:isArabic?'ar':'en', bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
@@ -425,7 +426,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const finalDetails = panel === 'details';
   const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length && !packagesLoading && !packageInvalid) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
   const phoneCheckPending = accountPhoneKey && accountPhoneCheck?.key !== accountPhoneKey;
-  const showPhoneVerification = phoneConfig && !verification
+  const showPhoneVerification = Boolean(customer) && phoneConfig && !verification
     && (activePhoneSession || !accountPhoneKey || (!phoneCheckPending && accountPhoneCheck?.required));
   const inlinePhoneError = showPhoneVerification
     && ['INVALID_CODE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED'].includes(error);
@@ -528,7 +529,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                 {slotsLoading ? <p className="cb-loading" role="status"><Loader2 size={20} className="cb-spinner" />{tr('loadingTimes')}</p> : <fieldset className="cb-time-options"><legend className="sr-only">{tr('timeLabel')}</legend>{slots.map(slot => <label key={slot} className={time === slot ? 'selected' : ''}><input type="radio" name="time" checked={time === slot} onChange={() => { setTime(slot); openPanel('details'); setError(''); }} /><span>{timeLabel(slot)}</span>{time === slot && <Check size={15} aria-hidden="true" />}</label>)}</fieldset>}
                 {checkingAvailability && !slotsLoading && !slots.length && !slotError && <div className="cb-empty"><Calendar size={28} aria-hidden="true" /><h3>{tr('noTimes')}</h3><p>{tr('noTimesHint')}</p></div>}
           </BookingSection>
-          <BookingSection feedback={panel === 'details' && !catalogError && !inlinePhoneError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.phone ? `${details.name} · ${details.countryCode} ${details.phone}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
+          <BookingSection feedback={panel === 'details' && !catalogError && !inlinePhoneError ? bookingError : null} id="choose-details" title={tr('guided.details')} summary={time ? customer?.name || (details.name && details.email ? `${details.name} · ${details.email}` : '') : ''} open={panel === 'details' && Boolean(time)} onEdit={() => openPanel('details')} editLabel={tr('edit')} disabled={busy || !appointmentReady}>
               {time && date && <>
                 {!customer && !accountLoading && <section className="cb-account-choice" aria-labelledby="booking-account-choice-title">
                   <h3 id="booking-account-choice-title">{tr('accountChoice.title')}</h3><p>{tr('accountChoice.hint')}</p>
@@ -544,7 +545,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
                     </> : <>
                       <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
-                      <label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
+                      <label className="cb-field-label" htmlFor="guest-email">{tr('emailLabel')}</label><input id="guest-email" className="cb-input" type="email" dir="ltr" autoComplete="email" value={details.email} maxLength={254} onChange={event => { setDetails(current => ({ ...current,email:event.target.value }));setVerification('');setFieldErrors(current=>({...current,email:''})); }} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email?'guest-email-error':undefined} required />{fieldErrors.email&&<p className="cb-field-error" id="guest-email-error">{fieldErrors.email}</p>}
+                      <label className="cb-field-label" htmlFor="customer-phone">{tr('optionalPhoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} /><p className="cb-helper">{tr('noAccount')}</p>
                     </>}
                     <div ref={captchaRef} />

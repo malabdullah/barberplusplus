@@ -85,7 +85,8 @@ async function chooseAppointment() {
 }
 async function requestVerification() {
   fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Test Customer' } });
-  fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '5000-0099' } });
+  fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'guest@example.test' } });
+  fireEvent.change(screen.getByLabelText('Phone number (optional)'), { target: { value: '5000-0099' } });
 }
 
 describe('one-page guest booking', () => {
@@ -236,7 +237,7 @@ it('allows multiple services before continuing and collapses services and opens 
 it('rechecks availability after editing date and retains the entered customer details', async () => {
   await chooseAppointment();
   fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Retained Name' } });
-  fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '50000099' } });
+  fireEvent.change(screen.getByLabelText('Phone number (optional)'), { target: { value: '50000099' } });
   click('Edit: Date & time');
   expect(screen.getByLabelText('Your name')).not.toBeVisible();
   customerBookingService.getSlots.mockResolvedValue({ slots: ['11:00'] });
@@ -245,7 +246,7 @@ it('rechecks availability after editing date and retains the entered customer de
   expect(screen.getByRole('button', { name: 'Continue to your details' })).toBeDisabled();
   fireEvent.click(await screen.findByRole('radio', { name: /11:00/ }));
   expect(screen.getByLabelText('Your name')).toHaveValue('Retained Name');
-  expect(screen.getByLabelText('Mobile number')).toHaveValue('50000099');
+  expect(screen.getByLabelText('Phone number (optional)')).toHaveValue('50000099');
   expect(expandedSections()).toHaveLength(1);
   expect(customerBookingService.getSlots).toHaveBeenLastCalledWith(expect.objectContaining({ date: tomorrow }));
 });
@@ -362,7 +363,7 @@ it('keeps guest details and notes when sign-in is cancelled or the page reloads'
   cleanup(); sessionStorage.clear();
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
   expect(await screen.findByLabelText('Your name')).toHaveValue('Test Customer');
-  expect(screen.getByLabelText('Mobile number')).toHaveValue('5000-0099');
+  expect(screen.getByLabelText('Phone number (optional)')).toHaveValue('5000-0099');
   expect(screen.getByLabelText(en.customerBooking.notesLabel)).toHaveValue('Please keep my note');
   expect(customerBookingService.book).not.toHaveBeenCalled();
 });
@@ -523,4 +524,20 @@ it('requires reviewing a changed package total before offering appointment times
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time' })).toBeEnabled());
   click('Continue to date & time');
   expect(await screen.findByRole('radio', { name: /10:00/ })).toBeVisible();
+});
+
+it('requires guest email and books with blank optional phone without SMS',async()=>{
+ customerBookingService.phoneConfig.mockResolvedValue({projectId:'test-project',testPhones:['+96550000099']});
+ await chooseAppointment();
+ fireEvent.change(screen.getByLabelText('Your name'),{target:{value:'Email Guest'}});
+ click('Confirm booking');
+ expect(await screen.findByText(en.customerBooking.emailError)).toBeVisible();
+ expect(customerBookingService.book).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText('Email address'),{target:{value:'guest@example.test'}});
+ expect(screen.getByLabelText('Email address')).toBeRequired();
+ expect(screen.getByLabelText('Phone number (optional)')).not.toBeRequired();
+ expect(screen.queryByText(en.customerBooking.phoneVerification.title)).not.toBeInTheDocument();
+ click('Confirm booking');await screen.findByText('TESTREF');
+ expect(customerBookingService.guestProof).toHaveBeenCalledWith(expect.objectContaining({contactMode:'email',email:'guest@example.test',phone:''}));
+ expect(customerBookingService.accountProof).not.toHaveBeenCalled();
 });

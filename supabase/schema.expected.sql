@@ -382,6 +382,22 @@ BEGIN
 END;
 $$;
 ALTER FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+declare secret_id uuid;
+begin
+ if p_enabled is null or p_api_url not in ('https://qvkucvcjmojjbphlzlks.supabase.co','https://srv1073968.hstgr.cloud')
+   or p_secret is null or p_secret !~ '^[0-9a-f]{64}$' then raise exception 'INVALID_REQUEST';end if;
+ select id into secret_id from vault.secrets where name='customer_booking_email_dispatch';
+ if found then perform vault.update_secret(secret_id,p_secret);else perform vault.create_secret(p_secret,'customer_booking_email_dispatch');end if;
+ insert into private.customer_booking_email_runtime(singleton,enabled,api_url)values(true,p_enabled,p_api_url)
+ on conflict(singleton)do update set enabled=excluded.enabled,api_url=excluded.api_url,
+ enabled_since=case when not customer_booking_email_runtime.enabled and excluded.enabled then clock_timestamp()else customer_booking_email_runtime.enabled_since end;
+ return true;
+end $_$;
+ALTER FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") RETURNS boolean
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -578,18 +594,24 @@ declare
   v_phone text;
   v_code text;
   v_name text;
+  v_email text;
+  v_email_guest boolean;
 begin
   if p_action not in ('slots', 'book', 'appointment-slots') or p_action is null then
     raise exception 'INVALID_REQUEST';
   end if;
   if p_action = 'book' then
     v_id := (p_data ->> 'id')::uuid;
-    v_phone := p_data ->> 'phone';
+    v_phone := nullif(p_data ->> 'phone','');
+    v_email_guest := p_data->>'guest_contact'='email' and nullif(p_data->>'account_user_id','') is null;
+    v_email := lower(btrim(p_data->>'email'));
     v_code := p_data ->> 'country_code';
     v_name := trim(p_data ->> 'name');
     if v_id is null or v_name is null or length(v_name) not between 2 and 120
        or v_code is null or v_code not in ('+965','+966','+971','+973','+974','+968')
-       or v_phone is null or v_phone !~ '^[0-9]{8,9}$'
+       or (coalesce(v_email_guest,false) and (v_email is null or length(v_email)>254 or v_email !~ '^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'))
+       or (not coalesce(v_email_guest,false) and v_phone is null)
+       or (v_phone is not null and v_phone !~ '^[0-9]{8,9}$')
        or length(coalesce(p_data ->> 'notes', '')) > 500 then
       raise exception 'INVALID_REQUEST';
     end if;
@@ -598,7 +620,8 @@ begin
     select * into v_booking from public.bookings where id = v_id;
     if found then
       if not exists (select 1 from public.customers where id = v_booking.customer_id
-        and phone = v_phone and country_code = v_code) then
+        and phone is not distinct from v_phone and country_code = v_code
+        and (not coalesce(v_email_guest,false) or lower(email)=v_email)) then
         raise exception 'INVALID_REQUEST';
       end if;
     end if;
@@ -671,6 +694,10 @@ begin
     if nullif(p_data->>'account_user_id','') is not null then
       v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
       if not exists(select 1 from public.customers where id=v_customer and phone=v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
+    elsif coalesce(v_email_guest,false) then
+      -- Unverified contact details never select or edit an existing person.
+      insert into public.customers(name,country_code,phone,email,preferred_branch_id,preferred_barber_id,created_by_type)
+        values(v_name,v_code,v_phone,v_email,v_branch.id,v_barber.id,'customer') returning id into v_customer;
     else
       -- Guests reuse a contact without editing it or acquiring its history.
       insert into public.customers(name,country_code,phone,preferred_branch_id,preferred_barber_id,created_by_type)
@@ -685,6 +712,10 @@ begin
     if p_data ? 'booking_policy' and p_data->'booking_policy' is distinct from jsonb_build_object(
       'cancel_minutes',v_booking.cancel_notice_minutes,'reschedule_minutes',v_booking.reschedule_notice_minutes
     ) then raise exception 'BOOKING_POLICY_CHANGED'; end if;
+  end if;
+  if p_action='book' and (coalesce(v_email_guest,false) or nullif(p_data->>'account_user_id','') is not null) then
+    insert into private.customer_booking_email_context(booking_id,customer_id,guest,language)
+      values(v_booking.id,v_booking.customer_id,coalesce(v_email_guest,false),case when p_data->>'language'='ar' then 'ar' else 'en' end) on conflict(booking_id) do nothing;
   end if;
   if p_action = 'book' and nullif(p_data->>'account_user_id','') is not null then
     perform private.record_customer_booking_owner(v_booking.id, (p_data->>'account_user_id')::uuid, (p_data->>'session_id')::uuid);
@@ -707,6 +738,62 @@ CREATE OR REPLACE FUNCTION "public"."customer_booking_discovery"("p_action" "tex
     SET "search_path" TO ''
     AS $$select private.customer_booking_discovery(p_action,p_data);$$;
 ALTER FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_booking_email_claim"("p_limit" integer DEFAULT 10) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare result jsonb;
+begin
+ update private.customer_booking_email_jobs set state='cancelled',leased_until=null where state in('pending','sending')and not private.customer_booking_email_allowed(id);
+ update private.customer_booking_email_jobs set state='failed',last_error='AttemptsExhausted',leased_until=null where state='sending'and attempts>=6 and leased_until<now();
+ with candidates as(
+  select id from private.customer_booking_email_jobs where
+   (state='pending'and available_at<=now()or state='sending'and leased_until<now())and attempts<6
+   order by available_at for update skip locked limit greatest(1,least(p_limit,10))
+ ),leased as(
+  update private.customer_booking_email_jobs j set state='sending',attempts=attempts+1,lease_id=gen_random_uuid(),leased_until=now()+interval '2 minutes',
+   first_attempt_at=coalesce(first_attempt_at,now()),message=coalesce(message,private.customer_booking_email_message(booking_id))
+   from candidates c where c.id=j.id returning j.*
+ )select coalesce(jsonb_agg(jsonb_build_object('id',id,'lease',lease_id,'kind',kind,'message',message)),'[]')into result from leased;
+ return result;
+end $$;
+ALTER FUNCTION "public"."customer_booking_email_claim"("p_limit" integer) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_booking_email_configuration"() RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+ select jsonb_build_object('enabled',r.enabled,'apiUrl',r.api_url,'secret',
+  (select decrypted_secret from vault.decrypted_secrets where name='customer_booking_email_dispatch'))
+ from private.customer_booking_email_runtime r where singleton;
+$$;
+ALTER FUNCTION "public"."customer_booking_email_configuration"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_booking_email_finish"("p_id" "uuid", "p_lease" "uuid", "p_status" integer, "p_provider_id" "text" DEFAULT ''::"text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare job private.customer_booking_email_jobs;
+begin
+ select * into job from private.customer_booking_email_jobs where id=p_id and lease_id=p_lease and state='sending'for update;
+ if not found then return false;end if;
+ if p_status=200 then
+  update private.customer_booking_email_jobs set state='sent',sent_at=now(),provider_id=left(p_provider_id,100),last_error=null,leased_until=null where id=p_id;
+ elsif p_status=410 then
+  update private.customer_booking_email_jobs set state='cancelled',leased_until=null where id=p_id;
+ else
+  update private.customer_booking_email_jobs set state=case when job.attempts>=6 or p_status in(400,401,403,409,422)then 'failed'else 'pending'end,
+   available_at=now()+make_interval(secs=>least(3600,30*power(2,job.attempts)::integer)),last_error='HTTP_'||p_status,leased_until=null where id=p_id;
+ end if;
+ return true;
+end $$;
+ALTER FUNCTION "public"."customer_booking_email_finish"("p_id" "uuid", "p_lease" "uuid", "p_status" integer, "p_provider_id" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_booking_email_validate"("p_id" "uuid", "p_lease" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+ select exists(select 1 from private.customer_booking_email_jobs where id=p_id and lease_id=p_lease and state='sending'and leased_until>now()
+  and private.customer_booking_email_allowed(id));
+$$;
+ALTER FUNCTION "public"."customer_booking_email_validate"("p_id" "uuid", "p_lease" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -774,13 +861,21 @@ CREATE OR REPLACE FUNCTION "public"."customer_claim_booking"("p_booking" "uuid",
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
     AS $$
+declare profile uuid; old_profile uuid;
 begin
-  perform 1 from public.bookings where id=p_booking for update;
-  if not found then raise exception 'INVALID_REQUEST'; end if;
-  perform private.record_customer_booking_owner(p_booking,p_account,p_session);
-  return jsonb_build_object('saved',true);
-end;
-$$;
+ select customer_id into old_profile from public.bookings where id=p_booking for update;
+ if not found then raise exception 'INVALID_REQUEST';end if;
+ if exists(select 1 from private.customer_booking_email_context where booking_id=p_booking and guest) then
+  profile:=private.resolve_booking_customer(p_account,p_session);
+  if not exists(select 1 from auth.users u join public.customers c on c.id=old_profile
+    where u.id=p_account and u.email_confirmed_at is not null and lower(u.email)=lower(c.email))
+    or exists(select 1 from private.customer_booking_owners where booking_id=p_booking and account_user_id<>p_account)
+    then raise exception 'INVALID_REQUEST';end if;
+  update public.bookings set customer_id=profile where id=p_booking and customer_id is distinct from profile;
+ end if;
+ perform private.record_customer_booking_owner(p_booking,p_account,p_session);
+ return jsonb_build_object('saved',true);
+end $$;
 ALTER FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
@@ -2651,6 +2746,8 @@ GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push_runtime"("p_api_url" "text", "p_topic" "text", "p_environments" "text"[]) FROM PUBLIC;
@@ -2673,6 +2770,14 @@ REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_booking_email_claim"("p_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking_email_claim"("p_limit" integer) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_booking_email_configuration"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking_email_configuration"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_booking_email_finish"("p_id" "uuid", "p_lease" "uuid", "p_status" integer, "p_provider_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking_email_finish"("p_id" "uuid", "p_lease" "uuid", "p_status" integer, "p_provider_id" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_booking_email_validate"("p_id" "uuid", "p_lease" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_booking_email_validate"("p_id" "uuid", "p_lease" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) FROM PUBLIC;
