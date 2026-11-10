@@ -48,3 +48,20 @@ it('creates managed profile using only a name, without email or invitation', asy
  expect(managedApi.createManaged.mock.calls[0][1]).not.toHaveProperty('email');
  expect(api.send).not.toHaveBeenCalled();
 });
+
+it('waits for a selected shop before exposing the managed form',()=>{
+ state.selectedBranch=null;mount();fireEvent.click(screen.getByRole('tab',{name:en.managedBarbers.add}));
+ expect(screen.queryByLabelText(en.common.fullName)).not.toBeInTheDocument();
+ expect(screen.getByRole('alert')).toHaveTextContent(en.barberInvitations.errors.SHOP_REQUIRED);
+});
+
+it('rejects short names and invalid optional phones without making a request',async()=>{
+ mount();fireEvent.click(screen.getByRole('tab',{name:en.managedBarbers.add}));
+ fireEvent.change(screen.getByLabelText(en.common.fullName),{target:{value:'A'}});
+ fireEvent.click(screen.getByRole('button',{name:en.barbers.addBarber}));
+ expect(screen.getByText(en.managerAudit.nameLength)).toBeVisible();expect(managedApi.createManaged).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText(en.common.fullName),{target:{value:'Managed QA'}});
+ fireEvent.change(screen.getByLabelText(en.managedBarbers.phoneOptional),{target:{value:'123'}});
+ fireEvent.click(screen.getByRole('button',{name:en.barbers.addBarber}));
+ expect(screen.getByRole('alert')).toHaveTextContent(en.validation.invalidPhone);expect(managedApi.createManaged).not.toHaveBeenCalled();
+});

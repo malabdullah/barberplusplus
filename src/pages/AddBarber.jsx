@@ -49,9 +49,9 @@ export default function AddBarber() {
     </div>
     <div role="tabpanel" id="barber-add-panel" aria-labelledby={`barber-${mode}-tab`}>
       {mode === 'invite' ? <InviteBarberForm branch={selectedBranch} onSent={result => navigate('/dashboard/barbers', { state: { invitationNotice: result.delivered ? 'sent' : 'deliveryFailed' } })} />
-        : <BarberForm key={selectedBranch?.id} managed services={services.filter(item => item.branchId === selectedBranch?.id)}
+        : selectedBranch ? <BarberForm key={selectedBranch.id} managed services={services.filter(item => item.branchId === selectedBranch.id)}
           onSubmit={create} onCancel={() => navigate('/dashboard/barbers')} isSubmitting={busy} submissionError={error}
-          onClearError={() => setError(null)} disabledReason={!selectedBranch ? t('barberInvitations.errors.SHOP_REQUIRED') : ''} />}
+          onClearError={() => setError(null)} /> : <p role="alert">{t('barberInvitations.errors.SHOP_REQUIRED')}</p>}
     </div>
   </div>;
 }
