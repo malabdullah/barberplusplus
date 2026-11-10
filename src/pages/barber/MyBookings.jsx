@@ -1,3 +1,4 @@
+import BookingContact from '../../components/BookingContact';
 import { useNotificationBooking } from '../../hooks/useNotificationBooking';
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,6 @@ import {
   Clock,
   User,
   Scissors,
-  Phone,
   X,
   Check,
   AlertCircle,
@@ -154,13 +154,7 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
             <span className="detail-value">{booking.customerName}</span>
           </div>
         </div>
-        <div className="booking-detail-row">
-          <Phone size={18} strokeWidth={1.5} />
-          <div>
-            <span className="detail-label">Phone</span>
-            <span className="detail-value">{booking.customerCountryCode} {booking.customerPhone}</span>
-          </div>
-        </div>
+        <BookingContact booking={booking} />
       </div>
 
       <div className="booking-details-section">

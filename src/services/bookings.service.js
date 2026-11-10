@@ -30,11 +30,13 @@ const toFrontend = (booking) => {
       name: customer.name,
       countryCode: customer.country_code,
       phone: customer.phone,
+      email: customer.email || null,
     } : null,
     // Backward compatibility - flatten customer fields
     customerName: customer.name || null,
     customerCountryCode: customer.country_code || null,
     customerPhone: customer.phone || null,
+    customerEmail: customer.email || null,
     date: booking.date,
     time: booking.time?.slice(0, 5),
     duration: booking.duration,
@@ -86,7 +88,7 @@ export const bookingsService = {
    */
   getAll: async (filters = {}) => {
     // Join customers table to get customer details
-    let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone)');
+    let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone, email)');
     if (filters.branchId) query = query.eq('branch_id', filters.branchId);
     if (filters.barberId) query = query.eq('barber_id', filters.barberId);
     if (filters.date) query = query.eq('date', filters.date);
@@ -99,7 +101,7 @@ export const bookingsService = {
   getChairAppointments: async ({ branchId, barberId, history, today, time, start, count }) => {
     const open = 'pending,confirmed';
     const upcoming = `date.gt.${today},and(date.eq.${today},time.gte.${time})`;
-    let query = supabase.from('bookings').select('*, customer:customers(id,name)')
+    let query = supabase.from('bookings').select('*, customer:customers(id,name,email)')
       .eq('branch_id', branchId).eq('barber_id', barberId);
     query = history
       ? query.or(`status.not.in.(${open}),date.lt.${today},and(date.eq.${today},time.lt.${time})`)
@@ -119,7 +121,7 @@ export const bookingsService = {
   getById: async (id) => {
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, country_code, phone), barber:barbers(name)')
+      .select('*, customer:customers(id, name, country_code, phone, email), barber:barbers(name)')
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;
@@ -197,7 +199,7 @@ export const bookingsService = {
       .from('bookings')
       .update(toDatabase(bookingData))
       .eq('id', id)
-      .select('*, customer:customers(id, name, country_code, phone)')
+      .select('*, customer:customers(id, name, country_code, phone, email)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -218,7 +220,7 @@ export const bookingsService = {
       .from('bookings')
       .update(updateData)
       .eq('id', id)
-      .select('*, customer:customers(id, name, country_code, phone)')
+      .select('*, customer:customers(id, name, country_code, phone, email)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -234,7 +236,7 @@ export const bookingsService = {
   getByDateRange: async (startDate, endDate, branchId = null) => {
     let query = supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, country_code, phone)')
+      .select('*, customer:customers(id, name, country_code, phone, email)')
       .gte('date', startDate)
       .lte('date', endDate);
     if (branchId) query = query.eq('branch_id', branchId);

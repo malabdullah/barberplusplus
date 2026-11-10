@@ -96,7 +96,7 @@ test('guest completes a real hosted booking',async ({page})=>{
   await page.locator('input[name="time"]').first().check();
   await page.getByRole('button',{name:'Continue as guest',exact:true}).click();
   await page.locator('#customer-name').fill('Cloud Test Guest');
-  await page.locator('#customer-phone').fill('50000991');
+  await page.locator('#guest-email').fill('hosted-guest@example.test');
   await page.locator('#booking-notes').fill('Synthetic cloud readiness check');
   await page.locator('#booking-next').click();
   await expect(page.locator('.cb-success')).toBeVisible();
