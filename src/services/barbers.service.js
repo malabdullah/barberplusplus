@@ -8,6 +8,7 @@ const toFrontend = (barber) => {
     id: barber.id,
     userId: barber.user_id,
     managerChair: barber.manager_chair === true,
+    managerManaged: barber.management_mode === 'managed',
     autoConfirmBookings: barber.auto_confirm_bookings !== false,
     branchId: barber.branch_id,
     name: barber.name,
@@ -37,6 +38,7 @@ const toFrontend = (barber) => {
 // Convert camelCase frontend data to snake_case for DB
 const toDatabase = (data) => {
   const result = {};
+  if (data.id !== undefined) result.id = data.id;
   if (data.userId !== undefined) result.user_id = data.userId;
   if (data.branchId !== undefined) result.branch_id = data.branchId;
   if (data.name !== undefined) result.name = data.name;
@@ -65,6 +67,11 @@ const toDatabase = (data) => {
 };
 
 export const barbersService = {
+  createManaged: async (branchId, data) => {
+    const result = await supabase.rpc('create_managed_barber', { p_shop: branchId, p_data: toDatabase(data) });
+    if (result.error) throw result.error;
+    return toFrontend(result.data);
+  },
   /**
    * Get all barbers, optionally filtered by branch
    * @param {string} branchId - Optional branch ID to filter

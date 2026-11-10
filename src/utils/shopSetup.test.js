@@ -36,3 +36,8 @@ it('only builds internal return links for the signed-in manager’s own shop',()
 it('requires enough overlapping time for an assigned service',()=>{
  expect(getShopSetup(shop,[{...service,duration:30}],[{...barber,availability:{monday:{enabled:true,start:'09:00',end:'09:15'}}}]).ready).toBe(false);
 });
+
+it('accepts an active manager-managed barber with services and approved hours without an account',()=>{
+ expect(getShopSetup(shop,[service],[{...barber,userId:null,managerManaged:true,inviteStatus:'managed'}]).ready).toBe(true);
+ expect(getShopSetup(shop,[service],[{...barber,userId:null,managerManaged:true,inviteStatus:'managed',availabilityApprovedAt:null}]).ready).toBe(false);
+});

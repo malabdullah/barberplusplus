@@ -15,7 +15,7 @@ export function setupReturn(search, branches, userId) {
 export function getShopSetup(shop, allServices = [], allBarbers = []) {
   const services = allServices.filter(s => s.branchId === shop?.id && s.status !== 'inactive' && s.name?.trim() && Number.isInteger(s.duration) && s.duration >= 5 && Number.isFinite(s.price) && s.price >= 0);
   const serviceIds = new Set(services.map(s => s.id));
-  const barbers = allBarbers.filter(b => b.branchId === shop?.id && b.userId && (b.managerChair || !b.inviteStatus || b.inviteStatus === 'accepted'));
+  const barbers = allBarbers.filter(b => b.branchId === shop?.id && (b.managerManaged || b.userId && (b.managerChair || !b.inviteStatus || b.inviteStatus === 'accepted')));
   const assigned = b => b.services?.some(id => serviceIds.has(id));
   const hours = b => Boolean(b.availabilityApprovedAt) && DAY_KEYS.some(day => {
     const h = b.availability?.[day]; const open = shop?.openingHours?.[day];

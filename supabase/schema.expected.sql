@@ -70,7 +70,10 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     "availability_revision" integer DEFAULT 0 NOT NULL,
     "availability_approved_at" timestamp with time zone DEFAULT "now"(),
     "auto_confirm_bookings" boolean DEFAULT true NOT NULL,
+    "management_mode" "text" DEFAULT 'account'::"text" NOT NULL,
+    CONSTRAINT "barbers_management_mode_check" CHECK (("management_mode" = ANY (ARRAY['account'::"text", 'managed'::"text"]))),
     CONSTRAINT "barbers_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text", 'on_leave'::"text"]))),
+    CONSTRAINT "managed_barber_has_no_account" CHECK ((("management_mode" <> 'managed'::"text") OR (("user_id" IS NULL) AND (NOT "manager_chair") AND ("email" IS NULL)))),
     CONSTRAINT "max_booking_days_range" CHECK ((("max_booking_days" >= 1) AND ("max_booking_days" <= 365)))
 );
 ALTER TABLE "public"."barbers" OWNER TO "postgres";
@@ -185,6 +188,9 @@ CREATE OR REPLACE FUNCTION "public"."can_write_avatar_object"("object_name" "tex
     SET "search_path" TO ''
     AS $_$
  select auth.uid() is not null and private.live_staff_role() is not null
+   and coalesce((select private.managed_barber_manager(b.branch_id) from public.barbers b
+    where b.management_mode='managed' and b.id::text=left(split_part(object_name,'/',2),36)
+     and split_part(object_name,'/',1)='barbers'),true)
  and object_name ~ '^(branches|barbers|profiles)/[0-9a-f-]{36}-[0-9]+\.(jpg|jpeg|png|webp|gif)$'
  and (private.live_staff_role()='admin'
   or split_part(object_name,'/',1)='profiles' and left(split_part(object_name,'/',2),36)=auth.uid()::text and private.live_staff_role() in ('manager','barber')
@@ -485,6 +491,34 @@ BEGIN
 END;
 $$;
 ALTER FUNCTION "public"."create_booking_reminder"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.barbers%rowtype; ids uuid[]; profile_id uuid:=coalesce(nullif(p_data->>'id','')::uuid,gen_random_uuid());
+begin
+ if private.managed_barber_manager(p_shop) is not true then
+  raise exception 'NOT_AUTHORIZED' using errcode='42501';
+ end if;
+ perform pg_advisory_xact_lock(hashtextextended('managed-barber:'||profile_id::text,0));
+ select * into b from public.barbers where id=profile_id;
+ if b.id is not null then
+  if b.branch_id<>p_shop or b.management_mode<>'managed' then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+  return to_jsonb(b);
+ end if;
+ if jsonb_typeof(p_data) is distinct from 'object' or length(trim(coalesce(p_data->>'name',''))) not between 2 and 120
+  or length(coalesce(p_data->>'name_ar',''))>120 then raise exception 'INVALID_NAME';end if;
+ if p_data ? 'service_ids' and jsonb_typeof(p_data->'service_ids')<>'array' then raise exception 'INVALID_SERVICE_ASSIGNMENT';end if;
+ ids:=array(select jsonb_array_elements_text(coalesce(p_data->'service_ids','[]'))::uuid);
+ if cardinality(ids)>200 or cardinality(ids)<>(select count(distinct id) from unnest(ids) id) or exists(
+  select 1 from unnest(ids) x(id) left join public.services s on s.id=x.id where s.id is null or s.branch_id<>p_shop or s.status<>'active'
+ ) then raise exception 'INVALID_SERVICE_ASSIGNMENT';end if;
+ insert into public.barbers(id,branch_id,name,name_ar,country_code,phone,status,service_ids,management_mode,invite_status,availability,availability_approved_at)
+ values(profile_id,p_shop,trim(p_data->>'name'),coalesce(p_data->>'name_ar',''),coalesce(p_data->>'country_code','+965'),nullif(trim(p_data->>'phone'),''),'inactive',ids,'managed','managed','{}',null)
+ returning * into b;
+ return to_jsonb(b);
+end $$;
+ALTER FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -1604,9 +1638,11 @@ declare b public.barbers%rowtype; actor text:=private.live_staff_role();
 begin
  if p_enabled is null then raise exception 'INVALID_REQUEST';end if;
  select * into b from public.barbers where id=p_barber_id for update;
- if actor is null or b.user_id is distinct from auth.uid() or not (
-  actor='barber' and not b.manager_chair or actor='manager' and b.manager_chair and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid())
- ) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if actor is null or (
+  b.management_mode='managed' and private.managed_barber_manager(b.branch_id)
+  or b.management_mode='account' and b.user_id=auth.uid() and (actor='barber' and not b.manager_chair
+   or actor='manager' and b.manager_chair and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid()))
+ ) is not true then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
  update public.barbers set auto_confirm_bookings=p_enabled where id=b.id;
  return jsonb_build_object('auto_confirm_bookings',p_enabled);
 end $$;
@@ -1620,6 +1656,7 @@ declare
  shop_id uuid:=nullif(p_data->>'branch_id','')::uuid; invite_id uuid:=nullif(p_data->>'id','')::uuid;
  mail text:=lower(trim(p_data->>'email')); person auth.users%rowtype; shop public.branches%rowtype;
  inv private.shop_barber_invitations%rowtype; profile public.customers%rowtype;
+ target public.barbers%rowtype; target_id uuid:=nullif(p_data->>'managed_barber_id','')::uuid;
  chair public.barbers%rowtype; uid uuid; label text; full_phone text; dial text; skip_count integer;
  actual_hash text:=p_data->>'token_hash'; password text:=p_data->>'password';
 begin
@@ -1628,14 +1665,18 @@ begin
   if invite_id is not null then
    select * into inv from private.shop_barber_invitations where id=invite_id for update;
    if inv.id is null or inv.manager_id<>actor then raise exception 'FORBIDDEN' using errcode='42501';end if;
-   shop_id:=inv.branch_id;
+   shop_id:=inv.branch_id;target_id:=inv.managed_barber_id;
   end if;
   select * into shop from public.branches where id=shop_id and manager_id=actor for share;
   if shop.id is null then raise exception 'FORBIDDEN' using errcode='42501';end if;
+  if target_id is not null then
+   select * into target from public.barbers where id=target_id and branch_id=shop.id and management_mode='managed' and user_id is null and not manager_chair for update;
+   if target.id is null then raise exception 'MANAGED_BARBER_UNAVAILABLE';end if;
+  end if;
   if p_action='list' then
    skip_count:=greatest(0,least(coalesce((p_data->>'offset')::integer,0),10000));
    return jsonb_build_object('invitations',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from (
-    select id,email,status,delivery,generation,expires_at,created_at,sent_at,accepted_at,barber_id
+    select id,email,status,delivery,generation,expires_at,created_at,sent_at,accepted_at,barber_id,managed_barber_id
     from private.shop_barber_invitations where branch_id=shop.id and manager_id=actor
     order by created_at desc,id desc limit 11 offset skip_count) x));
   end if;
@@ -1667,7 +1708,8 @@ begin
    update private.shop_barber_invitations set status='cancelled' where branch_id=shop.id and email=mail and status='pending' and manager_id<>actor;
    if exists(select 1 from private.shop_barber_invitations where branch_id=shop.id and email=mail and status='pending') then raise exception 'INVITE_EXISTS';end if;
    if (select count(*) from private.shop_barber_invitations where manager_id=actor and created_at>now()-interval '1 hour')>=30 then raise exception 'RATE_LIMITED';end if;
-   insert into private.shop_barber_invitations(branch_id,manager_id,email,token_hash) values(shop.id,actor,mail,actual_hash) returning * into inv;
+   if target_id is not null and exists(select 1 from private.shop_barber_invitations where managed_barber_id=target_id and status='pending') then raise exception 'INVITE_EXISTS';end if;
+   insert into private.shop_barber_invitations(branch_id,manager_id,email,token_hash,managed_barber_id) values(shop.id,actor,mail,actual_hash,target_id) returning * into inv;
   else
    if inv.generation>=20 then raise exception 'RATE_LIMITED';end if;
    update private.shop_barber_invitations set token_hash=actual_hash,delivery='sending',generation=generation+1,expires_at=clock_timestamp()+interval '7 days',sent_at=clock_timestamp() where id=inv.id returning * into inv;
@@ -1688,10 +1730,15 @@ begin
  if inv.status='accepted' then raise exception 'INVITE_USED';end if;
  if inv.status='cancelled' then raise exception 'INVITE_CANCELLED';end if;
  if inv.expires_at<=clock_timestamp() then raise exception 'INVITE_EXPIRED';end if;
+ target_id:=inv.managed_barber_id;
+ if target_id is not null then
+  select * into target from public.barbers where id=target_id and branch_id=inv.branch_id and management_mode='managed' and user_id is null and not manager_chair for update;
+  if target.id is null then raise exception 'MANAGED_BARBER_UNAVAILABLE';end if;
+ end if;
  select * into person from auth.users where lower(email)=inv.email and deleted_at is null;
  if person.id is not null and (person.raw_app_meta_data->>'role' is distinct from 'customer' or (person.banned_until is not null and person.banned_until>now())) then raise exception 'EMAIL_UNAVAILABLE';end if;
  if p_action='resolve' then
-  if person.id is null and p_data ? 'phone' and exists(select 1 from private.phone_numbers where phone=private.canonical_phone(p_data->>'phone',p_data->>'country_code')) then raise exception 'PHONE_IN_USE';end if;
+  if person.id is null and p_data ? 'phone' and not private.managed_invitation_phone_available(target_id,private.canonical_phone(p_data->>'phone',p_data->>'country_code')) then raise exception 'PHONE_IN_USE';end if;
   if person.id is not null and private.invitation_live(actor,sid,'customer') and actor=person.id then
    select c.* into profile from public.customers c join private.customer_accounts a on a.customer_id=c.id where a.user_id=person.id;
   end if;
@@ -1723,6 +1770,13 @@ begin
  if full_phone is null or full_phone !~ '^\+(965[569][0-9]{7}|9665[0-9]{8}|9715[0-9]{8}|973[0-9]{8}|974[3567][0-9]{7}|968[79][0-9]{7})$' then raise exception 'INVALID_PHONE';end if;
 
  dial:='+'||substring(full_phone from 2 for 3);
+ -- Email invitation plus accepting account authorizes reclassifying only the
+ -- exact target profile's optional number; it never matches unrelated contacts.
+ if target.id is not null then
+  perform pg_advisory_xact_lock(hashtextextended('barber-phone:'||full_phone,0));
+  update private.phone_numbers set owner_key='user:'||person.id::text,customer_user_id=person.id
+   where phone=full_phone and owner_key='barber:'||target.id::text and customer_user_id is null and customer_record_id is null;
+ end if;
  perform pg_advisory_xact_lock(hashtextextended('barber-phone:'||full_phone,0));
  -- Reclassify only the same canonical person. No number matching can attach
  -- another customer record, and uniqueness guards remain enabled throughout.
@@ -1735,8 +1789,13 @@ begin
  update auth.users set raw_app_meta_data=(raw_app_meta_data-'invitation_setup')||jsonb_build_object('role','barber'),
   raw_user_meta_data=raw_user_meta_data||jsonb_build_object('name',label,'phone',full_phone),
   email_confirmed_at=coalesce(email_confirmed_at,clock_timestamp()),confirmation_token='',updated_at=clock_timestamp() where id=person.id;
+ if target.id is not null then
+  update public.barbers set management_mode='account',user_id=person.id,email=inv.email,country_code=dial,phone=substring(full_phone from 5),
+   invite_status='accepted',invite_sent_at=inv.sent_at,invite_accepted_at=clock_timestamp() where id=target.id returning * into chair;
+ else
  insert into public.barbers(user_id,branch_id,name,email,country_code,phone,status,service_ids,availability,time_offs,vacations,invite_status,invite_sent_at,invite_accepted_at,availability_approved_at)
  values(person.id,inv.branch_id,label,inv.email,dial,substring(full_phone from 5),'inactive','{}','{}','[]','[]','accepted',inv.sent_at,clock_timestamp(),null) returning * into chair;
+ end if;
  update private.shop_barber_invitations set status='accepted',accepted_at=clock_timestamp(),accepted_user_id=person.id,barber_id=chair.id where id=inv.id;
  insert into public.logs(level,log_type,user_id,user_role,action,entity_type,entity_id,message) values('info','action',person.id,'barber','accept_invite','barber',chair.id,'Barber invitation accepted');
  perform private.deliver_dashboard_notification(inv.id,inv.manager_id,inv.branch_id,'manager','barber_invite_accepted',chair.id,'barber',jsonb_build_object('barberId',chair.id,'barberName',label));
@@ -2291,6 +2350,8 @@ CREATE INDEX "idx_whatsapp_messages_session" ON "public"."whatsapp_messages" USI
 CREATE UNIQUE INDEX "notifications_event_recipient_unique" ON "public"."notifications" USING "btree" ("event_id", "recipient_user_id") WHERE ("event_id" IS NOT NULL);
 CREATE INDEX "services_discovery_active" ON "public"."services" USING "btree" ("branch_id", "id") INCLUDE ("duration") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "unique_whatsapp_message_id" ON "public"."whatsapp_messages" USING "btree" ("whatsapp_message_id") WHERE ("whatsapp_message_id" IS NOT NULL);
+CREATE OR REPLACE TRIGGER "a0_managed_barber" BEFORE INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_managed_barber"();
+CREATE OR REPLACE TRIGGER "a0_managed_booking_access" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_managed_booking_access"();
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();
 CREATE OR REPLACE TRIGGER "a_barber_confirmation_preference" BEFORE UPDATE OF "auto_confirm_bookings" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_barber_confirmation_preference"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
@@ -2604,6 +2665,8 @@ GRANT ALL ON FUNCTION "public"."count_users_by_role"("role_filter" "text") TO "s
 GRANT ALL ON FUNCTION "public"."create_booking_reminder"() TO "anon";
 GRANT ALL ON FUNCTION "public"."create_booking_reminder"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_booking_reminder"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;

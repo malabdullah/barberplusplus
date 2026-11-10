@@ -8,6 +8,9 @@ import { logErrorDev } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
 import './AddBranch.css';
 import { setupReturn } from '../utils/shopSetup';
+import AutoConfirmBookings from '../components/BookingPolicy/AutoConfirmBookings';
+import InviteBarberForm from '../components/Invitations/InviteBarberForm';
+import './ManagedBarbers.css';
 
 export default function EditBarber() {
   const { t } = useTranslation();
@@ -19,6 +22,8 @@ export default function EditBarber() {
   const backTo = setup?.path || '/dashboard/barbers';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [invitationNotice, setInvitationNotice] = useState('');
+  const tab = new URLSearchParams(search).get('tab') === 'settings' ? 'settings' : 'profile';
 
   const barber = barbers.find((b) => b.id === barberId && branches.some(shop => shop.id === b.branchId && shop.managerId === user?.id));
   const branchServices = services.filter(service => service.branchId === barber?.branchId);
@@ -65,15 +70,27 @@ export default function EditBarber() {
         <p>{t('barbers.updateProfile')} {barber.name}</p>
       </div>
 
+      {barber.managerManaged && <nav className="managed-barber-tabs" aria-label={t('managedBarbers.manage')}>
+        <Link className={`btn ${tab === 'profile' ? 'btn-primary' : 'btn-secondary'}`} to="?tab=profile">{t('profile.title')}</Link>
+        <Link className="btn btn-secondary" to={`/dashboard/barbers/${barber.id}/schedule`}>{t('availabilityCompact.title')}</Link>
+        <Link className={`btn ${tab === 'settings' ? 'btn-primary' : 'btn-secondary'}`} to="?tab=settings">{t('settings.title')}</Link>
+      </nav>}
       <div className="edit-branch-form-container animate-fade-in-up stagger-1">
         {errorMessage && <p className="error-banner" role="alert">{errorMessage}</p>}
-        <BarberForm
+        {barber.managerManaged && tab === 'settings' ? <div className="managed-barber-settings">
+          <AutoConfirmBookings barberId={barber.id} />
+          <section><h2>{t('managedBarbers.inviteToSignIn')}</h2>
+            {invitationNotice && <p role={invitationNotice === 'deliveryFailed' ? 'alert' : 'status'}>{t('barberInvitations.' + invitationNotice)}</p>}
+            <InviteBarberForm branch={branches.find(item => item.id === barber.branchId)} managedBarberId={barber.id}
+              onSent={result => setInvitationNotice(result.delivered ? 'sent' : 'deliveryFailed')} />
+          </section>
+        </div> : <BarberForm
           barber={barber}
           services={branchServices}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isSubmitting={isSubmitting}
-        />
+        />}
       </div>
     </div>
   );

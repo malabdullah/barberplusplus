@@ -5,7 +5,7 @@ import ConfirmDialog from '../UI/ConfirmDialog';
 import '../Forms/Forms.css';
 import './Invitations.css';
 
-export default function InviteBarberForm({ branch: selectedBranch, onSent }) {
+export default function InviteBarberForm({ branch: selectedBranch, managedBarberId, onSent }) {
   const { t } = useTranslation();
   const tr = (key, options) => t('barberInvitations.' + key, options);
   const [email, setEmail] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [confirm, setConfirm] = useState(false);
@@ -18,11 +18,11 @@ export default function InviteBarberForm({ branch: selectedBranch, onSent }) {
     try {
       if (!branchId) throw new Error('SHOP_REQUIRED');
       if (!confirmed) {
-        const checked = await api.check(branchId, email);
+        const checked = await api.check(branchId, email, ...(managedBarberId ? [managedBarberId] : []));
         if (currentBranch.current !== branchId) return;
         if (checked.kind === 'customer') { setConfirm(true); return; }
       }
-      const result = await api.send(branchId, email, confirmed);
+      const result = await api.send(branchId, email, confirmed, ...(managedBarberId ? [managedBarberId] : []));
       if (currentBranch.current !== branchId) return;
       onSent(result);
     } catch (e) { setError(e.message); setConfirm(false); } finally { setBusy(false); }

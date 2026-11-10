@@ -11,6 +11,13 @@ function setup(overrides:Partial<InviteDependencies>={}) {
  return {calls,mails,created:()=>created,call:async(body:unknown,auth='valid',origin='https://test.example')=>{
  const r=await handler(new Request('https://edge.example',{method:'POST',headers:{Origin:origin,...(auth?{Authorization:'Bearer '+auth}:{})},body:JSON.stringify(body)}));return {status:r.status,body:await r.json()};}};
 }
+Deno.test('managed profile invitations pass only a validated target with trusted actor',async()=>{
+ const s=setup();
+ assertEquals((await s.call({action:'send',branchId:id,email:'new@example.test',managedBarberId:'invalid'})).status,400);
+ assertEquals(s.calls.length,0);
+ assertEquals((await s.call({action:'send',branchId:id,email:'new@example.test',managedBarberId:id,actor:'forged'})).status,200);
+ assertEquals(s.calls[0].data.managed_barber_id,id);assertEquals(s.calls[0].data.actor,'trusted-user');assertEquals(s.created(),0);
+});
 Deno.test('manager identities are derived from the token, not supplied actor/session fields',async()=>{
  const s=setup();const r=await s.call({action:'send',branchId:id,email:' NEW@example.test ',actor:'forged',session:'forged'});assertEquals(r.status,200);
  assertEquals(s.calls[0].data.actor,'trusted-user');assertEquals(s.calls[0].data.session,'trusted-session');assertEquals(s.calls[0].data.email,'new@example.test');assertEquals(s.created(),0);
