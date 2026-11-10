@@ -373,9 +373,10 @@ it('does not erase the saved time when page navigation cancels an availability r
   await chooseAppointment(); await requestVerification();
   cleanup();
   let rejectSlots;
-  customerBookingService.getSlots.mockReturnValueOnce(new Promise((_, reject) => { rejectSlots = reject; }));
+  customerBookingService.getSlots.mockImplementationOnce(() => new Promise((_, reject) => { rejectSlots = reject; }));
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
   await screen.findByLabelText('Email address');
+  await waitFor(() => expect(rejectSlots).toBeTypeOf('function'));
   fireEvent(window, new Event('beforeunload'));
   await act(async () => { rejectSlots(new TypeError('Load failed')); });
   expect(readBookingDraft()).toMatchObject({ time: '10:00', panel: 'details', details: { email: 'guest@example.test' } });
