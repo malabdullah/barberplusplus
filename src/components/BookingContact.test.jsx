@@ -18,3 +18,9 @@ it('keeps malformed legacy email as text instead of an unsafe mail link',()=>{
  render(<BookingContact booking={{customerEmail:'user@example.test\r\nBcc:other@example.test'}}/>);
  expect(screen.queryByRole('link')).not.toBeInTheDocument();
 });
+it('never interprets recipient text as extra mail headers',()=>{
+ render(<BookingContact booking={{customerEmail:'guest@example.test?bcc=other%40example.test'}}/>);
+ const link=screen.getByRole('link');
+ expect(link).toHaveAttribute('href','mailto:guest@example.test%3Fbcc%3Dother%2540example.test');
+ expect(new URL(link.href).search).toBe('');
+});

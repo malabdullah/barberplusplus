@@ -11,7 +11,7 @@ export default function BookingContact({ booking }) {
       <Mail size={18} strokeWidth={1.5} aria-hidden="true" />
       <div style={{ minWidth: 0 }}><span className="detail-label">{t('common.email')}</span>
         <span className="detail-value" style={{ overflowWrap: 'anywhere' }}>
-          {safeEmail ? <a href={`mailto:${email}`} dir="ltr">{email}</a> : <bdi>{email}</bdi>}
+          {safeEmail ? <a href={`mailto:${encodeURIComponent(email).replace('%40', '@')}`} dir="ltr">{email}</a> : <bdi>{email}</bdi>}
         </span>
       </div>
     </div>}

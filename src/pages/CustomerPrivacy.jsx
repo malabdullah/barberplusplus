@@ -19,7 +19,7 @@ export default function CustomerPrivacy() {
       {sections.map((section, index) => <section key={index} aria-labelledby={`privacy-section-${index}`}>
         <h2 id={`privacy-section-${index}`}>{section.title}</h2><p>{section.text}</p>
       </section>)}
-      <a href="mailto:alabdullah.cs@gmail.com" aria-label={t('customerPrivacy.contact')} dir="ltr">alabdullah.cs@gmail.com</a>
+      <a href="mailto:support@barberplusplus.com" aria-label={t('customerPrivacy.contact')} dir="ltr">support@barberplusplus.com</a>
     </main>
   </div>;
 }
