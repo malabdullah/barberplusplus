@@ -109,9 +109,13 @@ Deno.test('APNs sends exact topic, fixed destinations and expiration; transport 
 });
 Deno.test('capture dispatch never calls APNs or mints provider credentials, and revalidates eligibility before capturing', async () => {
   const finished: number[] = [];
+  let continued = 0;
   const handle = createAnnouncementDispatcher({
     ...runtime,
     configuration: async () => config,
+    continueWork: async () => {
+      continued++;
+    },
     claim: async () => [job, { ...job, recipientBinding: '' }],
     validate: async () => true,
     finish: async (_, r) => {
@@ -143,6 +147,7 @@ Deno.test('capture dispatch never calls APNs or mints provider credentials, and 
     ...runtime,
     environment: 'production',
     configuration: async () => config,
+    continueWork: async () => {},
     claim: async () => {
       throw Error('must not claim');
     },

@@ -18,6 +18,7 @@ type Dependencies = {
   publicUrl: string;
   configuration: () => Promise<Configuration>;
   claim: () => Promise<AnnouncementJob[]>;
+  continueWork: () => Promise<void>;
   validate: (job: AnnouncementJob) => Promise<boolean>;
   finish: (
     job: AnnouncementJob,
@@ -100,6 +101,7 @@ export function createAnnouncementDispatcher(deps: Dependencies) {
           }),
         );
       }
+      await deps.continueWork();
       return reply(200, { claimed: jobs.length, captured, accepted, other });
     } catch {
       return reply(503, { error: 'DISPATCH_UNAVAILABLE' });

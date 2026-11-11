@@ -73,3 +73,19 @@ provider deliveries. Browser QA covers English/Arabic, light/dark, Chromium and
 WebKit at desktop, narrow and landscape widths. Native checks are coordinated
 with the iOS chat on Test only. Physical APNs delivery remains a separate,
 owner-approved test; capture results never establish device delivery.
+
+## Queue and audience scale
+
+Audience eligibility is joined in bulk with parameter-aware query planning. A
+5,000-account/5,000-device synthetic hosted Test run measured approximately
+0.51 seconds for audience evaluation and 2.05 seconds for the complete frozen
+preview. One claimed batch remained capped at 20 even when a larger limit was
+requested (about 0.32 seconds). These are Test measurements, not a production
+latency guarantee. All 5,000 fixture records and network queue writes rolled back.
+
+The dispatcher requests one server-side continuation after each bounded batch
+when due jobs remain. It does not wait a minute between every batch. The minute
+cron remains a recovery path. Only explicit transient provider responses are
+retried (maximum three attempts); uncertain delivery is recorded as unknown and
+is never automatically replayed. Consent, session, installation generation and
+frozen mode are rechecked before delivery.

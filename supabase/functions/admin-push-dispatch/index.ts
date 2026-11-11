@@ -23,6 +23,9 @@ Deno.serve(createAnnouncementDispatcher({
     Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   configuration: () => call('configuration'),
   claim: () => call('claim', { limit: 20 }),
+  continueWork: async () => {
+    await call('continue');
+  },
   validate: async (job: AnnouncementJob) =>
     (await call('validate', { id: job.id, lease: job.lease })) === true,
   finish: async (job, result) => {
