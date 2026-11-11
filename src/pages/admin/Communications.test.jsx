@@ -352,3 +352,44 @@ describe('phase2 scheduling and lifecycle', () => {
     expect(adminPushService.send).not.toHaveBeenCalled();
   });
 });
+
+it('switching a duplicated selection to filters does not retain hidden selected IDs', async () => {
+  adminPushService.history.mockResolvedValue({
+    campaigns: [campaign],
+    total: 1,
+  });
+  adminPushService.duplicate.mockResolvedValue({
+    draft: {
+      titleEn: 'Copy',
+      bodyEn: 'Copy body',
+      titleAr: '',
+      bodyAr: '',
+      destination: 'book',
+      filters: { userIds: ['old-selected'], excludeIds: ['old-excluded'] },
+    },
+    users: [{ id: 'old-selected', name: 'Previously selected' }, {
+      id: 'old-excluded',
+      name: 'Previously excluded',
+    }],
+  });
+  await mount();
+  fireEvent.click(
+    await screen.findByRole('button', { name: en.announcements.duplicate }),
+  );
+  await screen.findByDisplayValue('Copy');
+  fireEvent.click(
+    screen.getByRole('button', { name: en.announcements.chooseAudience }),
+  );
+  fireEvent.click(screen.getByLabelText(en.announcements.modes.filtered));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: en.announcements.review }))
+      .toBeEnabled()
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: en.announcements.review }),
+  );
+  await waitFor(() => expect(adminPushService.preview).toHaveBeenCalled());
+  const filters = adminPushService.preview.mock.calls[0][0].filters;
+  expect(filters.userIds).toBeUndefined();
+  expect(filters.excludeIds).toEqual(['old-excluded']);
+});

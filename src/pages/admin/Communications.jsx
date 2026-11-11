@@ -264,7 +264,12 @@ export default function Communications() {
       start();
       const { filters: criteria, ...copy } = draft;
       setMessage(copy);
-      setFilters({ ...blankFilters, ...criteria });
+      const filterCriteria = Object.fromEntries(
+        Object.entries(criteria).filter(([key]) =>
+          !['userIds', 'excludeIds'].includes(key)
+        ),
+      );
+      setFilters({ ...blankFilters, ...filterCriteria });
       if (criteria.userIds?.length) {
         setMode('selected');
         setSelected(
@@ -272,11 +277,13 @@ export default function Communications() {
             criteria.userIds.map((id) => [id, names[id] || { id, name: id }]),
           ),
         );
-      } else {setMode(
+      } else {
+        setMode(
           Object.keys(criteria).filter((key) => key !== 'excludeIds').length
             ? 'filtered'
             : 'all',
-        );}
+        );
+      }
       setExcluded(
         Object.fromEntries(
           (criteria.excludeIds || []).map((
@@ -688,7 +695,12 @@ export default function Communications() {
                       className='form-input'
                       type='datetime-local'
                       value={scheduledTime}
-                      min={kuwaitInput(new Date(Date.now() + 60000))}
+                      min={kuwaitInput(
+                        new Date(
+                          Math.ceil((Date.now() + 60000) / 60000) * 60000,
+                        ),
+                      )}
+                      max={kuwaitInput(new Date(Date.now() + 365 * 86400000))}
                       required
                       disabled={busy}
                       onChange={(e) => setScheduledTime(e.target.value)}
