@@ -73,4 +73,8 @@
 [data-theme='light'] .bs-status--confirmed, [data-theme='light'] .bs-status--completed { color: #286c2e; }
 [data-theme='light'] .bs-status--pending { color: #805b18; }
 [data-theme='light'] .bs-status--cancelled, [data-theme='light'] .bs-status--no_show { color: #9e2929; }
+[data-theme='light'] .bs-share-links .bs-stop { color: #9e2929; }
+[data-theme='dark'] .bs-share-links .bs-stop,
+[data-theme='dark'] .bs-status--cancelled,
+[data-theme='dark'] .bs-status--no_show { color: #e88383; }
 .bs-share-dialog .bs-share-footer .cb-secondary { background: var(--bg-primary); color: var(--text-primary); }
