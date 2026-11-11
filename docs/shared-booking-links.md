@@ -4,7 +4,7 @@ Implemented on hosted Test only. Main and production must remain unchanged until
 
 The account appointment's More → Share booking details and checkout confirmation open the shared-link dialog. Share link uses Web Share with a URL, Copy link is the fallback, Preview opens the read-only appointment and Stop sharing revokes it. Reopening sharing retains the same active URL. Creating a new link after revocation never revives an old link.
 
-The page uses the public Barber++ header, theme, languages and a focused appointment card. It shows current shop/barber identity, purchased services/package, Kuwait date/time/end/duration, price, status, reference, directions and calendar. No customer identity, contacts, notes, internal cancellation reason, management actions or account/claim capability is returned. It refreshes on entry, foreground/focus, explicit Refresh and once per minute while visible.
+The page uses the public Barber++ header, theme, languages and a focused appointment card. It shows current shop/barber identity, purchased services/package, Kuwait date/time/end/duration, price, status, reference, directions and calendar. No customer identity, contacts, notes, internal cancellation reason, management actions or account/claim capability is returned. It refreshes on entry, foreground/focus, explicit Refresh and once per minute while visible. Keyboard Skip to content preserves the token fragment.
 
 ## API and access
 
@@ -15,7 +15,7 @@ New `booking-share` Function uses existing exact environment/origin/Test gateway
 - POST `view`, `token` → `{booking:<whitelisted appointment>}`. No account is required to view; hosted Test still requires its existing environment access gate.
 - All endpoint responses are no-store/no-referrer/noindex. Invalid, revoked, reassigned and expired links return the same LINK_UNAVAILABLE response. No mutation is possible with a viewing link.
 
-`/booking/share#<64 hex token>` keeps the token out of HTTP page URLs, referrers and chat-preview requests. Tokens derive from a random link UUID/nonce under a separate HMAC namespace; only its SHA-256 hash and nonce are saved in the private RLS table. Exact indexed hash lookup is service-only. A server credential rotation invalidates the prior derivation; reconcile and rotate link rows if needed, never expose a server key to restore them.
+`/booking/share#<64 hex token>` keeps the token out of HTTP page URLs, referrers and chat-preview requests. Tokens derive from a random link UUID/nonce under a separate HMAC namespace; only its SHA-256 hash and nonce are saved in the private RLS table. Exact indexed hash lookup is service-only. A server credential rotation changes the reconstruction key. Existing public tokens still require explicit revocation or expiry; operators must reconcile and rotate link rows during that maintenance. Never expose a server key to restore a link.
 
 Only the owner-authorized RPC response permits reconstructing an existing active URL. User-supplied identity fields are discarded by the Function. No receipt, bearer, contacts or token is logged by the feature or embedded in previews. Do not introduce analytics or third-party scripts on this route.
 
