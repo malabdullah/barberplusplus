@@ -323,7 +323,7 @@ describe('phase2 scheduling and lifecycle', () => {
       audiences: [{
         id: 'returning',
         name: 'Returning',
-        filters: { minCompleted: 2 },
+        filters: { maxCompleted: 0 },
       }],
       total: 1,
     });
@@ -343,12 +343,13 @@ describe('phase2 scheduling and lifecycle', () => {
     fireEvent.click(
       screen.getByRole('button', { name: en.announcements.applyAudience }),
     );
+    expect(screen.getByLabelText(en.announcements.maxCompleted)).toHaveValue(0);
     fireEvent.click(
       screen.getByRole('button', { name: en.announcements.review }),
     );
     await waitFor(() => expect(adminPushService.preview).toHaveBeenCalled());
-    expect(adminPushService.preview.mock.calls[0][0].filters.minCompleted).toBe(
-      2,
+    expect(adminPushService.preview.mock.calls[0][0].filters.maxCompleted).toBe(
+      0,
     );
     expect(adminPushService.send).not.toHaveBeenCalled();
   });

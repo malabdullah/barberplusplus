@@ -21,6 +21,7 @@ export default function AnnouncementAudience(
   const loadSaved = async (page = 1) => {
     setSaved(await adminPushService.audiences(page));
     setSavedPage(page);
+    setPreset('');
   };
   useEffect(() => {
     run(() => loadSaved());
@@ -180,7 +181,7 @@ export default function AnnouncementAudience(
                     max='100000'
                     step='1'
                     disabled={busy}
-                    value={filters[key] || ''}
+                    value={filters[key] ?? ''}
                     onChange={(e) =>
                       change(key, e.target.value)}
                   />
