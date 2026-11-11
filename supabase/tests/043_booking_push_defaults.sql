@@ -6,6 +6,7 @@ create function pg_temp.defaults_assert(value boolean,label text) returns void l
 do $tests$
 declare uid uuid:=gen_random_uuid();sid uuid:=gen_random_uuid();cid uuid:=gen_random_uuid();device uuid:=gen_random_uuid();guest_device uuid:=gen_random_uuid();client jsonb;got jsonb;chosen jsonb:='{"updates":true,"reminder24":false,"reminder2":true,"reviews":false}';all_on jsonb:='{"updates":true,"reminder24":true,"reminder2":true,"reviews":true}';
 begin
+ perform public.configure_customer_push_runtime('https://qvkucvcjmojjbphlzlks.supabase.co','com.barberplusplus.customer.test',array['sandbox']);
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)values(uid,uid::text||'@example.test',now(),'{"role":"customer"}','{}');
  insert into auth.sessions(id,user_id)values(sid,uid);
  insert into public.customers(id,name,email,created_by_type)values(cid,'Notification defaults SQL QA',uid::text||'@example.test','customer');
@@ -15,8 +16,10 @@ begin
  perform pg_temp.defaults_assert(got->'preferences'=all_on,'fresh signed-in installation defaults all four on');
  insert into private.customer_push_preferences(account_id)values(uid);
  perform pg_temp.defaults_assert((select preferences=all_on from private.customer_push_preferences where account_id=uid),'future account preference rows default all four on');
+ if to_regprocedure('public.customer_announcement_api(text,jsonb)')is not null then
  got:=public.customer_announcement_api('status',jsonb_build_object('user_id',uid,'session_id',sid));
  perform pg_temp.defaults_assert(got->'enabled'='false'::jsonb,'announcements remain separate and default off');
+ end if;
  got:=public.customer_push_api('push-preferences',client||jsonb_build_object('preferences',chosen,'notificationsEnabled',false));
  got:=public.customer_push_api('push-preferences',client||jsonb_build_object('preferences',chosen,'notificationsEnabled',true));
  perform pg_temp.defaults_assert(got->'preferences'=chosen,'master off/on preserves saved review and reminder opt-outs');

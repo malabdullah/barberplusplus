@@ -136,3 +136,11 @@ SQL042/043/044 run transactionally, with all fixtures and queue kicks rolled bac
 Hosted acceptance separately verifies the actual cron→Function→capture path,
 cancellation, duplicate drafts and saved-filter APIs using a synthetic account
 and fictional device. Main and production are excluded from Phase2 deployment.
+
+Phase2's hosted synthetic benchmark included 5,000 eligible accounts, devices and
+owned completed bookings, with completed-count and last-visit filters enabled.
+The complete frozen preview took about 3.8 seconds; claiming a bounded 20-device
+batch took about 0.34 seconds. Device eligibility is joined before aggregation,
+preventing an activity-filter join plan from rescanning the complete device-count
+aggregate for every account. All benchmark fixtures and capture acknowledgements
+rolled back. These are Test measurements, not a production latency guarantee.
