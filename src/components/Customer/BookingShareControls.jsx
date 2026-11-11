@@ -60,6 +60,10 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
     submitting.current = true;
     setSharing(true); setError(''); setMessage(''); setManualUrl('');
     const menu = button.current?.closest('details');
+    const closeMenu = () => {
+      menu?.removeAttribute('open');
+      if (mounted.current && menu?.isConnected) menu.querySelector('summary')?.focus({ preventScroll: true });
+    };
     try {
       let ready = link.current;
       if (!ready || new Date(ready.expiresAt).getTime() <= Date.now()) ready = await prepare();
@@ -70,9 +74,9 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
         try {
           const sending = navigator.share({ title: tr('title'), url: ready.url });
           await sending;
-          menu?.removeAttribute('open');
+          closeMenu();
           return;
-        } catch (failure) { if (failure.name === 'AbortError') { menu?.removeAttribute('open'); return; } }
+        } catch (failure) { if (failure.name === 'AbortError') { closeMenu(); return; } }
       }
       if (!current()) return;
       try {

@@ -63,6 +63,7 @@ it('prepares lazily when More opens, and a new booking revision obtains a fresh 
   const menu = view.container.querySelector('details'); menu.open = true; fireEvent(menu, new Event('toggle'));
   const button = await ready(); fireEvent.click(button); expect(navigator.share).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(menu.open).toBe(false));
+  expect(menu.querySelector('summary')).toHaveFocus();
   view.rerender(<I18nextProvider i18n={i18n}><BookingShareControls bookingId="appointment" revision="rescheduled" /></I18nextProvider>);
   await ready(); expect(bookingShareService.create).toHaveBeenCalledTimes(2);
 });
