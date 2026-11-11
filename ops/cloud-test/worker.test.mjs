@@ -5,6 +5,17 @@ import worker from './worker.js';
 const origin = 'https://test.example.com';
 const env = {APP_URL:origin,SUPABASE_URL:'https://abcdefghijklmnopqrst.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public',TEST_ACCESS_PASSWORD:'test-only-password',CLOUD_TEST_ACCESS_KEY:'gateway-test-only',ASSETS:{fetch:async request => {assert.equal(request.headers.get('authorization'),null);return new Response('asset');}}};
 const login = () => new Request(origin,{headers:{authorization:`Basic ${btoa('tester:test-only-password')}`}});
+test('shared appointment HTML stays behind the Test gate and uses generic no-store metadata', async () => {
+  const url = origin + '/booking/share';
+  assert.equal((await worker.fetch(new Request(url),env)).status,401);
+  const response = await worker.fetch(new Request(url,{headers:{authorization:login().headers.get('authorization')}}),{
+    ...env,ASSETS:{fetch:async request=>{assert.equal(new URL(request.url).pathname,'/booking-share');assert.equal(request.headers.get('authorization'),null);return new Response('<title>Shared appointment | Barber++</title>');}},
+  });
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('x-robots-tag'),/noindex/);
+  assert.equal(response.headers.get('referrer-policy'),'no-referrer');
+  assert.equal(response.headers.get('cache-control'),'private, no-store');
+});
 test('application pages and assets fail closed before authentication', async () => {
   assert.equal((await worker.fetch(new Request(`${origin}/assets/app.js`),env)).status,401);
   assert.equal((await worker.fetch(login(),{...env,TEST_ACCESS_PASSWORD:''})).status,503);

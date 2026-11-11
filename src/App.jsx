@@ -72,6 +72,7 @@ const CustomerPassword = lazy(() => import('./pages/CustomerPassword'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
+const SharedBooking = lazy(() => import('./pages/SharedBooking'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
@@ -152,6 +153,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<PublicLayout />}>
+      {customerFeaturesEnabled && <Route path="/booking/share" element={<Suspense fallback={null}><SharedBooking /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/password" element={<Suspense fallback={null}><CustomerPassword /></Suspense>} />}
       {customerFeaturesEnabled && ['sign-in', 'sign-up', 'forgot-password', 'reset-password'].map(mode => <Route key={mode} path={`/customer/${mode}`} element={<Suspense fallback={null}><CustomerAuth key={mode} mode={mode} /></Suspense>} />)}

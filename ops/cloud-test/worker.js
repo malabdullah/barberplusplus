@@ -8,7 +8,7 @@ const installAssets = new Map([
   ['/icon-512.png', 'image/png'],
   ['/site.webmanifest', 'application/manifest+json'],
 ]);
-const functions = new Set(['customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox']);
+const functions = new Set(['booking-share', 'customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox']);
 
 async function digest(value) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
@@ -69,7 +69,9 @@ export default {
       response = new Response('User-agent: *\nDisallow: /\n');
     } else {
       // Credentials and test cookies are never sent to the static asset service.
-      response = await env.ASSETS.fetch(new Request(request.url, {method:request.method,headers:{Accept:request.headers.get('accept') || '*/*'}}));
+      const assetUrl = new URL(request.url);
+      if (url.pathname === '/booking/share') assetUrl.pathname = '/booking-share';
+      response = await env.ASSETS.fetch(new Request(assetUrl, {method:request.method,headers:{Accept:request.headers.get('accept') || '*/*'}}));
     }
     const result = new Response(response.body, response);
     if (url.pathname === '/test-inbox' && url.searchParams.get('format') !== 'json' && response.ok) {

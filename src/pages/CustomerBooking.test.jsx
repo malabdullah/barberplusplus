@@ -24,6 +24,7 @@ const catalog = {
   services: [{ id: 'wash', branchId: 'branch', name: 'Hair wash', duration: 15, price: 2 }, { id: 'hair', branchId: 'branch', name: 'Haircut', duration: 30, price: 5 }, { id: 'beard', branchId: 'branch', name: 'Beard trim', duration: 15, price: 3 }],
 };
 const receipt = { id: 'saved', reference: 'TESTREF', branchName: 'Seafront shop', barberName: 'Omar', date: '2026-10-31', time: '10:00', duration: 30, price: 5, services: [{ name: 'Haircut' }] };
+vi.mock('../services/bookingShare.service', () => ({ bookingShareService: { create: vi.fn(), revoke: vi.fn(), view: vi.fn() } }));
 let i18n;
 beforeEach(async () => {
   vi.resetAllMocks();

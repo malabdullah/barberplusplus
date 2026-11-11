@@ -1,9 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarPlus, MoreHorizontal, RotateCcw, Share2 } from 'lucide-react';
+import { CalendarPlus, MoreHorizontal, RotateCcw } from 'lucide-react';
 import { customerAuthService } from '../../services/customerAuth.service';
 import { downloadBookingCalendar, getKuwaitDate, safeBookingUrl } from '../../utils/customerBooking';
 import { appointmentDate } from '../../utils/customerRebooking';
+import BookingShareControls from './BookingShareControls';
 import { shopWording } from '../../utils/customerTerminology';
 
 const actionErrors = ['PACKAGE_DATE_UNAVAILABLE', 'BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
@@ -77,7 +78,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
 
   async function save(event) {
     event.preventDefault();
-    if (submitting.current || action === 'share' || (action === 'reschedule' && !canReschedule)) return;
+    if (submitting.current || (action === 'reschedule' && !canReschedule)) return;
     submitting.current = true;
     setBusy(true); setError('');
     try {
@@ -94,20 +95,6 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     } finally { submitting.current = false; setBusy(false); }
   }
 
-  async function share() {
-    setMessage('');
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: tr('shareTitle'), text: [appointment, booking.package?.name].filter(Boolean).join('\n') });
-        return;
-      }
-      await navigator.clipboard.writeText(appointment);
-      setMessage(tr('copied'));
-    } catch (failure) {
-      if (failure.name !== 'AbortError') open('share');
-    }
-  }
-
   const calendar = () => downloadBookingCalendar({
     id: booking.id, reference: booking.id, date: booking.date, time: booking.time.slice(0, 5),
     duration: booking.duration, services, package: booking.package, branchName: shop, address: booking.shop_address, description: appointment,
@@ -121,7 +108,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
       <summary className="cb-secondary"><MoreHorizontal size={18} aria-hidden="true" />{tr('more')}</summary>
       <div className="ca-upcoming-menu">
         {booking.duration > 0 && <button type="button" onClick={calendar}><CalendarPlus size={17} aria-hidden="true" />{t('customerBooking.addCalendar')}</button>}
-        <button type="button" onClick={share}><Share2 size={17} aria-hidden="true" />{tr('share')}</button>
+        <BookingShareControls bookingId={booking.id} menuItem />
         {canCancel && <button type="button" className="ca-upcoming-danger" onClick={() => open('cancel')}>{tr('cancel')}</button>}
       </div>
     </details>
@@ -137,10 +124,9 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     }}>
       {action && <form onSubmit={save}>
         <div className="ca-appointment-dialog-body">
-          <h3 id={id}>{tr(action === 'cancel' ? 'cancelTitle' : action === 'share' ? 'share' : 'reschedule')}</h3>
+          <h3 id={id}>{tr(action === 'cancel' ? 'cancelTitle' : 'reschedule')}</h3>
           <p>{appointment}</p>
           {action === 'cancel' && <p>{tr('cutoff', { date: formatDate(cutoff) })}</p>}
-          {action === 'share' && <textarea className="cb-input" aria-label={tr('share')} value={appointment} readOnly onFocus={event => event.target.select()} />}
           {action === 'reschedule' && <>
             {!!services.length && <p>{services.map(service => service.name).join(arabic ? '، ' : ', ')}</p>}
             <p>{tr('rescheduleInfo')}</p>
@@ -166,7 +152,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
         <div className="ca-appointment-dialog-actions">
           <button className="cb-secondary" type="button" disabled={busy} onClick={() => setAction('')}>{tr(action === 'cancel' ? 'keep' : 'close')}</button>
           {unavailable ? <button className="cb-secondary" type="button" onClick={onRefresh}>{tr('refresh')}</button>
-            : action !== 'share' && <button type="submit" className={action === 'cancel' ? 'cb-secondary ca-upcoming-danger' : 'cb-primary'} disabled={busy || (action === 'reschedule' && !canReschedule)}>
+            : <button type="submit" className={action === 'cancel' ? 'cb-secondary ca-upcoming-danger' : 'cb-primary'} disabled={busy || (action === 'reschedule' && !canReschedule)}>
               {tr(action === 'cancel' ? 'cancel' : 'saveTime')}
             </button>}
         </div>
