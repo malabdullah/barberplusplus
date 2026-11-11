@@ -49,7 +49,23 @@ begin
  perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'upcoming',true))))->>'total'='0','past booking does not match upcoming');
  perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'city','Nonexistent QA city'))))->>'total'='0','unrelated city excluded');
  preview:=actor||jsonb_build_object('titleEn','QA announcement','bodyEn','Capture only','destination','book','filters',jsonb_build_object('userIds',jsonb_build_array(uid)));
- got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;
+ 
+ -- Every device, account and master-consent gate is checked independently.
+ update private.customer_push_devices set permission=false where id=did;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'OS permission denied');update private.customer_push_devices set permission=true where id=did;
+ update private.customer_push_devices set enabled=false where id=did;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'installation disabled');update private.customer_push_devices set enabled=true where id=did;
+ update private.customer_push_devices set notifications_enabled=false where id=did;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'installation master disabled');update private.customer_push_devices set notifications_enabled=true where id=did;
+ insert into private.customer_push_preferences(account_id,notifications_enabled)values(uid,false);perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'account master disabled');update private.customer_push_preferences set notifications_enabled=true where account_id=uid;
+ update private.customer_push_devices set topic='another.app'where id=did;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'different app excluded');update private.customer_push_devices set topic='com.barberplusplus.customer.test'where id=did;
+ update private.customer_push_devices set environment='production'where id=did;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'production device excluded from Test');update private.customer_push_devices set environment='sandbox'where id=did;
+ update auth.sessions set not_after=now()-interval '1 second'where id=us;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'expired session excluded');update auth.sessions set not_after=null where id=us;
+ update auth.users set banned_until=now()+interval '1 day'where id=uid;perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'suspended account excluded');update auth.users set banned_until=null where id=uid;
+ update auth.users set raw_app_meta_data=raw_app_meta_data||'{"role":"manager"}'where id=uid;perform pg_temp.ann_assert(private.announcement_device_allowed(did,uid),'manager using customer app supported');
+ update auth.users set raw_app_meta_data=raw_app_meta_data||'{"role":"barber"}'where id=uid;perform pg_temp.ann_assert(private.announcement_device_allowed(did,uid),'barber using customer app supported');
+ update auth.users set raw_app_meta_data=raw_app_meta_data||'{"role":"customer"}'where id=uid;
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'governorateId',(select governorate_id from public.branches where id=barber.branch_id),'dateFrom',(current_date-1)::text,'dateTo',(current_date-1)::text))))->>'total'='1','governorate and inclusive booking date filters intersect');
+ denied:=false;begin perform public.admin_push_api('preview',preview||'{"titleAr":"مرحبا","bodyAr":""}');exception when others then denied:=sqlerrm='INVALID_REQUEST';end;perform pg_temp.ann_assert(denied,'incomplete translation denied');
+ denied:=false;begin perform public.admin_push_api('preview',preview||'{"destination":"https://bad.example"}');exception when others then denied:=sqlerrm='INVALID_REQUEST';end;perform pg_temp.ann_assert(denied,'arbitrary destination denied');
+got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;
  perform pg_temp.ann_assert(got->'campaign'->>'devices'='1'and got->'campaign'->>'eligibleUsers'='1','preview freezes exact audience');
  denied:=false;begin perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign));exception when others then denied:=sqlerrm='CONFIRMATION_REQUIRED';end;perform pg_temp.ann_assert(denied,'send needs explicit confirmation');
  insert into private.customer_push_devices(id,secret_hash,account_id,session_id,token,environment,topic,permission)values(did2,extensions.digest(repeat('c',64),'sha256'),uid,us,repeat('d',64),'sandbox','com.barberplusplus.customer.test',true);
@@ -90,6 +106,9 @@ begin
  update private.customer_push_devices set session_id='bb120000-0000-4000-8000-000000000014'where id=did;
  got:=public.customer_announcement_api('register',client||'{"session_id":"bb120000-0000-4000-8000-000000000014"}');perform pg_temp.ann_assert(got->>'recipientBinding'<>binding,'new auth session rotates recipient binding');
  perform pg_temp.ann_assert(jsonb_array_length(public.admin_push_api('options',actor)->'shops')<=25,'shop picker bounded');
+ 
+ -- Only the private worker can set delivery mode, and capture never targets production.
+ denied:=false;begin update private.announcement_runtime set api_url='https://srv1073968.hstgr.cloud',mode='capture'where singleton;exception when check_violation then denied:=true;end;perform pg_temp.ann_assert(denied,'capture prohibited on production API');
  raise notice 'ANNOUNCEMENT_DATABASE_SCENARIOS_PASS';
 end $tests$;
 select pass('Announcement auth, audience, binding, queue, retries and capture invariants');

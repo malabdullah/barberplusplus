@@ -56,3 +56,20 @@ eligible and excluded counts are separate. Each growing list is paginated.
 Keep existing Auth accounts, protected admin, account/history dispatchers and
 booking email/push routines/configuration unchanged. Native integration is owned
 by the iOS chat after its current task; no native production release is implied.
+
+## Test acceptance coverage
+
+The isolated QA accounts are separate from the protected administrator. The
+transactional SQL suite exercises role/MFA and installation-proof denials,
+default-off consent, master switches and OS permission, live-session checks,
+Test topic/environment boundaries, manager/barber customer mode, intersecting
+booking filters, frozen audiences, explicit confirmation and idempotency,
+preview expiry, capture/APNs mode separation, transient retry limits and expired
+leases. Every SQL fixture and settings override rolls back.
+
+A hosted capture campaign uses one synthetic account and a fictional APNs token.
+The real cron-to-Function path must finish it as `captured`, with zero accepted
+provider deliveries. Browser QA covers English/Arabic, light/dark, Chromium and
+WebKit at desktop, narrow and landscape widths. Native checks are coordinated
+with the iOS chat on Test only. Physical APNs delivery remains a separate,
+owner-approved test; capture results never establish device delivery.
