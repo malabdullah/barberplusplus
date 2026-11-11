@@ -13,6 +13,7 @@ const auth = vi.hoisted(() => ({ updateProfile: vi.fn(), logout: vi.fn(), custom
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ loading: false, ...auth }) }));
 vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { bookings: vi.fn() } }));
 vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn() } }));
+vi.mock('../services/bookingShare.service', () => ({ bookingShareService: { create: vi.fn(), revoke: vi.fn(), view: vi.fn() } }));
 let i18n;
 beforeEach(async () => {
   vi.resetAllMocks(); sessionStorage.clear(); customerAuthService.bookings.mockResolvedValue([]);

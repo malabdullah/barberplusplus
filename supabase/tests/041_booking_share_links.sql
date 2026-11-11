@@ -1,0 +1,72 @@
+-- Works on hosted Test without pgTAP; every fixture and mutation is rolled back.
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
+set local statement_timeout='45s';
+create function pg_temp.share_assert(value boolean, label text) returns void language plpgsql as $$begin if value is distinct from true then raise exception 'SHARE_ASSERT: %',label;end if;end$$;
+do $tests$
+declare
+ uid uuid:='bb110000-0000-4000-8000-000000000011';other_uid uuid:='bb110000-0000-4000-8000-000000000012';
+ sid uuid:='bb110000-0000-4000-8000-000000000021';other_sid uuid:='bb110000-0000-4000-8000-000000000022';
+ cid uuid:='bb110000-0000-4000-8000-000000000031';other_cid uuid:='bb110000-0000-4000-8000-000000000032';guest_cid uuid:='bb110000-0000-4000-8000-000000000033';
+ bid uuid:='bb110000-0000-4000-8000-000000000041';guest_bid uuid:='bb110000-0000-4000-8000-000000000042';
+ barber public.barbers%rowtype;identity jsonb;candidate jsonb;got jsonb;viewed jsonb;receipt jsonb;
+ denied boolean;oldhash text:=repeat('a',64);newhash text:=repeat('b',64);guesthash text:=repeat('c',64);
+begin
+ perform pg_temp.share_assert(not has_function_privilege('anon','public.customer_booking_share(text,jsonb)','EXECUTE'),'anonymous cannot execute capability RPC');
+ perform pg_temp.share_assert(not has_function_privilege('authenticated','public.customer_booking_share(text,jsonb)','EXECUTE'),'customers and staff cannot bypass gateway');
+ perform pg_temp.share_assert(has_function_privilege('service_role','public.customer_booking_share(text,jsonb)','EXECUTE'),'gateway permission');
+ perform pg_temp.share_assert((select relrowsecurity from pg_class where oid='private.customer_booking_shares'::regclass),'private table RLS');
+ perform pg_temp.share_assert(not has_table_privilege('authenticated','private.customer_booking_shares','SELECT'),'no direct link enumeration');
+ select * into barber from public.barbers where branch_id is not null and cardinality(service_ids)>0 order by id limit 1;
+ if barber.id is null then raise exception 'Synthetic barber fixture required';end if;
+ insert into public.services(id,branch_id,name,name_ar,duration,price)values('bb110000-0000-4000-8000-000000000051',barber.branch_id,'Purchased cut','قص الشعر',30,10);
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)values
+ (uid,'share-owner@example.test',now(),'{"role":"customer"}','{"name":"Share Owner"}'),
+ (other_uid,'share-other@example.test',now(),'{"role":"customer"}','{"name":"Share Other"}');
+ insert into auth.sessions(id,user_id)values(sid,uid),(other_sid,other_uid);
+ insert into public.customers(id,name,email,created_by_type)values(cid,'Share Owner','share-owner@example.test','customer'),(other_cid,'Share Other','share-other@example.test','customer'),(guest_cid,'Private guest','share-owner@example.test','customer');
+ insert into private.customer_accounts(user_id,customer_id)values(uid,cid),(other_uid,other_cid);
+ insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,notes,added_by_type,service_snapshot)
+ values(bid,cid,barber.branch_id,barber.id,array['bb110000-0000-4000-8000-000000000051']::uuid[],current_date+20,'23:00',30,10,'cancelled','SECRET CUSTOMER NOTE','customer','[{"name":"Purchased cut","name_ar":"قص الشعر","quantity":2,"private":"SECRET"}]'),
+ (guest_bid,guest_cid,barber.branch_id,barber.id,array['bb110000-0000-4000-8000-000000000051']::uuid[],current_date+21,'23:00',30,10,'cancelled','SECRET GUEST NOTE','customer','[{"name":"Guest cut"}]');
+ insert into private.customer_booking_owners(booking_id,account_user_id)values(bid,uid);
+ insert into private.customer_booking_email_context(booking_id,customer_id,guest,language)values(guest_bid,guest_cid,true,'en');
+ identity:=jsonb_build_object('user_id',uid,'session_id',sid,'booking_id',bid);
+ candidate:=jsonb_build_object('id',gen_random_uuid(),'nonce',gen_random_uuid(),'hash',oldhash);
+ got:=public.customer_booking_share('create',identity||candidate);
+ perform pg_temp.share_assert(got->>'hash'=oldhash,'owner creates link');
+ perform pg_temp.share_assert((public.customer_booking_share('create',identity||jsonb_build_object('id',gen_random_uuid(),'nonce',gen_random_uuid(),'hash',newhash)))->>'hash'=oldhash,'repeat sharing preserves existing link');
+ viewed:=public.customer_booking_share('view',jsonb_build_object('hash',oldhash));
+ perform pg_temp.share_assert(viewed->>'status'='cancelled','current status shown');
+ perform pg_temp.share_assert(viewed->'services'->0->>'name'='Purchased cut','purchased service snapshot used');
+ perform pg_temp.share_assert(not(viewed ?| array['id','customer_id','email','phone','notes','user_id','session_id','token','nonce','hash']),'private fields omitted');
+ perform pg_temp.share_assert(not(viewed::text like '%SECRET%')and not(viewed::text like '%example.test%'),'no nested private fields or contacts');
+ perform pg_temp.share_assert((viewed->>'expiresAt')::timestamptz=((current_date+20+'23:00'::time+interval '30 minutes')at time zone'Asia/Kuwait')+interval '24 hours','expiry uses appointment end and Kuwait time');
+ denied:=false;begin perform public.customer_booking_share('create',identity||candidate||jsonb_build_object('user_id',other_uid,'session_id',other_sid));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'another account denied');
+ denied:=false;begin perform public.customer_booking_share('revoke',identity||jsonb_build_object('session_id',other_sid));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.share_assert(denied,'mismatched live session denied');
+ denied:=false;begin perform public.customer_booking_share('create',identity||candidate||jsonb_build_object('session_id',gen_random_uuid()));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.share_assert(denied,'revoked/missing session denied');
+ update public.bookings set time='23:15',date=current_date+22 where id=bid;
+ viewed:=public.customer_booking_share('view',jsonb_build_object('hash',oldhash));perform pg_temp.share_assert(viewed->>'time'='23:15'and(viewed->>'date')::date=current_date+22,'same link reflects rescheduling');
+ update public.bookings set date=current_date-3 where id=bid;
+ denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',oldhash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'expired appointment denied');
+ update public.bookings set date=current_date+22 where id=bid;
+ perform public.customer_booking_share('revoke',identity);
+ denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',oldhash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'revocation invalidates link');
+ perform public.customer_booking_share('create',identity||jsonb_build_object('id',gen_random_uuid(),'nonce',gen_random_uuid(),'hash',newhash));
+ denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',oldhash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'new link never reactivates old token');
+ update public.bookings set customer_id=other_cid where id=bid;
+ denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',newhash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'customer reassignment invalidates existing link');
+ receipt:=jsonb_build_object('id',guest_bid,'guest_contact','email','email','share-owner@example.test','phone','','country_code','+965');
+ perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt,'id',gen_random_uuid(),'nonce',gen_random_uuid(),'hash',guesthash));
+ perform pg_temp.share_assert(public.customer_booking_share('view',jsonb_build_object('hash',guesthash))->>'status'='cancelled','email guest without phone can share');
+ denied:=false;begin perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt||'{"email":"wrong@example.test"}'));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'mismatched guest contact denied');
+ insert into private.customer_booking_owners(booking_id,account_user_id)values(guest_bid,uid);
+ denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',guesthash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'guest-to-account ownership transition invalidates old link');
+ denied:=false;begin perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'guest receipt cannot manage an account-owned booking');
+ raise notice 'SHARED_BOOKING_DATABASE_22_SCENARIOS_PASS';
+end $tests$;
+select pass('Shared link ownership, privacy, expiry, updates and revocation scenarios');
+select * from finish();
+rollback;

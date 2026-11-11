@@ -17,6 +17,7 @@ import CatalogRating from '../components/Customer/CatalogRating';
 import PackagePicker from '../components/Packages/PackagePicker';
 import { packageErrors, packageError } from '../utils/servicePackages';
 import { packageSelection, packageTotals } from '../utils/servicePackages';
+import BookingShareControls from '../components/Customer/BookingShareControls';
 import BookingImage from '../components/Customer/BookingImage';
 import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
@@ -520,7 +521,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
               </>}
             </>}
           </section>
-          <div className="cb-success-actions"><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.reload(); }}>{tr('anotherBooking')}</button></div>
+          <div className="cb-success-actions"><BookingShareControls bookingId={receipt.id} receipt={receipt.claimToken} /><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.reload(); }}>{tr('anotherBooking')}</button></div>
         </div> : <>
           <FavouriteFeedback />
           <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => editSection('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>

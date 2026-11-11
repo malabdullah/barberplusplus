@@ -1,0 +1,71 @@
+.bs-page { min-height: 65vh; }
+.bs-main { max-width: 760px; margin-inline: auto; padding: 48px 24px 64px; }
+.bs-ticket { background: var(--bg-primary); border: 1px solid var(--surface-divider); border-radius: var(--radius-xl); overflow: hidden; }
+.bs-ticket-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px 0; }
+.bs-ticket-header .ca-eyebrow { margin: 0; }
+.bs-status { font-size: 13px; font-weight: 500; padding: 6px 11px; border-radius: var(--radius-sm); background: var(--status-info-bg); color: var(--text-primary); }
+.bs-status--confirmed, .bs-status--completed { background: var(--status-success-bg); color: var(--status-success); }
+.bs-status--pending { background: var(--status-warning-bg); color: var(--accent-primary); }
+.bs-status--cancelled, .bs-status--no_show { background: var(--status-error-bg); color: var(--status-error); }
+.bs-when { padding: 28px 32px 32px; border-bottom: 1px solid var(--surface-divider); }
+.bs-date { font-size: 19px; color: var(--text-secondary); margin: 0 0 8px; }
+.bs-when h1 { font-family: var(--font-display); font-size: clamp(48px, 8vw, 72px); line-height: 1.1; letter-spacing: -.025em; margin: 0 0 12px; color: var(--text-primary); }
+.bs-time-meta { display: block; margin: 0; font-size: 14px; color: var(--text-secondary); }
+.bs-people { padding: 28px 32px; display: grid; gap: 24px; }
+.bs-person { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.bs-person > div:last-child { min-width: 0; }
+.bs-photo { flex: 0 0 64px; width: 64px; height: 64px; display: grid; place-items: center; color: var(--accent-primary); background: var(--bg-secondary); border-radius: var(--radius-md); overflow: hidden; }
+.bs-photo img { width: 100%; height: 100%; object-fit: cover; }
+.bs-photo--barber { border-radius: 50%; }
+.bs-person h2 { font-family: var(--font-body); font-size: 20px; font-weight: 600; line-height: 1.35; margin: 2px 0; overflow-wrap: anywhere; }
+.bs-label { font-size: 12px; color: var(--text-secondary); margin: 0; }
+.bs-person p:not(.bs-label) { font-size: 14px; line-height: 1.5; margin: 4px 0 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.bs-services { margin: 0 32px; padding: 24px 0; border-block: 1px solid var(--surface-divider); }
+.bs-services h2 { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--text-secondary); margin: 0 0 12px; }
+.bs-services ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bs-services li { display: flex; justify-content: space-between; gap: 16px; font-size: 17px; overflow-wrap: anywhere; }
+.bs-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; font-size: 18px; }
+.bs-total strong { font-size: 24px; font-weight: 600; }
+.bs-ticket-actions { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 32px 28px; }
+.bs-ticket-actions > * { flex: 1 1 200px; justify-content: center; }
+.bs-ticket-footer { border-top: 1px dashed var(--surface-divider); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.bs-ticket-footer p, .bs-ticket-footer button { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.bs-ticket-footer bdi { margin-inline-start: 6px; font-weight: 500; letter-spacing: .035em; }
+.bs-state { text-align: center; padding: 64px 24px; }
+.bs-state h1 { font-family: var(--font-display); font-size: 36px; }
+.bs-state p { color: var(--text-secondary); }
+.bs-share-dialog { margin: auto; width: min(460px, calc(100% - 32px)); max-block-size: calc(100dvh - 32px); padding: 0; border: 1px solid var(--surface-divider); border-radius: var(--radius-xl); background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); }
+.bs-share-dialog[open] { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.bs-share-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.bs-share-dialog[dir='rtl'] { font-family: 'Noto Sans Arabic', Tahoma, sans-serif; }
+.bs-share-dialog button { font: inherit; cursor: pointer; }
+.bs-share-dialog .cb-primary { color: #151A20; }
+.bs-share-dialog :where(button,a,input):focus-visible { outline: 2px solid var(--booking-link); outline-offset: 3px; }
+.bs-share-body { padding: 28px; overflow-y: auto; min-block-size: 0; }
+.bs-share-body h3 { font-family: var(--font-display); font-size: 30px; margin: 16px 0 10px; }
+.bs-share-body p { color: var(--text-secondary); line-height: 1.55; }
+.bs-share-symbol { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: var(--radius-md); color: var(--accent-primary); background: var(--status-warning-bg); }
+.bs-share-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.bs-share-buttons > * { flex: 1 1 130px; justify-content: center; }
+.bs-share-links { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.bs-share-links .bs-stop { color: var(--status-error); }
+.bs-share-body .bs-share-expiry { font-size: 12px; margin-top: 20px; }
+.bs-share-footer { display: flex; justify-content: flex-end; padding: 16px 28px; border-top: 1px solid var(--surface-divider); }
+.bs-loading { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 600px) {
+ .bs-main { padding: 24px 16px 40px; }
+ .bs-ticket-header { padding: 20px 20px 0; }
+ .bs-when { padding: 24px 20px; }
+ .bs-date { font-size: 16px; }
+ .bs-people { padding: 24px 20px; }
+ .bs-person h2 { font-size: 18px; }
+ .bs-services { margin-inline: 20px; }
+ .bs-total { padding: 24px 20px; }
+ .bs-total strong { font-size: 21px; }
+ .bs-ticket-actions { padding: 0 20px 24px; }
+ .bs-ticket-footer { padding: 16px 20px; }
+ .bs-share-body { padding: 24px; }
+}
+
+.bs-photo .cb-image { width: 100%; height: 100%; border: 0; background: transparent; color: inherit; }
+.bs-photo .cb-image img { padding: 0; object-fit: cover; }
