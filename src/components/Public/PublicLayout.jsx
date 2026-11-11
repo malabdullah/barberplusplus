@@ -42,7 +42,14 @@ export default function PublicLayout() {
 
   return <NavigationContext.Provider value={{ busy: busy || signingOut, setBusy, setSigningOut }}>
     <div className="public-site">
-      <a className="public-skip" href="#public-content">{t('publicNav.skip')}</a>
+      <a className="public-skip" href="#public-content" onClick={event => {
+        // This route keeps its viewing capability in the URL fragment. A skip
+        // link must move keyboard focus without replacing that capability.
+        if (location.pathname !== '/booking/share') return;
+        event.preventDefault();
+        const content = document.getElementById('public-content');
+        content?.focus(); content?.scrollIntoView({ block: 'start' });
+      }}>{t('publicNav.skip')}</a>
       <PublicHeader />
       <div id="public-content" className="public-content" tabIndex={-1}>{signingOut ? <p className="public-sign-out-loading" role="status">{t('customerAuth.signingOut')}</p> : <Outlet />}</div>
       <PublicFooter />

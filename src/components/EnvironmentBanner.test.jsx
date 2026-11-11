@@ -22,7 +22,10 @@ describe('Test environment indicator', () => {
     expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow, noarchive');
   });
   it('measures wrapped banner height, reacts to resizing and restores the prior offset', async () => {
-    let resize; const disconnect = vi.fn(); let height = 34;
+    let resize, nextFrame;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => { nextFrame = callback; return 1; });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+    const disconnect = vi.fn(); let height = 34;
     vi.stubGlobal('ResizeObserver', class {
       constructor(callback) { resize = callback; }
       observe() {}
@@ -34,7 +37,7 @@ describe('Test environment indicator', () => {
     const { unmount } = render(<I18nextProvider i18n={i18n}><EnvironmentBanner /></I18nextProvider>);
     expect(document.documentElement.style.getPropertyValue('--environment-banner-height')).toBe('34px');
     height = 62;
-    act(() => resize());
+    act(() => { resize(); nextFrame(); });
     expect(document.documentElement.style.getPropertyValue('--environment-banner-height')).toBe('62px');
     unmount();
     expect(disconnect).toHaveBeenCalledOnce();

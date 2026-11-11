@@ -13,6 +13,7 @@ const securityHeaders = {
 
 export default defineConfig({
   plugins: [react()],
+  build: { rollupOptions: { input: { main: 'index.html', sharedBooking: 'booking-share.html' } } },
   server: {
     headers: securityHeaders,
   },

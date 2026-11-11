@@ -1994,7 +1994,7 @@
   },
   "customerPrivacy": {
     "title": "Privacy policy",
-    "updated": "Updated 10 November 2026",
+    "updated": "Updated 11 November 2026",
     "intro": "This page explains how information is used in Barber++ customer accounts and bookings.",
     "back": "Back to booking",
     "sections": [
@@ -2009,6 +2009,10 @@
       {
         "title": "Google and Apple sign-in",
         "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password."
+      },
+      {
+        "title": "Sharing an appointment",
+        "text": "If you choose to share an appointment, anyone with the link can view its shop, barber, services, time, price and status without an account. Your name, email, phone number and private notes are not included. The link updates when the booking changes, expires 24 hours after the appointment ends, and can be disabled with Stop sharing. Recipients can forward the link or save their own copy."
       },
       {
         "title": "Service providers",
@@ -2510,5 +2514,47 @@
     "manage": "Manage barber",
     "phoneOptional": "Phone (optional)",
     "inviteToSignIn": "Invite to sign in"
+  },
+  "bookingShare": {
+    "share": "Share booking details",
+    "title": "Shared appointment",
+    "privacy": "Anyone with the link can view this appointment. Your contact details and notes stay private.",
+    "loading": "Loading…",
+    "shareLink": "Share link",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copyManually": "Select and copy the link below.",
+    "preview": "Preview",
+    "stop": "Stop sharing",
+    "stopped": "Sharing stopped. Previous links no longer work.",
+    "newLink": "Create new link",
+    "expires": "Available until {{date}} (Kuwait time)",
+    "link": "Booking link",
+    "close": "Close",
+    "signInRequired": "Sign in again to share this appointment.",
+    "cannotShare": "This appointment can no longer be shared from this session.",
+    "error": "Could not load the appointment. Please try again.",
+    "errorTitle": "Unable to load appointment",
+    "unavailableTitle": "This link is unavailable",
+    "unavailable": "It may have expired or the customer has stopped sharing it.",
+    "appointment": "Appointment",
+    "shop": "Shop",
+    "barber": "Barber",
+    "services": "Services",
+    "total": "Total",
+    "directions": "Get directions",
+    "calendar": "Add to calendar",
+    "reference": "Reference",
+    "refresh": "Refresh",
+    "kuwaitTime": "Kuwait time",
+    "minutes": "{{count}} min",
+    "status": {
+      "pending": "Awaiting confirmation",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "Not attended"
+    },
+    "endsAt": "Until {{time}}"
   }
 }
