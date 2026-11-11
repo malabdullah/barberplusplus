@@ -2518,7 +2518,7 @@
   "bookingShare": {
     "share": "Share booking details",
     "title": "Shared appointment",
-    "privacy": "Anyone with the link can view this appointment. Your contact details and notes stay private.",
+    "privacy": "Anyone with the link can view this saved copy. Your contact details and notes stay private.",
     "loading": "Loading…",
     "shareLink": "Share link",
     "copy": "Copy link",
