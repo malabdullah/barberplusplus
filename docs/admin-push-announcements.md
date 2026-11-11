@@ -96,3 +96,43 @@ change the separate Announcements or booking-category choices. OS permission
 re-registration must advance its installation generation, invalidating any
 older frozen delivery generation. Both transitions are covered transactionally
 through the normal push-preferences/register routines.
+
+## Phase 2 — hosted Test
+
+The composer offers immediate delivery or a scheduled date/time, always entered
+and displayed in Kuwait time (UTC+3). Scheduling requires a time at least one
+minute ahead and within 365 days. The 15-minute preview confirmation window still
+applies. The minute cron activates due campaigns; this is minute-level delivery,
+not an exact-second guarantee. Expiry is 24 hours after the scheduled time.
+Confirmed schedules survive ordinary admin logout, but delivery requires their
+creator to remain an active admin with a verified TOTP factor.
+
+Saved audiences store filters privately for the creating admin (maximum 100,
+unique case-insensitive name, paginated by 25). They do not save recipients or
+consent. Applying one always requires a fresh audience preview and confirmation.
+Individual selections/exclusions remain per-campaign. Additional filters include
+barber, booking status, completed-visit counts, last completed visit before a
+date, and no bookings yet. Location, shop, barber, status and booking-date filters
+must match the same owned appointment. Completed counts/recency refer to all
+owned completed appointments; no-bookings excludes all accounts with any owned
+appointment, including cancelled appointments. Contradictory criteria are rejected.
+
+Duplication returns an editable draft, without the previous schedule, recipient
+snapshot or any delivery side effect. The admin must review and confirm again.
+Cancellation stops pending recipients and invalidates pre-send validation for
+claimed work. It cannot recall an alert already handed to Apple. In-flight
+provider acknowledgements are retained honestly; transient errors after
+cancellation cannot requeue work. Cancelled campaigns cannot be resumed.
+
+New campaigns freeze an eligibility epoch as well as the original device,
+account, binding and token hash. Ordinary native registration-version/language
+refreshes retain the epoch. Token, account/session, installation, master or OS
+permission transitions invalidate it. Enabled-since consent boundaries still
+prevent opt-out/re-enable replay. Pre-Phase2 campaigns keep their original strict
+registration-version guard. No booking push API, native payload or customer inbox
+is changed by Phase2. Test remains capture-only; real APNs needs separate consent.
+
+SQL042/043/044 run transactionally, with all fixtures and queue kicks rolled back.
+Hosted acceptance separately verifies the actual cron→Function→capture path,
+cancellation, duplicate drafts and saved-filter APIs using a synthetic account
+and fictional device. Main and production are excluded from Phase2 deployment.

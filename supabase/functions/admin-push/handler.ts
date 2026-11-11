@@ -1,4 +1,4 @@
-import { customerRuntime } from '../_shared/customer-runtime.ts';
+import { customerRuntime } from "../_shared/customer-runtime.ts";
 type Data = Record<string, unknown>;
 type Identity = {
   user_id: string;
@@ -15,35 +15,35 @@ export function createAdminPushHandler(deps: Dependencies) {
   const runtime = customerRuntime(deps);
   return async (req: Request) => {
     const allowed = await runtime.allows(req);
-    const origin = req.headers.get('origin');
+    const origin = req.headers.get("origin");
     const headers = {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': allowed && origin ? origin : deps.appUrl,
-      'Access-Control-Allow-Headers':
-        'authorization, apikey, content-type, x-client-info',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Vary': 'Origin',
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": allowed && origin ? origin : deps.appUrl,
+      "Access-Control-Allow-Headers":
+        "authorization, apikey, content-type, x-client-info",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Vary": "Origin",
     };
     const reply = (status: number, value: unknown) =>
       Response.json(value, { status, headers });
-    if (!runtime.enabled) return reply(404, { error: 'NOT_AVAILABLE' });
-    if (!allowed) return reply(403, { error: 'FORBIDDEN' });
-    if (req.method === 'OPTIONS') {
+    if (!runtime.enabled) return reply(404, { error: "NOT_AVAILABLE" });
+    if (!allowed) return reply(403, { error: "FORBIDDEN" });
+    if (req.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
     }
-    if (req.method !== 'POST') return reply(405, { error: 'INVALID_REQUEST' });
+    if (req.method !== "POST") return reply(405, { error: "INVALID_REQUEST" });
     try {
       const token =
-        req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+        req.headers.get("authorization")?.replace(/^Bearer /i, "") || "";
       const identity = token ? await deps.authenticate(token) : null;
-      if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });
-      if (identity.role !== 'admin') return reply(403, { error: 'FORBIDDEN' });
-      if (identity.aal !== 'aal2') {
-        return reply(403, { error: 'ADMIN_MFA_REQUIRED' });
+      if (!identity) return reply(401, { error: "AUTH_REQUIRED" });
+      if (identity.role !== "admin") return reply(403, { error: "FORBIDDEN" });
+      if (identity.aal !== "aal2") {
+        return reply(403, { error: "ADMIN_MFA_REQUIRED" });
       }
       const reader = req.body?.getReader();
-      if (!reader) return reply(400, { error: 'INVALID_REQUEST' });
+      if (!reader) return reply(400, { error: "INVALID_REQUEST" });
       const parts: Uint8Array[] = [];
       let size = 0;
       while (true) {
@@ -52,7 +52,7 @@ export function createAdminPushHandler(deps: Dependencies) {
         size += value.length;
         if (size > 65536) {
           await reader.cancel();
-          return reply(413, { error: 'INVALID_REQUEST' });
+          return reply(413, { error: "INVALID_REQUEST" });
         }
         parts.push(value);
       }
@@ -66,20 +66,26 @@ export function createAdminPushHandler(deps: Dependencies) {
       try {
         body = JSON.parse(new TextDecoder().decode(bytes));
       } catch {
-        return reply(400, { error: 'INVALID_REQUEST' });
+        return reply(400, { error: "INVALID_REQUEST" });
       }
       if (
         !body || Array.isArray(body) ||
         ![
-          'options',
-          'users',
-          'preview',
-          'send',
-          'history',
-          'details',
-          'recipients',
+          "options",
+          "users",
+          "preview",
+          "send",
+          "history",
+          "details",
+          "recipients",
+          "audiences",
+          "saveAudience",
+          "deleteAudience",
+          "barbers",
+          "duplicate",
+          "cancel",
         ].includes(String(body.action))
-      ) return reply(400, { error: 'INVALID_REQUEST' });
+      ) return reply(400, { error: "INVALID_REQUEST" });
       const action = String(body.action);
       const data: Data = {
         user_id: identity.user_id,
@@ -89,74 +95,98 @@ export function createAdminPushHandler(deps: Dependencies) {
         if (
           !Number.isInteger(body.page) || Number(body.page) < 1 ||
           Number(body.page) > 10000
-        ) return reply(400, { error: 'INVALID_REQUEST' });
+        ) return reply(400, { error: "INVALID_REQUEST" });
         data.page = body.page;
       }
-      if (action === 'options' && body.query !== undefined) {
-        if (typeof body.query !== 'string' || body.query.length > 120) {
-          return reply(400, { error: 'INVALID_REQUEST' });
+      if (["options", "barbers"].includes(action) && body.query !== undefined) {
+        if (typeof body.query !== "string" || body.query.length > 120) {
+          return reply(400, { error: "INVALID_REQUEST" });
         }
         data.query = body.query;
       }
-      if (['send', 'details', 'recipients'].includes(action)) {
+      if (
+        ["send", "details", "recipients", "duplicate", "cancel"].includes(
+          action,
+        )
+      ) {
         if (!uuid.test(String(body.campaignId))) {
-          return reply(400, { error: 'INVALID_REQUEST' });
+          return reply(400, { error: "INVALID_REQUEST" });
         }
         data.campaignId = body.campaignId;
       }
-      if (['users', 'preview'].includes(action)) {
+      if (["users", "preview", "saveAudience"].includes(action)) {
         if (
-          !body.filters || typeof body.filters !== 'object' ||
+          !body.filters || typeof body.filters !== "object" ||
           Array.isArray(body.filters)
-        ) return reply(400, { error: 'INVALID_REQUEST' });
+        ) return reply(400, { error: "INVALID_REQUEST" });
         data.filters = body.filters;
       }
-      if (action === 'preview') {
+      if (action === "deleteAudience") {
+        if (!uuid.test(String(body.audienceId))) {
+          return reply(400, { error: "INVALID_REQUEST" });
+        }
+        data.audienceId = body.audienceId;
+      }
+      if (action === "saveAudience") {
+        if (
+          typeof body.name !== "string" || !body.name.trim() ||
+          body.name.length > 80
+        ) return reply(400, { error: "INVALID_REQUEST" });
+        data.name = body.name;
+      }
+      if (action === "preview") {
         for (
           const field of [
-            'titleEn',
-            'bodyEn',
-            'titleAr',
-            'bodyAr',
-            'destination',
+            "titleEn",
+            "bodyEn",
+            "titleAr",
+            "bodyAr",
+            "destination",
+            "scheduledAt",
           ]
         ) {
           if (
-            body[field] !== undefined && typeof body[field] !== 'string'
-          ) return reply(400, { error: 'INVALID_REQUEST' });
+            body[field] !== undefined && typeof body[field] !== "string"
+          ) return reply(400, { error: "INVALID_REQUEST" });
           data[field] = body[field];
         }
       }
-      if (action === 'send') data.confirmed = body.confirmed === true;
+      if (["send", "cancel"].includes(action)) {
+        data.confirmed = body.confirmed === true;
+      }
       return reply(200, await deps.rpc(action, data));
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
+      const message = error instanceof Error ? error.message : "";
       const name = [
-        'AUTH_REQUIRED',
-        'ADMIN_MFA_REQUIRED',
-        'FORBIDDEN',
-        'INVALID_REQUEST',
-        'DELIVERY_DISABLED',
-        'RATE_LIMITED',
-        'AUDIENCE_TOO_LARGE',
-        'NO_RECIPIENTS',
-        'CONFIRMATION_REQUIRED',
-        'PREVIEW_EXPIRED',
-        'NOT_FOUND',
+        "AUTH_REQUIRED",
+        "ADMIN_MFA_REQUIRED",
+        "FORBIDDEN",
+        "INVALID_REQUEST",
+        "DELIVERY_DISABLED",
+        "RATE_LIMITED",
+        "AUDIENCE_TOO_LARGE",
+        "NO_RECIPIENTS",
+        "CONFIRMATION_REQUIRED",
+        "PREVIEW_EXPIRED",
+        "NOT_FOUND",
+        "INVALID_SCHEDULE",
+        "AUDIENCE_NAME_EXISTS",
+        "SAVED_AUDIENCE_LIMIT",
+        "ALREADY_FINISHED",
       ].find((code) => message.includes(code));
       return reply(
-        name === 'AUTH_REQUIRED'
+        name === "AUTH_REQUIRED"
           ? 401
-          : ['ADMIN_MFA_REQUIRED', 'FORBIDDEN'].includes(name || '')
+          : ["ADMIN_MFA_REQUIRED", "FORBIDDEN"].includes(name || "")
           ? 403
-          : name === 'NOT_FOUND'
+          : name === "NOT_FOUND"
           ? 404
-          : name === 'RATE_LIMITED'
+          : name === "RATE_LIMITED"
           ? 429
           : name
           ? 400
           : 503,
-        { error: name || 'UNAVAILABLE' },
+        { error: name || "UNAVAILABLE" },
       );
     }
   };

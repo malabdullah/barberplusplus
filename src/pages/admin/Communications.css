@@ -689,3 +689,19 @@
 
 .ann-header h1 { scroll-margin-top: 150px; }
 .ann-review-recipients { margin-inline-start: 24px; }
+
+.ann-presets { border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; margin-block: 20px; }
+.ann-presets .ann-search { margin-top: 16px; }
+.ann-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-block: 12px; }
+.ann-advanced { margin-block: 20px; border-block: 1px solid var(--border-color); padding-block: 18px; }
+.ann-advanced > summary { cursor: pointer; font-weight: 600; }
+.ann-full { grid-column: 1 / -1; }
+.ann-state { display: block; color: var(--accent-color); font-weight: 600; margin-bottom: 6px; }
+.ann-table td:last-child .ann-text { display: block; margin-top: 12px; }
+.ann-page .ann-danger { color: var(--danger, #dc5757); }
+.ann-scheduling { margin-top: 24px; }
+.ann-scheduled-review { border-inline-start: 3px solid var(--accent-color); padding: 14px 18px; background: var(--bg-secondary); border-radius: 8px; }
+.ann-cancel-dialog { max-width: 520px; }
+.ann-result--cancelled { color: var(--text-secondary); }
+.ann-page input[type='datetime-local'] { min-width: 0; max-width: 100%; color-scheme: light dark; }
+@media (max-width: 600px) { .ann-presets { padding: 16px; } .ann-presets .ann-search { flex-wrap: wrap; } .ann-presets .ann-search input { width: 100%; } }

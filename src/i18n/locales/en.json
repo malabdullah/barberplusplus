@@ -2557,7 +2557,7 @@
     "message": "Message",
     "audience": "Audience",
     "results": "Results",
-    "sentAt": "Sent",
+    "sentAt": "Status / time · Kuwait",
     "details": "Details",
     "actions": "Actions",
     "previous": "Previous",
@@ -2644,7 +2644,8 @@
       "captured": "Captured",
       "skipped": "Skipped",
       "failed": "Failed",
-      "unknown": "Unconfirmed"
+      "unknown": "Unconfirmed",
+      "cancelled": "Cancelled"
     },
     "errors": {
       "AUTH_REQUIRED": "Sign in again to continue.",
@@ -2657,8 +2658,52 @@
       "NO_RECIPIENTS": "No eligible devices remain in this audience.",
       "CONFIRMATION_REQUIRED": "Confirm the recipient count before sending.",
       "PREVIEW_EXPIRED": "This preview expired. Review the audience again.",
-      "UNAVAILABLE": "Could not complete this action. Try again."
+      "UNAVAILABLE": "Could not complete this action. Try again.",
+      "INVALID_SCHEDULE": "Choose a time at least one minute ahead, within the next year.",
+      "AUDIENCE_NAME_EXISTS": "An audience with this name already exists.",
+      "SAVED_AUDIENCE_LIMIT": "You can save up to 100 audiences. Delete an unused one first.",
+      "ALREADY_FINISHED": "This notification has finished sending. There are no queued messages to cancel."
     },
-    "sentBy": "Sent by {{name}}"
+    "sentBy": "Sent by {{name}}",
+    "savedAudiences": "Saved audiences",
+    "chooseSaved": "Choose an audience",
+    "applyAudience": "Apply",
+    "deleteAudience": "Delete",
+    "audienceName": "Audience name",
+    "saveAudience": "Save filters",
+    "bookingActivity": "Booking and visit filters",
+    "noBookings": "No bookings yet",
+    "bookingStatuses": "Booking status",
+    "minCompleted": "Minimum completed visits",
+    "maxCompleted": "Maximum completed visits",
+    "lastVisitBefore": "Last completed visit before",
+    "barbers": "Barbers ({{count}})",
+    "barber": "Barber",
+    "searchBarbers": "Search barbers",
+    "deliveryTime": "When to send",
+    "schedule": "Schedule",
+    "scheduledTime": "Date and time · Kuwait (UTC+3)",
+    "scheduledFor": "Scheduled for {{date}} · Kuwait time",
+    "scheduleConfirm": "Confirm schedule",
+    "scheduledSuccess": "Notification scheduled.",
+    "duplicate": "Duplicate",
+    "cancelCampaign": "Cancel delivery",
+    "cancelWarning": "Stop messages that have not been sent. Messages already being processed may still arrive. Sent notifications cannot be recalled.",
+    "keepCampaign": "Keep delivery",
+    "confirmCancel": "Cancel delivery",
+    "cancelledSuccess": "Remaining delivery cancelled.",
+    "campaignStates": {
+      "preview": "Draft preview",
+      "scheduled": "Scheduled",
+      "queued": "Dispatched",
+      "cancelled": "Cancelled"
+    },
+    "bookingStatus": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No-show"
+    }
   }
 }
