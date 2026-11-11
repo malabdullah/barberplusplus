@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarPlus, Clock, Loader2, MapPin, RefreshCw } from 'lucide-react';
+import { CalendarPlus, Clock, Loader2, MapPin } from 'lucide-react';
 import { bookingShareService } from '../services/bookingShare.service';
 import { downloadBookingCalendar, safeBookingUrl } from '../utils/customerBooking';
 import BookingImage from '../components/Customer/BookingImage';
@@ -69,7 +69,7 @@ export default function SharedBooking() {
           <section className="bs-services" aria-labelledby="bs-services-title"><h2 id="bs-services-title">{packageName || tr('services')}</h2><ul>{services.map((service, index) => <li key={index}><span>{service.name}</span>{service.quantity > 1 && <span>×{service.quantity}</span>}</li>)}</ul></section>
           <div className="bs-total"><span>{tr('total')}</span><strong>{new Intl.NumberFormat(i18n.resolvedLanguage, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>
           <div className="bs-ticket-actions">{directions && <a href={directions} className="cb-primary" target="_blank" rel="noreferrer"><MapPin size={18} aria-hidden="true" />{tr('directions')}</a>}{!cancelled && <button type="button" className="cb-secondary" onClick={calendar}><CalendarPlus size={18} aria-hidden="true" />{tr('calendar')}</button>}</div>
-          <footer className="bs-ticket-footer"><p>{tr('reference')} <bdi>{booking.reference}</bdi></p><button type="button" className="cb-text-button" onClick={() => setRevision(value => value + 1)}><RefreshCw size={14} aria-hidden="true" />{tr('refresh')}</button></footer>
+          <footer className="bs-ticket-footer"><p>{tr('reference')} <bdi>{booking.reference}</bdi></p></footer>
         </article>}
   </main></div>;
 }
