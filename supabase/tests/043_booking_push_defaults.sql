@@ -16,9 +16,9 @@ begin
  perform pg_temp.defaults_assert(got->'preferences'=all_on,'fresh signed-in installation defaults all four on');
  insert into private.customer_push_preferences(account_id)values(uid);
  perform pg_temp.defaults_assert((select preferences=all_on from private.customer_push_preferences where account_id=uid),'future account preference rows default all four on');
- if to_regprocedure('public.customer_announcement_api(text,jsonb)') is not null then
-  got:=public.customer_announcement_api('status',jsonb_build_object('user_id',uid,'session_id',sid));
-  perform pg_temp.defaults_assert(got->'enabled'='false'::jsonb,'announcements remain separate and default off');
+ if to_regprocedure('public.customer_announcement_api(text,jsonb)')is not null then
+ got:=public.customer_announcement_api('status',jsonb_build_object('user_id',uid,'session_id',sid));
+ perform pg_temp.defaults_assert(got->'enabled'='false'::jsonb,'announcements remain separate and default off');
  end if;
  got:=public.customer_push_api('push-preferences',client||jsonb_build_object('preferences',chosen,'notificationsEnabled',false));
  got:=public.customer_push_api('push-preferences',client||jsonb_build_object('preferences',chosen,'notificationsEnabled',true));

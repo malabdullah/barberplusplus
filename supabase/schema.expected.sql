@@ -131,6 +131,16 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.admin_push_api(p_action,p_data);$$;
+ALTER FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.admin_push_worker(p_action,p_data);$$;
+ALTER FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean DEFAULT NULL::boolean) RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -567,6 +577,11 @@ select case
 end;
 $$;
 ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.customer_announcement_api(p_action,p_data);$$;
+ALTER FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -2790,6 +2805,10 @@ GRANT ALL ON TABLE "public"."branches" TO "authenticated";
 GRANT ALL ON TABLE "public"."branches" TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."archive_service"("p_id" "uuid") FROM PUBLIC;
@@ -2836,6 +2855,8 @@ REVOKE ALL ON FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data
 GRANT ALL ON FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
