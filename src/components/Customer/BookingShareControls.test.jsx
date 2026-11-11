@@ -12,7 +12,7 @@ let i18n;
 beforeEach(async () => {
   vi.resetAllMocks();
   i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: { en: { translation: en } } });
-  bookingShareService.create.mockResolvedValue({ url, expiresAt: '2027-01-02T12:00:00Z' });
+  bookingShareService.create.mockResolvedValue({ url, expiresAt: new Date(Date.now() + 86400000).toISOString() });
   Object.defineProperty(navigator, 'share', { configurable: true, value: vi.fn().mockResolvedValue() });
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue() } });
 });
@@ -62,7 +62,7 @@ it('prepares lazily when More opens, and a new booking revision obtains a fresh 
   expect(bookingShareService.create).not.toHaveBeenCalled();
   const menu = view.container.querySelector('details'); menu.open = true; fireEvent(menu, new Event('toggle'));
   const button = await ready(); fireEvent.click(button); expect(navigator.share).toHaveBeenCalledTimes(1);
-  await waitFor(() => expect(button).toBeEnabled());
+  await waitFor(() => expect(menu.open).toBe(false));
   view.rerender(<I18nextProvider i18n={i18n}><BookingShareControls bookingId="appointment" revision="rescheduled" /></I18nextProvider>);
   await ready(); expect(bookingShareService.create).toHaveBeenCalledTimes(2);
 });

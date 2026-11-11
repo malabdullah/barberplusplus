@@ -6,7 +6,7 @@ import './BookingShare.css';
 
 export default function BookingShareControls({ bookingId, receipt, revision = '', menuItem = false }) {
   const { t } = useTranslation();
-  const [preparing, setPreparing] = useState(false);
+  const [preparing, setPreparing] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -43,7 +43,7 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
     const focus = () => { if (!submitting.current) { link.current = null; ready(); } };
     const toggle = () => {
       if (menu.open) ready();
-      else { requestId.current += 1; link.current = null; pending.current = false; setPreparing(false); }
+      else { requestId.current += 1; link.current = null; pending.current = false; setPreparing(true); }
     };
     ready();
     menu?.addEventListener('toggle', toggle);
