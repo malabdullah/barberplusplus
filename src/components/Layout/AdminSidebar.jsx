@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   BarChart3,
+  Send,
   Settings2,
   Shield,
   Settings,
@@ -19,6 +20,7 @@ import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
 const navItems = [
   { path: '/admin', icon: LayoutDashboard, labelKey: 'nav.dashboard', exact: true },
   { path: '/admin/users', icon: Users, labelKey: 'admin.nav.users' },
+  { path: '/admin/communications', icon: Send, labelKey: 'announcements.title' },
   { path: '/admin/analytics', icon: BarChart3, labelKey: 'admin.nav.analytics' },
   { path: '/admin/configuration', icon: Settings2, labelKey: 'admin.nav.configuration' },
   { path: '/admin/audit', icon: Shield, labelKey: 'admin.nav.audit' },

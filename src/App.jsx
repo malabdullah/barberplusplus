@@ -47,6 +47,7 @@ import PlatformAnalytics from './pages/admin/PlatformAnalytics';
 import SystemConfiguration from './pages/admin/SystemConfiguration';
 import LocationsConfig from './pages/admin/LocationsConfig';
 import NotificationTemplates from './pages/admin/NotificationTemplates';
+import Communications from './pages/admin/Communications';
 import GlobalSettings from './pages/admin/GlobalSettings';
 import AuditCompliance from './pages/admin/AuditCompliance';
 import ActivityLogs from './pages/admin/ActivityLogs';
@@ -265,6 +266,7 @@ function AppRoutes() {
         <Route path="configuration" element={<SystemConfiguration />} />
         <Route path="configuration/locations" element={<LocationsConfig />} />
         <Route path="configuration/templates" element={<NotificationTemplates />} />
+        <Route path="communications" element={<Communications />} />
         <Route path="configuration/settings" element={<GlobalSettings />} />
         <Route path="audit" element={<AuditCompliance />} />
         <Route path="audit/activity" element={<ActivityLogs />} />
