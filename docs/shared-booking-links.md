@@ -2,7 +2,7 @@
 
 Implemented on hosted Test only. Main and production must remain unchanged until owner acceptance.
 
-The account appointment's More → Share booking details and checkout confirmation open the shared-link dialog. Share link uses Web Share with a URL, Copy link is the fallback, Preview opens the read-only appointment and Stop sharing revokes it. Reopening sharing retains the same active URL. Creating a new link after revocation never revives an old link.
+The account appointment's More → Share booking details and saved-account checkout confirmation open the shared-link dialog. Past/cancelled appointments retain sharing controls until the link's expiry, so owners can still revoke. Guest checkout must first save the booking to an account before the website offers persistent sharing; receiving a shared link never requires an account. Share link uses Web Share with a URL, Copy link is the fallback, Preview opens the read-only appointment and Stop sharing revokes it. Reopening sharing retains the same active URL. Creating a new link after revocation never revives an old link.
 
 The page uses the public Barber++ header, theme, languages and a focused appointment card. It shows current shop/barber identity, purchased services/package, Kuwait date/time/end/duration, price, status, reference, directions and calendar. No customer identity, contacts, notes, internal cancellation reason, management actions or account/claim capability is returned. It refreshes on entry, foreground/focus, explicit Refresh and once per minute while visible. Keyboard Skip to content preserves the token fragment.
 

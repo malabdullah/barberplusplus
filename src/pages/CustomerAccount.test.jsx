@@ -20,6 +20,18 @@ beforeEach(async () => {
   i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: { en: { translation: en }, ar: { translation: ar } }, interpolation: { escapeValue: false } });
 });
 afterEach(cleanup);
+it('keeps sharing available for a cancelled future appointment, but hides it after expiry', async () => {
+  const next = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const expired = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  customerAuthService.bookings.mockResolvedValue([
+    { id: 'cancelled-future', date: next, time: '10:00', duration: 30, price: 3, status: 'cancelled', shop_name: 'Cancelled shop', barber_name: 'Barber', services: [] },
+    { id: 'expired-visit', date: expired, time: '10:00', duration: 30, price: 3, status: 'completed', shop_name: 'Expired shop', barber_name: 'Barber', services: [] },
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Past appointments' }));
+  expect(await screen.findByRole('button', { name: 'Share booking details' })).toBeVisible();
+  expect(screen.getAllByRole('button', { name: 'Share booking details' })).toHaveLength(1);
+});
 function BookingDestination() { return <pre data-testid="booking-destination">{JSON.stringify(useLocation().state)}</pre>; }
 function mount() { return render(<I18nextProvider i18n={i18n}><MemoryRouter><Routes><Route path="/" element={<CustomerAccount />} /><Route path="/book" element={<BookingDestination />} /></Routes></MemoryRouter></I18nextProvider>); }
 it('keeps profile edits local until save, discards cancelled edits and validates invalid contact data', async () => {
