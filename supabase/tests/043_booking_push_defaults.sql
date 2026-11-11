@@ -6,6 +6,7 @@ create function pg_temp.defaults_assert(value boolean,label text) returns void l
 do $tests$
 declare uid uuid:=gen_random_uuid();sid uuid:=gen_random_uuid();cid uuid:=gen_random_uuid();device uuid:=gen_random_uuid();guest_device uuid:=gen_random_uuid();client jsonb;got jsonb;chosen jsonb:='{"updates":true,"reminder24":false,"reminder2":true,"reviews":false}';all_on jsonb:='{"updates":true,"reminder24":true,"reminder2":true,"reviews":true}';
 begin
+ perform public.configure_customer_push_runtime('https://qvkucvcjmojjbphlzlks.supabase.co','com.barberplusplus.customer.test',array['sandbox']);
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)values(uid,uid::text||'@example.test',now(),'{"role":"customer"}','{}');
  insert into auth.sessions(id,user_id)values(sid,uid);
  insert into public.customers(id,name,email,created_by_type)values(cid,'Notification defaults SQL QA',uid::text||'@example.test','customer');
