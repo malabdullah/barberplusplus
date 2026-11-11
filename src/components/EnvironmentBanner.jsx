@@ -11,13 +11,19 @@ export default function EnvironmentBanner() {
     const style = document.documentElement.style;
     const property = '--environment-banner-height';
     const previous = style.getPropertyValue(property);
-    const measure = () => style.setProperty(property, `${bannerRef.current.getBoundingClientRect().height}px`);
+    let frame;
+    const measure = () => {
+      const height = `${bannerRef.current.getBoundingClientRect().height}px`;
+      if (style.getPropertyValue(property) !== height) style.setProperty(property, height);
+    };
+    const queueMeasure = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
     measure();
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(queueMeasure) : null;
     observer?.observe(bannerRef.current);
     window.addEventListener('resize', measure);
     return () => {
       observer?.disconnect();
+      cancelAnimationFrame(frame);
       window.removeEventListener('resize', measure);
       if (previous) style.setProperty(property, previous);
       else style.removeProperty(property);

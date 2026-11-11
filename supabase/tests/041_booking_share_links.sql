@@ -62,7 +62,10 @@ begin
  perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt,'id',gen_random_uuid(),'nonce',gen_random_uuid(),'hash',guesthash));
  perform pg_temp.share_assert(public.customer_booking_share('view',jsonb_build_object('hash',guesthash))->>'status'='cancelled','email guest without phone can share');
  denied:=false;begin perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt||'{"email":"wrong@example.test"}'));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'mismatched guest contact denied');
- insert into private.customer_booking_owners(booking_id,account_user_id)values(guest_bid,uid);
+ execute 'set local role service_role';
+ perform public.customer_claim_booking(guest_bid,uid,sid);
+ execute 'reset role';
+ perform pg_temp.share_assert(not has_function_privilege('authenticated','private.guest_booking_email_matches(uuid,uuid)','EXECUTE'),'customer cannot use private email check directly');
  denied:=false;begin perform public.customer_booking_share('view',jsonb_build_object('hash',guesthash));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'guest-to-account ownership transition invalidates old link');
  denied:=false;begin perform public.customer_booking_share('create',jsonb_build_object('booking_id',guest_bid,'receipt',receipt));exception when others then denied:=sqlerrm='LINK_UNAVAILABLE';end;perform pg_temp.share_assert(denied,'guest receipt cannot manage an account-owned booking');
  raise notice 'SHARED_BOOKING_DATABASE_22_SCENARIOS_PASS';

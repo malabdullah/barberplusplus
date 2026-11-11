@@ -797,7 +797,7 @@ ALTER FUNCTION "public"."customer_booking_email_validate"("p_id" "uuid", "p_leas
 CREATE OR REPLACE FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare
  b public.bookings%rowtype;
  link private.customer_booking_shares%rowtype;
@@ -867,8 +867,9 @@ begin
    returning * into link;
  end if;
  return jsonb_build_object('id',link.id,'nonce',link.nonce,'hash',link.token_hash,'expiresAt',expiry);
-end $$;
+end $_$;
 ALTER FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+COMMENT ON FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") IS 'Service-only booking sharing. Gateway validates live owner or sealed original guest receipt. View returns only whitelisted appointment data.';
 CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -942,8 +943,7 @@ begin
  if not found then raise exception 'INVALID_REQUEST';end if;
  if exists(select 1 from private.customer_booking_email_context where booking_id=p_booking and guest) then
   profile:=private.resolve_booking_customer(p_account,p_session);
-  if not exists(select 1 from auth.users u join public.customers c on c.id=old_profile
-    where u.id=p_account and u.email_confirmed_at is not null and lower(u.email)=lower(c.email))
+  if not private.guest_booking_email_matches(old_profile,p_account)
     or exists(select 1 from private.customer_booking_owners where booking_id=p_booking and account_user_id<>p_account)
     then raise exception 'INVALID_REQUEST';end if;
   update public.bookings set customer_id=profile where id=p_booking and customer_id is distinct from profile;

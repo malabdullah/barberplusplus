@@ -28,3 +28,7 @@ Additive migration `20261111040859_customer_booking_share_links.sql`; no existin
 Deploy the new Function, preserve its own origin/owner/capability authentication (`verify_jwt=false`), then the hosted Worker allowlist/UI. Preserve Worker secret bindings. A second generic HTML entry has only public brand metadata; production Nginx routing/noindex/no-store/no-referrer support is prepared in source, not deployed to production. Hosting Test remains gated; chat unfurlers without gate credentials will not display its preview. Messaging apps control their own preview caching.
 
 No iOS work is included. The pending native history patch and native email/contact handoff remain separate.
+
+## Related claim-path fix found during acceptance
+
+The actual service-role guest-to-account claim failed on hosted Test because its invoker routine directly read Auth users, a permission not granted to that role. Forward migration `20261111042039_guest_email_claim_permission.sql` keeps the public routine invoker/service-only and moves only the already receipt-bound, verified-email equality to a private boolean security-definer helper with an empty search path and no client grants. It does not grant Auth-table access or turn an email into ownership proof. The existing live-session, sealed-receipt, exact-booking and account checks remain. A real synthetic API claim must pass as part of acceptance.
