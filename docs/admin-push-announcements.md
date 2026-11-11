@@ -89,3 +89,10 @@ cron remains a recovery path. Only explicit transient provider responses are
 retried (maximum three attempts); uncertain delivery is recorded as unknown and
 is never automatically replayed. Consent, session, installation generation and
 frozen mode are rechecked before delivery.
+
+The existing account/device master-enabled timestamps also gate queued delivery.
+Turning the master switch off and on does not resurrect an older campaign or
+change the separate Announcements or booking-category choices. OS permission
+re-registration must advance its installation generation, invalidating any
+older frozen delivery generation. Both transitions are covered transactionally
+through the normal push-preferences/register routines.

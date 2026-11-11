@@ -107,6 +107,26 @@ got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')
  got:=public.customer_announcement_api('register',client||'{"session_id":"bb120000-0000-4000-8000-000000000014"}');perform pg_temp.ann_assert(got->>'recipientBinding'<>binding,'new auth session rotates recipient binding');
  perform pg_temp.ann_assert(jsonb_array_length(public.admin_push_api('options',actor)->'shops')<=25,'shop picker bounded');
  
+
+ -- Master consent can be re-enabled without replaying a previously queued campaign.
+ got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform public.customer_push_api('push-preferences',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64),'notificationsEnabled',false,'preferences',before_prefs));
+ perform pg_temp.ann_assert(not private.announcement_device_allowed(did2,uid),'master off immediately excludes announcements');
+ perform public.customer_push_api('push-preferences',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64),'notificationsEnabled',true,'preferences',before_prefs));
+ perform pg_temp.ann_assert(private.announcement_device_allowed(did2,uid),'master on permits future announcements');
+ perform pg_temp.ann_assert(not exists(select 1 from private.announcement_deliveries where campaign_id=campaign and private.announcement_delivery_allowed(id)),'master re-enable cannot replay the old queue');
+ perform pg_temp.ann_assert((select enabled from private.announcement_preferences where account_id=uid),'master toggle preserves separate announcement choice');
+ perform pg_temp.ann_assert((select preferences from private.customer_push_preferences where account_id=uid)=before_prefs,'master toggle preserves booking categories');
+ perform public.admin_push_worker('claim','{}');
+ perform pg_temp.ann_assert((select bool_and(state='skipped')from private.announcement_deliveries where campaign_id=campaign),'old campaign skipped after master re-enable');
+ -- OS permission changes go through monotonic device registration generations.
+ got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform public.customer_push_api('push-register',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64),'version',2,'token',repeat('d',64),'environment','sandbox','language','en','permission',false));
+ perform public.customer_announcement_api('register',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64)));
+ perform public.customer_push_api('push-register',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64),'version',3,'token',repeat('d',64),'environment','sandbox','language','en','permission',true));
+ perform public.customer_announcement_api('register',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64)));
+ perform pg_temp.ann_assert(private.announcement_device_allowed(did2,uid),'newly permitted compatible generation eligible');
+ perform pg_temp.ann_assert(not exists(select 1 from private.announcement_deliveries where campaign_id=campaign and device_id=did2 and private.announcement_delivery_allowed(id)),'permission off/on cannot replay frozen old generation');
  -- Only the private worker can set delivery mode, and capture never targets production.
  denied:=false;begin update private.announcement_runtime set api_url='https://srv1073968.hstgr.cloud',mode='capture'where singleton;exception when check_violation then denied:=true;end;perform pg_temp.ann_assert(denied,'capture prohibited on production API');
  raise notice 'ANNOUNCEMENT_DATABASE_SCENARIOS_PASS';
