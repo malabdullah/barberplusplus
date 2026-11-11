@@ -22,6 +22,12 @@ async function request(action, data = {}) {
   return result;
 }
 export const adminPushService = {
+  audiences: (page = 1) => request('audiences', { page }),
+  saveAudience: (name, filters) => request('saveAudience', { name, filters }),
+  deleteAudience: (audienceId) => request('deleteAudience', { audienceId }),
+  barbers: (page = 1, query = '') => request('barbers', { page, query }),
+  duplicate: (campaignId) => request('duplicate', { campaignId }),
+  cancel: (campaignId) => request('cancel', { campaignId, confirmed: true }),
   options: (page = 1, query = '') => request('options', { page, query }),
   users: (filters, page = 1) => request('users', { filters, page }),
   preview: (data) => request('preview', data),

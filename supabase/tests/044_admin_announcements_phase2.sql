@@ -1,0 +1,147 @@
+-- All fixture records, network queue writes and settings changes roll back.
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
+set local statement_timeout='45s';
+create function pg_temp.ann_assert(value boolean,label text)returns void language plpgsql as $$begin if value is distinct from true then raise exception 'ANN_ASSERT: %',label;end if;end$$;
+do $tests$
+declare
+ admin_id uuid:='bb120000-0000-4000-8000-000000000001';sid uuid:='bb120000-0000-4000-8000-000000000002';factor uuid:='bb120000-0000-4000-8000-000000000003';
+ uid uuid:='bb120000-0000-4000-8000-000000000011';us uuid:='bb120000-0000-4000-8000-000000000012';cid uuid:='bb120000-0000-4000-8000-000000000013';
+ did uuid:='bb120000-0000-4000-8000-000000000021';did2 uuid:='bb120000-0000-4000-8000-000000000022';
+ actor jsonb;client jsonb;got jsonb;preview jsonb;campaign uuid;job jsonb;binding text;denied boolean;barber public.barbers%rowtype;bid uuid:=gen_random_uuid();before_prefs jsonb;
+begin
+ perform pg_temp.ann_assert(not has_function_privilege('anon','public.admin_push_api(text,jsonb)','EXECUTE'),'anonymous admin API denied');
+ perform pg_temp.ann_assert(not has_function_privilege('authenticated','public.admin_push_worker(text,jsonb)','EXECUTE'),'clients cannot drain queue');
+ perform pg_temp.ann_assert(not has_function_privilege('authenticated','public.customer_announcement_api(text,jsonb)','EXECUTE'),'clients cannot forge identity via RPC');
+ perform pg_temp.ann_assert(not has_table_privilege('authenticated','private.announcement_targets','SELECT'),'recipient list stays private');
+ perform pg_temp.ann_assert((select relrowsecurity from pg_class where oid='private.announcement_deliveries'::regclass),'delivery RLS');
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values(admin_id,'ann-admin@example.test',now(),'{"role":"admin"}'),(uid,'ann-customer@example.test',now(),'{"role":"customer"}');
+ insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values(factor,admin_id,'QA','totp','verified','synthetic-not-live',now(),now());
+ insert into auth.sessions(id,user_id,aal,factor_id)values(sid,admin_id,'aal2',factor),(us,uid,'aal1',null);
+ insert into public.customers(id,name,email,created_by_type)values(cid,'Announcement QA','ann-customer@example.test','customer');
+ insert into private.customer_accounts(user_id,customer_id)values(uid,cid);
+ actor:=jsonb_build_object('user_id',admin_id,'session_id',sid);client:=jsonb_build_object('user_id',uid,'session_id',us,'deviceId',did,'deviceSecret',repeat('a',64),'version',1);
+ update private.announcement_runtime set enabled=true,mode='capture',api_url='https://qvkucvcjmojjbphlzlks.supabase.co'where singleton;
+ -- Remote CI has no native runtime configured. This change rolls back on Test.
+ insert into private.customer_push_runtime(singleton,api_url,topic,environments)values(true,'https://qvkucvcjmojjbphlzlks.supabase.co','com.barberplusplus.customer.test',array['sandbox'])on conflict(singleton)do update set api_url=excluded.api_url,topic=excluded.topic,environments=excluded.environments;
+ insert into private.customer_push_devices(id,secret_hash,account_id,session_id,token,environment,topic,permission)values(did,extensions.digest(repeat('a',64),'sha256'),uid,us,repeat('b',64),'sandbox','com.barberplusplus.customer.test',true);
+ select preferences into before_prefs from private.customer_push_devices where id=did;
+ perform pg_temp.ann_assert(public.customer_announcement_api('status',client)->>'enabled'='false','announcements default off');
+ perform public.customer_announcement_api('register',client);
+ perform pg_temp.ann_assert(not private.announcement_device_allowed(did,uid),'register alone never opts in');
+ got:=public.customer_announcement_api('preference',client||'{"enabled":true}');binding:=got->>'recipientBinding';
+ perform pg_temp.ann_assert(length(binding)=64 and private.announcement_device_allowed(did,uid),'explicit opt-in and capability make device eligible');
+ perform pg_temp.ann_assert(public.customer_announcement_api('register',client)->>'recipientBinding'=binding,'same account/session retains binding');
+ perform pg_temp.ann_assert((select preferences from private.customer_push_devices where id=did)=before_prefs,'booking preferences unchanged');
+ denied:=false;begin perform public.customer_announcement_api('register',client||jsonb_build_object('deviceSecret',repeat('c',64)));exception when others then denied:=sqlerrm='FORBIDDEN';end;perform pg_temp.ann_assert(denied,'device secret mismatch denied');
+ denied:=false;begin perform public.admin_push_api('history',client);exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.ann_assert(denied,'customer cannot administer announcements');
+ update auth.sessions set aal='aal1'where id=sid;
+ denied:=false;begin perform public.admin_push_api('history',actor);exception when others then denied:=sqlerrm='ADMIN_MFA_REQUIRED';end;perform pg_temp.ann_assert(denied,'admin aal1 denied');update auth.sessions set aal='aal2'where id=sid;
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid))));perform pg_temp.ann_assert(got->>'total'='1'and got->'users'->0->>'devices'='1','exact selected account and device count');
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'excludeIds',jsonb_build_array(uid)))))->>'total'='0','exclusions override selection');
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'roles',jsonb_build_array('manager')))))->>'total'='0','roles intersect account selection');
+ select * into barber from public.barbers where branch_id is not null and cardinality(service_ids)>0 order by id limit 1;
+ insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)values(bid,cid,barber.branch_id,barber.id,barber.service_ids,current_date-1,'23:00',30,10,'completed','customer');
+ insert into private.customer_booking_owners(booking_id,account_user_id)values(bid,uid);
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'shopIds',jsonb_build_array(barber.branch_id)))))->>'total'='1','shop filter uses owned bookings');
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'upcoming',true))))->>'total'='0','past booking does not match upcoming');
+ perform pg_temp.ann_assert((public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'city','Nonexistent QA city'))))->>'total'='0','unrelated city excluded');
+ preview:=actor||jsonb_build_object('titleEn','QA announcement','bodyEn','Capture only','destination','book','filters',jsonb_build_object('userIds',jsonb_build_array(uid)));
+ 
+
+ perform pg_temp.ann_assert(not has_table_privilege('authenticated','private.announcement_saved_audiences','SELECT'),'saved filters private');
+ perform pg_temp.ann_assert(not has_function_privilege('authenticated','private.announcement_filters_valid(jsonb)','EXECUTE'),'helper private');
+ -- All filters refer to owned bookings; completed counts and recency are aggregated once.
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'barberIds',jsonb_build_array(barber.id),'bookingStatuses',jsonb_build_array('completed'),'minCompleted',1,'maxCompleted',1,'lastVisitBefore',current_date::text)));
+ perform pg_temp.ann_assert(got->>'total'='1','completed visit, barber, range and last visit intersect');
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'bookingStatuses',jsonb_build_array('cancelled'))));
+ perform pg_temp.ann_assert(got->>'total'='0','completed not cancelled');
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'minCompleted',2)));
+ perform pg_temp.ann_assert(got->>'total'='0','minimum completed excludes');
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'maxCompleted',0)));
+ perform pg_temp.ann_assert(got->>'total'='0','maximum completed zero excludes');
+ got:=public.admin_push_api('users',actor||jsonb_build_object('filters',jsonb_build_object('userIds',jsonb_build_array(uid),'noBookings',true)));
+ perform pg_temp.ann_assert(got->>'total'='0','existing booking not first timer');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"noBookings":true,"minCompleted":1}'),'contradictory criteria rejected');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"minCompleted":4,"maxCompleted":2}'),'inverted completed range rejected');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"bookingStatuses":["other"]}'),'unknown status rejected');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"barberIds":["bad"]}'),'invalid IDs rejected');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"dateFrom":"2026-02-30"}'),'nonexistent date rejected');
+ perform pg_temp.ann_assert(not private.announcement_filters_valid('{"unknown":true}'),'unknown filter rejected');
+ perform pg_temp.ann_assert(jsonb_array_length(public.admin_push_api('barbers',actor)->'barbers')<=25,'barber options bounded');
+ got:=public.admin_push_api('saveAudience',actor||'{"name":"Returning QA","filters":{"minCompleted":1}}');
+ perform pg_temp.ann_assert(got->'filters'='{"minCompleted":1}','saved filters persist without resolving recipients');
+ perform pg_temp.ann_assert(public.admin_push_api('audiences',actor)->>'total'='1','saved audiences list owner scope');
+ denied:=false;begin perform public.admin_push_api('saveAudience',actor||'{"name":"returning qa","filters":{}}');exception when others then denied:=sqlerrm='AUDIENCE_NAME_EXISTS';end;perform pg_temp.ann_assert(denied,'duplicate names case insensitive');
+ denied:=false;begin perform public.admin_push_api('saveAudience',actor||jsonb_build_object('name','IDs','filters',jsonb_build_object('userIds',jsonb_build_array(uid))));exception when others then denied:=sqlerrm='INVALID_REQUEST';end;perform pg_temp.ann_assert(denied,'saved audience cannot hide specific IDs');
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values('bb120000-0000-4000-8000-000000000004','ann-admin2@example.test',now(),'{"role":"admin"}');
+ insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values('bb120000-0000-4000-8000-000000000005','bb120000-0000-4000-8000-000000000004','QA','totp','verified','synthetic-not-live',now(),now());
+ insert into auth.sessions(id,user_id,aal,factor_id)values('bb120000-0000-4000-8000-000000000006','bb120000-0000-4000-8000-000000000004','aal2','bb120000-0000-4000-8000-000000000005');
+ perform pg_temp.ann_assert(public.admin_push_api('audiences','{"user_id":"bb120000-0000-4000-8000-000000000004","session_id":"bb120000-0000-4000-8000-000000000006"}')->>'total'='0','other administrator cannot read saved criteria');
+ denied:=false;begin perform public.admin_push_api('deleteAudience',jsonb_build_object('user_id','bb120000-0000-4000-8000-000000000004','session_id','bb120000-0000-4000-8000-000000000006','audienceId',got->>'id'));exception when others then denied:=sqlerrm='NOT_FOUND';end;perform pg_temp.ann_assert(denied,'other administrator cannot delete saved criteria');
+ perform public.admin_push_api('deleteAudience',actor||jsonb_build_object('audienceId',got->>'id'));
+ perform pg_temp.ann_assert(public.admin_push_api('audiences',actor)->>'total'='0','saved audience removed');
+ -- Scheduling freezes time and audience. Confirmation is idempotent, never auto-send.
+ denied:=false;begin perform public.admin_push_api('preview',preview||jsonb_build_object('scheduledAt',now()-interval '1 minute'));exception when others then denied:=sqlerrm='INVALID_SCHEDULE';end;perform pg_temp.ann_assert(denied,'past schedule rejected');
+ denied:=false;begin perform public.admin_push_api('preview',preview||jsonb_build_object('scheduledAt',now()+interval '366 days'));exception when others then denied:=sqlerrm='INVALID_SCHEDULE';end;perform pg_temp.ann_assert(denied,'more than year rejected');
+ denied:=false;begin perform public.admin_push_api('preview',preview||'{"scheduledAt":"2027-01-01T10:00:00"}');exception when others then denied:=sqlerrm='INVALID_SCHEDULE';end;perform pg_temp.ann_assert(denied,'ambiguous timezone rejected');
+ got:=public.admin_push_api('preview',preview||jsonb_build_object('scheduledAt',now()+interval '2 days'));campaign:=(got->'campaign'->>'id')::uuid;
+ perform pg_temp.ann_assert(got->'campaign'->>'state'='preview','schedule still needs explicit confirmation');
+ perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ got:=public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform pg_temp.ann_assert(got->'campaign'->>'state'='scheduled','repeat scheduling idempotent');
+ perform pg_temp.ann_assert(jsonb_array_length(public.admin_push_worker('claim','{}'))=0,'future schedule never claimed early');
+ perform pg_temp.ann_assert((select expires_at=scheduled_at+interval '24 hours'from private.announcement_campaigns where id=campaign),'long schedule not expired from preview time');
+ got:=public.admin_push_api('duplicate',actor||jsonb_build_object('campaignId',campaign));
+ perform pg_temp.ann_assert(got->'draft'->>'titleEn'='QA announcement'and not(got->'draft'?'scheduledAt'),'duplicate returns editable copy without inherited schedule or sending');
+ perform pg_temp.ann_assert((select count(*)from private.announcement_campaigns where created_by=admin_id)=1,'duplicate does not dispatch or create frozen jobs');
+ -- New registrations on same account cannot expand reviewed jobs.
+ insert into private.customer_push_devices(id,secret_hash,account_id,session_id,token,environment,topic,permission)values(did2,extensions.digest(repeat('c',64),'sha256'),uid,us,repeat('d',64),'sandbox','com.barberplusplus.customer.test',true);
+ perform public.customer_announcement_api('register',client||jsonb_build_object('deviceId',did2,'deviceSecret',repeat('c',64)));
+ update private.customer_push_devices set registration_version=registration_version+1,language='ar'where id=did;
+ perform public.customer_announcement_api('register',client);
+ update private.announcement_campaigns set scheduled_at=now()-interval '1 second'where id=campaign;
+ -- A confirmed trusted schedule survives the creator's ordinary logout.
+ delete from auth.sessions where id=sid;
+ job:=public.admin_push_worker('claim','{}')->0;
+ perform pg_temp.ann_assert(job is not null and job->>'campaignId'=campaign::text,'due schedule activates after creator logout');
+ perform pg_temp.ann_assert(public.admin_push_worker('validate',job)='true','ordinary registration version refresh remains eligible');
+ perform pg_temp.ann_assert((select count(*)from private.announcement_deliveries where campaign_id=campaign)=1,'no new device added at dispatch');
+ perform public.admin_push_worker('finish',job||'{"status":200}');
+ perform pg_temp.ann_assert((select state from private.announcement_deliveries where id=(job->>'id')::uuid)='captured','due capture has no provider delivery');
+ insert into auth.sessions(id,user_id,aal,factor_id)values(sid,admin_id,'aal2',factor);
+ -- Cancellation blocks pending work and validation of claimed work; accepted stays honest.
+ got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;
+ perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ job:=public.admin_push_worker('claim','{"limit":1}')->0;
+ denied:=false;begin perform public.admin_push_api('cancel',actor||jsonb_build_object('campaignId',campaign));exception when others then denied:=sqlerrm='CONFIRMATION_REQUIRED';end;perform pg_temp.ann_assert(denied,'cancel requires confirmation');
+ perform public.admin_push_api('cancel',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform public.admin_push_api('cancel',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform pg_temp.ann_assert(public.admin_push_worker('validate',job)='false','claimed delivery blocked after cancellation');
+ perform pg_temp.ann_assert((select count(*)from private.announcement_deliveries where campaign_id=campaign and state='cancelled')=1,'pending recipients cancelled');
+ perform public.admin_push_worker('finish',job||'{"status":200}');
+ perform pg_temp.ann_assert((select state from private.announcement_deliveries where id=(job->>'id')::uuid)='captured','already provider accepted result retained after cancellation');
+ denied:=false;begin perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));exception when others then denied:=sqlerrm='INVALID_REQUEST';end;perform pg_temp.ann_assert(denied,'cancelled campaign cannot revive');
+ got:=public.admin_push_api('preview',preview);campaign:=(got->'campaign'->>'id')::uuid;perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ job:=public.admin_push_worker('claim','{"limit":1}')->0;
+ perform public.admin_push_api('cancel',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ perform public.admin_push_worker('finish',job||'{"status":503}');
+ perform pg_temp.ann_assert((select state='cancelled'and attempts=1 from private.announcement_deliveries where id=(job->>'id')::uuid),'cancelled transient failure cannot retry');
+ -- A new permission or creator-authority boundary cannot revive a frozen delivery.
+ got:=public.admin_push_api('preview',preview||jsonb_build_object('scheduledAt',now()+interval '2 days'));campaign:=(got->'campaign'->>'id')::uuid;perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ update private.customer_push_devices set permission=false where id in(did,did2);update private.customer_push_devices set permission=true where id in(did,did2);
+ update private.announcement_campaigns set scheduled_at=now()-interval '1 second'where id=campaign;
+ perform public.admin_push_worker('claim','{}');
+ perform pg_temp.ann_assert((select bool_and(state='skipped')from private.announcement_deliveries where campaign_id=campaign),'OS off/on excludes old schedule');
+ got:=public.admin_push_api('preview',preview||jsonb_build_object('scheduledAt',now()+interval '2 days'));campaign:=(got->'campaign'->>'id')::uuid;perform public.admin_push_api('send',actor||jsonb_build_object('campaignId',campaign,'confirmed',true));
+ update auth.users set raw_app_meta_data='{"role":"customer"}'where id=admin_id;
+ update private.announcement_campaigns set scheduled_at=now()-interval '1 second'where id=campaign;
+ perform public.admin_push_worker('claim','{}');
+ perform pg_temp.ann_assert((select bool_and(state='skipped')from private.announcement_deliveries where campaign_id=campaign),'removed admin authority blocks schedule');
+ raise notice 'ANNOUNCEMENT_PHASE2_DATABASE_SCENARIOS_PASS';
+end $tests$;
+select pass('Phase2 schedules, cancellation, saved filters, activity, frozen audience and consent boundaries');
+select * from finish();
+rollback;

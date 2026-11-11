@@ -2585,7 +2585,7 @@
     "message": "الرسالة",
     "audience": "الجمهور",
     "results": "النتائج",
-    "sentAt": "وقت الإرسال",
+    "sentAt": "الحالة / الوقت · الكويت",
     "details": "التفاصيل",
     "actions": "الإجراءات",
     "previous": "السابق",
@@ -2675,7 +2675,8 @@
       "captured": "تمت المحاكاة",
       "skipped": "تم التخطي",
       "failed": "فشل",
-      "unknown": "غير مؤكد"
+      "unknown": "غير مؤكد",
+      "cancelled": "ملغى"
     },
     "errors": {
       "AUTH_REQUIRED": "سجّل الدخول مجددًا للمتابعة.",
@@ -2688,8 +2689,52 @@
       "NO_RECIPIENTS": "لم تعد هناك أجهزة مؤهلة ضمن الجمهور.",
       "CONFIRMATION_REQUIRED": "أكد عدد المستلمين قبل الإرسال.",
       "PREVIEW_EXPIRED": "انتهت صلاحية المعاينة. راجع الجمهور مجددًا.",
-      "UNAVAILABLE": "تعذر إكمال الإجراء. حاول مجددًا."
+      "UNAVAILABLE": "تعذر إكمال الإجراء. حاول مجددًا.",
+      "INVALID_SCHEDULE": "اختر وقتاً بعد دقيقة على الأقل وخلال السنة القادمة.",
+      "AUDIENCE_NAME_EXISTS": "يوجد جمهور محفوظ بهذا الاسم.",
+      "SAVED_AUDIENCE_LIMIT": "يمكنك حفظ 100 جمهور. احذف جمهوراً غير مستخدم أولاً.",
+      "ALREADY_FINISHED": "اكتمل إرسال هذا الإشعار. لا توجد رسائل متبقية لإلغائها."
     },
-    "sentBy": "أرسلها {{name}}"
+    "sentBy": "أرسلها {{name}}",
+    "savedAudiences": "الجماهير المحفوظة",
+    "chooseSaved": "اختر جمهوراً",
+    "applyAudience": "تطبيق",
+    "deleteAudience": "حذف",
+    "audienceName": "اسم الجمهور",
+    "saveAudience": "حفظ الفلاتر",
+    "bookingActivity": "فلاتر الحجوزات والزيارات",
+    "noBookings": "لم يحجز بعد",
+    "bookingStatuses": "حالة الحجز",
+    "minCompleted": "الحد الأدنى للزيارات المكتملة",
+    "maxCompleted": "الحد الأقصى للزيارات المكتملة",
+    "lastVisitBefore": "آخر زيارة مكتملة قبل",
+    "barbers": "الحلاقون ({{count}})",
+    "barber": "حلاق",
+    "searchBarbers": "ابحث عن حلاق",
+    "deliveryTime": "وقت الإرسال",
+    "schedule": "جدولة",
+    "scheduledTime": "التاريخ والوقت · الكويت (UTC+3)",
+    "scheduledFor": "مجدول في {{date}} · بتوقيت الكويت",
+    "scheduleConfirm": "تأكيد الجدولة",
+    "scheduledSuccess": "تمت جدولة الإشعار.",
+    "duplicate": "نسخ",
+    "cancelCampaign": "إلغاء الإرسال",
+    "cancelWarning": "سيتم إيقاف الرسائل التي لم تُرسل بعد. قد تصل الرسائل الجاري إرسالها. لا يمكن سحب الإشعارات المرسلة.",
+    "keepCampaign": "متابعة الإرسال",
+    "confirmCancel": "إلغاء الإرسال",
+    "cancelledSuccess": "تم إلغاء الإرسال المتبقي.",
+    "campaignStates": {
+      "preview": "معاينة المسودة",
+      "scheduled": "مجدول",
+      "queued": "تم بدء الإرسال",
+      "cancelled": "ملغى"
+    },
+    "bookingStatus": {
+      "pending": "قيد الانتظار",
+      "confirmed": "مؤكد",
+      "completed": "مكتمل",
+      "cancelled": "ملغى",
+      "no_show": "لم يحضر"
+    }
   }
 }

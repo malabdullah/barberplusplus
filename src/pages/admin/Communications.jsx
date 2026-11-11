@@ -13,6 +13,8 @@ import {
   X,
 } from 'lucide-react';
 import { adminPushService } from '../../services/adminPush.service';
+import AnnouncementAudience from './AnnouncementAudience';
+import { kuwaitInput, kuwaitSchedule } from './announcementSchedule';
 import './AdminPages.css';
 import './Communications.css';
 const blankMessage = {
@@ -30,6 +32,12 @@ const blankFilters = {
   upcoming: false,
   dateFrom: '',
   dateTo: '',
+  barberIds: [],
+  bookingStatuses: [],
+  minCompleted: '',
+  maxCompleted: '',
+  lastVisitBefore: '',
+  noBookings: false,
 };
 const errorCodes = [
   'AUTH_REQUIRED',
@@ -42,6 +50,10 @@ const errorCodes = [
   'NO_RECIPIENTS',
   'CONFIRMATION_REQUIRED',
   'PREVIEW_EXPIRED',
+  'INVALID_SCHEDULE',
+  'AUDIENCE_NAME_EXISTS',
+  'SAVED_AUDIENCE_LIMIT',
+  'ALREADY_FINISHED',
 ];
 
 export default function Communications() {
@@ -76,6 +88,10 @@ export default function Communications() {
   const [review, setReview] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [details, setDetails] = useState(null);
+  const [scheduled, setScheduled] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [cancelCandidate, setCancelCandidate] = useState(null);
+  const cancelDialog = useRef(null);
   const [recipientPage, setRecipientPage] = useState(1);
   const dialog = useRef(null);
   const detailVersion = useRef(0);
@@ -140,6 +156,11 @@ export default function Communications() {
     };
   }, [history.campaigns, historyPage]);
   useEffect(() => {
+    const node = cancelDialog.current;
+    if (cancelCandidate && !node.open) node.showModal();
+    if (!cancelCandidate && node.open) node.close();
+  }, [cancelCandidate]);
+  useEffect(() => {
     const node = dialog.current;
     if (details && !node.open) node.showModal();
     if (!details && node.open) node.close();
@@ -147,7 +168,10 @@ export default function Communications() {
   useEffect(() => {
     if (step) {
       heading.current?.focus({ preventScroll: true });
-      heading.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+      heading.current?.scrollIntoView?.({
+        block: 'start',
+        behavior: 'instant',
+      });
     }
   }, [step]);
   const run = async (action) => {
@@ -164,6 +188,8 @@ export default function Communications() {
   };
   const start = () => {
     setMessage(blankMessage);
+    setScheduled(false);
+    setScheduledTime('');
     setFilters(blankFilters);
     setMode('all');
     setSelected({});
@@ -207,6 +233,7 @@ export default function Communications() {
       }
       const result = await adminPushService.preview({
         ...message,
+        ...(scheduled ? { scheduledAt: kuwaitSchedule(scheduledTime) } : {}),
         filters: effectiveFilters(),
       });
       setReview(result);
@@ -219,8 +246,58 @@ export default function Communications() {
       await adminPushService.send(review.campaign.id);
       setStep(0);
       setNotice(
-        tr(review.delivery.mode === 'capture' ? 'queuedCapture' : 'queued'),
+        tr(
+          review.campaign.scheduledAt
+            ? 'scheduledSuccess'
+            : review.delivery.mode === 'capture'
+            ? 'queuedCapture'
+            : 'queued',
+        ),
       );
+      await refreshHistory();
+    });
+  const duplicate = (id) =>
+    run(async () => {
+      const { draft, users: draftUsers = [] } = await adminPushService
+        .duplicate(id);
+      const names = Object.fromEntries(draftUsers.map((u) => [u.id, u]));
+      start();
+      const { filters: criteria, ...copy } = draft;
+      setMessage(copy);
+      const filterCriteria = Object.fromEntries(
+        Object.entries(criteria).filter(([key]) =>
+          !['userIds', 'excludeIds'].includes(key)
+        ),
+      );
+      setFilters({ ...blankFilters, ...filterCriteria });
+      if (criteria.userIds?.length) {
+        setMode('selected');
+        setSelected(
+          Object.fromEntries(
+            criteria.userIds.map((id) => [id, names[id] || { id, name: id }]),
+          ),
+        );
+      } else {
+        setMode(
+          Object.keys(criteria).filter((key) => key !== 'excludeIds').length
+            ? 'filtered'
+            : 'all',
+        );
+      }
+      setExcluded(
+        Object.fromEntries(
+          (criteria.excludeIds || []).map((
+            id,
+          ) => [id, names[id] || { id, name: id }]),
+        ),
+      );
+    });
+  const cancelCampaign = () =>
+    run(async () => {
+      await adminPushService.cancel(cancelCandidate.id);
+      setCancelCandidate(null);
+      closeDetails();
+      setNotice(tr('cancelledSuccess'));
       await refreshHistory();
     });
   const closeDetails = () => {
@@ -295,6 +372,7 @@ export default function Communications() {
         'skipped',
         'failed',
         'unknown',
+        'cancelled',
       ].filter((key) => campaign.results?.[key]).map((key) => (
         <span className={`ann-result ann-result--${key}`} key={key}>
           {tr(`states.${key}`)} <b>{campaign.results[key]}</b>
@@ -431,7 +509,10 @@ export default function Communications() {
                           </td>
                           <td data-label={tr('results')}>{resultCounts(c)}</td>
                           <td data-label={tr('sentAt')}>
-                            {date(c.queuedAt || c.createdAt)}
+                            <span className='ann-state'>
+                              {tr(`campaignStates.${c.state || 'queued'}`)}
+                            </span>
+                            {date(c.scheduledAt || c.queuedAt || c.createdAt)}
                           </td>
                           <td>
                             <button
@@ -441,6 +522,25 @@ export default function Communications() {
                             >
                               {tr('details')}
                             </button>
+                            <button
+                              className='ann-text'
+                              disabled={busy}
+                              onClick={() => duplicate(c.id)}
+                            >
+                              {tr('duplicate')}
+                            </button>
+                            {c.state !== 'cancelled' &&
+                              (c.state === 'scheduled' || c.results?.pending ||
+                                c.results?.sending) &&
+                              (
+                                <button
+                                  className='ann-text ann-danger'
+                                  disabled={busy}
+                                  onClick={() => setCancelCandidate(c)}
+                                >
+                                  {tr('cancelCampaign')}
+                                </button>
+                              )}
                           </td>
                         </tr>
                       ))}
@@ -562,6 +662,51 @@ export default function Communications() {
                     {phonePreview()}
                   </aside>
                 </div>
+                <fieldset className='ann-mode ann-scheduling'>
+                  <legend>{tr('deliveryTime')}</legend>
+                  <label>
+                    <input
+                      type='radio'
+                      name='ann-schedule'
+                      checked={!scheduled}
+                      disabled={busy}
+                      onChange={() => setScheduled(false)}
+                    />
+                    {tr('sendNow')}
+                  </label>
+                  <label>
+                    <input
+                      type='radio'
+                      name='ann-schedule'
+                      checked={scheduled}
+                      disabled={busy}
+                      onChange={() => setScheduled(true)}
+                    />
+                    {tr('schedule')}
+                  </label>
+                </fieldset>
+                {scheduled && (
+                  <div className='ann-field'>
+                    <label htmlFor='ann-scheduled-time'>
+                      {tr('scheduledTime')}
+                    </label>
+                    <input
+                      id='ann-scheduled-time'
+                      className='form-input'
+                      type='datetime-local'
+                      value={scheduledTime}
+                      min={kuwaitInput(
+                        new Date(
+                          Math.ceil((Date.now() + 60000) / 60000) * 60000,
+                        ),
+                      )}
+                      max={kuwaitInput(new Date(Date.now() + 365 * 86400000))}
+                      required
+                      disabled={busy}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                    />
+                  </div>
+                )}
                 <footer className='ann-footer'>
                   <button className='btn btn-primary' type='submit'>
                     {tr('chooseAudience')}
@@ -593,187 +738,207 @@ export default function Communications() {
                   ))}
                 </fieldset>
                 {mode === 'filtered' && (
-                  <div className='ann-filters'>
-                    <div className='ann-field'>
-                      <label htmlFor='ann-governorate'>
-                        {tr('governorate')}
-                      </label>
-                      <select
-                        id='ann-governorate'
-                        className='form-input'
-                        disabled={busy}
-                        value={filters.governorateId}
-                        onChange={(e) => {
-                          setFilter('governorateId', e.target.value);
-                          setFilter('city', '');
-                        }}
-                      >
-                        <option value=''>{tr('allGovernorates')}</option>
-                        {options.governorates.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {ar ? g.nameAr : g.nameEn}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className='ann-field'>
-                      <label htmlFor='ann-city'>{tr('city')}</label>
-                      <select
-                        id='ann-city'
-                        className='form-input'
-                        disabled={busy}
-                        value={filters.city}
-                        onChange={(e) => setFilter('city', e.target.value)}
-                      >
-                        <option value=''>{tr('allCities')}</option>
-                        {options.cities.filter((c) =>
-                          !filters.governorateId ||
-                          String(c.governorateId) === filters.governorateId
-                        ).map((c) => (
-                          <option
-                            key={`${c.governorateId}:${c.city}`}
-                            value={c.city}
-                          >
-                            {c.city}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <fieldset className='ann-roles'>
-                      <legend>{tr('accountRoles')}</legend>
-                      {['customer', 'manager', 'barber'].map((role) => (
-                        <label key={role}>
-                          <input
-                            type='checkbox'
-                            checked={filters.roles.includes(role)}
+                  <>
+                    <AnnouncementAudience
+                      filters={filters}
+                      setFilters={(value) =>
+                        setFilters((current) => ({
+                          ...blankFilters,
+                          ...(typeof value === 'function'
+                            ? value(current)
+                            : value),
+                        }))}
+                      busy={busy}
+                      run={run}
+                      pager={pager}
+                    />
+                    {!filters.noBookings && (
+                      <div className='ann-filters'>
+                        <div className='ann-field'>
+                          <label htmlFor='ann-governorate'>
+                            {tr('governorate')}
+                          </label>
+                          <select
+                            id='ann-governorate'
+                            className='form-input'
                             disabled={busy}
-                            onChange={(e) =>
-                              setFilter(
-                                'roles',
-                                e.target.checked
-                                  ? [...filters.roles, role]
-                                  : filters.roles.filter((r) =>
-                                    r !== role
-                                  ),
-                              )}
-                          />
-                          {tr(`roles.${role}`)}
-                        </label>
-                      ))}
-                    </fieldset>
-                    <details className='ann-shop-picker'>
-                      <summary>
-                        {tr('shops', { count: filters.shopIds.length })}
-                      </summary>
-                      <form
-                        className='ann-search'
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          searchShops();
-                        }}
-                      >
-                        <label className='sr-only' htmlFor='ann-shop-query'>
-                          {tr('searchShops')}
-                        </label>
-                        <input
-                          id='ann-shop-query'
-                          className='form-input'
-                          value={shopQuery}
-                          maxLength={120}
-                          onChange={(e) => setShopQuery(e.target.value)}
-                          placeholder={tr('searchShops')}
-                        />
-                        <button
-                          className='btn btn-secondary'
-                          disabled={busy}
-                          type='submit'
-                        >
-                          <Search size={17} />
-                          {tr('search')}
-                        </button>
-                      </form>
-                      <div className='ann-shop-list'>
-                        {options.shops.map((s) => (
-                          <label key={s.id}>
+                            value={filters.governorateId}
+                            onChange={(e) => {
+                              setFilter('governorateId', e.target.value);
+                              setFilter('city', '');
+                            }}
+                          >
+                            <option value=''>{tr('allGovernorates')}</option>
+                            {options.governorates.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {ar ? g.nameAr : g.nameEn}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className='ann-field'>
+                          <label htmlFor='ann-city'>{tr('city')}</label>
+                          <select
+                            id='ann-city'
+                            className='form-input'
+                            disabled={busy}
+                            value={filters.city}
+                            onChange={(e) => setFilter('city', e.target.value)}
+                          >
+                            <option value=''>{tr('allCities')}</option>
+                            {options.cities.filter((c) =>
+                              !filters.governorateId ||
+                              String(c.governorateId) === filters.governorateId
+                            ).map((c) => (
+                              <option
+                                key={`${c.governorateId}:${c.city}`}
+                                value={c.city}
+                              >
+                                {c.city}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <fieldset className='ann-roles'>
+                          <legend>{tr('accountRoles')}</legend>
+                          {['customer', 'manager', 'barber'].map((role) => (
+                            <label key={role}>
+                              <input
+                                type='checkbox'
+                                checked={filters.roles.includes(role)}
+                                disabled={busy}
+                                onChange={(e) =>
+                                  setFilter(
+                                    'roles',
+                                    e.target.checked
+                                      ? [...filters.roles, role]
+                                      : filters.roles.filter((r) => r !== role),
+                                  )}
+                              />
+                              {tr(`roles.${role}`)}
+                            </label>
+                          ))}
+                        </fieldset>
+                        <details className='ann-shop-picker'>
+                          <summary>
+                            {tr('shops', { count: filters.shopIds.length })}
+                          </summary>
+                          <form
+                            className='ann-search'
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              searchShops();
+                            }}
+                          >
+                            <label className='sr-only' htmlFor='ann-shop-query'>
+                              {tr('searchShops')}
+                            </label>
                             <input
-                              type='checkbox'
+                              id='ann-shop-query'
+                              className='form-input'
+                              value={shopQuery}
+                              maxLength={120}
+                              onChange={(e) =>
+                                setShopQuery(e.target.value)}
+                              placeholder={tr('searchShops')}
+                            />
+                            <button
+                              className='btn btn-secondary'
                               disabled={busy}
-                              checked={filters.shopIds.includes(s.id)}
-                              onChange={(e) => {
+                              type='submit'
+                            >
+                              <Search size={17} />
+                              {tr('search')}
+                            </button>
+                          </form>
+                          <div className='ann-shop-list'>
+                            {options.shops.map((s) => (
+                              <label key={s.id}>
+                                <input
+                                  type='checkbox'
+                                  disabled={busy}
+                                  checked={filters.shopIds.includes(s.id)}
+                                  onChange={(e) => {
+                                    setFilter(
+                                      'shopIds',
+                                      e.target.checked
+                                        ? [...filters.shopIds, s.id]
+                                        : filters.shopIds.filter((id) =>
+                                          id !== s.id
+                                        ),
+                                    );
+                                    setShopNames((n) => ({
+                                      ...n,
+                                      [s.id]: ar && s.nameAr || s.name,
+                                    }));
+                                  }}
+                                />
+                                <span>
+                                  {ar && s.nameAr || s.name}
+                                  <small>{s.city}</small>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          {pager(shopPage, options.shopTotal, searchShops)}
+                        </details>
+                        <div className='ann-chips'>
+                          {filters.shopIds.map((id) => (
+                            <button
+                              type='button'
+                              disabled={busy}
+                              key={id}
+                              onClick={() =>
                                 setFilter(
                                   'shopIds',
-                                  e.target.checked
-                                    ? [...filters.shopIds, s.id]
-                                    : filters.shopIds.filter((id) =>
-                                      id !== s.id
-                                    ),
-                                );
-                                setShopNames((n) => ({
-                                  ...n,
-                                  [s.id]: ar && s.nameAr || s.name,
-                                }));
-                              }}
-                            />
-                            <span>
-                              {ar && s.nameAr || s.name}
-                              <small>{s.city}</small>
-                            </span>
+                                  filters.shopIds.filter((v) => v !== id),
+                                )}
+                            >
+                              {shopNames[id] || tr('shop')}
+                              <X size={14} />
+                            </button>
+                          ))}
+                        </div>
+                        <label className='ann-checkbox'>
+                          <input
+                            type='checkbox'
+                            disabled={busy}
+                            checked={filters.upcoming}
+                            onChange={(e) =>
+                              setFilter('upcoming', e.target.checked)}
+                          />
+                          {tr('upcomingOnly')}
+                        </label>
+                        <div className='ann-field'>
+                          <label htmlFor='ann-date-from'>
+                            {tr('dateFrom')}
                           </label>
-                        ))}
+                          <input
+                            id='ann-date-from'
+                            className='form-input'
+                            type='date'
+                            disabled={busy}
+                            value={filters.dateFrom}
+                            onChange={(e) =>
+                              setFilter('dateFrom', e.target.value)}
+                          />
+                        </div>
+                        <div className='ann-field'>
+                          <label htmlFor='ann-date-to'>{tr('dateTo')}</label>
+                          <input
+                            id='ann-date-to'
+                            className='form-input'
+                            type='date'
+                            disabled={busy}
+                            min={filters.dateFrom || undefined}
+                            value={filters.dateTo}
+                            onChange={(e) =>
+                              setFilter('dateTo', e.target.value)}
+                          />
+                        </div>
                       </div>
-                      {pager(shopPage, options.shopTotal, searchShops)}
-                    </details>
-                    <div className='ann-chips'>
-                      {filters.shopIds.map((id) => (
-                        <button
-                          type='button'
-                          disabled={busy}
-                          key={id}
-                          onClick={() =>
-                            setFilter(
-                              'shopIds',
-                              filters.shopIds.filter((v) => v !== id),
-                            )}
-                        >
-                          {shopNames[id] || tr('shop')}
-                          <X size={14} />
-                        </button>
-                      ))}
-                    </div>
-                    <label className='ann-checkbox'>
-                      <input
-                        type='checkbox'
-                        disabled={busy}
-                        checked={filters.upcoming}
-                        onChange={(e) =>
-                          setFilter('upcoming', e.target.checked)}
-                      />
-                      {tr('upcomingOnly')}
-                    </label>
-                    <div className='ann-field'>
-                      <label htmlFor='ann-date-from'>{tr('dateFrom')}</label>
-                      <input
-                        id='ann-date-from'
-                        className='form-input'
-                        type='date'
-                        disabled={busy}
-                        value={filters.dateFrom}
-                        onChange={(e) => setFilter('dateFrom', e.target.value)}
-                      />
-                    </div>
-                    <div className='ann-field'>
-                      <label htmlFor='ann-date-to'>{tr('dateTo')}</label>
-                      <input
-                        id='ann-date-to'
-                        className='form-input'
-                        type='date'
-                        disabled={busy}
-                        min={filters.dateFrom || undefined}
-                        value={filters.dateTo}
-                        onChange={(e) => setFilter('dateTo', e.target.value)}
-                      />
-                    </div>
-                  </div>
+                    )}
+                  </>
                 )}
                 <div className='ann-user-picker'>
                   <h2>
@@ -920,7 +1085,14 @@ export default function Communications() {
                     >
                       {tr('editAudience')}
                     </button>
-                    <button type='button' className='ann-text ann-review-recipients' disabled={busy} onClick={() => openDetails(review.campaign.id)}>{tr('recipients')}</button>
+                    <button
+                      type='button'
+                      className='ann-text ann-review-recipients'
+                      disabled={busy}
+                      onClick={() => openDetails(review.campaign.id)}
+                    >
+                      {tr('recipients')}
+                    </button>
                     <p className='ann-expiry'>
                       {tr('previewUntil', {
                         date: date(review.campaign.previewExpiresAt),
@@ -931,6 +1103,13 @@ export default function Communications() {
                     )}
                   </section>
                 </div>
+                {review.campaign.scheduledAt && (
+                  <p className='ann-scheduled-review'>
+                    {tr('scheduledFor', {
+                      date: date(review.campaign.scheduledAt),
+                    })}
+                  </p>
+                )}
                 <label className='ann-confirm'>
                   <input
                     type='checkbox'
@@ -965,7 +1144,9 @@ export default function Communications() {
                       ? <Loader2 size={17} className='cb-spinner' />
                       : <Send size={17} />}
                     {tr(
-                      review.delivery.mode === 'capture'
+                      review.campaign.scheduledAt
+                        ? 'scheduleConfirm'
+                        : review.delivery.mode === 'capture'
                         ? 'sendCapture'
                         : 'sendNow',
                     )}
@@ -975,6 +1156,36 @@ export default function Communications() {
             )}
           </>
         )}
+      <dialog
+        ref={cancelDialog}
+        className='ann-dialog ann-cancel-dialog'
+        aria-labelledby='ann-cancel-title'
+        onCancel={() => setCancelCandidate(null)}
+      >
+        <header>
+          <h2 id='ann-cancel-title'>{tr('cancelCampaign')}</h2>
+        </header>
+        <div className='ann-dialog-body'>
+          <strong>{cancelCandidate?.titleEn}</strong>
+          <p>{tr('cancelWarning')}</p>
+        </div>
+        <footer>
+          <button
+            className='btn btn-secondary'
+            disabled={busy}
+            onClick={() => setCancelCandidate(null)}
+          >
+            {tr('keepCampaign')}
+          </button>
+          <button
+            className='btn btn-danger'
+            disabled={busy}
+            onClick={cancelCampaign}
+          >
+            {tr('confirmCancel')}
+          </button>
+        </footer>
+      </dialog>
       <dialog
         ref={dialog}
         className='ann-dialog'
@@ -1003,6 +1214,15 @@ export default function Communications() {
             </p>
             <p className='ann-message-copy'>
               {ar && details.campaign.bodyAr || details.campaign.bodyEn}
+            </p>
+            <p>
+              {tr(`campaignStates.${details.campaign.state || 'queued'}`)}
+              {details.campaign.scheduledAt &&
+                ` · ${
+                  tr('scheduledFor', {
+                    date: date(details.campaign.scheduledAt),
+                  })
+                }`}
             </p>
             {counters(details.campaign)}
             {resultCounts(details.campaign)}
