@@ -686,3 +686,6 @@
   color: var(--text-secondary);
   font-size: .85rem;
 }
+
+.ann-header h1 { scroll-margin-top: 150px; }
+.ann-review-recipients { margin-inline-start: 24px; }

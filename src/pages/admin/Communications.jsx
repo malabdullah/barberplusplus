@@ -145,7 +145,10 @@ export default function Communications() {
     if (!details && node.open) node.close();
   }, [details]);
   useEffect(() => {
-    if (step) heading.current?.focus();
+    if (step) {
+      heading.current?.focus({ preventScroll: true });
+      heading.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+    }
   }, [step]);
   const run = async (action) => {
     if (busy) return;
@@ -917,6 +920,7 @@ export default function Communications() {
                     >
                       {tr('editAudience')}
                     </button>
+                    <button type='button' className='ann-text ann-review-recipients' disabled={busy} onClick={() => openDetails(review.campaign.id)}>{tr('recipients')}</button>
                     <p className='ann-expiry'>
                       {tr('previewUntil', {
                         date: date(review.campaign.previewExpiresAt),
