@@ -134,12 +134,12 @@ ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb
 CREATE OR REPLACE FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
-    AS $_$select private.admin_push_api(p_action,p_data);$_$;
+    AS $$select private.admin_push_api(p_action,p_data);$$;
 ALTER FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
-    AS $_$select private.admin_push_worker(p_action,p_data);$_$;
+    AS $$select private.admin_push_worker(p_action,p_data);$$;
 ALTER FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_transfer_branch_manager"("p_branch_id" "uuid", "p_barber_id" "uuid", "p_expected_manager_id" "uuid", "p_keep_bookable" boolean DEFAULT NULL::boolean) RETURNS "jsonb"
     LANGUAGE "sql"
@@ -580,7 +580,7 @@ ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "json
 CREATE OR REPLACE FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
-    AS $_$select private.customer_announcement_api(p_action,p_data);$_$;
+    AS $$select private.customer_announcement_api(p_action,p_data);$$;
 ALTER FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"

@@ -88,6 +88,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.exact}
                 onClick={handleNavClick}
                 className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
                 style={{ animationDelay: `${index * 50}ms` }}
