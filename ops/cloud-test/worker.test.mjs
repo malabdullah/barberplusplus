@@ -84,3 +84,19 @@ test('public installation paths reject missing files and SPA HTML fallbacks', as
     }
   }
 });
+
+test('announcements use the gated named endpoints, never expose the queue worker', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.match(String(url), /\/functions\/v1\/(admin-push|customer-announcements)$/);
+    assert.equal(options.headers.get('x-cloud-test-key'), env.CLOUD_TEST_ACCESS_KEY);
+    return Response.json({ok:true});
+  };
+  try {
+    for (const name of ['admin-push','customer-announcements']) {
+      assert.equal((await worker.fetch(new Request(`${origin}/test-api/${name}`,{method:'POST'}),env)).status,401);
+      assert.equal((await worker.fetch(new Request(`${origin}/test-api/${name}`,{method:'POST',headers:{authorization:login().headers.get('authorization')}}),env)).status,200);
+    }
+    assert.equal((await worker.fetch(new Request(`${origin}/test-api/admin-push-dispatch`,{headers:{authorization:login().headers.get('authorization')}}),env)).status,404);
+  } finally { globalThis.fetch = original; }
+});

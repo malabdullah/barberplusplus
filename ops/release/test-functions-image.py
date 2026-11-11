@@ -75,7 +75,7 @@ Deno.serve(async (request) => {
                         # The test mailbox must compile but stay unavailable
                         # outside cloud-test. Require that exact closed state;
                         # do not accept 404 for ordinary application workers.
-                        expected = [404] if function == 'cloud-test-inbox' else [403] if function in ('customer-push-dispatch','customer-booking-email') else [200, 204, 401, 405]
+                        expected = [404] if function == 'cloud-test-inbox' else [403] if function in ('customer-push-dispatch','customer-booking-email','admin-push-dispatch') else [200, 204, 401, 405]
                         if result['status'] not in expected: raise ValueError('Unexpected synthetic handler response: ' + str(result['status']))
                         results.append(result); last = None; break
                     except urllib.error.HTTPError as error:
