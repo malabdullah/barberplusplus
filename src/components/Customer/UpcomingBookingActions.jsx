@@ -108,7 +108,7 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
       <summary className="cb-secondary"><MoreHorizontal size={18} aria-hidden="true" />{tr('more')}</summary>
       <div className="ca-upcoming-menu">
         {booking.duration > 0 && <button type="button" onClick={calendar}><CalendarPlus size={17} aria-hidden="true" />{t('customerBooking.addCalendar')}</button>}
-        <BookingShareControls bookingId={booking.id} menuItem />
+        <BookingShareControls bookingId={booking.id} revision={JSON.stringify(booking)} menuItem />
         {canCancel && <button type="button" className="ca-upcoming-danger" onClick={() => open('cancel')}>{tr('cancel')}</button>}
       </div>
     </details>

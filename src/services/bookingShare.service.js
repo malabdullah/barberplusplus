@@ -14,6 +14,5 @@ async function request(action, data) {
 }
 export const bookingShareService = {
   create: (bookingId, receipt) => request('create', { bookingId, ...(receipt ? { receipt } : {}) }),
-  revoke: (bookingId, receipt) => request('revoke', { bookingId, ...(receipt ? { receipt } : {}) }),
   view: async token => (await request('view', { token })).booking,
 };
