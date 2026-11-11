@@ -223,6 +223,7 @@ describe('admin announcement review and send', () => {
 
 describe('phase2 scheduling and lifecycle', () => {
   it('freezes the explicitly chosen Kuwait time in preview', async () => {
+    const day = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     await mount();
     await screen.findByText(en.announcements.empty);
     fireEvent.click(screen.getByRole('button', { name: en.announcements.new }));
@@ -234,7 +235,7 @@ describe('phase2 scheduling and lifecycle', () => {
     });
     fireEvent.click(screen.getByLabelText(en.announcements.schedule));
     fireEvent.change(screen.getByLabelText(en.announcements.scheduledTime), {
-      target: { value: '2030-01-01T12:30' },
+      target: { value: `${day}T12:30` },
     });
     fireEvent.click(
       screen.getByRole('button', { name: en.announcements.chooseAudience }),
@@ -244,7 +245,7 @@ describe('phase2 scheduling and lifecycle', () => {
     );
     await waitFor(() => expect(adminPushService.preview).toHaveBeenCalled());
     expect(adminPushService.preview.mock.calls[0][0].scheduledAt).toBe(
-      '2030-01-01T09:30:00.000Z',
+      `${day}T09:30:00.000Z`,
     );
   });
   it('duplicates into an editable unscheduled draft without sending', async () => {
