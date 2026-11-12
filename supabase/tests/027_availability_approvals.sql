@@ -122,5 +122,30 @@ select throws_ok($$select public.barber_availability('approve',jsonb_build_objec
 select throws_ok($$select public.barber_availability('get',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000302','request_id',current_setting('availability.fifth')::jsonb->'request'->>'id'))$$,'42501','NOT_AUTHORIZED','request cannot be displayed under a different barber route');
 reset role;
 
+-- Transfer authority follows current membership and session state.
+select set_config('request.jwt.claims','{}',true);
+insert into public.branches(id,manager_id,name)
+values ('ec080000-0000-4000-8000-000000000103','ec080000-0000-4000-8000-000000000001','Second managed shop');
+insert into auth.sessions(id,user_id)
+values ('ec080000-0000-4000-8000-000000000011','ec080000-0000-4000-8000-000000000001');
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000103'),'transfer requires a session ID');
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","session_id":"ec080000-0000-4000-8000-000000000011","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select ok(private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000103'),'manager may transfer between two owned shops');
+select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'manager must own the destination');
+select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000102','ec080000-0000-4000-8000-000000000101'),'manager must own the source');
+select set_config('request.jwt.claims','{}',true);
+insert into auth.users(id,email,raw_app_meta_data)
+values ('ec080000-0000-4000-8000-000000000005','transfer-admin@example.test','{"role":"admin"}');
+insert into auth.sessions(id,user_id)
+values ('ec080000-0000-4000-8000-000000000015','ec080000-0000-4000-8000-000000000005');
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000005","session_id":"ec080000-0000-4000-8000-000000000015","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select ok(private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'live admin session retains transfer authority');
+update auth.users set raw_app_meta_data='{"role":"barber"}' where id='ec080000-0000-4000-8000-000000000005';
+select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'demotion removes authority from an existing admin session');
+update auth.users set raw_app_meta_data='{"role":"admin"}' where id='ec080000-0000-4000-8000-000000000005';
+delete from auth.sessions where id='ec080000-0000-4000-8000-000000000015';
+select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'revoked admin session has no transfer authority');
+
 select * from finish();
 rollback;
