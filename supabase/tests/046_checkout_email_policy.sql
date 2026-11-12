@@ -73,7 +73,9 @@ insert into private.customer_accounts(user_id,customer_id) values
  ('fb121000-0000-4000-8000-000000000001','fb121000-0000-4000-8000-000000000101'),
  ('fb121000-0000-4000-8000-000000000002','fb121000-0000-4000-8000-000000000102');
 select set_config('policy.book',jsonb_build_object('id','fb121000-0000-4000-8000-000000000501','branch_id','fb101000-0000-4000-8000-000000000101','barber_id','fb101000-0000-4000-8000-000000000301','service_ids',jsonb_build_array('fb101000-0000-4000-8000-000000000201'),'date',current_setting('managed.day'),'time','10:00','name','Policy Customer','country_code','+965','phone','','account_user_id','fb121000-0000-4000-8000-000000000001','session_id','fb121000-0000-4000-8000-000000000011','expected_price',3,'expected_duration',30)::text,true);
+set local role service_role;
 select lives_ok($$select public.native_customer_booking('book',current_setting('policy.book')::jsonb)$$,'verified email books with no phone');
+reset role;
 select is((select customer_id::text from public.bookings where id='fb121000-0000-4000-8000-000000000501'),'fb121000-0000-4000-8000-000000000101','account canonical record reused');
 select is((select account_user_id::text from private.customer_booking_owners where booking_id='fb121000-0000-4000-8000-000000000501'),'fb121000-0000-4000-8000-000000000001','live account owns booking');
 select is((select count(*) from private.customer_phone_verifications where customer_id='fb121000-0000-4000-8000-000000000101'),0::bigint,'phone is not marked verified');
@@ -86,7 +88,9 @@ select throws_ok($$select public.native_customer_booking('book',current_setting(
 select public.configure_customer_checkout_policy('standard');
 select throws_ok($$select public.native_customer_booking('book',current_setting('policy.book')::jsonb||'{"id":"fb121000-0000-4000-8000-000000000502","time":"11:00"}')$$,'P0001','INVALID_REQUEST','restoring standard requires phone again');
 select public.configure_customer_checkout_policy('email_only');
+set local role service_role;
 select lives_ok($$select public.native_customer_booking('book',(current_setting('policy.book')::jsonb-'account_user_id'-'session_id')||'{"id":"fb121000-0000-4000-8000-000000000503","time":"12:00","guest_contact":"email","email":"policy@example.test"}')$$,'guest may supply existing email as contact only');
+reset role;
 select is((select count(*) from private.customer_booking_owners where booking_id='fb121000-0000-4000-8000-000000000503'),0::bigint,'guest email does not link account');
 select lives_ok($$select public.customer_claim_booking('fb121000-0000-4000-8000-000000000503','fb121000-0000-4000-8000-000000000001','fb121000-0000-4000-8000-000000000011')$$,'matching verified account can explicitly claim receipt');
 select is((select customer_id::text from public.bookings where id='fb121000-0000-4000-8000-000000000503'),'fb121000-0000-4000-8000-000000000101','claim references same canonical customer');

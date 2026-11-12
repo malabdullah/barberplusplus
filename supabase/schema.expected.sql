@@ -641,7 +641,7 @@ begin
     if v_email_account then
       -- Live canonical ownership is mandatory, including for an idempotent retry.
       v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
-      select lower(u.email) into v_email from auth.users u where u.id=(p_data->>'account_user_id')::uuid and u.email_confirmed_at is not null;
+      v_email:=private.customer_checkout_email((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
       if v_email is null or length(v_email)>254 or v_email !~ '^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$' then raise exception 'EMAIL_REQUIRED';end if;
     end if;
     v_code := p_data ->> 'country_code';
