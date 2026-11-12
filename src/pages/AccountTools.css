@@ -89,7 +89,7 @@
 .account-tools-status { display:flex; align-items:center; gap:.6rem; color:var(--text-secondary); }
 .account-tools-empty { padding:2.5rem 1rem; text-align:center; color:var(--text-secondary); }
 .account-tools-empty svg { color:var(--accent-primary); }
-.account-tools-notice { color:var(--success); }
+.account-tools-notice { color:var(--status-success); }
 .account-tools-dialog { max-height:calc(100dvh - 2rem); overflow:auto; }
 .account-support-panel { display:flex; flex-direction:column; align-items:flex-start; gap:1.25rem; padding-block:1rem; }
 .account-support-panel>p { color:var(--text-secondary); font-size:1.05rem; line-height:1.7; max-width:52ch; margin:0; }

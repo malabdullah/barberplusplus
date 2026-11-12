@@ -134,7 +134,8 @@
     "reset": "Reset",
     "saving": "Saving...",
     "changesSaved": "Changes saved successfully",
-    "agent": "Agent"
+    "agent": "Agent",
+    "retry": "Try again"
   },
   "agent": {
     "nav": {
