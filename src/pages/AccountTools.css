@@ -69,3 +69,30 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.account-tools { width:100%; max-width:880px; min-width:0; padding:clamp(1rem,4vw,2.5rem); color:var(--text-primary); }
+.account-tools-back { display:inline-flex; align-items:center; gap:.5rem; color:var(--accent-primary); text-decoration:none; margin-bottom:1.5rem; }
+[dir="rtl"] .account-tools-back svg { transform:scaleX(-1); }
+.account-tools-heading { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+.account-tools-heading>div { display:flex; align-items:center; gap:.8rem; }
+.account-tools-heading>div>svg { color:var(--accent-primary); flex-shrink:0; }
+.account-tools-heading h1 { margin:0; font-size:clamp(1.5rem,4vw,2rem); }
+.account-tools .cb-secondary { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; width:auto; min-height:44px; padding:.6rem .9rem; color:var(--text-primary); border-color:var(--border-primary); background:var(--bg-secondary); text-decoration:none; }
+.account-tools .cb-secondary:disabled { opacity:.6; cursor:wait; }
+.account-tools-list li { flex-wrap:nowrap; gap:1rem; padding-block:1.1rem; }
+.account-tools-icon { display:grid; place-items:center; width:44px; height:44px; flex-shrink:0; background:var(--bg-tertiary); color:var(--accent-primary); border-radius:var(--radius-md); }
+.account-tools-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.account-tools-copy strong { font-weight:600; }
+.account-tools-copy p { margin:.35rem 0; }
+.account-session-current { border-top:1px solid var(--border-primary); }
+.account-tools-badge { color:var(--accent-primary); background:var(--bg-tertiary); padding:.4rem .65rem; border-radius:var(--radius-sm); font-size:.8rem; text-align:center; }
+.account-tools-status { display:flex; align-items:center; gap:.6rem; color:var(--text-secondary); }
+.account-tools-empty { padding:2.5rem 1rem; text-align:center; color:var(--text-secondary); }
+.account-tools-empty svg { color:var(--accent-primary); }
+.account-tools-notice { color:var(--success); }
+.account-tools-dialog { max-height:calc(100dvh - 2rem); overflow:auto; }
+.account-support-panel { display:flex; flex-direction:column; align-items:flex-start; gap:1.25rem; padding-block:1rem; }
+.account-support-panel>p { color:var(--text-secondary); font-size:1.05rem; line-height:1.7; max-width:52ch; margin:0; }
+.account-support-panel>span { color:var(--text-secondary); }
+.account-support .cb-primary { display:inline-flex; gap:.6rem; width:auto; padding:.8rem 1.3rem; }
+@media(max-width:520px) { .account-tools-list li { flex-wrap:wrap; } .account-tools-list li>.cb-secondary { margin-inline-start:calc(44px + 1rem); } .account-tools-badge { max-width:100%; } .account-tools-dialog-actions>* { flex:1; } }

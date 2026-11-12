@@ -103,6 +103,11 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
     CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
 );
 ALTER TABLE "public"."branches" OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.account_tools_api(p_action,p_data);$$;
+ALTER FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -2538,7 +2543,11 @@ CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barber
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
 CREATE OR REPLACE TRIGGER "bookings_updated_at" BEFORE UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
+CREATE OR REPLACE TRIGGER "capture_barber_schedule_activity" AFTER UPDATE OF "availability", "time_offs", "vacations" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+CREATE OR REPLACE TRIGGER "capture_booking_activity" AFTER INSERT OR UPDATE OF "date", "time", "status" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
 CREATE OR REPLACE TRIGGER "capture_customer_push" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_customer_push"();
+CREATE OR REPLACE TRIGGER "capture_deadline_activity" AFTER INSERT OR UPDATE OF "setting_value" ON "public"."admin_settings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
+CREATE OR REPLACE TRIGGER "capture_shop_hours_activity" AFTER UPDATE OF "working_hours" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
 CREATE OR REPLACE TRIGGER "clear_customer_phone_verification" AFTER UPDATE ON "public"."customers" FOR EACH ROW WHEN (((("old"."phone")::"text" IS DISTINCT FROM ("new"."phone")::"text") OR (("old"."country_code")::"text" IS DISTINCT FROM ("new"."country_code")::"text"))) EXECUTE FUNCTION "private"."clear_customer_phone_verification"();
 CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
@@ -2636,6 +2645,10 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
     ADD CONSTRAINT "whatsapp_logs_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."whatsapp_conversations"("id") ON DELETE SET NULL;
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."whatsapp_conversations"("id") ON DELETE CASCADE;
+CREATE POLICY "Account tools live session" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
+CREATE POLICY "Account tools live session" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
+CREATE POLICY "Account tools live session" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
+CREATE POLICY "Account tools live session" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
 CREATE POLICY "Admin realtime reads require MFA" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
 CREATE POLICY "Admin realtime reads require MFA" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
 CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
@@ -2803,6 +2816,8 @@ GRANT ALL ON TABLE "public"."barbers" TO "service_role";
 GRANT ALL ON TABLE "public"."branches" TO "anon";
 GRANT ALL ON TABLE "public"."branches" TO "authenticated";
 GRANT ALL ON TABLE "public"."branches" TO "service_role";
+REVOKE ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
