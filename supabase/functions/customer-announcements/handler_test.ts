@@ -70,3 +70,33 @@ Deno.test('announcement preference needs live identity and installation proof wi
   });
   assert((await signedOut(request({ action: 'status' }))).status === 401);
 });
+
+Deno.test('announcement first setup forwards only a typed register flag and trusted identity', async () => {
+  const calls: Record<string, unknown>[] = [];
+  const handle = createCustomerAnnouncementsHandler({
+    ...runtime,
+    identity: async () => identity,
+    rpc: async (_, value) => {
+      calls.push(value);
+      return { enabled: true, version: 1, preferenceConfigured: true };
+    },
+  });
+  for (const initializeDefaults of [true, false]) {
+    const response = await handle(request({
+      action: 'register', ...device, initializeDefaults, user_id: 'forged',
+    }));
+    assert(response.status === 200);
+    assert((await response.json()).preferenceConfigured === true);
+    assert(calls.at(-1)?.initializeDefaults === initializeDefaults);
+    assert(calls.at(-1)?.user_id === identity.user_id);
+  }
+  assert((await handle(request({ action: 'register', ...device }))).status === 200);
+  assert(!('initializeDefaults' in calls[2]));
+  for (const body of [
+    { action: 'register', ...device, initializeDefaults: 'true' },
+    { action: 'register', ...device, initializeDefaults: null },
+    { action: 'status', initializeDefaults: true },
+    { action: 'preference', ...device, enabled: true, initializeDefaults: true },
+  ]) assert((await handle(request(body))).status === 400);
+  assert(calls.length === 3);
+});
