@@ -68,3 +68,19 @@ Generated raster sources were converted to WebP without altering the actual bran
 - [ ] Owner review and approval before production promotion.
 
 Residual gap: responsive browser captures are not a physical iPhone/Safari test. No native changes were made. No follow-up P3 item is required for this handoff.
+
+## Owner-requested dark palette and feature addition
+
+Application commit `54f1ec9`, Test Worker deployment `f7563d8f5b5444b3ae7b91e4d5dc2c36` adds the requested customer feature section immediately before the shop section. Its subject is rescheduling while retaining shop, barber and services. The illustrative time comparison has no fake booking action; the real CTA opens `/customer/account#appointments`. Existing booking and cutoff rules are unchanged.
+
+The native source of truth is `BarberCustomer/Assets.xcassets/CanvasBackground.colorset/Contents.json` (`#141414` dark canvas), with `Brand.surface` in `DesignTokens.swift` (`#222222`). The landing's dark hero and shop band now use the native canvas, with the new feature band using the native raised surface. DOM-computed colours confirm RGB(20,20,20) and RGB(34,34,34). Light mode retains the approved design.
+
+New evidence is in `/Users/malabdullah/Documents/Codex/Barber++/artifacts/landing-native-dark-reschedule-2026-11-12`:
+
+- `comparison-desktop-dark.png` shows the previous approved implementation and requested refinement together, both captured at 1440 × 1000 CSS pixels. Raster width is 1432 pixels; full-page heights are 1647 before and 2099 after. Both are normalized to 720 pixels wide without changing aspect ratio. The additional 452 CSS pixels correspond to the requested new section, not unintended drift.
+- `rescheduling-section-dark.png` is the readable focused crop, including adjacent section context. `mobile-en-dark.png`, `mobile-en-light.png`, `mobile-ar-dark.png`, `mobile-ar-light.png` and `mobile-320-ar-dark.png` verify responsive/themed rendering. Mobile CSS viewport 390 × 844 yields 386-pixel captures; narrow Arabic CSS width 320 has no page or time-label overflow. The Arabic desktop capture is `desktop-ar-dark.png`; English light is `desktop-en-light.png`.
+- The comparison was opened and reviewed. Preserved hero/customer/photo proportions, Outfit/Arabic fallback typography, spacing, contrast, existing image quality, copy and semantic current/new time labels were checked. No actionable P0/P1/P2 issue was found. The added section has no original image target; it is assessed against the owner's requested placement, existing design system and declared rescheduling benefit rather than claimed as a pixel match to the old concept.
+- New CTA tested in Arabic: the customer account's appointments heading loaded successfully. Browser console errors: none captured. English/dark and the original browser viewport were restored. No real appointment was changed.
+- Lint, 192 Function tests, 342 frontend tests, 63 operations tests, migration/domain checks and cloud build passed. The application has no new dependency, image download, schema change or provider call from this refinement. The separate APNs candidate is not part of this landing branch.
+
+final result: passed
