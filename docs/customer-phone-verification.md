@@ -66,7 +66,11 @@ No native iOS changes are part of this release.
 The service-only `configure_customer_checkout_policy('email_only')` switch pauses
 customer checkout SMS independently of the retained `CHECKOUT_GOOGLE_*` provider
 settings. The migration defaults to `standard` and activates no environment.
-Use `configure_customer_checkout_policy('standard')` to restore normal enforcement.
+Use `configure_customer_checkout_policy('standard')` to restore the existing
+signed-in phone requirement. The existing email-first guest path still accepts
+optional, unverified phones under `standard`; this switch does not introduce
+global guest SMS enforcement. Requiring SMS for email-first guests later needs
+a separate explicit policy change that preserves their email contact and claims.
 No provider secret, Google configuration or existing verification marker is removed
 or fabricated. Staff authentication and manual booking rules do not change.
 
