@@ -30,18 +30,22 @@ export function pushContent(job:PushJob) {
 }
 
 const b64=(data:Uint8Array)=>btoa(String.fromCharCode(...data)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
-let cached:{value:string;created:number;identity:string}|undefined;
+const cachedTokens = new Map<string, { value: string; created: number }>();
 export async function apnsToken(pem:string,keyId:string,teamId:string) {
   const now=Math.floor(Date.now()/1000);
-  const identity=keyId+':'+teamId;
-  if(cached && now-cached.created<2400 && cached.identity===identity) return cached.value;
+  const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pem))),x=>x.toString(16).padStart(2,'0')).join('');
+  const identity=keyId+':'+teamId+':'+fingerprint;
+  const cached = cachedTokens.get(identity);
+  if(cached && now-cached.created<2400) return cached.value;
   const raw=atob(pem.replace(/-----[^-]+-----|\s/g,''));
   const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(raw,c=>c.charCodeAt(0)),{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
   const encoder=new TextEncoder();
   const data=b64(encoder.encode(JSON.stringify({alg:'ES256',kid:keyId})))+'.'+b64(encoder.encode(JSON.stringify({iss:teamId,iat:now})));
   const signature=new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},key,encoder.encode(data)));
-  cached={value:data+'.'+b64(signature),created:now,identity};
-  return cached.value;
+  const value=data+'.'+b64(signature);
+  if (cachedTokens.size >= 4) cachedTokens.delete(cachedTokens.keys().next().value!);
+  cachedTokens.set(identity, { value, created: now });
+  return value;
 }
 
 export async function sendAPNs(job:PushJob,jwt:string,send:typeof fetch=fetch,

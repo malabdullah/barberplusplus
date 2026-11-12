@@ -431,6 +431,11 @@ CREATE OR REPLACE FUNCTION "public"."configure_customer_push"("p_config" "jsonb"
   select private.configure_customer_push(p_config,p_dispatch_secret);
 $$;
 ALTER FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."configure_customer_push_credential"("p_environment" "text", "p_config" "jsonb") RETURNS boolean
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.configure_customer_push_credential(p_environment,p_config);$$;
+ALTER FUNCTION "public"."configure_customer_push_credential"("p_environment" "text", "p_config" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."configure_customer_push_runtime"("p_api_url" "text", "p_topic" "text", "p_environments" "text"[]) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -2889,6 +2894,8 @@ REVOKE ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" 
 GRANT ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."configure_customer_push_credential"("p_environment" "text", "p_config" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."configure_customer_push_credential"("p_environment" "text", "p_config" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push_runtime"("p_api_url" "text", "p_topic" "text", "p_environments" "text"[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_push_runtime"("p_api_url" "text", "p_topic" "text", "p_environments" "text"[]) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."confirm_pending_booking"("p_booking_id" "uuid") FROM PUBLIC;
