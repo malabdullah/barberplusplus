@@ -47,12 +47,12 @@ def main():
         # https://github.com/michelp/pgsodium#server-key-management
         command = (
             "umask 077 && od -An -N32 -tx1 /dev/urandom | tr -d ' \\n' > /tmp/compat-vault-key && "
-            "printf '%s\\n' '#!/bin/sh' 'cat /tmp/compat-vault-key' > /tmp/compat-getkey && "
-            'chmod 700 /tmp/compat-getkey && '
+            "printf '%s\\n' '#!/bin/sh' 'cat /tmp/compat-vault-key' > /var/lib/postgresql/barber-compat-getkey && "
+            'chmod 700 /var/lib/postgresql/barber-compat-getkey && '
             'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && '
             'exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp '
             '-c shared_preload_libraries=pgsodium,pg_cron,pg_net,pg_stat_statements '
-            '-c pgsodium.getkey_script=/tmp/compat-getkey '
+            '-c pgsodium.getkey_script=/var/lib/postgresql/barber-compat-getkey '
             '-c cron.database_name=postgres -c cron.launch_active_jobs=off'
         )
         docker('run','-d','--name',name,'--platform','linux/amd64','--label','barber.operation=postgres-compatibility','--network','none','--memory','1g','--cpus','1','--user','postgres','--tmpfs','/tmp:rw,size=768m','--entrypoint','/bin/bash',image,'-lc',command); started=True
@@ -61,7 +61,13 @@ def main():
             result = subprocess.run(['docker','--host',endpoint,'exec',name,'pg_isready','-h','/tmp','-U','postgres'],capture_output=True)
             if result.returncode==0: break
             time.sleep(1)
-        else: raise RuntimeError('Compatibility database did not start')
+        else:
+            # Only this synthetic container's startup log; mask any accidental
+            # 32-byte hex value before including a bounded diagnostic.
+            logs = subprocess.run(['docker','--host',endpoint,'logs',name], capture_output=True, timeout=30)
+            startup = (logs.stdout + logs.stderr).decode(errors='replace')[-2000:]
+            startup = re.sub(r'\b[0-9a-fA-F]{64}\b', '[redacted]', startup)
+            raise RuntimeError('Compatibility database did not start: ' + startup)
         def sql(text, strict=True): return docker('exec','-i',name,'psql','-h','/tmp','-U','postgres','-d','postgres','-X','-qAt','-v','ON_ERROR_STOP='+('1' if strict else '0'),data=text.encode(),check=strict).decode()
         sql(roles.decode(),False)
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.dump',data=platform)
