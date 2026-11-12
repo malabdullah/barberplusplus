@@ -41,14 +41,36 @@ def main():
     )
     started = False
     try:
-        command = 'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp -c shared_preload_libraries=pg_cron,pg_net,pg_stat_statements -c cron.database_name=postgres -c cron.launch_active_jobs=off'
+        # Vault writes need pgsodium's server-key mode. Generate a fresh key
+        # inside this network-isolated container's tmpfs, never from the source
+        # profile or production. Neither the key nor its contents leave /tmp.
+        # Vault embeds its own key state: preloading pgsodium alone does not
+        # initialize supabase_vault. Both use this synthetic per-container key.
+        # https://github.com/supabase/vault/blob/main/src/supabase_vault.c
+        command = (
+            "umask 077 && od -An -N32 -tx1 /dev/urandom | tr -d ' \\n' > /tmp/compat-vault-key && "
+            "printf '%s\\n' '#!/bin/sh' 'cat /tmp/compat-vault-key' > /var/lib/postgresql/barber-compat-getkey && "
+            'chmod 700 /var/lib/postgresql/barber-compat-getkey && '
+            'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && '
+            'exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp '
+            '-c shared_preload_libraries=pgsodium,supabase_vault,pg_cron,pg_net,pg_stat_statements '
+            '-c pgsodium.getkey_script=/var/lib/postgresql/barber-compat-getkey '
+            '-c vault.getkey_script=/var/lib/postgresql/barber-compat-getkey '
+            '-c cron.database_name=postgres -c cron.launch_active_jobs=off'
+        )
         docker('run','-d','--name',name,'--platform','linux/amd64','--label','barber.operation=postgres-compatibility','--network','none','--memory','1g','--cpus','1','--user','postgres','--tmpfs','/tmp:rw,size=768m','--entrypoint','/bin/bash',image,'-lc',command); started=True
         import time
         for _ in range(60):
             result = subprocess.run(['docker','--host',endpoint,'exec',name,'pg_isready','-h','/tmp','-U','postgres'],capture_output=True)
             if result.returncode==0: break
             time.sleep(1)
-        else: raise RuntimeError('Compatibility database did not start')
+        else:
+            # Only this synthetic container's startup log; mask any accidental
+            # 32-byte hex value before including a bounded diagnostic.
+            logs = subprocess.run(['docker','--host',endpoint,'logs',name], capture_output=True, timeout=30)
+            startup = (logs.stdout + logs.stderr).decode(errors='replace')[-2000:]
+            startup = re.sub(r'\b[0-9a-fA-F]{64}\b', '[redacted]', startup)
+            raise RuntimeError('Compatibility database did not start: ' + startup)
         def sql(text, strict=True): return docker('exec','-i',name,'psql','-h','/tmp','-U','postgres','-d','postgres','-X','-qAt','-v','ON_ERROR_STOP='+('1' if strict else '0'),data=text.encode(),check=strict).decode()
         sql(roles.decode(),False)
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.dump',data=platform)
@@ -68,6 +90,24 @@ def main():
             ' POLICY storage objects Barber avatars ' in line)) + '\n'
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')
+        # Verify the actual Vault encryption path, not just pgsodium's separate
+        # root-key state. Return a marker only, and roll back the synthetic row.
+        bootstrap = sql("""
+begin;
+do $probe$
+declare probe_id uuid;
+begin
+  if position('supabase_vault' in current_setting('shared_preload_libraries'))=0
+    or current_setting('vault.getkey_script',true) is distinct from '/var/lib/postgresql/barber-compat-getkey'
+  then raise exception 'COMPATIBILITY_VAULT_NOT_PRELOADED'; end if;
+  probe_id:=vault.create_secret('synthetic compatibility probe','barber-compat-bootstrap-probe');
+  if not exists(select 1 from vault.decrypted_secrets where id=probe_id and decrypted_secret='synthetic compatibility probe')
+  then raise exception 'COMPATIBILITY_VAULT_ROUNDTRIP_FAILED'; end if;
+end $probe$;
+rollback;
+select 'COMPATIBILITY_VAULT_READY';
+""")
+        if bootstrap.strip() != 'COMPATIBILITY_VAULT_READY': raise RuntimeError('Compatibility Vault readiness probe failed')
         for p in sorted((root/'supabase/migrations').glob('*.sql')): sql(p.read_text())
         for seed_name in ['seed.sql', 'seed-customer-booking.sql']:
             seed_path = root / 'supabase' / seed_name
@@ -80,6 +120,18 @@ def main():
             if re.search(r'^not ok\b',output,re.M) or len(plans)!=1 or len(actual)!=int(plans[0]): raise RuntimeError('Production image pgTAP failure: '+p.name)
             total += len(actual)
         print(json.dumps({'status':'PASS','image':image,'platform':'linux/amd64','network':'none','publishedPorts':0,'source':'schema-only synthetic CLI platform bootstrap; app migrations and synthetic seed replayed','productionRowsCopied':0,'authorizationTests':total}))
+    except Exception as error:
+        # SQL-stage failures need the same bounded, redacted startup evidence
+        # as boot failures. Never expose the ephemeral encryption key.
+        diagnostic = ''
+        if started:
+            try:
+                logs = subprocess.run(['docker','--host',endpoint,'logs',name],capture_output=True,timeout=30)
+                diagnostic = (logs.stdout + logs.stderr).decode(errors='replace')[-2000:]
+            except Exception:
+                diagnostic = 'Startup diagnostics unavailable'
+        message = re.sub(r'\b[0-9a-fA-F]{64}\b','[redacted]',str(error) + '\nCompatibility startup diagnostics: ' + diagnostic)
+        raise RuntimeError(message) from None
     finally:
         if started: docker('rm','-f',name,check=False)
 
