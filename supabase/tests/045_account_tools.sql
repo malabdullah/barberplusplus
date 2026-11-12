@@ -14,6 +14,7 @@ begin
  perform pg_temp.tools_assert(not has_function_privilege('authenticated','public.account_tools_api(text,jsonb)','EXECUTE'),'authenticated cannot forge API identity');
  perform pg_temp.tools_assert(not has_table_privilege('authenticated','private.account_activity','SELECT'),'activity table private');
  perform pg_temp.tools_assert(not has_table_privilege('authenticated','private.account_revoked_sessions','SELECT'),'revocation markers private');
+ perform pg_temp.tools_assert((select count(*) from pg_policy where polname='Account tools live session' and not polpermissive and polcmd='r' and polroles=array[(select oid from pg_roles where rolname='authenticated')])=4,'all four realtime tables have restrictive authenticated read guards');
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
  (m,m::text||'@example.test',now(),'{"role":"manager"}'),(b,b::text||'@example.test',now(),'{"role":"barber"}'),(c,c::text||'@example.test',now(),'{"role":"customer"}'),(a,a::text||'@example.test',now(),'{"role":"admin"}'),(g,g::text||'@example.test',now(),'{"role":"agent"}'),(other_user,other_user::text||'@example.test',now(),'{"role":"manager"}');
  insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values(factor,a,'QA','totp','verified','synthetic-only',now(),now());

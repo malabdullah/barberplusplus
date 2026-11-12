@@ -61,6 +61,7 @@ export default function AccountTools({ view, customer = false }) {
   const title = t(activity ? 'accountTools.activity' : 'settings.activeSessions');
   const back = customer ? '/customer/account' : accountSettingsPath(access.identity?.role);
   const Icon = activity ? Activity : ShieldCheck;
+  const Container = customer ? 'main' : 'section';
   const sessionRow = (row, pinned) => {
     const Mobile = /iPhone|iPad|Android/i.test(row.device) ? Smartphone : Laptop;
     return <li key={row.id} className={pinned ? 'account-session-current' : ''}>
@@ -69,7 +70,7 @@ export default function AccountTools({ view, customer = false }) {
       {pinned ? <span className="account-tools-badge">{t('accountTools.thisDevice')}</span> : <button className="cb-secondary" type="button" disabled={busy} onClick={() => { setTarget(row); setError(''); }}><LogOut size={16} aria-hidden="true" />{t('accountTools.endSession')}</button>}
     </li>;
   };
-  return <main className="account-tools" dir={i18n.dir()}>
+  return <Container className="account-tools" dir={i18n.dir()}>
     {!access.identity ? <AccountAccessState access={access} /> : <>
       <Link className="account-tools-back" to={back}><ArrowLeft size={17} aria-hidden="true" />{t('common.back')}</Link>
       <header className="account-tools-heading"><div><Icon size={24} aria-hidden="true" /><h1>{title}</h1></div><button className="cb-secondary" type="button" disabled={loading || busy} onClick={() => { setCursor(null); setAttempt(n => n + 1); }}><RefreshCw size={16} aria-hidden="true" />{t('common.refresh')}</button></header>
@@ -87,5 +88,5 @@ export default function AccountTools({ view, customer = false }) {
         <div className="account-tools-dialog-actions"><button type="button" className="cb-secondary" disabled={busy} onClick={() => setTarget(null)}>{t('common.cancel')}</button><button type="button" className="btn btn-danger" disabled={busy} onClick={revoke}>{busy ? t('common.saving') : t('accountTools.endSession')}</button></div>
       </dialog>
     </>}
-  </main>;
+  </Container>;
 }

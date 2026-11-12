@@ -14,7 +14,8 @@ export default function AccountAccessState({ access }) {
       if (data.session?.access_token !== access.session?.access_token) { access.retry(); return; }
       const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (!error) navigate('/customer/sign-in', { replace: true });
-    } finally { setBusy(false); }
+    } catch { access.retry(); }
+    finally { setBusy(false); }
   };
   if (access.loading) return <p role="status" className="account-tools-status"><Loader2 className="cb-spinner" size={20} aria-hidden="true" />{t('common.loading')}</p>;
   if (access.error === 'ADMIN_MFA_REQUIRED') return <Navigate to="/mfa-setup" replace />;
