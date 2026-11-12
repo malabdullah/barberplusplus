@@ -13,6 +13,7 @@ export default function Landing() {
   const demoDate = new Date(`${addBookingDays(getKuwaitDate(), 1)}T14:30:00+03:00`);
   const date = new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Kuwait' }).format(demoDate);
   const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(demoDate);
+  const newTime = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(new Date(demoDate.getTime() + 90 * 60 * 1000));
   const price = new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(8);
   const rating = new Intl.NumberFormat(locale, { minimumFractionDigits: 1 }).format(4.8);
   const count = new Intl.NumberFormat(locale).format(24);
@@ -52,6 +53,28 @@ export default function Landing() {
           <strong>{tr('packageName')}</strong><span className="lp-preview-price">{price}</span>
           <p className="lp-preview-date"><CalendarDays size={17} aria-hidden="true" /><span>{date} · {time}</span></p>
           <Link to="/customer/account#appointments" className="lp-text-link">{tr('viewAppointments')}<ArrowRight size={16} aria-hidden="true" /></Link>
+        </div>
+      </div>
+    </section>
+
+    <section className="lp-flexibility-section" aria-labelledby="lp-flexibility-title">
+      <div className="lp-flexibility-inner">
+        <div className="lp-flexibility-copy">
+          <h2 id="lp-flexibility-title">{tr('flexibilityTitleStart')}<br />{tr('flexibilityTitleEnd')}</h2>
+          <p>{tr('flexibilityDescription')}</p>
+          <Link to="/customer/account#appointments" className="lp-button lp-button-outline">{tr('manageAppointments')}<ArrowRight size={20} aria-hidden="true" /></Link>
+        </div>
+        <div className="lp-reschedule-preview">
+          <p className="lp-reschedule-caption">{tr('reschedulePreview')}</p>
+          <div className="lp-reschedule-appointment">
+            <strong>{tr('packageName')}</strong>
+            <span>{tr('barberName')} · {date}</span>
+          </div>
+          <div className="lp-time-change">
+            <dl><dt>{tr('currentTime')}</dt><dd><time dateTime={demoDate.toISOString()}>{time}</time></dd></dl>
+            <ArrowRight size={24} aria-hidden="true" />
+            <dl className="lp-new-time"><dt>{tr('newTime')}</dt><dd><time dateTime={new Date(demoDate.getTime() + 90 * 60 * 1000).toISOString()}>{newTime}</time></dd></dl>
+          </div>
         </div>
       </div>
     </section>

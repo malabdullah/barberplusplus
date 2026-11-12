@@ -2802,6 +2802,13 @@
     "shopsTitle": "وراء كل موعد رائع، صالون منظّم.",
     "shopsDescription": "أدر الحجوزات والباقات وتوفّر فريقك في جميع صالوناتك.",
     "footer": "مواعيد مرتّبة. وأيام أفضل.",
-    "support": "الدعم"
+    "support": "الدعم",
+    "flexibilityTitleStart": "تغيّرت خططك؟",
+    "flexibilityTitleEnd": "غيّر موعدك.",
+    "flexibilityDescription": "اختر وقتاً آخر متاحاً دون إعادة اختيار الصالون والحلاق والخدمات.",
+    "manageAppointments": "إدارة مواعيدي",
+    "reschedulePreview": "معاينة إعادة الجدولة",
+    "currentTime": "الوقت الحالي",
+    "newTime": "الوقت الجديد"
   }
 }

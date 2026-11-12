@@ -4,6 +4,12 @@
   --bg-primary: #fff; --bg-secondary: #f7f8fa; --text-primary: #151a20;
   --text-secondary: #596473; --border-color: #e3e7ed;
 }
+[data-theme='dark'] .public-site:has(.landing-refresh) {
+  --bg-primary: #141414; --bg-secondary: #222222; --text-primary: #f6f6f6;
+  --text-secondary: #b9b9b9; --border-color: #3d3d3d;
+}
+[data-theme='dark'] .landing-refresh .lp-hero { background: var(--bg-primary); }
+[data-theme='dark'] .landing-refresh .lp-shops-section { background: var(--bg-primary); }
 body:has(.landing-refresh)::before { display: none; }
 .landing-refresh { overflow: clip; background: var(--bg-primary); color: var(--text-primary); }
 .landing-refresh :is(h1, h2) { font-family: var(--font-body); letter-spacing: -.035em; font-weight: 600; }
@@ -45,6 +51,25 @@ body:has(.landing-refresh)::before { display: none; }
 .lp-preview-date { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin: 0; }
 .lp-preview-date svg { flex-shrink: 0; margin-top: 2px; }
 .lp-text-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 2px; color: var(--booking-link); font-weight: 500; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
+.lp-flexibility-section { background: var(--bg-secondary); }
+.lp-flexibility-inner { max-width: 1280px; margin-inline: auto; padding: 88px 32px; display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 88px; }
+.lp-flexibility-copy { grid-column: 2; grid-row: 1; }
+.lp-flexibility-copy > p { max-width: 420px; margin-bottom: 28px; font-size: 18px; line-height: 1.65; color: var(--text-secondary); }
+.lp-button-outline { border: 1px solid var(--border-color); color: var(--text-primary); background: var(--bg-primary); }
+.lp-button-outline:hover { border-color: var(--booking-link); }
+.lp-reschedule-preview { grid-column: 1; grid-row: 1; padding: 30px 32px; border-radius: 12px; background: var(--bg-primary); min-width: 0; }
+.lp-reschedule-caption { margin: 0 0 24px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.lp-reschedule-appointment { display: flex; flex-direction: column; gap: 7px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); }
+.lp-reschedule-appointment strong { font-size: 20px; font-weight: 600; line-height: 1.4; }
+.lp-reschedule-appointment > span { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+.lp-time-change { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; margin: 24px 0 0; }
+.lp-time-change > dl { margin: 0; }
+.lp-time-change dt { margin-bottom: 8px; color: var(--text-secondary); font-size: 13px; }
+.lp-time-change dd { margin: 0; font-size: 30px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+.lp-time-change > dl:first-child dd { color: var(--text-secondary); text-decoration: line-through; text-decoration-thickness: 1px; }
+.lp-time-change > svg { color: var(--text-secondary); }
+.lp-new-time dd { color: var(--booking-link); }
+[dir='rtl'] .lp-time-change > svg { transform: scaleX(-1); }
 .lp-shops-section { background: #22292f; color: #fff; }
 .lp-shops-inner { display: grid; grid-template-columns: 1.3fr 1fr; gap: 80px; align-items: center; max-width: 1280px; margin: 0 auto; padding: 56px 32px; }
 .lp-shops-copy h2 { font-size: 32px; line-height: 1.2; max-width: 600px; color: #fff; }
@@ -68,6 +93,9 @@ body:has(.landing-refresh)::before { display: none; }
   .lp-booking-path { padding-inline: 20px; font-size: 18px; gap: 14px; }
   .lp-customer-section { gap: 32px; }
   .lp-shops-inner { gap: 40px; }
+  .lp-flexibility-inner { gap: 40px; }
+  .lp-time-change { gap: 14px; }
+  .lp-time-change dd { font-size: 26px; }
 }
 @media (max-width: 800px) {
   .lp-hero-inner { min-height: 540px; padding-block: 72px 90px; }
@@ -79,6 +107,9 @@ body:has(.landing-refresh)::before { display: none; }
   .lp-appointment-preview { max-width: 620px; }
   .lp-shops-inner { grid-template-columns: 1.2fr 1fr; gap: 32px; }
   .lp-shops-copy h2 { font-size: 28px; }
+  .lp-flexibility-inner { grid-template-columns: 1fr; gap: 32px; padding-block: 64px; }
+  .lp-flexibility-copy, .lp-reschedule-preview { grid-column: auto; grid-row: auto; }
+  .lp-reschedule-preview { max-width: 620px; width: 100%; }
 }
 @media (max-width: 600px) {
   .lp-hero { display: flex; flex-direction: column; min-height: 0; }
@@ -104,6 +135,13 @@ body:has(.landing-refresh)::before { display: none; }
   .lp-preview-appointment > strong { font-size: 16px; }
   .lp-preview-date { font-size: 14px; }
   .lp-text-link { margin-top: 4px; }
+  .lp-flexibility-inner { padding: 48px 22px; }
+  .lp-flexibility-copy > p { font-size: 16px; margin-bottom: 24px; }
+  .lp-flexibility-copy .lp-button { width: 100%; justify-content: space-between; }
+  .lp-reschedule-preview { padding: 24px 20px; }
+  .lp-reschedule-appointment strong { font-size: 18px; }
+  .lp-time-change { gap: 12px; }
+  .lp-time-change dd { font-size: clamp(20px, 6.6vw, 26px); }
   .lp-shops-inner { padding: 32px 22px; grid-template-columns: 1fr; gap: 0; }
   .lp-shops-copy h2 { font-size: 25px; line-height: 1.3; }
   .lp-shops-copy > p { font-size: 16px; }

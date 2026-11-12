@@ -2771,6 +2771,13 @@
     "shopsTitle": "Behind every great appointment, a well-run shop.",
     "shopsDescription": "Manage bookings, packages and team availability across your shops.",
     "footer": "Good appointments. Better days.",
-    "support": "Support"
+    "support": "Support",
+    "flexibilityTitleStart": "Plans change.",
+    "flexibilityTitleEnd": "Your appointment can too.",
+    "flexibilityDescription": "Choose another available time without selecting your shop, barber and services again.",
+    "manageAppointments": "Manage my appointments",
+    "reschedulePreview": "Rescheduling preview",
+    "currentTime": "Current time",
+    "newTime": "New time"
   }
 }
