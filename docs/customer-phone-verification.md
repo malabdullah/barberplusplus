@@ -107,3 +107,12 @@ email; canonical profiles are referenced rather than overwritten. Restoring
 `standard` rejects new unverified account booking proofs again. Test email capture
 and native push capture settings remain unchanged; no real messaging is needed
 to test this policy.
+
+Email-first guest booking push registration uses the same sealed receipt. The
+Auth adapter forwards contact mode/email only from that verified receipt; client
+email fields are ignored. SQL checks the exact booking, its current guest email
+context and canonical customer, receipt age, installation secret, account-owner
+and live-session boundaries before adding the device subscription. This never
+marks a phone verified or grants account/history ownership. Existing phone-only
+receipts retain their original validation. `push-guest-receipt` still requires an
+unexpired subscription and cannot open an unrelated booking.

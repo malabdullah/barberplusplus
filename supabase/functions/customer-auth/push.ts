@@ -51,6 +51,13 @@ export async function customerPushAction(deps: Dependencies, request: Request, b
       if (proof.purpose!=='receipt' || proof.user_id || typeof proof.expires!=='number' || proof.expires<=Date.now()
         || !uuid.test(String(proof.id)) || typeof proof.phone!=='string' || typeof proof.country_code!=='string') throw Error();
     } catch { throw Error('FORBIDDEN'); }
+    if (proof.guest_contact !== undefined && proof.guest_contact !== 'email') throw Error('FORBIDDEN');
+    if (proof.guest_contact === 'email') {
+      if (typeof proof.email !== 'string' || proof.email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(proof.email)) throw Error('FORBIDDEN');
+      // Neither a client email nor an optional phone is an ownership proof.
+      // These claims come exclusively from this booking's sealed guest receipt.
+      Object.assign(data,{receiptContact:'email',receiptEmail:proof.email.toLowerCase()});
+    }
     Object.assign(data,{bookingId:proof.id,receiptPhone:proof.phone,receiptCountry:proof.country_code});
   } else if (action==='push-guest-receipt') {
     if (!uuid.test(String(body.bookingId))) throw Error('INVALID_REQUEST');

@@ -1235,7 +1235,14 @@ begin
     if not found then raise exception 'FORBIDDEN'; end if;
     if p_action='push-guest-subscribe' then
       -- The handler supplied these fields only from a valid signed receipt.
-      if not exists(select 1 from public.customers c where c.id=booking.customer_id and c.phone=p_data->>'receiptPhone'
+      if p_data->>'receiptContact'='email' then
+        if booking.created_at < clock_timestamp()-interval '1 hour'
+          or not exists(select 1 from private.customer_booking_email_context ctx
+            join public.customers c on c.id=ctx.customer_id
+            where ctx.booking_id=booking.id and ctx.guest and ctx.customer_id=booking.customer_id
+              and c.status='active' and lower(c.email)=p_data->>'receiptEmail') then raise exception 'FORBIDDEN';end if;
+      elsif p_data ? 'receiptContact' then raise exception 'FORBIDDEN';
+      elsif not exists(select 1 from public.customers c where c.id=booking.customer_id and c.phone=p_data->>'receiptPhone'
           and c.country_code=p_data->>'receiptCountry') then raise exception 'FORBIDDEN'; end if;
       if exists(select 1 from private.customer_booking_owners o where o.booking_id=booking.id and o.account_user_id is distinct from account)
         then raise exception 'FORBIDDEN'; end if;
