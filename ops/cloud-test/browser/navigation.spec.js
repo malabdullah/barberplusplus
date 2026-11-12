@@ -61,7 +61,7 @@ for (const language of ['en', 'ar']) {
 test('homepage to customer signup restores the booking and offers account navigation', async ({ page, request }) => {
   const email = `navigation-${Date.now()}@barber.test`;
   await page.goto('/');
-  await page.locator('.hero-cta').getByRole('link', { name: 'Book appointment' }).click();
+  await page.locator('.lp-hero').getByRole('link', { name: 'Book appointment' }).click();
   await chooseBookingCity(page, 'Kuwait City');
   await page.locator('input[name="branch"][value="10000000-0000-4000-8000-000000000011"]').check();
   await page.locator('input[name="barber"]').first().check();
