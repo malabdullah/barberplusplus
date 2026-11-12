@@ -27,7 +27,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED', 'BOOKING_RATE_LIMIT'];
+const ERROR_CODES = ['SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED', 'BOOKING_RATE_LIMIT', 'EMAIL_REQUIRED'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -94,6 +94,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [details, setDetails] = useState(() => ({ name: '', email: '', countryCode: '+965', phone: '', notes: '', ...draft?.details }));
   const [verification, setVerification] = useState('');
   const [phoneConfig, setPhoneConfig] = useState(null);
+  const [checkoutPolicy, setCheckoutPolicy] = useState(null);
+  const phoneOptional = checkoutPolicy === 'email_only';
   const [accountPhoneCheck, setAccountPhoneCheck] = useState(null);
   const [phoneSession, setPhoneSession] = useState(null);
   const [phoneChallenge, setPhoneChallenge] = useState(null);
@@ -322,7 +324,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const validGuestDetails = () => {
     const errors = {};
     if (details.name.trim().length < 2 || details.name.trim().length > 120) errors.name = tr('nameError');
-    if ((customer || details.phone.trim()) && !validatePhoneNumber(details.phone.replace(/[\s()-]/g, ''), details.countryCode).valid) errors.phone = tr('phoneError');
+    if (((customer && !phoneOptional) || details.phone.trim()) && !validatePhoneNumber(details.phone.replace(/[\s()-]/g, ''), details.countryCode).valid) errors.phone = tr('phoneError');
     if (!customer && (details.email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(details.email.trim()))) errors.email = tr('emailError');
     setFieldErrors(errors);
     if (Object.keys(errors).length) setTimeout(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus(), 0);
@@ -338,7 +340,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const activePhoneSession = phoneSession?.phone === fullPhone && phoneSession?.account === customer?.id ? phoneSession : null;
   useEffect(() => {
     let active = true;
-    customerBookingService.phoneConfig().then(config => { if (active) setPhoneConfig(config); }).catch(() => {});
+    customerBookingService.checkoutPolicy().then(config => { if (active) { setPhoneConfig(config.phone); setCheckoutPolicy(config.checkoutPolicy || 'standard'); } }).catch(() => { if (active) setError('UNAVAILABLE'); });
     return () => { active = false; };
   }, []);
   const accountPhoneKey = phoneConfig && customer?.phone
@@ -398,8 +400,10 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (!validGuestDetails()) return;
     setBusy(true); setError('');
     try {
-      const config = customer ? phoneConfig || (!customer.phone ? await customerBookingService.phoneConfig() : null) : null;
-      if (!config && customer && !customer.phone) {
+      const policy = await customerBookingService.checkoutPolicy();
+      const config = customer ? policy.phone : null;
+      setPhoneConfig(policy.phone); setCheckoutPolicy(policy.checkoutPolicy || 'standard');
+      if (customer && !customer.phone && details.phone.trim()) {
         await updateProfile({ name: customer.name, email: customer.email, countryCode: details.countryCode, phone: details.phone });
       }
       // Preserve the same signed booking ID across uncertain network retries.
@@ -560,8 +564,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                 {(customer || guest) && !accountLoading && <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
-                      <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.countryCode} {customer.phone}</bdi></div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
-                      {!customer.phone && <><label className="cb-field-label" htmlFor="customer-phone">{tr('phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}</>}
+                      <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.email}</bdi>{customer.phone && <><br /><bdi>{customer.countryCode} {customer.phone}</bdi></>}</div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
+                      {!customer.phone && <><label className="cb-field-label" htmlFor="customer-phone">{tr(phoneOptional ? 'optionalPhoneLabel' : 'phoneLabel')}</label><div className="cb-phone-input" dir="ltr"><select aria-label={tr('countryCode')} value={details.countryCode} onChange={event => { setDetails(current => ({ ...current, countryCode: event.target.value })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }}>{GCC_COUNTRIES.map(country => <option key={country.code} value={country.code}>{country.flag} {country.code}</option>)}</select><input id="customer-phone" type="tel" autoComplete="tel-national" value={details.phone} maxLength={14} onChange={event => { setDetails(current => ({ ...current, phone: event.target.value.replace(/[^0-9\s()-]/g, '') })); setVerification(''); setPhoneSession(null); setPhoneCode(''); setFieldErrors(current => ({ ...current, phone: '' })); }} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'customer-phone-error' : undefined} required={!phoneOptional} /></div>{fieldErrors.phone && <p className="cb-field-error" id="customer-phone-error">{fieldErrors.phone}</p>}</>}
                       <label htmlFor="booking-notes" className="cb-field-label">{tr('notesLabel')}</label><textarea id="booking-notes" className="cb-input" rows={2} maxLength={500} value={details.notes} onChange={event => setDetails(current => ({ ...current, notes: event.target.value }))} />
                     </> : <>
                       <label className="cb-field-label" htmlFor="customer-name">{tr('nameLabel')}</label><input id="customer-name" className="cb-input" autoComplete="name" value={details.name} maxLength={120} onChange={event => { setDetails(current => ({ ...current, name: event.target.value })); setVerification(''); setFieldErrors(current => ({ ...current, name: '' })); }} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'customer-name-error' : undefined} required />{fieldErrors.name && <p className="cb-field-error" id="customer-name-error">{fieldErrors.name}</p>}
@@ -609,7 +613,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
           <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
             {finalDetails
-              ? bookingSubmit(tr(phoneCheckPending ? 'phoneVerification.checking' : 'confirm'), Boolean(phoneCheckPending))
+              ? bookingSubmit(tr(phoneCheckPending || !checkoutPolicy ? 'phoneVerification.checking' : 'confirm'), Boolean(phoneCheckPending || !checkoutPolicy))
               : <button id="booking-next" type="button" className="cb-primary" disabled={!canContinue || busy || catalogError}
                 onClick={() => openPanel(PANELS[panelIndex + 1])}>{nextLabel}<ArrowRight size={20} className="cb-directional" /></button>}
           </div>

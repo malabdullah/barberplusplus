@@ -16,6 +16,7 @@ type Dependencies = {
   customer?: (token: string) => Promise<{id: string; customerId?: string; session_id: string; name: string; phone: string; countryCode: string; email?: string} | null>;
   limitGuest?: (email: string, ip: string) => Promise<boolean>;
   phone?: GooglePhoneConfig;
+  checkoutPolicy?: () => Promise<'standard' | 'email_only'>;
   startTestPhone?: (phone: string) => Promise<string>;
   confirmPhone?: (session: string, code: string, phone: string) => Promise<boolean>;
   accountPhone?: (customerId: string, country: string, phone: string, verified: boolean) => Promise<boolean>;
@@ -24,7 +25,7 @@ type Dependencies = {
   recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
 };
-type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean; email?: string; guest_contact?: 'email'; language?: string };
+type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean; email?: string; guest_contact?: 'email'; account_contact?: 'email'; language?: string };
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
@@ -62,7 +63,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
     const origin = req.headers.get('origin');
     // The authenticated Test Worker sets this header itself; direct native Test
     // traffic and environments without explicit phone settings stay compatible.
-    const phoneConfig = deps.environment === 'cloud-test' && req.headers.get('x-barber-test-web') !== '1' ? undefined : deps.phone;
+    const configuredPhone = deps.environment === 'cloud-test' && req.headers.get('x-barber-test-web') !== '1' ? undefined : deps.phone;
     const originAllowed = await runtime.allows(req);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
@@ -84,6 +85,12 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
+      // Recovery capabilities remain valid across policy switches. New proof and
+      // booking requests always read the authoritative policy; errors fail closed.
+      const policyActions = ['phone-config', 'phone-start', 'phone-confirm', 'account-proof', 'guest-proof', 'book', 'claim-booking'];
+      const checkoutPolicy = policyActions.includes(String(body.action)) && deps.checkoutPolicy ? await deps.checkoutPolicy() : 'standard';
+      const emailOnly = checkoutPolicy === 'email_only';
+      const phoneConfig = emailOnly ? undefined : configuredPhone;
       if (['recover-booking', 'resolve-booking'].includes(String(body.action))) {
         if (body.action === 'recover-booking' && !deps.recover || body.action === 'resolve-booking' && !deps.close) return reply(404, { error: 'NOT_AVAILABLE' });
         const proof = await verify(body.verification, 'verified', 24 * 60 * 60_000);
@@ -121,7 +128,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         const config = phoneConfig?.testPhones
           ? { projectId: phoneConfig.projectId, testPhones: phoneConfig.testPhones }
           : phoneConfig;
-        return reply(200, { phone: config || null });
+        return reply(200, { phone: config || null, checkoutPolicy, phoneVerificationRequired: Boolean(phoneConfig), phoneRequired: !emailOnly, emailRequired: true, guestContactMode: 'email' });
       }
       if (body.action === 'phone-start') {
         if (deps.environment !== 'cloud-test' || !phoneConfig?.testPhones || !deps.startTestPhone) {
@@ -176,6 +183,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (body.action === 'account-proof') {
         const account = await readAccount();
         if (!account) return reply(401, {error:'VERIFICATION_REQUIRED'});
+        if (emailOnly) {
+          const email = account.email?.trim().toLowerCase() || '';
+          if (email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return reply(428, { error: 'EMAIL_REQUIRED' });
+          if (account.phone && !patterns[account.countryCode]?.test(account.phone)) return reply(400, { error: 'INVALID_DETAILS' });
+          return reply(200, { verification: await sign({ purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,
+            account_contact:'email',email,name:account.name,phone:account.phone || '',country_code:account.countryCode || '+965',phone_verified:false,expires:Date.now()+10*60_000 }) });
+        }
         if (phoneConfig && (!account.phone || !await isAccountPhoneVerified(account))) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (!account.phone || !patterns[account.countryCode]?.test(account.phone)) return reply(400, {error:'INVALID_DETAILS'});
         return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,phone_verified:Boolean(phoneConfig),name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
@@ -222,6 +236,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
           return reply(200, { verification: await sign({ purpose:'verified',id:crypto.randomUUID(),name,phone,country_code:countryCode,
             email,guest_contact:'email',language:body.language==='ar'?'ar':'en',phone_verified:false,expires:Date.now()+10*60_000 }) });
         }
+        if (emailOnly) return reply(428, { error: 'EMAIL_REQUIRED' });
         // Older native clients retain their existing phone-based contract.
         if (phoneConfig) return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
         if (name.length < 2 || name.length > 120 || !patterns[countryCode]?.test(phone)) return reply(400, { error: 'INVALID_DETAILS' });
@@ -269,6 +284,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (proof.user_id) {
           const account = await readAccount();
           if (!account || account.id !== proof.user_id || account.session_id !== proof.session_id) return reply(401, {error:'VERIFICATION_REQUIRED'});
+          if (proof.account_contact === 'email' && account.email?.toLowerCase() !== proof.email) return reply(401, { error: 'VERIFICATION_REQUIRED' });
           if (phoneConfig && (account.phone !== proof.phone || account.countryCode !== proof.country_code || !await isAccountPhoneVerified(account))) {
             return reply(428, { error: 'PHONE_VERIFICATION_REQUIRED' });
           }

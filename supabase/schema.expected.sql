@@ -413,6 +413,17 @@ begin
  return true;
 end $_$;
 ALTER FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if p_policy is null or p_policy not in ('standard','email_only') then raise exception 'INVALID_REQUEST'; end if;
+  update private.customer_checkout_runtime set policy=p_policy,updated_at=clock_timestamp() where singleton;
+  if not found then raise exception 'UNAVAILABLE'; end if;
+  return p_policy;
+end $$;
+ALTER FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") RETURNS boolean
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -616,6 +627,7 @@ declare
   v_name text;
   v_email text;
   v_email_guest boolean;
+  v_email_account boolean := false;
 begin
   if p_action not in ('slots', 'book', 'appointment-slots') or p_action is null then
     raise exception 'INVALID_REQUEST';
@@ -625,12 +637,19 @@ begin
     v_phone := nullif(p_data ->> 'phone','');
     v_email_guest := p_data->>'guest_contact'='email' and nullif(p_data->>'account_user_id','') is null;
     v_email := lower(btrim(p_data->>'email'));
+    v_email_account := public.customer_checkout_policy()='email_only' and nullif(p_data->>'account_user_id','') is not null;
+    if v_email_account then
+      -- Live canonical ownership is mandatory, including for an idempotent retry.
+      v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
+      select lower(u.email) into v_email from auth.users u where u.id=(p_data->>'account_user_id')::uuid and u.email_confirmed_at is not null;
+      if v_email is null or length(v_email)>254 or v_email !~ '^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$' then raise exception 'EMAIL_REQUIRED';end if;
+    end if;
     v_code := p_data ->> 'country_code';
     v_name := trim(p_data ->> 'name');
     if v_id is null or v_name is null or length(v_name) not between 2 and 120
        or v_code is null or v_code not in ('+965','+966','+971','+973','+974','+968')
        or (coalesce(v_email_guest,false) and (v_email is null or length(v_email)>254 or v_email !~ '^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'))
-       or (not coalesce(v_email_guest,false) and v_phone is null)
+       or (not coalesce(v_email_guest,false) and not v_email_account and v_phone is null)
        or (v_phone is not null and v_phone !~ '^[0-9]{8,9}$')
        or length(coalesce(p_data ->> 'notes', '')) > 500 then
       raise exception 'INVALID_REQUEST';
@@ -713,7 +732,7 @@ begin
     end if;
     if nullif(p_data->>'account_user_id','') is not null then
       v_customer:=private.resolve_booking_customer((p_data->>'account_user_id')::uuid,(p_data->>'session_id')::uuid);
-      if not exists(select 1 from public.customers where id=v_customer and phone=v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
+      if not exists(select 1 from public.customers where id=v_customer and phone is not distinct from v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
     elsif coalesce(v_email_guest,false) then
       -- Unverified contact details never select or edit an existing person.
       insert into public.customers(name,country_code,phone,email,preferred_branch_id,preferred_barber_id,created_by_type)
@@ -947,6 +966,13 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_checkout_policy"() RETURNS "text"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select policy from private.customer_checkout_runtime where singleton;
+$$;
+ALTER FUNCTION "public"."customer_checkout_policy"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -2852,6 +2878,8 @@ REVOKE ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" int
 GRANT ALL ON FUNCTION "public"."cleanup_old_notifications"("retention_days" integer, "batch_size" integer) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push_runtime"("p_api_url" "text", "p_topic" "text", "p_environments" "text"[]) FROM PUBLIC;
@@ -2890,6 +2918,8 @@ REVOKE ALL ON FUNCTION "public"."customer_catalog_ratings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_catalog_ratings"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_checkout_phone"("p_customer" "uuid", "p_country" "text", "p_phone" "text", "p_verified" boolean) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_checkout_policy"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_checkout_policy"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;

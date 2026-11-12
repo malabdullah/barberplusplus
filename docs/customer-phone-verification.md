@@ -60,3 +60,46 @@ For operational rollback, disable the explicit Functions switch and restore the
 previous compatible Functions/frontend artifact if necessary. Retain marker rows
 and customer writes; never reverse SQL or restore an old database automatically.
 No native iOS changes are part of this release.
+
+## Temporary email-only checkout policy
+
+The service-only `configure_customer_checkout_policy('email_only')` switch pauses
+customer checkout SMS independently of the retained `CHECKOUT_GOOGLE_*` provider
+settings. The migration defaults to `standard` and activates no environment.
+Use `configure_customer_checkout_policy('standard')` to restore normal enforcement.
+No provider secret, Google configuration or existing verification marker is removed
+or fabricated. Staff authentication and manual booking rules do not change.
+
+POST `customer-booking` with `{ "action": "phone-config" }` advertises:
+
+```json
+{"phone":null,"checkoutPolicy":"email_only","phoneVerificationRequired":false,"phoneRequired":false,"emailRequired":true,"guestContactMode":"email"}
+```
+
+Clients must recognise the explicit `email_only` policy. Missing/unknown fields
+must retain their older behavior; a null provider configuration alone does not
+mean phone-optional checkout. The database and Function read the authoritative
+policy for each new booking/proof; lookup failure fails closed.
+
+Signed-in clients continue to request `account-proof` with a live Auth token.
+The proof uses the canonical account's verified Auth email and saved optional
+phone, binds the account/session and explicitly sets `phone_verified:false`.
+A missing verified account email returns HTTP 428 `EMAIL_REQUIRED`. Clients cannot
+supply an email to override this identity. They may save an optional phone through
+the normal profile update before requesting the proof; global uniqueness and
+verification-marker invalidation remain enforced.
+
+New guests request `guest-proof` with `contactMode:"email"`, name, email,
+countryCode (default `+965`), optional phone (empty or omitted), and language.
+The email is contact-only: no OTP, lookup, automatic linking or profile overwrite.
+New phone-only guest-proof requests while paused return HTTP 428 `EMAIL_REQUIRED`.
+Malformed contacts return `INVALID_DETAILS`; guest rate limits remain active.
+
+Existing signed phone-only attempts and receipts are not converted into email
+attempts. Their IDs, closure, price/package checks, recovery window and original
+claim semantics stay intact. New email receipt claims require explicit receipt
+possession, its original one-hour deadline and a matching verified signed-in
+email; canonical profiles are referenced rather than overwritten. Restoring
+`standard` rejects new unverified account booking proofs again. Test email capture
+and native push capture settings remain unchanged; no real messaging is needed
+to test this policy.

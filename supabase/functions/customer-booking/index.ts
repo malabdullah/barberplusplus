@@ -33,6 +33,11 @@ Deno.serve(createCustomerBookingHandler({
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
   phone,
+  checkoutPolicy: async () => {
+    const result = await admin.rpc('customer_checkout_policy');
+    if (result.error || !['standard', 'email_only'].includes(result.data)) throw Error('Checkout policy unavailable');
+    return result.data;
+  },
   limitGuest: async (email, ip) => {
     const buckets: [string,string,number][] = [['email',email,12]];
     // An unavailable proxy address must not create one shared limit for every guest.
@@ -67,7 +72,12 @@ Deno.serve(createCustomerBookingHandler({
     const identity = await customerIdentity(admin, token);
     if (!identity) return null;
     const result = await admin.rpc('customer_account_api', {p_action:'profile',p_data:identity});
-    return result.error || !result.data ? null : {...result.data,session_id:identity.session_id};
+    if (result.error || !result.data) return null;
+    // The canonical account address, rather than client contact metadata, is the
+    // email-only checkout identity. A phone-confirmed login alone is insufficient.
+    const auth = await admin.auth.admin.getUserById(result.data.id);
+    if (auth.error) throw Error('Account unavailable');
+    return {...result.data,email:auth.data.user?.email_confirmed_at ? auth.data.user.email : undefined,session_id:identity.session_id};
   },
   discovery: async (action, data) => {
     const result = await admin.rpc('customer_booking_discovery', { p_action: action, p_data: data });
