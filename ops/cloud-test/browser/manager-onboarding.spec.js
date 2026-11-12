@@ -11,9 +11,9 @@ for (const language of ['en', 'ar']) for (const theme of ['light', 'dark']) {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.addInitScript(({ language, theme }) => { localStorage.setItem('barber-language', language); localStorage.setItem('barber-theme', theme); }, { language, theme });
     await page.goto('/');
-    await expect(page.locator('.hero-btn-secondary')).toHaveAttribute('href', '/login');
-    await expect(page.locator('.cta-button')).toHaveAttribute('href', '/login');
-    await expect(page.locator('a[href="/signup"]')).toHaveCount(0);
+    await expect(page.locator('.lp-team-link')).toHaveAttribute('href', '/login');
+    await expect(page.locator('.lp-shop-actions a[href="/signup"]')).toHaveText(language === 'ar' ? 'أنشئ حساب المدير الخاص بك' : 'Create your manager account');
+    await expect(page.getByRole('link', {name:/Register your shop|سجّل صالونك/i})).toHaveCount(0);
     await page.goto('/dashboard/branches/new');
     await expect(page).toHaveURL(/\/login$/);
     const signup = panel(page).locator('a[href="/signup"]');

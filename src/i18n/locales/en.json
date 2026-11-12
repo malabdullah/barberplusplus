@@ -2033,7 +2033,7 @@
   "publicNav": {
     "shops": "Shops",
     "customers": "Customers",
-    "pageTitle": "Book your next cut. Manage your shop.",
+    "pageTitle": "Make time for a great cut.",
     "home": "Home",
     "book": "Book appointment",
     "forShops": "For shops",
@@ -2754,5 +2754,30 @@
     "managers": "Managers can ask about shop settings or team access.",
     "whatToInclude": "Include the booking reference or shop name if it helps explain the issue. Keep passwords and verification codes private.",
     "email": "Email support"
+  },
+  "landingRefresh": {
+    "titleStart": "Make time",
+    "titleEnd": "for a great cut.",
+    "intro": "Find your barber. Choose your time. We’ll take care of the booking.",
+    "bookingChoices": "Choose how to book",
+    "customerTitleStart": "The right barber.",
+    "customerTitleEnd": "The next appointment.",
+    "customerDescription": "Save favourites, explore packages, and keep your bookings together.",
+    "demo": "Demo preview",
+    "barberName": "Ahmed",
+    "demoRating": "Illustrative rating and review count",
+    "packageName": "Haircut + Beard package",
+    "viewAppointments": "View appointments",
+    "shopsTitle": "Behind every great appointment, a well-run shop.",
+    "shopsDescription": "Manage bookings, packages and team availability across your shops.",
+    "footer": "Good appointments. Better days.",
+    "support": "Support",
+    "flexibilityTitleStart": "Plans change.",
+    "flexibilityTitleEnd": "Your appointment can too.",
+    "flexibilityDescription": "Choose another available time without selecting your shop, barber and services again.",
+    "manageAppointments": "Manage my appointments",
+    "reschedulePreview": "Rescheduling preview",
+    "currentTime": "Current time",
+    "newTime": "New time"
   }
 }

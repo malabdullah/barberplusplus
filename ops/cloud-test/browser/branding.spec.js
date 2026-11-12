@@ -33,7 +33,7 @@ for (const width of [1440, 390]) {
           await expect.poll(() => logo.locator(`.brand-logo-${treatment}`).evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
           if (name === 'landing' && width === 390) {
-            await expect.poll(() => page.locator('.hero-cta .hero-btn-primary').evaluate(el => {
+            await expect.poll(() => page.locator('.lp-hero .lp-button-primary').evaluate(el => {
               const box = el.getBoundingClientRect();
               return box.top >= document.querySelector('.public-header').getBoundingClientRect().bottom && box.bottom <= innerHeight;
             }), { message: 'Booking is immediately reachable in the mobile homepage viewport' }).toBe(true);

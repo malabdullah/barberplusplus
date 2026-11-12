@@ -16,9 +16,9 @@ vi.mock('./FavouriteButton', () => ({default:()=>null}));
 vi.mock('./FavouriteFeedback', () => ({default:()=>null}));
 let props;
 function Checkout(p) { props=p; return <><p>Checkout: {p.initialDraft.barberId}</p><button onClick={p.onClearSelection}>Clear selection</button></>; }
-async function open() {
+async function open(entries = ['/book']) {
   const i18n=i18next.createInstance(); await i18n.init({lng:'en',resources:{en:{translation:en}}});
-  render(<I18nextProvider i18n={i18n}><MemoryRouter><BookingFinder checkout={Checkout}/></MemoryRouter></I18nextProvider>);
+  render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={entries}><BookingFinder checkout={Checkout}/></MemoryRouter></I18nextProvider>);
 }
 beforeEach(()=>{
   vi.resetAllMocks(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); localStorage.clear();sessionStorage.clear();props=null;
@@ -70,3 +70,14 @@ it('does not restore a selection when an earlier provider request finishes after
  await act(async()=>finish({branches:[{id:'shop',city:'Sharq'}],barbers:[{id:'barber'}],services:[]}));
  expect(screen.getByRole('heading',{name:'How would you like to book?'})).toBeVisible();expect(readBookingDraft()).toBeNull();expect(screen.queryByText('Checkout: barber')).not.toBeInTheDocument();
 });
+
+for (const mode of ['time', 'barber', 'shop']) {
+ it('opens the landing '+mode+' entry directly without restoring a different provider', async()=>{
+  saveBookingDraft({city:'Sharq',branchId:'old-shop',barberId:'old-barber',serviceIds:['old-service'],date:getKuwaitDate(),time:'10:00',step:1,bookingMode:'shop'});
+  await open([{pathname:'/book',state:{bookingEntryMode:mode}}]);
+  if(mode==='time') { expect(screen.getByLabelText('From')).toBeVisible(); expect(screen.queryByLabelText('City')).not.toBeInTheDocument(); }
+  if(mode==='barber') await screen.findByLabelText('Search barbers');
+  if(mode==='shop') expect(screen.getByLabelText('City')).toBeVisible();
+  await waitFor(()=>expect(readBookingDraft()).toMatchObject({bookingMode:mode,barberId:'',branchId:'',serviceIds:[],city:'Sharq'}));
+ });
+}
