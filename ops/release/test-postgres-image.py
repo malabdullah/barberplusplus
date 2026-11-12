@@ -41,7 +41,20 @@ def main():
     )
     started = False
     try:
-        command = 'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp -c shared_preload_libraries=pg_cron,pg_net,pg_stat_statements -c cron.database_name=postgres -c cron.launch_active_jobs=off'
+        # Vault writes need pgsodium's server-key mode. Generate a fresh key
+        # inside this network-isolated container's tmpfs, never from the source
+        # profile or production. Neither the key nor its contents leave /tmp.
+        # https://github.com/michelp/pgsodium#server-key-management
+        command = (
+            "umask 077 && od -An -N32 -tx1 /dev/urandom | tr -d ' \\n' > /tmp/compat-vault-key && "
+            "printf '%s\\n' '#!/bin/sh' 'cat /tmp/compat-vault-key' > /tmp/compat-getkey && "
+            'chmod 700 /tmp/compat-getkey && '
+            'initdb -D /tmp/compat-pg --username=postgres --auth=trust >/tmp/init.log 2>&1 && '
+            'exec postgres -D /tmp/compat-pg -c listen_addresses= -c unix_socket_directories=/tmp '
+            '-c shared_preload_libraries=pgsodium,pg_cron,pg_net,pg_stat_statements '
+            '-c pgsodium.getkey_script=/tmp/compat-getkey '
+            '-c cron.database_name=postgres -c cron.launch_active_jobs=off'
+        )
         docker('run','-d','--name',name,'--platform','linux/amd64','--label','barber.operation=postgres-compatibility','--network','none','--memory','1g','--cpus','1','--user','postgres','--tmpfs','/tmp:rw,size=768m','--entrypoint','/bin/bash',image,'-lc',command); started=True
         import time
         for _ in range(60):
