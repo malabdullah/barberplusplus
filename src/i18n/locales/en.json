@@ -134,7 +134,8 @@
     "reset": "Reset",
     "saving": "Saving...",
     "changesSaved": "Changes saved successfully",
-    "agent": "Agent"
+    "agent": "Agent",
+    "retry": "Try again"
   },
   "agent": {
     "nav": {
@@ -2705,5 +2706,52 @@
       "cancelled": "Cancelled",
       "no_show": "No-show"
     }
+  },
+  "accountTools": {
+    "activity": "Account activity",
+    "activityHint": "See recent booking and shop changes available to your account.",
+    "sessionsHint": "See the browsers and devices signed in to your account.",
+    "unknownDevice": "Unknown device",
+    "currentDevice": "Current session",
+    "lastRefresh": "Last session refresh",
+    "endSession": "Sign out device",
+    "endSessionPrompt": "Sign this device out of your account? Your current session will stay open.",
+    "revokeFailed": "Could not sign out that device. Try again.",
+    "loadFailed": "Could not load this information.",
+    "loadMore": "Load more",
+    "noActivity": "No recorded activity yet.",
+    "noSessions": "No active sessions found.",
+    "you": "You",
+    "events": {
+      "booking_created": "Booking created",
+      "booking_rescheduled": "Booking rescheduled",
+      "booking_status_changed": "Booking status changed",
+      "shop_hours_changed": "Shop hours changed",
+      "barber_schedule_changed": "Barber schedule changed",
+      "booking_deadlines_changed": "Platform booking deadlines changed"
+    },
+    "actors": {
+      "admin": "Admin",
+      "manager": "Shop manager",
+      "barber": "Barber",
+      "agent": "Booking agent",
+      "whatsapp_agent": "Booking agent",
+      "customer": "Customer",
+      "unknown": "Actor unavailable"
+    },
+    "sessionEnded": "Session signed out.",
+    "sessionUnavailable": "This session is no longer available.",
+    "noOtherSessions": "No other active sessions",
+    "thisDevice": "This device",
+    "sessionExpired": "This session has ended. Sign in again to continue.",
+    "signInAgain": "Sign in again"
+  },
+  "support": {
+    "description": "Contact us about your account, appointments or shop.",
+    "customers": "Customers can ask for help with bookings or account access.",
+    "barbers": "Barbers can report scheduling or profile issues.",
+    "managers": "Managers can ask about shop settings or team access.",
+    "whatToInclude": "Include the booking reference or shop name if it helps explain the issue. Keep passwords and verification codes private.",
+    "email": "Email support"
   }
 }

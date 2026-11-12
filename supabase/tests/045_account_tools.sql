@@ -1,0 +1,92 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
+create function pg_temp.tools_assert(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'ACCOUNT_TOOLS_ASSERT: %',label;end if;end$$;
+do $tests$
+declare
+ m uuid:=gen_random_uuid();b uuid:=gen_random_uuid();c uuid:=gen_random_uuid();a uuid:=gen_random_uuid();g uuid:=gen_random_uuid();other_user uuid:=gen_random_uuid();
+ ms uuid:=gen_random_uuid();bs uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();ads uuid:=gen_random_uuid();gs uuid:=gen_random_uuid();os uuid:=gen_random_uuid();factor uuid:=gen_random_uuid();
+ shop uuid:=gen_random_uuid();other_shop uuid:=gen_random_uuid();chair uuid:=gen_random_uuid();other_chair uuid:=gen_random_uuid();profile uuid:=gen_random_uuid();booking uuid:=gen_random_uuid();other_booking uuid:=gen_random_uuid();
+ who jsonb;got jsonb;page2 jsonb;target uuid;denied boolean;old_count bigint;svc uuid:=gen_random_uuid();other_svc uuid:=gen_random_uuid();
+begin
+ perform pg_temp.tools_assert(not has_function_privilege('anon','public.account_tools_api(text,jsonb)','EXECUTE'),'anonymous cannot call identity-taking API');
+ perform pg_temp.tools_assert(not has_function_privilege('authenticated','public.account_tools_api(text,jsonb)','EXECUTE'),'authenticated cannot forge API identity');
+ perform pg_temp.tools_assert(not has_table_privilege('authenticated','private.account_activity','SELECT'),'activity table private');
+ perform pg_temp.tools_assert(not has_table_privilege('authenticated','private.account_revoked_sessions','SELECT'),'revocation markers private');
+ perform pg_temp.tools_assert((select count(*) from pg_policy where polname='Account tools live session' and not polpermissive and polcmd='r' and polroles=array[(select oid from pg_roles where rolname='authenticated')])=4,'all four realtime tables have restrictive authenticated read guards');
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
+ (m,m::text||'@example.test',now(),'{"role":"manager"}'),(b,b::text||'@example.test',now(),'{"role":"barber"}'),(c,c::text||'@example.test',now(),'{"role":"customer"}'),(a,a::text||'@example.test',now(),'{"role":"admin"}'),(g,g::text||'@example.test',now(),'{"role":"agent"}'),(other_user,other_user::text||'@example.test',now(),'{"role":"manager"}');
+ insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values(factor,a,'QA','totp','verified','synthetic-only',now(),now());
+ insert into auth.sessions(id,user_id,aal,factor_id,created_at)values(ms,m,'aal1',null,now()),(bs,b,'aal1',null,now()),(cs,c,'aal1',null,now()),(ads,a,'aal2',factor,now()),(gs,g,'aal1',null,now()),(os,other_user,'aal1',null,now());
+ insert into public.branches(id,manager_id,name)values(shop,m,'Account tools QA'),(other_shop,other_user,'Other tools QA');
+ insert into public.services(id,branch_id,name,duration,price)values(svc,shop,'Tools cut',30,3),(other_svc,other_shop,'Other cut',30,3);
+ insert into public.barbers(id,user_id,branch_id,name,email,service_ids)values(chair,b,shop,'Tools barber',b::text||'@example.test',array[svc]);
+ insert into public.barbers(id,branch_id,name,management_mode,status,service_ids)values(other_chair,other_shop,'Other chair','managed','inactive',array[other_svc]);
+ insert into public.customers(id,name,email,created_by_type)values(profile,'Tools customer',c::text||'@example.test','customer');
+ insert into private.customer_accounts(user_id,customer_id)values(c,profile);
+ -- Link a booking-shaped identifier without creating real bookings or email jobs.
+ insert into public.bookings(id,customer_id,branch_id,barber_id,service_ids,date,time,duration,price,status,added_by_type)values(booking,profile,shop,chair,array[svc],current_date-10,'09:00',30,3,'completed','customer'),(other_booking,profile,other_shop,other_chair,array[other_svc],current_date-11,'09:00',30,3,'completed','customer');
+ insert into private.customer_booking_owners(booking_id,account_user_id)values(booking,c);
+ insert into private.account_activity(kind,branch_id,booking_id,barber_id,actor_user_id,actor_role)select 'booking_status_changed',shop,booking,chair,m,'manager'from generate_series(1,30);
+ insert into private.account_activity(kind,branch_id,booking_id,barber_id,actor_user_id,actor_role)values('booking_status_changed',other_shop,other_booking,other_chair,other_user,'manager'),('booking_deadlines_changed',null,null,null,g,'agent');
+ who:=jsonb_build_object('user_id',m,'session_id',ms,'aal','aal1');
+ got:=public.account_tools_api('status',who);perform pg_temp.tools_assert(got->>'role'='manager','live manager accepted');
+ got:=public.account_tools_api('activity',who||'{"view":"work"}');perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25 and got->>'nextCursor'is not null,'activity first page bounded');
+ perform pg_temp.tools_assert(not exists(select 1 from jsonb_array_elements(got->'rows')e where e->>'shop'is distinct from 'Account tools QA'),'manager only current shop');
+ page2:=public.account_tools_api('activity',who||jsonb_build_object('view','work','cursor',got->'nextCursor'));
+ perform pg_temp.tools_assert(jsonb_array_length(page2->'rows')>=5 and page2->>'nextCursor'is null,'activity cursor reaches remaining rows');
+ perform pg_temp.tools_assert(not exists(select 1 from jsonb_array_elements(got->'rows')x join jsonb_array_elements(page2->'rows')y on x->>'id'=y->>'id'),'activity pages never overlap');
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',b,'session_id',bs,'view','work'));
+ perform pg_temp.tools_assert(not exists(select 1 from jsonb_array_elements(got->'rows')e where e->>'shop'is distinct from 'Account tools QA'),'barber own chair only');
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',c,'session_id',cs,'view','customer'));
+ perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25 and not exists(select 1 from jsonb_array_elements(got->'rows')e where e->>'actorName'is not null or e->>'shop'is distinct from 'Account tools QA'),'customer only owned booking without staff identity');
+ denied:=false;begin perform public.account_tools_api('activity',jsonb_build_object('user_id',c,'session_id',cs,'view','work'));exception when others then denied:=sqlerrm='FORBIDDEN';end;perform pg_temp.tools_assert(denied,'customer work view denied');
+ denied:=false;begin perform public.account_tools_api('activity',who||'{"view":"customer"}');exception when others then denied:=sqlerrm='FORBIDDEN';end;perform pg_temp.tools_assert(denied,'manager without personal profile cannot read customer activity');
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',g,'session_id',gs,'view','work'));
+ perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=1 and got->'rows'->0->>'kind'='booking_deadlines_changed','agent only own actions');
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',a,'session_id',ads,'aal','aal2','view','work'));perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25,'admin MFA scope');
+ denied:=false;begin perform public.account_tools_api('status',jsonb_build_object('user_id',a,'session_id',ads,'aal','aal1'));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.tools_assert(denied,'admin AAL1 denied');
+
+ -- A manager's personal activity never includes work-only events from their shop.
+ insert into public.customers(id,name,created_by_type)values(gen_random_uuid(),'Tools manager personal','customer');
+ insert into private.customer_accounts(user_id,customer_id)select m,id from public.customers where name='Tools manager personal';
+ insert into private.customer_booking_owners(booking_id,account_user_id)values(other_booking,m);
+ got:=public.account_tools_api('activity',who||'{"view":"customer"}');
+ perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=2 and not exists(select 1 from jsonb_array_elements(got->'rows')e where e->>'shop'is distinct from 'Other tools QA'),'manager personal view uses ownership, not managed shop');
+ update public.barbers set status='inactive'where id=chair;
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',b,'session_id',bs,'view','work'));
+ perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=0,'inactive barber loses work scope');
+ update public.barbers set status='active'where id=chair;
+ update public.branches set manager_id=other_user where id=shop;
+ got:=public.account_tools_api('activity',who||'{"view":"work"}');perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=0,'former manager loses history access');
+ -- Tied timestamps exercise the ID tie-breaker, while expired and foreign sessions stay out.
+ insert into auth.sessions(id,user_id,aal,created_at,user_agent)select gen_random_uuid(),m,'aal1',now()-interval '1 hour','Synthetic Safari'from generate_series(1,27);
+ insert into auth.sessions(id,user_id,aal,not_after)values(gen_random_uuid(),m,'aal1',now()-interval '1 minute');
+ got:=public.account_tools_api('sessions',who);perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25 and got->'currentSession'->>'id'=ms::text,'current pinned with bounded others');
+ page2:=public.account_tools_api('sessions',who||jsonb_build_object('cursor',got->'nextCursor'));perform pg_temp.tools_assert(jsonb_array_length(page2->'rows')=2 and page2->>'nextCursor'is null,'sessions cursor remaining two');
+ perform pg_temp.tools_assert(not exists(select 1 from jsonb_array_elements(got->'rows')x join jsonb_array_elements(page2->'rows')y on x->>'id'=y->>'id'),'session pages never overlap');
+ perform pg_temp.tools_assert(not exists(select 1 from jsonb_array_elements(got->'rows')e where e ? 'ip' or e ? 'token' or e->>'id'=os::text),'sessions exclude IP, secrets and other accounts');
+ denied:=false;begin perform public.account_tools_api('revoke-session',who||jsonb_build_object('targetId',os));exception when others then denied:=sqlerrm='SESSION_NOT_FOUND';end;perform pg_temp.tools_assert(denied,'cannot revoke another account');
+ denied:=false;begin perform public.account_tools_api('revoke-session',who||jsonb_build_object('targetId',ms));exception when others then denied:=sqlerrm='USE_SIGN_OUT_FOR_CURRENT_SESSION';end;perform pg_temp.tools_assert(denied,'current session must use sign out');
+ target:=(got->'rows'->0->>'id')::uuid;perform public.account_tools_api('revoke-session',who||jsonb_build_object('targetId',target));
+ perform pg_temp.tools_assert((select not_after<=clock_timestamp()from auth.sessions where id=target),'revoke expires Auth session');
+ perform pg_temp.tools_assert(exists(select 1 from private.account_revoked_sessions where session_id=target),'persistent realtime deny marker');
+ denied:=false;begin perform public.account_tools_api('status',jsonb_build_object('user_id',m,'session_id',target));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.tools_assert(denied,'revoked access token cannot use tools');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'session_id',target,'role','authenticated')::text,true);perform pg_temp.tools_assert(not private.account_tools_session_live(),'realtime guard denies revoked session');
+ perform set_config('request.jwt.claims','{}',true);
+ update auth.users set banned_until=now()+interval '1 day'where id=m;
+ denied:=false;begin perform public.account_tools_api('sessions',who);exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.tools_assert(denied,'suspended user denied');update auth.users set banned_until=null where id=m;
+ denied:=false;begin perform public.account_tools_api('status',who||jsonb_build_object('session_id',os));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.tools_assert(denied,'wrong session/user pair denied');
+ select count(*)into old_count from private.account_activity where booking_id=booking;
+ update public.bookings set date=date-1,status='cancelled'where id=booking;
+ perform pg_temp.tools_assert((select count(*)from private.account_activity where booking_id=booking)=old_count+2,'reschedule and status trigger captured separately');
+ update public.branches set working_hours='{}'where id=shop;
+ perform pg_temp.tools_assert(exists(select 1 from private.account_activity where branch_id=shop and kind='shop_hours_changed'),'shop hours trigger captured');
+ update public.barbers set availability=jsonb_set(availability,'{monday,end}','"20:00"')where id=chair;
+ perform pg_temp.tools_assert(exists(select 1 from private.account_activity where barber_id=chair and kind='barber_schedule_changed'),'barber schedule trigger captured');
+ raise notice 'ACCOUNT_TOOLS_DATABASE_SCENARIOS_PASS';
+end $tests$;
+select pass('Account tools: live sessions, pagination, revocation, isolation, roles and audit capture');
+select * from finish();
+rollback;
