@@ -380,12 +380,12 @@ export default function Settings() {
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
-          <button className="settings-link-btn">
+          <>{userRole === 'admin' && <button className="settings-link-btn" onClick={() => navigate('/mfa-setup')}>
             {t('settings.twoFactor')}
             <ChevronRight size={16} strokeWidth={1.5} />
-          </button>
+          </button>}</>
 
-          <button className="settings-link-btn">
+          <button className="settings-link-btn" onClick={() => navigate('../sessions')}>
             {t('settings.activeSessions')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
@@ -413,7 +413,7 @@ export default function Settings() {
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
-          <button className="settings-link-btn">
+          <button className="settings-link-btn" onClick={() => navigate('/support')}>
             {t('settings.contactSupport')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
@@ -432,7 +432,7 @@ export default function Settings() {
         >
           <button
             className="settings-link-btn"
-            onClick={() => navigate(userRole === 'manager' ? '/logs' : '/barber/logs')}
+            onClick={() => navigate('../activity')}
           >
             {t('settings.viewActivity')}
             <ChevronRight size={16} strokeWidth={1.5} />

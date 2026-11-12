@@ -15,6 +15,8 @@ import AdminPasswordReset from './pages/admin/AdminPasswordReset';
 import AccountEmails from './pages/admin/AccountEmails';
 import AcceptInvite from './pages/AcceptInvite';
 import MFASetup from './pages/MFASetup';
+import AccountTools from './pages/AccountTools';
+import ContactSupport from './pages/ContactSupport';
 import Dashboard from './pages/Dashboard';
 import ShopSetup from './pages/ShopSetup';
 import Branches from './pages/Branches';
@@ -163,6 +165,9 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
+      <Route path="/support" element={<ContactSupport />} />
+      <Route path="/customer/sessions" element={<AccountTools view="sessions" customer />} />
+      <Route path="/customer/activity" element={<AccountTools view="activity" customer />} />
       <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
       <Route
@@ -227,6 +232,8 @@ function AppRoutes() {
         <Route path="logs" element={<Logs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools view="sessions" />} />
+        <Route path="activity" element={<AccountTools view="activity" />} />
       </Route>
 
       {/* Barber Routes */}
@@ -245,6 +252,8 @@ function AppRoutes() {
         <Route path="logs" element={<MyLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools view="sessions" />} />
+        <Route path="activity" element={<AccountTools view="activity" />} />
       </Route>
 
       {/* Admin Routes */}
@@ -273,6 +282,8 @@ function AppRoutes() {
         <Route path="audit/security" element={<SecurityEvents />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools view="sessions" />} />
+        <Route path="activity" element={<AccountTools view="activity" />} />
       </Route>
 
       {/* Agent Routes */}
@@ -291,6 +302,8 @@ function AppRoutes() {
         <Route path="customers" element={<AgentCustomers />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="sessions" element={<AccountTools view="sessions" />} />
+        <Route path="activity" element={<AccountTools view="activity" />} />
       </Route>
 
       <Route path="*" element={<Navigate to={getDefaultRoute()} replace />} />
