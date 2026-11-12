@@ -9,6 +9,12 @@ export default function PublicFooter() {
   const { t } = useTranslation();
   const location = useLocation();
   const returnTo = location.pathname === '/book' || location.state?.returnTo === '/book' ? '/book' : '/customer/account';
+  if (location.pathname === '/') return <footer className="public-footer lp-footer">
+    <div className="public-footer-inner">
+      <div className="public-footer-brand"><NavigationLink to="/" aria-label={t('common.brandHome')}><BrandLogo decorative size="footer" symbolOnSmallScreens /></NavigationLink><p>{t('landingRefresh.footer')}</p></div>
+      <nav aria-label={t('publicNav.help')}><NavigationLink to="/privacy">{t('landing.footer.privacy')}</NavigationLink><a href="mailto:support@barberplusplus.com">{t('landingRefresh.support')}</a></nav>
+    </div>
+  </footer>;
   return <footer className="public-footer">
     <div className="public-footer-inner">
       <div className="public-footer-brand"><NavigationLink to="/" aria-label={t('common.brandHome')}><BrandLogo decorative size="footer" /></NavigationLink><p>{t('publicNav.footerMessage')}</p></div>
