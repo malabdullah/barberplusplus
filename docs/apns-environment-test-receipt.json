@@ -1,0 +1,157 @@
+{
+  "date": "2026-11-12",
+  "project": "qvkucvcjmojjbphlzlks",
+  "scope": "APNs dual-environment credentials; separate from landing",
+  "migration": "20261112101059_apns_environment_credentials.sql",
+  "sqlAssertions": 46,
+  "sqlFailures": 0,
+  "legacySQL": {
+    "nativeRelease": 33,
+    "bookingDefaults": "passed",
+    "announcementPhase2": "passed",
+    "guestReceipts": 34
+  },
+  "checks": {
+    "functions": 208,
+    "frontend": 339,
+    "operations": 63,
+    "functionLint": "passed",
+    "functionTypes": "passed",
+    "migrationNames": "passed",
+    "domains": "passed",
+    "build": "passed"
+  },
+  "deployments": {
+    "booking": {
+      "id": "88ec1010-748c-4d28-ba56-110391d68d72",
+      "slug": "customer-push-dispatch",
+      "name": "customer-push-dispatch",
+      "status": "ACTIVE",
+      "version": 9,
+      "created_at": 1793870472026,
+      "updated_at": 1794478442914,
+      "verify_jwt": false,
+      "import_map": true,
+      "entrypoint_path": "file:///tmp/user_fn_qvkucvcjmojjbphlzlks_88ec1010-748c-4d28-ba56-110391d68d72_9/source/supabase/functions/customer-push-dispatch/index.ts",
+      "import_map_path": "file:///tmp/user_fn_qvkucvcjmojjbphlzlks_88ec1010-748c-4d28-ba56-110391d68d72_9/source/deno.json",
+      "ezbr_sha256": "3e5c3333a8beb4f63fc4c9861828ecdedb7f2db3e4408585c2d8de6ba848c19e"
+    },
+    "announcements": {
+      "id": "b0dbc94d-45ff-4314-aa84-7e9a027507f2",
+      "slug": "admin-push-dispatch",
+      "name": "admin-push-dispatch",
+      "status": "ACTIVE",
+      "version": 5,
+      "created_at": 1794382895228,
+      "updated_at": 1794478457139,
+      "verify_jwt": false,
+      "import_map": true,
+      "entrypoint_path": "file:///tmp/user_fn_qvkucvcjmojjbphlzlks_b0dbc94d-45ff-4314-aa84-7e9a027507f2_5/source/supabase/functions/admin-push-dispatch/index.ts",
+      "import_map_path": "file:///tmp/user_fn_qvkucvcjmojjbphlzlks_b0dbc94d-45ff-4314-aa84-7e9a027507f2_5/source/deno.json",
+      "ezbr_sha256": "dd6e66f833d199c6d2a386fc9389105a6d91f425e25ec5c7eb14a6050fe76234"
+    }
+  },
+  "preservation": {
+    "before": [
+      {
+        "snapshot": {
+          "devices": 59,
+          "runtime": {
+            "topic": "com.barberplusplus.customer.test",
+            "api_url": "https://qvkucvcjmojjbphlzlks.supabase.co",
+            "singleton": true,
+            "environments": [
+              "sandbox"
+            ]
+          },
+          "secrets": [
+            {
+              "hash": "760964e72101fe932296b29c689d57da",
+              "name": "customer_push_apns"
+            },
+            {
+              "hash": "c01d4266a9163efa447bad17b1f8e8be",
+              "name": "customer_push_dispatch_secret"
+            }
+          ],
+          "preferences": "3b5f66d46af3ef77a79a68e8a7389eff",
+          "announcements": {
+            "mode": "capture",
+            "api_url": "https://qvkucvcjmojjbphlzlks.supabase.co",
+            "enabled": true,
+            "singleton": true
+          }
+        }
+      }
+    ],
+    "after": [
+      {
+        "snapshot": {
+          "devices": 59,
+          "runtime": {
+            "topic": "com.barberplusplus.customer.test",
+            "api_url": "https://qvkucvcjmojjbphlzlks.supabase.co",
+            "singleton": true,
+            "environments": [
+              "sandbox"
+            ]
+          },
+          "secrets": [
+            {
+              "hash": "760964e72101fe932296b29c689d57da",
+              "name": "customer_push_apns"
+            },
+            {
+              "hash": "c01d4266a9163efa447bad17b1f8e8be",
+              "name": "customer_push_dispatch_secret"
+            }
+          ],
+          "preferences": "3b5f66d46af3ef77a79a68e8a7389eff",
+          "announcements": {
+            "mode": "capture",
+            "api_url": "https://qvkucvcjmojjbphlzlks.supabase.co",
+            "enabled": true,
+            "singleton": true
+          }
+        }
+      }
+    ]
+  },
+  "statePreserved": true,
+  "securityAdvisoryDelta": {
+    "new": [],
+    "removed": [],
+    "groups": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 49
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 3
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 31
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1
+      }
+    ]
+  },
+  "smoke": {
+    "bookingUnauthenticated": 403,
+    "announcementUnauthenticated": 403
+  },
+  "providerSends": 0,
+  "actualProductionKeyReadOrImported": false,
+  "productionChanged": false,
+  "landingWorkerChangedByThisCandidate": false,
+  "remaining": [
+    "CI and exact production-image replay",
+    "separate production release/access approval",
+    "approved private key import and activation",
+    "private owner beta installation/registration followed by a separately bounded real production-token alert acceptance"
+  ]
+}

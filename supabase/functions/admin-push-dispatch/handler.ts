@@ -1,6 +1,7 @@
 import { nativePushRuntime } from '../_shared/native-push-runtime.ts';
+import { type APNsConfiguration, type APNsCredential, apnsTokenSelector, hasAPNsCredential } from '../_shared/apns-credentials.ts';
 import { type AnnouncementJob, announcementPayload } from './delivery.ts';
-type Configuration = {
+type Configuration = APNsConfiguration & {
   announcementEnabled: boolean;
   deliveryMode: string;
   announcementApiUrl: string;
@@ -24,7 +25,7 @@ type Dependencies = {
     job: AnnouncementJob,
     result: { status: number; reason: string; providerId: string },
   ) => Promise<void>;
-  providerToken: (config: Configuration) => Promise<string>;
+  providerToken: (key: APNsCredential) => Promise<string>;
   send: (
     job: AnnouncementJob,
     jwt: string,
@@ -72,12 +73,9 @@ export function createAnnouncementDispatcher(deps: Dependencies) {
       ) return reply(503, { error: 'DELIVERY_DISABLED' });
       if (
         config.deliveryMode === 'apns' &&
-        (!config.privateKey || !/^[A-Z0-9]{10}$/.test(config.keyId) ||
-          !/^[A-Z0-9]{10}$/.test(config.teamId))
+        !hasAPNsCredential(config)
       ) return reply(503, { error: 'DELIVERY_DISABLED' });
-      const jwt = config.deliveryMode === 'apns'
-        ? await deps.providerToken(config)
-        : '';
+      const token = apnsTokenSelector(config, deps.providerToken);
       const jobs = await deps.claim();
       let captured = 0, accepted = 0, other = 0;
       for (let index = 0; index < jobs.length; index += 5) {
@@ -88,11 +86,14 @@ export function createAnnouncementDispatcher(deps: Dependencies) {
               new TextEncoder().encode(JSON.stringify(announcementPayload(job)))
                   .length <= 4096 &&
               await deps.validate(job);
+            const jwt = valid && config.deliveryMode === 'apns' && job.topic === config.topic
+              ? await token(job.environment) : null;
             const result = !valid
               ? { status: 409, reason: 'NoLongerEligible', providerId: '' }
               : config.deliveryMode === 'capture'
               ? { status: 200, reason: 'Captured', providerId: '' }
-              : await deps.send(job, jwt, config);
+              : jwt ? await deps.send(job, jwt, config)
+              : { status: 503, reason: 'CredentialUnavailable', providerId: '' };
             await deps.finish(job, result);
             if (result.status === 200) {
               if (config.deliveryMode === 'capture') captured++;
