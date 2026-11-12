@@ -73,8 +73,10 @@ Deno.test('expired, account-bound, unknown-mode and malformed-email guest receip
  assert(calls===0);
 });
 Deno.test('altered email receipt signatures cannot reach subscription SQL',async()=>{
- const token=await signedReceipt();let calls=0;
- try{await customerPushAction({...runtime,identity:async()=>null,rpc:async()=>{calls++;}},request(),{action:'push-guest-subscribe',...device,claimToken:token.slice(0,-2)+'zz'});throw Error('Expected failure');}
+ const token=await signedReceipt();const [payload,signature]=token.split('.');
+ // Flip significant bits, rather than unused base64 padding bits.
+ const tampered=payload+'.'+(signature[0]==='A'?'B':'A')+signature.slice(1);let calls=0;
+ try{await customerPushAction({...runtime,identity:async()=>null,rpc:async()=>{calls++;}},request(),{action:'push-guest-subscribe',...device,claimToken:tampered});throw Error('Expected failure');}
  catch(error){assert((error as Error).message==='FORBIDDEN');}
  assert(calls===0);
 });

@@ -23,9 +23,11 @@ it('sends managers to separate pending item reviews instead of approving a bundl
 it('submits a barber proposal instead of directly changing approved availability', async () => {
   state.app.userRole = 'barber'; state.app.barberBranch = { name: 'Shop' };
   state.call.mockImplementation(async action => action === 'get' ? { ...detail, requests: [] } : { request: { status: 'pending' } });
-  render(<MemoryRouter><MyAvailability /></MemoryRouter>);
+  // Flush the resolved fetch and seed effect before editing the loaded form.
+  await act(async () => { render(<MemoryRouter><MyAvailability /></MemoryRouter>); });
   const horizon = await screen.findByRole('spinbutton', { name: 'availability.bookingWindow' });
   fireEvent.change(horizon, { target: { value: '31' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'availabilityCompact.submit' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'availabilityCompact.submit' }));
   await waitFor(() => expect(state.call).toHaveBeenCalledWith('submit', expect.objectContaining({ barber_id: 'staff', base_revision: 2, proposal: expect.objectContaining({ max_booking_days: 31 }) })));
   expect(state.app.updateBarber).not.toHaveBeenCalled();
