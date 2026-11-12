@@ -22,7 +22,14 @@ export default function BookingFinder({ checkout: Checkout }) {
   const { t, i18n } = useTranslation(); const tr = (key, values) => t(`bookingFinder.${key}`, values);
   const { customer, loading: authLoading } = useCustomerAuth(); const { items: favourites } = useCustomerFavourites();
   const location = useLocation(); const navigate = useNavigate();
-  const [initial] = useState(() => location.state?.bookingDraft || location.state?.rebookingDraft || readBookingReturnDraft() || readBookingDraft());
+  const [initial] = useState(() => {
+    const saved = location.state?.bookingDraft || location.state?.rebookingDraft || readBookingReturnDraft() || readBookingDraft();
+    const entry = location.state?.bookingEntryMode;
+    if (!['time', 'barber', 'shop'].includes(entry)) return saved;
+    return { ...saved, ...empty, details: saved?.details, city: saved?.city || '', bookingMode: entry,
+      date: saved?.date || getKuwaitDate(), rangeStart: saved?.rangeStart || '09:00', rangeEnd: saved?.rangeEnd || '18:00',
+      finderStage: entry === 'time' ? 'range' : entry === 'barber' ? 'results' : 'city' };
+  });
   const [draft, setDraft] = useState(() => ({ ...empty, ...initial }));
   const [receipt] = useState(() => !initial && readBookingReceipt());
   const [mode, setMode] = useState(initial?.bookingMode || (initial ? 'shop' : ''));
@@ -62,6 +69,12 @@ export default function BookingFinder({ checkout: Checkout }) {
     setCatalog(null); setError(''); setQuery(''); resetPage();
     patch({ bookingMode: value, branchId: '', barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, time: '', date: draft.date || getKuwaitDate(), rangeStart: draft.rangeStart || '09:00', rangeEnd: draft.rangeEnd || '18:00' });
   };
+  useEffect(() => {
+    if (['time', 'barber', 'shop'].includes(location.state?.bookingEntryMode)) {
+      forgetBookingReturn();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, []);
   useEffect(() => {
     let live = true; setFilterError(false);
     customerBookingService.filters().then(value => { if (live) setFilters(value.cities); }).catch(() => { if (live) setFilterError(true); });
