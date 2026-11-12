@@ -1708,7 +1708,8 @@
       "INVALID_DATE": "Choose a date within this barber's booking window.",
       "INVALID_SELECTION": "Your selection is no longer available. Please check your shop, barber and services.",
       "BOOKING_UNAVAILABLE": "We couldn't complete this booking. Please contact the shop.",
-      "BOOKING_RATE_LIMIT": "Too many booking attempts. Please try again later."
+      "BOOKING_RATE_LIMIT": "Too many booking attempts. Please try again later.",
+      "EMAIL_REQUIRED": "A verified account email is required. Open My account to check your email, or continue as a guest."
     },
     "cities": {
       "Kuwait City": "Kuwait City",

@@ -17,7 +17,7 @@ vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: 
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ setLanguage: vi.fn() }) }));
-vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { packages: vi.fn(), getCatalog: vi.fn(), phoneConfig: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
+vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { packages: vi.fn(), getCatalog: vi.fn(), confirmPhone: vi.fn(), checkoutPolicy: vi.fn(), phoneConfig: vi.fn(), accountProof: vi.fn(), getSlots: vi.fn(), guestProof: vi.fn(), requestCode: vi.fn(), verifyCode: vi.fn(), claim: vi.fn(), book: vi.fn() } }));
 const catalog = {
   branches: [{ id: 'branch', name: 'Seafront shop', city: 'Kuwait City', address: 'Waterfront' }, { id: 'other', name: 'Salmiya shop', city: 'Salmiya' }],
   barbers: [{ id: 'omar', branchId: 'branch', name: 'Omar', serviceIds: ['hair', 'wash'], maxBookingDays: 30 }, { id: 'ali', branchId: 'branch', name: 'Ali', serviceIds: ['beard'], maxBookingDays: 30 }],
@@ -36,6 +36,7 @@ beforeEach(async () => {
   customerBookingService.packages.mockResolvedValue([]);
   customerBookingService.getCatalog.mockResolvedValue(catalog);
   customerBookingService.phoneConfig.mockResolvedValue(null);
+  customerBookingService.checkoutPolicy.mockImplementation(async () => ({phone:await customerBookingService.phoneConfig(),checkoutPolicy:'standard'}));
   customerBookingService.accountProof.mockResolvedValue({ verification: 'account-proof' });
   customerBookingService.getSlots.mockResolvedValue({ slots: ['10:00', '10:30'] });
   customerBookingService.guestProof.mockResolvedValue({ verification: 'verified' });
@@ -555,4 +556,19 @@ it('requires guest email and books with blank optional phone without SMS',async(
  click('Confirm booking');await screen.findByText('TESTREF');
  expect(customerBookingService.guestProof).toHaveBeenCalledWith(expect.objectContaining({contactMode:'email',email:'guest@example.test',phone:''}));
  expect(customerBookingService.accountProof).not.toHaveBeenCalled();
+});
+
+it('email-only signed-in checkout shows email and allows booking without a phone or SMS', async () => {
+  await chooseAppointment(); cleanup();
+  customerState.customer = { id:'customer',name:'Email Customer',email:'email@example.test',countryCode:'+965',phone:'' };
+  customerBookingService.checkoutPolicy.mockResolvedValue({ phone:null,checkoutPolicy:'email_only',phoneRequired:false });
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
+  await screen.findByText('email@example.test');
+  const phone = await screen.findByLabelText(en.customerBooking.optionalPhoneLabel);
+  expect(phone).not.toBeRequired();
+  await waitFor(() => expect(screen.getByRole('button',{name:'Confirm booking'})).toBeEnabled());
+  click('Confirm booking'); await screen.findByText('TESTREF');
+  expect(customerState.updateProfile).not.toHaveBeenCalled();
+  expect(customerBookingService.accountProof).toHaveBeenCalled();
+  expect(customerBookingService.confirmPhone).not.toHaveBeenCalled();
 });

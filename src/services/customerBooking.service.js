@@ -59,6 +59,7 @@ export const customerBookingService = {
     return { ...mapCatalog(result), maxDuration: result.maxDuration };
   },
   claim: claimToken => request('claim-booking', { claimToken }),
+  checkoutPolicy: () => request('phone-config'),
   phoneConfig: async () => (await request('phone-config')).phone,
   startTestPhone: async phone => (await request('phone-start', { phone })).session,
   confirmPhone: data => request('phone-confirm', data),
