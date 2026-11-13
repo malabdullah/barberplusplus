@@ -102,7 +102,9 @@ Database deletion removes owned notification registrations before deleting Auth
 sessions, because the existing session trigger otherwise detaches their ownership.
 Guest links to the deleted customer's bookings are removed; another account using
 that device remains intact. Old JWTs are denied through live-session checks,
-including restrictive Storage/Realtime policies. User-editable metadata is not an
+including restrictive Storage/Realtime policies. The current app-verified canonical
+phone is included in deterministic contact cleanup even when auth.users.phone is
+empty; unverified guessed names/numbers are never identity matches. User-editable metadata is not an
 eligibility grant.
 
 ## Apple, privacy and remaining release requirements
@@ -137,3 +139,5 @@ answers, production policy and production migration require owner acceptance.
   public support and report-export invalidation before and after file buffering.
 - Separate disposable website/native pilot credentials live only in the ignored
   private `.cloud-test/deletion/qa.json`; never include them in artifacts or chat.
+
+Production work remains explicitly scoped in [production readiness](customer-deletion-production-readiness.md).

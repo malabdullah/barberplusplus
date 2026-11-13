@@ -1,3 +1,5 @@
+> Historical restart checkpoint. Superseded by [verified Test contract](customer-account-deletion-test.md) and [production boundary](customer-deletion-production-readiness.md).
+
 # Account deletion — paused draft, 13 November 2026
 
 The owner requested a safe pause for a MacBook Air restart. This is an

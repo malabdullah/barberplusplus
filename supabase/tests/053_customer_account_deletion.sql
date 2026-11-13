@@ -4,7 +4,7 @@ do $$
 declare u uuid:=gen_random_uuid(); sid uuid:=gen_random_uuid(); m uuid:=gen_random_uuid(); ms uuid:=gen_random_uuid();
  o uuid:=gen_random_uuid(); os uuid:=gen_random_uuid(); c uuid:=gen_random_uuid(); shop uuid:=gen_random_uuid(); chair uuid:=gen_random_uuid(); svc uuid:=gen_random_uuid();
  past uuid:=gen_random_uuid(); upcoming uuid:=gen_random_uuid(); added uuid:=gen_random_uuid(); job uuid:=gen_random_uuid();
- r jsonb; p jsonb; scope jsonb; lease jsonb; wrong boolean; n integer; report_id uuid; own_device uuid:=gen_random_uuid(); other_device uuid:=gen_random_uuid(); snapshot_amount numeric;
+ r jsonb; p jsonb; scope jsonb; lease jsonb; wrong boolean; n integer; report_id uuid; own_device uuid:=gen_random_uuid(); other_device uuid:=gen_random_uuid(); snapshot_amount numeric; fixture_phone text:='80'||lpad(floor(random()*1000000)::text,6,'0'); conversation uuid:=gen_random_uuid();
 begin
  perform set_config('request.jwt.claims','{}',true);
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
@@ -12,6 +12,10 @@ begin
  insert into auth.sessions(id,user_id)values(sid,u),(ms,m),(os,o);
  insert into public.customers(id,name,email)values(c,'Deletion rollback customer',u||'@example.test');
  insert into private.customer_accounts(user_id,customer_id)values(u,c);
+ update public.customers set country_code='+965',phone=fixture_phone where id=c;
+ insert into private.customer_phone_verifications(customer_id,verified_at)values(c,now());
+ insert into public.whatsapp_conversations(id,phone_number,phone_country_code,customer_name)values(conversation,fixture_phone,'+965','Private QA contact');
+
  insert into public.branches(id,manager_id,name)values(shop,m,'Deletion rollback shop');
  insert into public.services(id,branch_id,name,duration,price)values(svc,shop,'Rollback service',30,3);
  insert into public.barbers(id,branch_id,name,status,service_ids)values(chair,shop,'Rollback barber','active',array[svc]);
@@ -68,6 +72,8 @@ begin
  assert not exists(select 1 from public.bookings where id=any(array[upcoming,added])and(status<>'cancelled'or notes is not null or staff_cancellation is not null)),'future cancellation anonymized';
  assert not exists(select 1 from private.customer_booking_email_jobs where booking_id=any(array[past,upcoming,added])),'no customer cancellation email survives';
  assert not exists(select 1 from private.customer_accounts where user_id=u),'account links erased';
+ assert not exists(select 1 from public.whatsapp_conversations where id=conversation),'app-verified email-account phone history removed';
+
  assert not exists(select 1 from private.customer_booking_ratings where booking_id=past),'ratings removed';
  assert not exists(select 1 from private.customer_favourites where customer_id=c),'favourites removed';
  assert not exists(select 1 from private.customer_booking_share_versions where customer_id=c),'shared URLs revoked';
