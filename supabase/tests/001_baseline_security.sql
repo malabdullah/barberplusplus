@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 
-select plan(32);
+select plan(33);
 
 select has_schema('public', 'public schema exists');
 select has_schema('private', 'private authorization schema exists');
@@ -35,8 +35,16 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  126::bigint,
-  'public policies include the four restrictive account-session read guards'
+  147::bigint,
+  'public policies include session read guards and enrolled-staff assurance guards'
+);
+select is(
+  (select count(*) from pg_policies where schemaname='public'
+    and policyname='Enrolled staff require verified MFA' and not permissive='PERMISSIVE'
+    and roles=array['authenticated']::name[] and cmd='ALL'
+    and qual like '%staff_factor_satisfied%' and with_check like '%staff_factor_satisfied%'),
+  21::bigint,
+  'every application table enforces the enrolled-staff factor on reads and writes'
 );
 
 select is(
@@ -252,10 +260,14 @@ select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select throws_ok('select * from public.whatsapp_logs', '42501');
 select throws_ok('select * from public.booking_reminders', '42501');
 
+reset role;
+insert into auth.sessions(id,user_id,aal,factor_id) values(
+  '71100000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001',
+  'aal2','71000000-0000-4000-8000-000000000001');
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"},"user_metadata":{}}',
+  '{"sub":"00000000-0000-4000-8000-000000000001","session_id":"71100000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"},"user_metadata":{}}',
   true
 );
 select is(
