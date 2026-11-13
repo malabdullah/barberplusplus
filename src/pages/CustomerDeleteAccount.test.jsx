@@ -28,7 +28,9 @@ async function prove() {
   await screen.findByRole('checkbox');
 }
 it('requires proof and explicit cancellation consent before confirming', async () => {
-  mount(); await prove(); const button = screen.getByRole('button', { name: en.customerDeletion.delete }); expect(button).toBeDisabled();
+  mount(); await screen.findByText(en.customerDeletion.future_zero);
+  expect(screen.getByText('Connected sign-in: Apple.')).toBeVisible();
+  await prove(); const button = screen.getByRole('button', { name: en.customerDeletion.delete }); expect(button).toBeDisabled();
   expect(state.request.mock.calls.some(([action]) => action === 'confirm')).toBe(false);
   fireEvent.click(screen.getByRole('checkbox')); expect(button).toBeEnabled(); expect(state.saved).toMatchObject({ ownerId: owner, phase: 'proof' });
 });

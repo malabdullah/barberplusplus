@@ -10,7 +10,7 @@ import { usePublicNavigationBusy } from '../components/Public/PublicNavigationCo
 import './CustomerDeleteAccount.css';
 
 export default function CustomerDeleteAccount() {
-  const { t, i18n } = useTranslation(); const tr = key => t(`customerDeletion.${key}`);
+  const { t, i18n } = useTranslation(); const tr = (key, values) => t(`customerDeletion.${key}`, values);
   const [preview, setPreview] = useState(null); const [operation, setOperation] = useState(deletionReceipt);
   const [state, setState] = useState('loading'); const [method, setMethod] = useState('email_code');
   const [code, setCode] = useState(''); const [password, setPassword] = useState(''); const [confirmed, setConfirmed] = useState(false);
