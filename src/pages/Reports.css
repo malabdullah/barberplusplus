@@ -108,4 +108,3 @@
 }
 @media (max-width: 400px) { .report-performance-row { grid-template-columns: 1fr; gap: 8px; } .report-row-value { justify-self: end; } .report-key-totals { grid-template-columns: 1fr 1fr; } .report-key-totals > div:last-child { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { .report-spinner { animation: none; } }
-
