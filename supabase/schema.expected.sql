@@ -136,6 +136,17 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."admin_manager_statuses"() RETURNS TABLE("id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform public.enforce_account_session();
+  if private.live_staff_role() is distinct from 'admin' then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  return query select u.id,coalesce(u.banned_until<=now(),true) from auth.users u
+    where u.raw_app_meta_data->>'role'='manager' and u.deleted_at is null;
+end $$;
+ALTER FUNCTION "public"."admin_manager_statuses"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -1368,7 +1379,7 @@ CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", 
     AS $$
   select exists (
     select 1 from auth.sessions s join auth.users u on u.id=s.user_id
-    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
+    where private.staff_session_factor_satisfied(p_user,p_session) and s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
       and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
       and (u.banned_until is null or u.banned_until<=now())
   )
@@ -1506,7 +1517,9 @@ declare
   current_session uuid;
 begin
   if auth.jwt()->>'role' is distinct from 'authenticated' then return; end if;
-  current_session := private.current_account_session();
+  if public.staff_factor_satisfied() is not true then raise exception using errcode='42501', message=case
+    when exists(select 1 from auth.users where id=auth.uid() and raw_app_meta_data->>'role'='admin')
+      then 'ADMIN_MFA_REQUIRED' else 'MFA_REQUIRED' end; end if; current_session := private.current_account_session();
   if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
   if exists (
     select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role'='admin'
@@ -1869,6 +1882,28 @@ begin
  return jsonb_build_object('auto_confirm_bookings',p_enabled);
 end $$;
 ALTER FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform public.enforce_account_session();
+  if private.live_staff_role() is distinct from 'admin' then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  if enabled is null then raise exception 'INVALID_REQUEST'; end if;
+  update auth.users set banned_until=case when enabled then null else now()+interval '100 years' end,
+    updated_at=now()
+    where id=manager and raw_app_meta_data->>'role'='manager' and deleted_at is null;
+  if not found then raise exception 'MANAGER_NOT_FOUND'; end if;
+  if not enabled then
+    insert into private.account_revoked_sessions(session_id,user_id)
+      select id,user_id from auth.sessions where user_id=manager
+      on conflict(session_id) do nothing;
+    update auth.sessions set not_after=now() where user_id=manager;
+  end if;
+  insert into public.audit_logs(admin_user_id,action_type,target_user_id,new_values)
+    values(auth.uid(),case when enabled then 'manager_enabled' else 'manager_disabled' end,manager,jsonb_build_object('is_active',enabled));
+end $$;
+ALTER FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -2059,6 +2094,23 @@ begin
  return result;
 end $$;
 ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_factor_satisfied"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select not exists (
+    select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id
+    where u.id=auth.uid() and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent')
+      and f.status='verified'
+  ) or (
+    auth.jwt()->>'aal'='aal2' and exists (
+      select 1 from auth.sessions s join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
+      where s.id=(auth.jwt()->>'session_id')::uuid and s.user_id=auth.uid()
+        and (s.not_after is null or s.not_after>now()) and s.aal='aal2' and f.status='verified'
+    )
+  );
+$$;
+ALTER FUNCTION "public"."staff_factor_satisfied"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -2091,6 +2143,15 @@ CREATE OR REPLACE FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data"
     SET "search_path" TO ''
     AS $$ select private.staff_save_booking(p_id,p_data); $$;
 ALTER FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select private.staff_session_factor_satisfied(p_user,p_session) and (
+    p_aal='aal2' or not exists(select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id
+      where u.id=p_user and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent') and f.status='verified'));
+$$;
+ALTER FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2765,6 +2826,27 @@ CREATE POLICY "Barbers view branch logs via barber record" ON "public"."logs" FO
    FROM "public"."barbers"
   WHERE ("barbers"."user_id" = "auth"."uid"()))));
 CREATE POLICY "Barbers view own logs" ON "public"."logs" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'barber'::"text") AND ("user_id" = ( SELECT "auth"."uid"() AS "uid"))));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."admin_settings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."areas" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."audit_logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."barbers" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."booking_reminders" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."bookings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."branches" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."customer_staff_details" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."customers" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."governorates" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."notification_templates" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."notifications" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."rate_limits" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."services" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."suspicious_activities" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."user_notification_preferences" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."user_settings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
 CREATE POLICY "Internal trigger cancels reminders" ON "public"."booking_reminders" FOR UPDATE TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1)) WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
 CREATE POLICY "Internal trigger creates reminders" ON "public"."booking_reminders" FOR INSERT TO "barber_reminder_writer" WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
 CREATE POLICY "Internal trigger reads reminder identifiers" ON "public"."booking_reminders" FOR SELECT TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
@@ -2858,6 +2940,9 @@ REVOKE ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" 
 GRANT ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."admin_manager_statuses"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
@@ -2982,8 +3067,7 @@ GRANT ALL ON FUNCTION "public"."get_managers"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "service_role";
-GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "anon";
-GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "service_role";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
@@ -3019,6 +3103,9 @@ GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_c
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
@@ -3031,6 +3118,9 @@ GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "serv
 REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_factor_satisfied"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") FROM PUBLIC;
@@ -3038,6 +3128,8 @@ GRANT ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") TO "aut
 REVOKE ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";

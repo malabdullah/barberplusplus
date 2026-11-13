@@ -80,7 +80,7 @@ const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
-  const { isAuthenticated, userRole, loading, adminVerified } = useApp();
+  const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
 
   // Show loading while auth state is being determined
   if (loading) {
@@ -114,7 +114,7 @@ function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
 
-  if (userRole === 'admin' && requireAdminMfa && !adminVerified) return <Navigate to="/mfa-setup" replace />;
+  if (staffMfaRequired && requireAdminMfa && !adminVerified) return <Navigate to="/mfa-setup" replace />;
   return children;
 }
 
@@ -198,7 +198,7 @@ function AppRoutes() {
       />
       <Route
         path="/mfa-setup"
-        element={<ProtectedRoute allowedRole="admin" requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
+        element={<ProtectedRoute requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
       />
 
       </Route>

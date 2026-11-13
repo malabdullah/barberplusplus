@@ -1,4 +1,5 @@
 import { customerCapable } from '../lib/accountSession';
+import { redirectStaffMfa } from '../lib/staffMfaReturn';
 import { passwordProof, rememberPasswordProof, forgetPasswordProof } from '../lib/customerPasswordProof';
 import { nativeEmailReturn } from '../lib/nativeEmailReturn';
 import { rememberBookingReturn } from '../utils/customerBookingDraft';
@@ -28,12 +29,25 @@ async function request(action, data = {}, authenticated = false) {
     if (['password-change', 'email-reset'].includes(action)) throw new Error('PASSWORD_UPDATE_UNCERTAIN', { cause: error });
     throw error;
   }
-  if (!response.ok) throw new Error(result.error || 'UNAVAILABLE');
+  if (!response.ok) {
+    if (authenticated && ['AUTH_REQUIRED', 'MFA_REQUIRED'].includes(result.error)) {
+      const assurance = await customerSupabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (!assurance.error && assurance.data?.currentLevel === 'aal1' && assurance.data?.nextLevel === 'aal2') {
+        redirectStaffMfa();
+        throw new Error('MFA_REQUIRED');
+      }
+    }
+    throw new Error(result.error || 'UNAVAILABLE');
+  }
   return result;
 }
 async function acceptSession(result) {
   const { error } = await customerSupabase.auth.setSession(result.session);
   if (error) throw new Error('SIGN_IN_REQUIRED');
+  if (result.mfaRequired) {
+    redirectStaffMfa();
+    throw new Error('MFA_REQUIRED');
+  }
   return result.profile;
 }
 async function clearCustomerSession(alreadyRevoked = false) {

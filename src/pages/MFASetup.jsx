@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/auth.service';
 import { useApp } from '../context/AppContext';
+import { staffMfaReturn } from '../lib/staffMfaReturn';
 import './CustomerAuth.css';
 import './AccountTools.css';
 
 export default function MFASetup() {
   const { t } = useTranslation();
-  const { adminVerified, logout, user } = useApp();
+  const { adminVerified, logout, user, userRole } = useApp();
   const navigate = useNavigate();
   const [factor, setFactor] = useState(null);
   const [enrollment, setEnrollment] = useState(null);
@@ -58,7 +59,8 @@ export default function MFASetup() {
     setError('');
     try {
       await authService.verifyTotp(enrollment?.id || factor.id, code);
-      navigate('/admin', { replace: true });
+      const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+      navigate(returnTo ? staffMfaReturn(returnTo) : ({admin:'/admin',manager:'/dashboard',barber:'/barber',agent:'/agent'})[userRole] || '/login', { replace: true });
     } catch {
       setCode('');
       setError('mfa.invalidCode');
@@ -77,7 +79,7 @@ export default function MFASetup() {
         ) : adminVerified ? (
           <>
             <p>{t('mfa.accountSecure')}</p>
-            <Link className="cb-secondary" to="/admin/settings">{t('common.back')}</Link>
+            <Link className="cb-secondary" to={userRole === 'admin' ? '/admin/settings' : '/dashboard'}>{t('common.back')}</Link>
           </>
         ) : factor || enrollment ? (
           <>
