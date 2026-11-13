@@ -17,7 +17,7 @@ Reports routes/services/migrations are excluded. The Test-based mail candidate i
   Arabic proof email, deterministic per-operation/send-generation idempotency,
   bounded timeout, no automatic retries and safe generic errors. Provider tests
   are injected mocks; no real deletion email was sent.
-- Function v2 and environment-binding migration are deployed on hosted Test only.
+- Function v3 and environment-binding migration are deployed on hosted Test only.
   Test remains pinned to `qvkucvcjmojjbphlzlks`, capture-only and restricted to
   trusted disposable QA identities. Captured branded Arabic mail, stable duplicate
   start/receipt and valid proof were checked; the owner-review account was preserved.
@@ -36,8 +36,8 @@ Reports routes/services/migrations are excluded. The Test-based mail candidate i
   attestation of the image currently running on the server.
 - Native flow passed on 17 Pro and 16e, including purpose-bound proof, two explicit
   future cancellations, anonymous past history, switched-account isolation and
-  lost-response receipt recovery. Duo remains blocked by simulator OS startup;
-  no Duo fold/device pass is claimed. No upload/install/submission is included.
+  lost-response receipt recovery. Duo deletion-specific coverage was not completed in that run;
+  no Duo deletion-specific pass is claimed. No upload/install/submission is included.
 
 ## Production inspection outcome
 
@@ -62,31 +62,32 @@ the added operator TCP22 source was removed. Frontend access was never opened.
 SSH processes completed; no persistent connection or console session remains.
 Safe aggregate evidence is `artifacts/customer-account-deletion-2026-11-13/production-readiness-summary.json`.
 
+## Completed database/Auth/Storage rehearsal
+
+The owner-approved isolated rehearsal is complete. Stock exact production images,
+official Auth migration bootstrap and the committed main baseline reproduced all
+56 selected relations, 15 routine hashes and 49 policies with zero differences.
+All main and six deletion migrations replayed; the public expected schema now
+matches. All 47 SQL suites passed (1,136 assertions). Real Auth/Storage APIs passed
+old-session/refresh revocation, 501-object bounded cleanup, interrupted cleanup,
+backoff, stale-lease rejection, receipt recovery and other-account isolation.
+No production schema dump was needed. Temporary resources were removed and their
+absence independently verified. See the detailed [rehearsal report](../artifacts/customer-account-deletion-2026-11-13/platform-rehearsal-report.md).
+
 ## Remaining release gates
 
-1. Selected production metadata inspection is complete. Reconcile the remaining
-   full schema and ordered migration ledger before declaring release readiness.
-   The metadata-only approval did not authorize a schema dump or routine-body
-   export. Prepare a separately reviewed, sanitized schema-only export if needed;
-   never export credentials, Vault contents or customer rows.
-2. Rehearse the scoped migrations on exact production PostgreSQL/Auth/Storage
-   images and an approved schema-only baseline; verify session/Storage/Realtime
-   revocation, cleanup behavior, notification side effects and privileges. Do not
-   substitute the ordinary local CLI Test stack or claim live parity from a lock.
-3. Reconcile the migration ledger and expected schema with verified hashes. The
-   six Test migrations are a review candidate, not an automatically deployable
-   artifact. Do not replay unrelated Reports migrations or use a blanket merge.
-4. Review cleanup secret/cron, receipt expiry, no-PII operational monitoring,
-   backups and disable procedure. Stop new requests while keeping cleanup on until
-   accepted work finishes; anonymization cannot be reversed by disabling a flag.
-5. Accept the proposed public privacy wording and native App Privacy disclosures.
-   Automatic Apple revocation is absent: manual Apple Account revocation remains
-   the explicit fallback; no native signing key was copied. No App Store acceptance
-   or retention/legal approval is implied.
-6. Present the immutable release manifest, exact-image/schema evidence, native
-   limitations and enable/disable steps for owner approval before the normal
-   dev → main → production workflow. A live deletion demo would require a separate
-   disposable production identity and explicit permission.
+1. Owner approval of the immutable release artifact and privacy disclosures before
+   dev → main → production. Reports stays excluded. No production deployment or
+   native upload/submission is authorized by this rehearsal.
+2. During an approved release, verify the applicable live migration ledger and
+   current runtime/configuration against the manifest. Selected catalogue parity
+   and a complete source replay do not attest an unexported live ledger.
+3. Review backup/restore readiness, cleanup secret/cron, receipt expiry, no-PII
+   monitoring and disable procedure. Stop new requests while keeping cleanup on
+   until accepted work finishes; anonymization cannot be reversed by a flag.
+4. Accept public privacy wording and native App Privacy disclosures. Automatic
+   Apple revocation is absent; manual Apple Account revocation remains the fallback.
+   Duo deletion-specific coverage remains unclaimed. No legal or App Store acceptance implied.
 
 Already delivered emails, downloaded exports, external copies and provider/backups
 cannot be recalled by this feature. No arbitrary legal retention period is claimed.

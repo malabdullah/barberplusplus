@@ -70,7 +70,7 @@ mandatory in the requesting app/site.
 
 The candidate has injected provider/environment tests, full application checks,
 operator-control rollback tests and actual hosted Test captured-mail validation.
-Function v2 and the environment binding are deployed to Test only. The main-based
+Function v3 and the environment binding are deployed to Test only. The main-based
 business rollback suite passed on hosted Test without Reports dependencies. The
 16-worker pinned Edge image rehearsal passed with synthetic settings and no public
 ports, and its disposable container was removed. Docker was started only for this
@@ -80,12 +80,33 @@ The approved production inspection verified the four pinned image IDs, healthy
 containers and all 15 selected routine hashes against main. The exact observed
 internal gateway `http://api-gw:8000` is now supported only with an explicit matching
 binding and the independent flags. Hosted Test v3 and 23 affected tests passed.
-Full PostgreSQL/Auth/Storage behavioral replay and complete schema/ledger
-reconciliation remain pending an approved schema-only baseline. Original firewall
+The exact-image PostgreSQL/Auth/Storage synthetic replay now passes all 47 SQL
+suites (1,136 assertions), real API revocation/cleanup and the 501-object boundary.
+The rebuilt public schema matches its reviewed snapshot. No production schema
+export was needed; the full live migration ledger is not attested. Original firewall
 profile 367995 is restored and the temporary source rule removed. Production
 application, database and settings remain unchanged. Scoped
-release packaging, expected schema, backups, privacy acceptance and final owner
+release packaging, live ledger verification, backups, privacy acceptance and final owner
 release approval remain required. See `docs/customer-deletion-production-readiness.md`.
 
 Sources: [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys),
 [Resend API](https://resend.com/docs/api-reference/emails/send-email).
+
+
+## Isolated platform rehearsal
+
+`rehearse-platform.py` starts only uniquely labelled, disposable resources from
+`ops/release/runtime-lock.json` on a local internal Docker network, with no public
+ports, ordinary Test reset, production credentials, real delivery or active cron.
+It bootstraps official Auth migrations, replays committed migrations, compares the
+public expected schema, runs transaction-rolled-back SQL suites and exercises real
+Auth/Storage APIs using synthetic customers. `platform_scenarios.py` owns those
+API scenarios; `dump-rehearsal-schema.sh` formats a synthetic public schema only.
+
+The completed run used the previously approved selected metadata in the ignored
+`.release-private/production-readiness.jsonl`; that file contains no rows, secrets
+or routine bodies. A future run needs an explicitly reviewed baseline and owner
+permission for Docker rehearsal; this script does not inspect production or grant
+permission to collect a new baseline. Run from the isolated main-based candidate,
+not the Reports checkout. Aggregate results are committed under
+`artifacts/customer-account-deletion-2026-11-13/platform-rehearsal-results.json`.

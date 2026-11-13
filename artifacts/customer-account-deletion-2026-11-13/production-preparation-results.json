@@ -74,7 +74,7 @@
   "publishedPorts": 0,
   "transport": "container-loopback",
   "actualDeployedParity": "FOUR_RUNTIME_IMAGE_IDS_MATCH",
-  "postgresAuthStorageRehearsal": "PENDING_APPROVED_SCHEMA_ONLY_BASELINE",
+  "postgresAuthStorageRehearsal": "PASS_STOCK_EXACT_IMAGE_SYNTHETIC_REBUILD",
   "main": "unchanged",
   "dev": "unchanged",
   "production": "unchanged",
@@ -94,5 +94,8 @@
   },
   "selectedSchemaRoutineHashes": "15 of 15 match main source; no full ledger/schema assertion",
   "gatewayBindingTests": 23,
-  "testFunctionVersion": 3
+  "testFunctionVersion": 3,
+  "schemaReconciliation": "Rebuilt public schema matches reviewed expected snapshot; only exact equivalent rate-limit policy role ordering normalized",
+  "fullLiveProductionLedgerAttested": false,
+  "platformRehearsalEvidence": "platform-rehearsal-results.json"
 }

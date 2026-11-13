@@ -2,12 +2,15 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 select plan(14);
+insert into auth.sessions(id,user_id) values
+('70400000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000002'),
+('70400000-0000-4000-8000-000000000004','00000000-0000-4000-8000-000000000004');
 select ok(exists(select 1 from storage.buckets where id='avatars' and public), 'public avatar bucket exists');
 select ok(not has_function_privilege('anon','public.can_write_avatar_object(text)','execute'), 'anonymous callers cannot inspect avatar ownership');
 select ok((select prosecdef and 'search_path=""'=any(proconfig) from pg_proc where oid='public.can_write_avatar_object(text)'::regprocedure), 'avatar predicate uses a locked definer boundary; following checks enforce live ownership');
 
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","session_id":"70400000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 select ok(public.can_write_avatar_object('branches/10000000-0000-4000-8000-000000000001-1700000000000.png'), 'manager can write own branch avatar');
 select ok(not public.can_write_avatar_object('branches/10000000-0000-4000-8000-000000000002-1700000000000.png'), 'manager cannot write another tenant avatar');
 select ok(not public.can_write_avatar_object('branches/../10000000-0000-4000-8000-000000000001-1700000000000.png'), 'nested or traversal paths denied');
@@ -20,7 +23,7 @@ select is((select file_size_limit from storage.buckets where id='avatars'),52428
 select ok((select allowed_mime_types @> array['image/png'] and not ('text/html'=any(allowed_mime_types)) from storage.buckets where id='avatars'), 'Storage API permits images and denies active HTML content');
 
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000004","session_id":"70400000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"}}',true);
 select ok(public.can_write_avatar_object('barbers/30000000-0000-4000-8000-000000000001-1700000000000.png'), 'barber may write own portrait');
 select ok(not public.can_write_avatar_object('branches/10000000-0000-4000-8000-000000000001-1700000000000.png'), 'barber cannot write branch avatar');
 reset role;

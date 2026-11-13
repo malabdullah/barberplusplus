@@ -60,8 +60,13 @@ insert into private.customer_booking_owners(booking_id,account_user_id) values
 select is(public.shop_booking_policy('dc090000-0000-4000-8000-000000000301'),
   '{"cancel_minutes":120,"reschedule_minutes":120}'::jsonb,'shops inherit separate two-hour defaults');
 select ok(not has_function_privilege('anon','public.manage_booking_policy(uuid,jsonb)','EXECUTE'),'anonymous clients cannot manage policies');
+-- Successful staff actions use real live sessions; all fixtures roll back.
+insert into auth.sessions(id,user_id)values
+('dc090000-0000-4000-8000-000000000103','dc090000-0000-4000-8000-000000000103'),
+('dc090000-0000-4000-8000-000000000104','dc090000-0000-4000-8000-000000000104'),
+('dc090000-0000-4000-8000-000000000105','dc090000-0000-4000-8000-000000000105');
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"dc090000-0000-4000-8000-000000000103"}',true);
 select throws_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":0,"reschedule_minutes":0}')$$,
   '42501','BOOKING_POLICY_FORBIDDEN','manager cannot change platform defaults');
 select throws_ok($$select public.manage_booking_policy('dc090000-0000-4000-8000-000000000999','{"cancel_minutes":0,"reschedule_minutes":0,"barber_can_cancel":false}')$$,
@@ -91,7 +96,7 @@ select throws_ok($$select public.customer_account_api('cancel-booking',current_s
   'P0001','BOOKING_CUTOFF_PASSED','customer cancellation is blocked by its own cutoff');
 reset role;
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000105","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000105","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"dc090000-0000-4000-8000-000000000105"}',true);
 select throws_ok($$update public.bookings set status='cancelled',staff_cancellation='{"reason":"Unavailable"}'
   where id='dc090000-0000-4000-8000-000000000601'$$,
   '42501','STAFF_CANCELLATION_NOT_ALLOWED','barber cancellation is disabled by default for the shop');
@@ -120,7 +125,7 @@ select ok((select modified_by_type='barber' and staff_cancellation->>'actor'='ba
   and staff_cancellation->>'user_id'='dc090000-0000-4000-8000-000000000105' from public.bookings
   where id='dc090000-0000-4000-8000-000000000601'),'server records actual actor and ignores spoofed metadata');
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"dc090000-0000-4000-8000-000000000103"}',true);
 with deleted as (
   delete from public.bookings where id='dc090000-0000-4000-8000-000000000605' returning id
 )
@@ -143,7 +148,7 @@ select ok((select item->'staff_cancellation'->>'reason'='Shop emergency' and not
   where item->>'id'='dc090000-0000-4000-8000-000000000605'),'the customer receives the reason without the staff account ID');
 reset role;
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000104","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000104","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"},"session_id":"dc090000-0000-4000-8000-000000000104"}',true);
 select lives_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":90,"reschedule_minutes":150}')$$,
   'admin can update both defaults together');
 with deleted as (

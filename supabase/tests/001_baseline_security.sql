@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 
-select plan(33);
+select plan(35);
 
 select has_schema('public', 'public schema exists');
 select has_schema('private', 'private authorization schema exists');
@@ -35,8 +35,25 @@ select ok(
 
 select is(
   (select count(*) from pg_policies where schemaname = 'public'),
-  147::bigint,
-  'public policies include session read guards and enrolled-staff assurance guards'
+  151::bigint,
+  'public policies include session, enrolled-staff and account-deletion guards'
+);
+select is(
+  (select count(*) from pg_policies where schemaname='public'
+    and tablename in ('bookings','notifications','whatsapp_conversations','whatsapp_messages')
+    and policyname='Realtime requires a live account session' and permissive='RESTRICTIVE'
+    and roles=array['authenticated']::name[] and cmd='SELECT'
+    and qual like '%account_deletion_access_allowed%' and with_check is null),
+  4::bigint,
+  'all four published tables reject revoked account sessions on reads'
+);
+select is(
+  (select count(*) from pg_policies where schemaname='storage' and tablename='objects'
+    and policyname='Storage requires a live account session' and permissive='RESTRICTIVE'
+    and roles=array['authenticated']::name[] and cmd='ALL'
+    and qual like '%account_deletion_access_allowed%' and with_check like '%account_deletion_access_allowed%'),
+  1::bigint,
+  'Storage rejects revoked account sessions on both reads and writes'
 );
 select is(
   (select count(*) from pg_policies where schemaname='public'

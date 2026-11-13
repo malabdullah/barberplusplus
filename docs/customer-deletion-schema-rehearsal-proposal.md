@@ -1,3 +1,10 @@
+> **Superseded on 13 November 2026; no extraction performed.** The approved
+> rehearsal rebuilt the platform from exact official images plus committed main
+> migrations. All selected production metadata matched and all 47 database suites
+> and real Auth/Storage scenarios passed. No broader production export or reopened
+> access was needed. The historical proposal below grants no authority to extract.
+> See [completed evidence](../artifacts/customer-account-deletion-2026-11-13/platform-rehearsal-report.md).
+
 # Proposal: schema-faithful deletion rehearsal baseline
 
 **Proposal only. Do not export, reopen SSH, deploy, or activate deletion from this

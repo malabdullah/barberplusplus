@@ -14,7 +14,11 @@ insert into public.branches(id,manager_id,name,status) values
 insert into public.services(id,branch_id,name,duration,price,status) values
 ('cc030000-0000-4000-8000-000000000201','cc030000-0000-4000-8000-000000000101','Haircut',30,5,'active');
 
-select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"cc030000-0000-4000-8000-000000000001"}',true);
+-- Successful staff actions use real live sessions; all fixtures roll back.
+insert into auth.sessions(id,user_id)values
+('cc030000-0000-4000-8000-000000000001','cc030000-0000-4000-8000-000000000001'),
+('cc030000-0000-4000-8000-000000000002','cc030000-0000-4000-8000-000000000002');
 set local role authenticated;
 select throws_ok($$
 insert into public.barbers(user_id,branch_id,name,manager_chair,status) values
@@ -48,7 +52,7 @@ insert into public.bookings(id,branch_id,barber_id,date,time,status,added_by_typ
 ('cc030000-0000-4000-8000-000000000401','cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2035-06-04','10:00','confirmed','customer'),
 ('cc030000-0000-4000-8000-000000000402','cc030000-0000-4000-8000-000000000101','cc030000-0000-4000-8000-000000000301','2020-06-01','10:00','confirmed','customer');
 select is((select count(*) from public.notifications where entity_id='cc030000-0000-4000-8000-000000000401'),1::bigint,'the manager receives one alert for their own chair');
-select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"cc030000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 update public.barbers set status='inactive' where id='cc030000-0000-4000-8000-000000000301';
 select is((select count(*) from public.bookings where barber_id='cc030000-0000-4000-8000-000000000301'),2::bigint,'upcoming and past bookings stay visible after closing');
@@ -62,7 +66,7 @@ select throws_ok($$delete from public.barbers where id='cc030000-0000-4000-8000-
 update public.barbers set status='active' where id='cc030000-0000-4000-8000-000000000301';
 select is((select status from public.barbers where id='cc030000-0000-4000-8000-000000000301'),'active','same chair reopens');
 reset role;
-select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"cc030000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"cc030000-0000-4000-8000-000000000002"}',true);
 set local role authenticated;
 select is((select count(*) from public.bookings where barber_id='cc030000-0000-4000-8000-000000000301'),0::bigint,'another manager cannot see the chair history');
 reset role;
