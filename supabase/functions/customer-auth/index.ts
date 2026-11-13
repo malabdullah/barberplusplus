@@ -72,7 +72,7 @@ Deno.serve(createCustomerAuthHandler({
     if(error || !data.session)return null;
     if(!['customer','manager','barber'].includes(data.user.app_metadata.role) || !data.user.email_confirmed_at){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     const name=typeof data.user.user_metadata?.name==='string'?data.user.user_metadata.name:'';
-    return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name};
+    return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name,mfaRequired:['manager','barber'].includes(String(data.user.app_metadata.role)) && Boolean(data.user.factors?.some(f=>f.status==='verified'))};
   },
   emailName:async(token)=>{
     const {data,error}=await admin.auth.getUser(token);
