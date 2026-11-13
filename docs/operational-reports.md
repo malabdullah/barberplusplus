@@ -19,9 +19,10 @@ is to hosted Test only. Main, production and native iOS remain outside this chan
   Appointment search/status filters browse the result; they do not regenerate its
   summary. Changing report criteria disables export until regeneration.
 
-The default screen prioritizes the breakdown, a short summary and a value trend.
-Additional metrics/definitions are collapsed. Mobile stacks the summary,
-breakdown, trend and status; filters use a keyboard-operable dialog. Arabic,
+The default screen stacks three full-width sections: breakdown first, period
+summary (including booking status) second, and value trend last. The same order
+is used on desktop and mobile. Additional metrics/definitions are collapsed;
+mobile filters use a keyboard-operable dialog. Arabic,
 light and the current #141414 dark theme use existing application conventions.
 The trend uses daily, weekly or longer calendar buckets according to the selected
 range. Missing days within the generated period are zero, and Chart data exposes
