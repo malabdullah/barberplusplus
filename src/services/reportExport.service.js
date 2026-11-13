@@ -1,6 +1,10 @@
 import { reportsService } from './reports.service';
 
 export async function exportReport(report, labels, language, onProgress, signal) {
+  const assertReady = async () => {
+    const current = await reportsService.get(report.id);
+    if (current.state !== 'ready') throw new Error(current.error || 'REPORT_FAILED');
+  };
   const worker = new Worker(new URL('../workers/reportExport.worker.js', import.meta.url), { type: 'module' });
   const send = (action, data) => new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(new DOMException('Cancelled', 'AbortError'));
@@ -13,7 +17,7 @@ export async function exportReport(report, labels, language, onProgress, signal)
     worker.postMessage({ action, data });
   });
   try {
-    await reportsService.get(report.id);
+    await assertReady();
     await send('start', { report, labels, language });
     for (const kind of ['groups', 'rows']) {
       let after = 0; let loaded = 0;
@@ -30,7 +34,7 @@ export async function exportReport(report, labels, language, onProgress, signal)
     }
     const result = await send('finish');
     // Recheck live authorization immediately before offering the private file.
-    await reportsService.get(report.id);
+    await assertReady();
     if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
     return new Blob([result.bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   } finally { worker.terminate(); }

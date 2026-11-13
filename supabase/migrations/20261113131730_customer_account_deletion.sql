@@ -11,6 +11,7 @@ create table private.customer_deletion_jobs (
   customer_ids uuid[],
   session_id uuid,
   receipt_hash text not null check(receipt_hash ~ '^[0-9a-f]{64}$'),
+  receipt_box text,
   code_hash text,
   email_hash text,
   code_expires_at timestamptz,
@@ -72,7 +73,7 @@ begin
     or id in(select user_id from private.customer_social_identities where account_user_id=primary_user);
   if exists(select 1 from private.customer_deletion_runtime where singleton and test_mode)and(
     exists(select 1 from unnest(people)x cross join private.customer_deletion_runtime cfg where cfg.singleton and not x=any(cfg.allowed_test_users))
-    or exists(select 1 from auth.users where id=any(people)and(raw_app_meta_data->>'deletion_qa'is distinct from'true'or email not like'%@example.test'))
+    or exists(select 1 from auth.users where id=any(people)and(raw_app_meta_data->>'deletion_qa'is distinct from'true'or coalesce(email,'') not like'%@example.test'))
   )then raise exception 'TEST_ACCOUNT_ONLY';end if;
   if exists(select 1 from auth.users where id=any(people) and raw_app_meta_data->>'role' is distinct from 'customer')
     or exists(select 1 from public.barbers where user_id=any(people))
@@ -80,11 +81,10 @@ begin
     or exists(select 1 from public.audit_logs where admin_user_id=any(people))
     or exists(select 1 from private.shop_barber_invitations where manager_id=any(people) or accepted_user_id=any(people))
   then raise exception 'LINKED_WORK_ACCOUNT' using errcode='42501'; end if;
-  select array_agg(distinct id) into customers from public.customers where id in(
+  select coalesce(array_agg(distinct id),'{}') into customers from public.customers where id in(
     select customer_id from private.customer_accounts where user_id=any(people)
     union select b.customer_id from public.bookings b join private.customer_booking_owners o on o.booking_id=b.id where o.account_user_id=any(people)
   );
-  if coalesce(cardinality(customers),0)=0 then raise exception 'PROFILE_REQUIRED'; end if;
   if exists(select 1 from private.customer_accounts where customer_id=any(customers) and not user_id=any(people)) then raise exception 'ACCOUNT_SCOPE_CONFLICT'; end if;
   if exists(select 1 from public.customers where id=any(customers) and account_deleted_at is not null) then raise exception 'DELETION_IN_PROGRESS'; end if;
   select email,coalesce(length(encrypted_password)>0,false) into destination,has_password from auth.users where id=p_user;
@@ -96,10 +96,12 @@ revoke all on function private.deletion_actor(uuid,uuid) from public,anon,authen
 
 create function private.deletion_preview(p_customers uuid[]) returns jsonb
 language sql stable set search_path='' as $$
-  select jsonb_build_object('upcoming',coalesce(jsonb_agg(jsonb_build_object('id',b.id,'shop',s.name,'shopAr',s.name_ar,'barber',r.name,'barberAr',r.name_ar,'date',b.date,'time',b.time)order by b.date,b.time,b.id),'[]'),
-    'digest',encode(extensions.digest(coalesce(string_agg(b.id::text||':'||b.date::text||':'||b.time::text||':'||b.status,',' order by b.id),''),'sha256'),'hex'))
-  from public.bookings b join public.branches s on s.id=b.branch_id join public.barbers r on r.id=b.barber_id
-  where b.customer_id=any(p_customers) and b.status in('pending','confirmed') and (b.date+b.time)at time zone'Asia/Kuwait'>clock_timestamp()
+  with visits as materialized (
+    select b.* from public.bookings b where b.customer_id=any(p_customers)and b.status in('pending','confirmed')and(b.date+b.time)at time zone'Asia/Kuwait'>clock_timestamp()
+  )
+  select jsonb_build_object('upcoming',(select coalesce(jsonb_agg(jsonb_build_object('id',b.id,'shop',s.name,'shopAr',s.name_ar,'barber',r.name,'barberAr',r.name_ar,'date',b.date,'time',b.time)order by b.date,b.time,b.id),'[]')from(select *from visits order by date,time,id limit 50)b join public.branches s on s.id=b.branch_id join public.barbers r on r.id=b.barber_id),
+    'upcomingCount',count(*),'hasMore',count(*)>50,
+    'digest',encode(extensions.digest(coalesce(string_agg(id::text||':'||date::text||':'||time::text||':'||status,',' order by id),''),'sha256'),'hex'))from visits
 $$;
 revoke all on function private.deletion_preview(uuid[]) from public,anon,authenticated,service_role;
 
@@ -159,16 +161,15 @@ begin
     select * into j from private.customer_deletion_jobs where id=(p_data->>'id')::uuid for update;
     if found then
       if j.user_id is distinct from u or j.session_id is distinct from s or j.state not in('awaiting_code','verified') then raise exception 'INVALID_REQUEST'; end if;
-      update private.customer_deletion_jobs set receipt_hash=p_data->>'receipt_hash' where id=j.id;
-      return jsonb_build_object('id',j.id,'state',j.state,'created',false,'email',actor->>'email','expiresAt',j.code_expires_at)||preview;
+      return jsonb_build_object('id',j.id,'state',j.state,'created',false,'receiptBox',j.receipt_box,'email',actor->>'email','expiresAt',j.code_expires_at)||preview;
     end if;
     if (select count(*) from private.customer_deletion_jobs where user_id=u and created_at>now()-interval'1 hour')>=3 then raise exception 'RATE_LIMITED'; end if;
-    insert into private.customer_deletion_jobs(id,user_id,user_ids,customer_ids,session_id,receipt_hash,code_hash,email_hash,code_expires_at,preview_digest,providers)
-      values((p_data->>'id')::uuid,u,array(select jsonb_array_elements_text(actor->'userIds')::uuid),cids,s,p_data->>'receipt_hash',p_data->>'code_hash',encode(extensions.digest(coalesce(actor->>'email',''),'sha256'),'hex'),clock_timestamp()+interval'10 minutes',preview->>'digest',array(select jsonb_array_elements_text(actor->'providers')))returning *into j;
-    return jsonb_build_object('id',j.id,'state',j.state,'created',true,'email',actor->>'email','expiresAt',j.code_expires_at)||preview;
+    insert into private.customer_deletion_jobs(id,user_id,user_ids,customer_ids,session_id,receipt_hash,receipt_box,code_hash,email_hash,code_expires_at,preview_digest,providers)
+      values((p_data->>'id')::uuid,u,array(select jsonb_array_elements_text(actor->'userIds')::uuid),cids,s,p_data->>'receipt_hash',p_data->>'receipt_box',p_data->>'code_hash',encode(extensions.digest(coalesce(actor->>'email',''),'sha256'),'hex'),clock_timestamp()+interval'10 minutes',preview->>'digest',array(select jsonb_array_elements_text(actor->'providers')))returning *into j;
+    return jsonb_build_object('id',j.id,'state',j.state,'created',true,'receiptBox',j.receipt_box,'email',actor->>'email','expiresAt',j.code_expires_at)||preview;
   end if;
   if p_action='confirm'then
-    select a.customer_id into u from private.customer_deletion_jobs d join private.customer_accounts a
+    select coalesce(a.customer_id,d.user_id) into u from private.customer_deletion_jobs d left join private.customer_accounts a
       on a.user_id=coalesce((select account_user_id from private.customer_social_identities where user_id=d.user_id),d.user_id)
       where d.id=(p_data->>'id')::uuid and d.user_id=(p_data->>'user_id')::uuid and d.receipt_hash=p_data->>'receipt_hash';
     if u is null then raise exception 'RECEIPT_INVALID';end if;
@@ -219,7 +220,7 @@ begin
     end if;
     ids:=j.user_ids;cids:=j.customer_ids;
     update private.customer_deletion_jobs set parent_id=j.id,state='cleanup_pending',user_id=null,user_ids=null,customer_ids=null,session_id=null,
-      code_hash=null,email_hash=null,password_attempt=null,verified_until=null,preview_digest=null where id<>j.id and user_id=any(ids);
+      code_hash=null,email_hash=null,password_attempt=null,verified_until=null,preview_digest=null,receipt_box=null where id<>j.id and user_id=any(ids);
     select coalesce(array_agg(id),'{}')into bids from public.bookings where customer_id=any(cids)
       or id in(select booking_id from private.customer_booking_owners where account_user_id=any(ids));
     select coalesce(array_agg(distinct lower(email))filter(where email_confirmed_at is not null and email is not null),'{}')into emails from auth.users where id=any(ids);
@@ -279,7 +280,7 @@ begin
       execute 'delete from private.staff_report_groups where run_id=any($1)'using runs;
       execute 'update private.staff_report_runs set state=''failed'',result=null,error_code=''REPORT_SOURCE_DELETED''where id=any($1)'using runs;
     end if;
-    update private.customer_deletion_jobs set state='cleanup_pending',cancelled_count=count_cancelled,code_hash=null,verified_until=null,session_id=null,
+    update private.customer_deletion_jobs set state='cleanup_pending',cancelled_count=count_cancelled,code_hash=null,verified_until=null,session_id=null,receipt_box=null,
       available_at=clock_timestamp()where id=j.id;
     return jsonb_build_object('id',j.id,'state','cleanup_pending','cancelledCount',count_cancelled);
   end if;

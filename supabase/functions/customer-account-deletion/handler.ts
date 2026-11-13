@@ -16,6 +16,19 @@ export async function digest(value: string) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 function secret() { return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=',''); }
+export async function receiptBox(pepper: string, id: string, value: string, decrypt = false) {
+  const bytes = new TextEncoder();
+  const keyBytes = await crypto.subtle.digest('SHA-256', bytes.encode('account-deletion-receipt:' + pepper));
+  const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt','decrypt']);
+  if (decrypt) {
+    const data = Uint8Array.from(atob(value), c => c.charCodeAt(0));
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: data.slice(0,12), additionalData: bytes.encode(id) }, key, data.slice(12)));
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: bytes.encode(id) }, key, bytes.encode(value)));
+  const data = new Uint8Array(iv.length + encrypted.length); data.set(iv); data.set(encrypted, iv.length);
+  return btoa(String.fromCharCode(...data));
+}
 function code() {
   let value: number;
   do { value = crypto.getRandomValues(new Uint32Array(1))[0]; } while (value >= 4294000000);
@@ -26,13 +39,14 @@ async function body(req: Request): Promise<Data> {
   const parts: Uint8Array[] = []; let length = 0;
   while (true) { const next = await reader.read(); if (next.done) break; length += next.value.length; if (length > 4096) { await reader.cancel(); throw Error('INVALID_REQUEST'); } parts.push(next.value); }
   const bytes = new Uint8Array(length); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
-  const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  let value;
+  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw Error('INVALID_REQUEST'); }
   if (!value || Array.isArray(value) || typeof value !== 'object') throw Error('INVALID_REQUEST'); return value;
 }
 function masked(email: string) { const [name, domain] = email.split('@'); return domain ? name.slice(0,1) + '***@' + domain : ''; }
 function preview(value: Data) {
   const email = typeof value.email === 'string' ? value.email : '';
-  return { upcoming: value.upcoming, digest: value.digest, providers: value.providers,
+  return { upcoming: value.upcoming, upcomingCount: value.upcomingCount, hasMore: value.hasMore, digest: value.digest, providers: value.providers,
     destination: masked(email), methods: [...(email ? ['email_code'] : []), ...(value.hasPassword ? ['password'] : [])],
     appleRevocation: Array.isArray(value.providers) && value.providers.includes('apple') ? 'manual_required' : 'not_applicable' };
 }
@@ -56,10 +70,11 @@ export function createDeletionHandler(deps: Dependencies) {
       if (action === 'preview') return reply(200, preview(await deps.rpc('preview', trusted)));
       const id = String(value.id || ''); if (!uuid.test(id)) return reply(400, { error: 'INVALID_REQUEST' });
       if (action === 'start') {
-        const receipt = secret(); const otp = code();
-        const result = await deps.rpc('start', { ...trusted, id, receipt_hash: await digest(receipt), code_hash: await digest(deps.pepper + ':' + id + ':' + otp) });
+        const candidate = secret(); const otp = code();
+        const result = await deps.rpc('start', { ...trusted, id, receipt_hash: await digest(candidate), receipt_box: await receiptBox(deps.pepper, id, candidate), code_hash: await digest(deps.pepper + ':' + id + ':' + otp) });
+        const receipt = result.created ? candidate : await receiptBox(deps.pepper, id, String(result.receiptBox), true);
         if (result.created && typeof result.email === 'string' && result.email) await deps.mail(result.email, otp, value.language === 'ar' ? 'ar' : 'en', id);
-        return reply(200, { id, receipt, state: result.state, expiresAt: result.expiresAt, upcoming: result.upcoming, digest: result.digest, destination: masked(String(result.email || '')) });
+        return reply(200, { id, receipt, state: result.state, expiresAt: result.expiresAt, upcoming: result.upcoming, upcomingCount: result.upcomingCount, hasMore: result.hasMore, digest: result.digest, destination: masked(String(result.email || '')) });
       }
       const receipt = String(value.receipt || ''); if (!receiptPattern.test(receipt)) return reply(400, { error: 'INVALID_REQUEST' });
       const scope = { ...trusted, id, receipt_hash: await digest(receipt) };

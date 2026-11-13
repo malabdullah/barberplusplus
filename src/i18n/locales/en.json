@@ -1995,8 +1995,8 @@
   },
   "customerPrivacy": {
     "title": "Privacy policy",
-    "updated": "Updated 11 November 2026",
-    "intro": "This page explains how information is used in Barber++ customer accounts and bookings.",
+    "updated": "Updated 13 November 2026 - Test draft",
+    "intro": "This Test draft covers the Barber++ website and customer iPhone app. Account deletion is being verified with designated disposable accounts before release.",
     "back": "Back to booking",
     "sections": [
       {
@@ -2013,15 +2013,23 @@
       },
       {
         "title": "Sharing an appointment",
-        "text": "If you choose to share an appointment, anyone with the link can view its shop, barber, services, time, price and status without an account. Your name, email, phone number and private notes are not included. The link updates when the booking changes, expires 24 hours after the appointment ends, and can be disabled with Stop sharing. Recipients can forward the link or save their own copy."
+        "text": "Shared links show a snapshot of the shop, barber, services, time, price and status when shared. Your name, email, phone and private notes are excluded. Later appointment changes do not rewrite the snapshot. Links expire 24 hours after the captured appointment ends. Recipients can forward links or save copies. There is no customer sharing-management screen."
       },
       {
         "title": "Service providers",
         "text": "Hosting, database, network and email services process information needed to operate and protect the website. Resend delivers account messages and booking updates. Zoho hosts support conversations. Google and Apple process sign-in under their own privacy policies when you choose those options. Where mobile verification is required, Google Identity Platform processes the phone number and verification request."
       },
       {
-        "title": "Browser storage and records",
-        "text": "The website stores sign-in sessions and preferences in your browser. Temporary booking drafts help you resume your choices and entered contact details. Technical logs support security and troubleshooting. Signing out removes your local customer session; it does not delete your account or past appointments. Account, booking and email-delivery records remain stored until removed through service administration."
+        "title": "Device storage and technical information",
+        "text": "The website stores sessions, preferences and temporary booking drafts in the browser. The iPhone app stores credentials securely on the device. Face ID and Touch ID templates stay with iOS; Barber++ does not receive them. If notifications are enabled, device push identifiers, preferences and delivery records support booking updates and permitted announcements. Service logs support security and diagnostics. Google Sign-In and Firebase Authentication may process identifiers, IP-derived approximate location, usage and diagnostic data under their policies. Barber++ does not request GPS access for booking. Signing out does not delete your account."
+      },
+      {
+        "title": "Deleting your customer account",
+        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. Apple sign-in access may also need to be revoked in Apple Account settings. Contact support if deletion is unavailable for your account."
+      },
+      {
+        "title": "Copies outside your account",
+        "text": "Deletion does not recall delivered emails, exported files or copies saved by recipients. Support correspondence, security records and provider backups may follow separate retention processes; the account-deletion flow does not claim to erase external copies immediately. Contact support about those records. Any requirement to retain identifiable data must be explained separately."
       },
       {
         "title": "Your information and contact",
@@ -2890,7 +2898,8 @@
       "REPORT_NO_CHAIR": "A linked barber profile is needed for personal performance.",
       "REPORT_TOO_LARGE": "This report exceeds 100,000 appointments. Choose a shorter period or fewer shops.",
       "REPORT_FAILED": "The report could not be generated. Please try again.",
-      "REPORT_EXPORT_FAILED": "Excel could not be prepared. Please try again."
+      "REPORT_EXPORT_FAILED": "Excel could not be prepared. Please try again.",
+      "REPORT_SOURCE_DELETED": "Customer data changed. Generate a new report before viewing or exporting it."
     },
     "presets": {
       "month": "This month to date",
@@ -3078,5 +3087,51 @@
     "bookingPrice": "Booking value",
     "close": "Close",
     "chartData": "Chart data"
+  },
+  "customerDeletion": {
+    "title": "Delete account",
+    "completeTitle": "Account deleted",
+    "effect": "Permanently delete your customer account and personal details. This cannot be undone.",
+    "future_one": "Your upcoming appointment will be cancelled.",
+    "future_other": "Your {{count}} upcoming appointments will be cancelled.",
+    "future_zero": "You have no upcoming appointments.",
+    "history": "Past appointment totals stay anonymous in shop reports. Your name, contact details, notes, favourites and ratings are removed.",
+    "moreAppointments": "The first 50 appointments are shown. All upcoming appointments will be cancelled.",
+    "continue": "Continue",
+    "delete": "Delete my account",
+    "confirm": "I understand that my account cannot be recovered and my upcoming appointments will be cancelled.",
+    "method": "Verify with",
+    "email_code": "Email code",
+    "password": "Current password",
+    "code": "Verification code",
+    "codeSent": "Enter the six-digit code sent to {{destination}}.",
+    "resend": "Resend code",
+    "verify": "Verify",
+    "pending": "Your account is closed. We are finishing the removal of your sign-in and uploaded files. You can close this page and check back here.",
+    "uncertain": "We could not confirm the result yet. Check the saved request before trying again.",
+    "checkStatus": "Check status",
+    "complete": "Your customer account has been deleted. Your sign-in no longer works.",
+    "home": "Back to home",
+    "switched": "You switched accounts. Refresh this page to continue with the current account.",
+    "providers": "Connected sign-in: {{providers}}.",
+    "appleHelp": "If you used Sign in with Apple, you can also stop using Apple for Barber++ in your Apple Account settings.",
+    "appleSettings": "Apple Account settings",
+    "errors": {
+      "UNAVAILABLE": "We could not finish this step. Your saved deletion request is kept. Please try again or contact support.",
+      "AUTH_REQUIRED": "Sign in to the customer account you want to delete.",
+      "TEST_ACCOUNT_ONLY": "Account deletion is being tested with designated disposable Test accounts. Your account has not been changed.",
+      "LINKED_WORK_ACCOUNT": "This account also has shop or staff responsibilities. Contact support to resolve those before deleting it.",
+      "ACCOUNT_SCOPE_CONFLICT": "This account has linked records that need a support review. Nothing has been deleted.",
+      "RECEIPT_INVALID": "We could not find this saved deletion request. Contact support before starting again.",
+      "CODE_EXPIRED": "This code or verification window has expired. Request a new code.",
+      "INVALID_CODE": "The code or current password is incorrect. Please try again.",
+      "RATE_LIMITED": "Too many attempts. Please wait before trying again.",
+      "REAUTH_REQUIRED": "Verify your identity again before deleting the account.",
+      "REVIEW_REQUIRED": "Your appointments changed. Review the updated list and confirm again.",
+      "CONFIRMATION_REQUIRED": "Confirm that you understand the effect of deleting your account.",
+      "EMAIL_UNAVAILABLE": "We could not send the verification code. Try Resend code or contact support.",
+      "DELETION_IN_PROGRESS": "A deletion request is already in progress. Check its saved status.",
+      "NOT_ENABLED": "Account deletion is not enabled in this environment."
+    }
   }
 }

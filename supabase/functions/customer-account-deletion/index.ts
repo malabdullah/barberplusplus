@@ -47,7 +47,7 @@ const handler = withCloudTestGateway(createDeletionHandler({
     if (existing.error || !existing.data.user) return false;
     const person = existing.data.user;
     const client = createClient(url, Deno.env.get('SUPABASE_ANON_KEY') || '', options);
-    const result = person.email ? await client.auth.signInWithPassword({ email: person.email, password }) : person.phone ? await client.auth.signInWithPassword({ phone: person.phone, password }) : null;
+    const result = person.email && person.email_confirmed_at ? await client.auth.signInWithPassword({ email: person.email, password }) : person.phone ? await client.auth.signInWithPassword({ phone: person.phone, password }) : null;
     if (!result || result.error || !result.data.session) return false;
     const valid = result.data.user.id === userId;
     await admin.auth.admin.signOut(result.data.session.access_token, 'local');

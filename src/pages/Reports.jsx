@@ -71,7 +71,7 @@ export default function Reports({ personal = false }) {
   const previous = report?.result?.previous;
   const name = row => row.kind === 'unallocated' ? t('reports.unallocated') : localizedReportName(row, language) || t('reports.unknown');
   const clearSensitive = failure => {
-    if (/FORBIDDEN|NOT_FOUND|EXPIRED/.test(failure.message)) { setReport(null); setGroups([]); setRows([]); }
+    if (/FORBIDDEN|NOT_FOUND|NOT_READY|EXPIRED|REPORT_SOURCE_DELETED/.test(failure.message)) { exportAbort.current?.abort(); setReport(null); setGroups([]); setRows([]); }
     return t(`reports.errors.${failure.message}`, { defaultValue: t('reports.errors.REPORT_FAILED') });
   };
   useEffect(() => {
@@ -82,6 +82,23 @@ export default function Reports({ personal = false }) {
     return () => { current = false; mounted.current = false; requestSequence.current++; exportAbort.current?.abort(); };
   }, [user?.id, personal]);
   useEffect(() => { const previousTitle = document.title; document.title = `${t(personal ? 'reports.personal' : 'reports.title')} | Barber++`; return () => { document.title = previousTitle; }; }, [t, personal]);
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    let active = true; let checking = false;
+    const check = async () => {
+      if (document.hidden || checking) return;
+      checking = true;
+      try {
+        const current = await reportsService.get(report.id);
+        if (active && current.state !== 'ready') setError(clearSensitive(new Error(current.error || 'REPORT_FAILED')));
+      } catch (failure) { if (active) setError(clearSensitive(failure)); }
+      finally { checking = false; }
+    };
+    window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
+    const timer = setInterval(check, 60000);
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
+  }, [report?.id, ready]);
 
   useEffect(() => {
     if (!ready || !detailsOpen) return;

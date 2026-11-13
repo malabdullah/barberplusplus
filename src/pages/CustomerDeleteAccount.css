@@ -1,0 +1,8 @@
+.ca-deletion-bookings { list-style: none; padding: 0; margin: 1.5rem 0; max-height: 18rem; overflow: auto; }
+.ca-deletion-bookings li { display: grid; gap: .35rem; padding: 1rem 0; border-bottom: 1px solid var(--surface-divider); }
+.ca-deletion-bookings span { color: var(--text-secondary); }
+.ca-deletion-confirm { display: flex; align-items: flex-start; gap: .75rem; margin-block: 1.5rem; }
+.ca-deletion-confirm input { width: 1.1rem; height: 1.1rem; margin-top: .15rem; flex-shrink: 0; accent-color: var(--accent); }
+.ca-delete-action { color: var(--error, #c54439); border-color: currentColor; }
+.ca-delete-action:hover:not(:disabled) { color: var(--error, #c54439); }
+[data-theme="dark"] .ca-delete-action { color: #ff9d95; }
