@@ -2813,6 +2813,8 @@
     "bookingValue": "Completed booking value",
     "visits": "Completed visits",
     "visitsCount": "{{count}} completed visits",
+    "visitsCount_one": "{{count}} completed visit",
+    "visitsCount_other": "{{count}} completed visits",
     "customers": "Customers served",
     "average": "Average booking",
     "newCustomers": "New customers",
