@@ -10,6 +10,7 @@ import {
   Users,
   Calendar,
   Settings,
+  BarChart3,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -25,6 +26,7 @@ const navItems = [
   { path: '/dashboard/barbers', icon: Users, labelKey: 'nav.barbers' },
   { path: '/dashboard/availability-requests', icon: Calendar, labelKey: 'availabilityApproval.requests' },
   { path: '/dashboard/bookings', icon: Calendar, labelKey: 'nav.bookings' },
+  { path: '/dashboard/reports', icon: BarChart3, labelKey: 'reports.title' },
   { path: '/dashboard/my-chair', icon: Scissors, labelKey: 'chair.title', chairOnly: true },
   { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },
 ];

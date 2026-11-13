@@ -8,7 +8,7 @@ const installAssets = new Map([
   ['/icon-512.png', 'image/png'],
   ['/site.webmanifest', 'application/manifest+json'],
 ]);
-const functions = new Set(['account-tools', 'admin-push', 'customer-announcements', 'booking-share', 'customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox']);
+const functions = new Set(['staff-reports', 'account-tools', 'admin-push', 'customer-announcements', 'booking-share', 'customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox']);
 
 async function digest(value) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)));

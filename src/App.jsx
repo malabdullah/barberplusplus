@@ -78,6 +78,7 @@ const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const SharedBooking = lazy(() => import('./pages/SharedBooking'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
+const Reports = lazy(() => import('./pages/Reports'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
   const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
@@ -221,6 +222,7 @@ function AppRoutes() {
         <Route path="branches/:branchId/edit" element={<EditBranch />} />
         <Route path="branches/:branchId" element={<BranchDetails />} />
         <Route path="services" element={<Services />} />
+        <Route path="reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
         <Route path="barbers" element={<Barbers />} />
         <Route path="barbers/new" element={<AddBarber />} />
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
@@ -249,6 +251,7 @@ function AppRoutes() {
         <Route path="bookings" element={<MyBookings />} />
         <Route path="availability" element={<MyAvailability />} />
         <Route path="profile" element={<MyProfile />} />
+        <Route path="performance" element={<Suspense fallback={null}><Reports personal /></Suspense>} />
         <Route path="logs" element={<MyLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
