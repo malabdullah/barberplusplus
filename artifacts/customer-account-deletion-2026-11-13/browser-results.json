@@ -1,0 +1,14 @@
+{
+  "results": [
+    "public support without sign-in",
+    "real customer sign-in and profile action",
+    "hosted exact source release",
+    "mobile page rendered, overflow checked",
+    "captured email code / explicit consent / real deletion / signed-out status recovery",
+    "receipt completion survives refresh",
+    "Safari mobile public privacy without obsolete sharing controls"
+  ],
+  "consoleErrors": 0,
+  "observedLanguage": "ar",
+  "productionChanged": false
+}
