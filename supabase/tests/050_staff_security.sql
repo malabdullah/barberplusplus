@@ -2,6 +2,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
+select ok(not has_function_privilege('anon','public.increment_customer_booking_count(uuid,date)','EXECUTE'),'anonymous cannot mutate booking aggregates');
+select ok(not has_function_privilege('authenticated','public.increment_customer_booking_count(uuid,date)','EXECUTE'),'staff cannot mutate booking aggregates directly');
 insert into auth.users(id,email,raw_app_meta_data) values
  ('ed120000-0000-4000-8000-000000000001','security-admin@example.test','{"role":"admin"}'),
  ('ed120000-0000-4000-8000-000000000002','security-manager@example.test','{"role":"manager"}');
