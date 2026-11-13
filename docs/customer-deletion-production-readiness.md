@@ -41,25 +41,34 @@ Reports routes/services/migrations are excluded. The Test-based mail candidate i
 
 ## Production inspection outcome
 
-Fresh one-hour DB-only access was approved through 16:02:44 UTC (19:02:44 Kuwait)
-on 13 November. SSH reached the host but rejected the existing key. No SSH policy,
-credential, production application, database or settings change was attempted.
-The existing Hostinger web console requires OS sign-in and was left at its login
-prompt. No customer rows, secret values or routine bodies were inspected.
+The approved read-only DB inspection completed on 13 November before the
+16:02:44 UTC deadline. The existing migration key worked after the owner chose
+the firewall route; no password reset or SSH authentication-policy change occurred.
+Actual PostgreSQL, Auth, Storage and Edge containers were healthy and matched the
+four pinned image IDs. PostgreSQL reports 17.6. Metadata covered 56 relations,
+15 routine hashes and 49 policies; all 15 selected routine hashes reconcile with
+main source (including existing package patches). This is selected catalogue
+verification, not the full migration ledger or a production schema export.
 
-The original database firewall profile 367995 was restored and observed Active
-with its five original rules. Temporary profile 394280 is inactive, and only the
-added operator TCP22 rule was removed; it again contains its five original rules.
-Frontend access was never opened. Production metadata/image inspection remains
-blocked pending a human-authenticated console or restored existing read-only path.
+The observed internal backend is `http://api-gw:8000`. The candidate now pins this
+exact alias, still requiring an explicit matching binding and both default-off
+flags. The 23 affected Function tests and hosted Test v3 captured-mail/proof checks
+passed. Production flags and the new binding remain absent; production is unchanged.
+No customer rows, secret values or routine bodies were exported.
+
+Original database firewall profile 367995 was restored and observed Active.
+Temporary profile 394280 is inactive and contains only its five original rules;
+the added operator TCP22 source was removed. Frontend access was never opened.
+SSH processes completed; no persistent connection or console session remains.
+Safe aggregate evidence is `artifacts/customer-account-deletion-2026-11-13/production-readiness-summary.json`.
 
 ## Remaining release gates
 
-1. Run the prepared metadata-only `ops/account-deletion/inspect-runtime.py` and
-   `readiness.sql` against the actual production host through an authorized,
-   authenticated session. Confirm exact images, non-secret URL bindings, platform
-   columns/privileges/policies and current schema. Never display raw Docker Env,
-   credentials, Vault contents, customer rows or routine bodies.
+1. Selected production metadata inspection is complete. Reconcile the remaining
+   full schema and ordered migration ledger before declaring release readiness.
+   The metadata-only approval did not authorize a schema dump or routine-body
+   export. Prepare a separately reviewed, sanitized schema-only export if needed;
+   never export credentials, Vault contents or customer rows.
 2. Rehearse the scoped migrations on exact production PostgreSQL/Auth/Storage
    images and an approved schema-only baseline; verify session/Storage/Realtime
    revocation, cleanup behavior, notification side effects and privileges. Do not

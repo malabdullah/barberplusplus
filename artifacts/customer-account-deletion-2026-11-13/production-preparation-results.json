@@ -73,8 +73,8 @@
   "productionCredentials": false,
   "publishedPorts": 0,
   "transport": "container-loopback",
-  "actualDeployedParity": "NOT_VERIFIED",
-  "postgresAuthStorageRehearsal": "BLOCKED_PENDING_APPROVED_SCHEMA_BASELINE",
+  "actualDeployedParity": "FOUR_RUNTIME_IMAGE_IDS_MATCH",
+  "postgresAuthStorageRehearsal": "PENDING_APPROVED_SCHEMA_ONLY_BASELINE",
   "main": "unchanged",
   "dev": "unchanged",
   "production": "unchanged",
@@ -91,5 +91,8 @@
     "operational": 65,
     "build": "PASS",
     "lint": "PASS"
-  }
+  },
+  "selectedSchemaRoutineHashes": "15 of 15 match main source; no full ledger/schema assertion",
+  "gatewayBindingTests": 23,
+  "testFunctionVersion": 3
 }

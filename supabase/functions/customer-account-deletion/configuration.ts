@@ -17,7 +17,7 @@ export function deletionConfiguration(input: Input): DeletionConfiguration {
   // The external API is pinned. The internal endpoint must be explicitly bound
   // during release preparation; copying Test credentials cannot enable Live.
   if (input.environment !== 'production' || input.appUrl !== PRODUCTION_APP || input.publicUrl !== PRODUCTION_API
-    || input.backendUrl !== input.productionBackendUrl || ![PRODUCTION_API, 'http://kong:8000'].includes(input.backendUrl)) return disabled;
+    || input.backendUrl !== input.productionBackendUrl || ![PRODUCTION_API, 'http://kong:8000', 'http://api-gw:8000'].includes(input.backendUrl)) return disabled;
   const cleanupEnabled = input.productionCleanupEnabled === 'true';
   const newRequestsEnabled = input.productionEnabled === 'true' && cleanupEnabled && Boolean(input.resendKey?.trim());
   return { mode: 'production', appUrl: PRODUCTION_APP, publicUrl: PRODUCTION_API,

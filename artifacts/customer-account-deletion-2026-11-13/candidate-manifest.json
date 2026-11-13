@@ -5,24 +5,32 @@
   "baseCommit": "55f7bb615cdd00d632e64d7eb352210c20854c34",
   "deploymentAuthorized": false,
   "requiredBeforeRelease": [
-    "actual-production-read-only-schema-and-image-inspection",
-    "exact-Postgres-Auth-Storage-rehearsal",
-    "migration-ledger-and-expected-schema-reconciliation",
+    "approved-minimal-schema-only-baseline",
+    "exact-Postgres-Auth-Storage-behavioral-rehearsal",
+    "full-migration-ledger-and-expected-schema-reconciliation",
     "privacy-and-owner-final-release-approval"
   ],
   "reportsIncluded": false,
   "files": [
     {
       "path": "artifacts/customer-account-deletion-2026-11-13/production-preparation-results.json",
-      "sha256": "1d83041f214675e8d896ecf25e8073a7b60eda754e4c1e02c08a2a578da4dce4"
+      "sha256": "8b6a5b0cbdbd3d8b73d2d92d228eb64a73ed241dfe247e7be1794f96c44cd912"
+    },
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/production-readiness-summary.json",
+      "sha256": "7a13f578ce92657b683831465b840f863f31eeb568776cb475b54226018bf5be"
     },
     {
       "path": "docs/customer-deletion-production-readiness.md",
-      "sha256": "36c113846f213e46ec615ff20abcf8602af9d302c98a29725d48adc8e617dbd4"
+      "sha256": "c0f0e64ede1bcff9174e843c1c99085845ed7f238f1414149d247457e8ddf967"
+    },
+    {
+      "path": "docs/customer-deletion-schema-rehearsal-proposal.md",
+      "sha256": "f57c1fcd26fe6bc8c726ec1f2412c18b2e975996019e277dfd3db2cb246a81ac"
     },
     {
       "path": "ops/account-deletion/README.md",
-      "sha256": "18493b57dfc99d74138ed56e214b3f7dcf1e45f9ce8032e3a5860f5aa542170e"
+      "sha256": "be47fca917a233a4b7e46cec6f4226143034dec31c5ee419585654be6f973094"
     },
     {
       "path": "ops/account-deletion/inspect-runtime.py",
@@ -30,7 +38,7 @@
     },
     {
       "path": "ops/account-deletion/production.env.example",
-      "sha256": "0eab489af740d1ed360b140aad28a7c977b970cdb265e769435977f6cba6994c"
+      "sha256": "93e5ddd6eafc2cfbc799005ccb6c58d5e42115098f3b11091ba6bb9fa3360b3d"
     },
     {
       "path": "ops/account-deletion/readiness.sql",
@@ -94,11 +102,11 @@
     },
     {
       "path": "supabase/functions/customer-account-deletion/configuration.ts",
-      "sha256": "2f759e0fc5b3a0fe4c2c223d0f4c08e4d6bf0802e205bef33518761d326e527e"
+      "sha256": "308a5042872a95006ae2d8cbd5c2bafede817248738d6549d8ac0871771030ed"
     },
     {
       "path": "supabase/functions/customer-account-deletion/configuration_test.ts",
-      "sha256": "f5ab964a6e5043986529cf98810c8321796200cee3250bffa5e00c55843df4c7"
+      "sha256": "8d02ac859b6b061ed0f81685d4ae3efa6aa440509c1615b64101a0883b89602e"
     },
     {
       "path": "supabase/functions/customer-account-deletion/handler.ts",

@@ -76,10 +76,14 @@ business rollback suite passed on hosted Test without Reports dependencies. The
 ports, and its disposable container was removed. Docker was started only for this
 approved compatibility check; no ordinary local website/Test stack was started.
 
-Current deployed image/schema attestation and exact PostgreSQL/Auth/Storage replay
-remain incomplete. DB-only SSH rejected the existing key; the web console requires
-human sign-in. Original firewall profile 367995 is restored and its temporary source
-rule removed. Production application, database and settings remain unchanged. Scoped
+The approved production inspection verified the four pinned image IDs, healthy
+containers and all 15 selected routine hashes against main. The exact observed
+internal gateway `http://api-gw:8000` is now supported only with an explicit matching
+binding and the independent flags. Hosted Test v3 and 23 affected tests passed.
+Full PostgreSQL/Auth/Storage behavioral replay and complete schema/ledger
+reconciliation remain pending an approved schema-only baseline. Original firewall
+profile 367995 is restored and the temporary source rule removed. Production
+application, database and settings remain unchanged. Scoped
 release packaging, expected schema, backups, privacy acceptance and final owner
 release approval remain required. See `docs/customer-deletion-production-readiness.md`.
 

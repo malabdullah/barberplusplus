@@ -16,6 +16,14 @@ Deno.test('mismatched environment, website, public API or internal backend canno
     assert(!deletionConfiguration({ ...production, productionCleanupEnabled: 'true', productionEnabled: 'true', ...patch }).enabled);
   }
 });
+Deno.test('the observed production gateway still requires an explicit matching binding and both flags', () => {
+  const observed = { ...production, backendUrl: 'http://api-gw:8000', productionBackendUrl: 'http://api-gw:8000' };
+  assert(!deletionConfiguration(observed).enabled);
+  assert(deletionConfiguration({ ...observed, productionCleanupEnabled: 'true', productionEnabled: 'true' }).newRequestsEnabled);
+  assert(!deletionConfiguration({ ...observed, productionBackendUrl: undefined, productionCleanupEnabled: 'true', productionEnabled: 'true' }).enabled);
+  assert(!deletionConfiguration({ ...observed, backendUrl: 'http://api-gw:8001', productionCleanupEnabled: 'true', productionEnabled: 'true' }).enabled);
+  assert(!deletionConfiguration({ ...observed, backendUrl: 'http://api-gw:8000.evil.test', productionBackendUrl: 'http://api-gw:8000.evil.test', productionCleanupEnabled: 'true', productionEnabled: 'true' }).enabled);
+});
 Deno.test('hosted Test is always pinned and retains its existing pilot behavior independently of production flags', () => {
   const input = { environment: 'cloud-test', appUrl: TEST_APP, publicUrl: TEST_API, backendUrl: TEST_API };
   const config = deletionConfiguration(input); assert(config.enabled); assert(config.newRequestsEnabled); equal(config.mode, 'test');
