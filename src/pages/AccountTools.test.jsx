@@ -49,18 +49,19 @@ it('requests the customer activity scope even for a manager in customer mode', a
   expect(state.activity).toHaveBeenCalledWith('customer', null, 'manager-token');
   expect(screen.getByRole('link', { name: en.common.back })).toHaveAttribute('href', '/customer/account');
 });
-it('keeps support details hidden from guests and shows a signed-in email action in Arabic', async () => {
+it('shows public support to guests and keeps the signed-in Arabic return path', async () => {
   state.access = { identity: null, session: null, loading: false, retry: vi.fn(), error: '' };
-  const page = mount(<ContactSupport />); await screen.findByText('Sign in destination');
-  expect(screen.queryByText('support@barberplusplus.com')).not.toBeInTheDocument();page.unmount();
+  const page = mount(<ContactSupport />);
+  expect(screen.getByRole('link', { name: en.support.email })).toHaveAttribute('href', 'mailto:support@barberplusplus.com');
+  expect(screen.getByRole('link', { name: en.common.back })).toHaveAttribute('href', '/'); page.unmount();
   state.access = { identity: { role: 'barber' }, session: { access_token: 'barber-token' }, loading: false };
   await i18n.changeLanguage('ar'); mount(<ContactSupport />);
   expect(screen.getByRole('link', { name: ar.support.email })).toHaveAttribute('href', 'mailto:support@barberplusplus.com');
   expect(screen.getByRole('link', { name: ar.common.back })).toHaveAttribute('href', '/barber/settings');
 });
-it('does not expose support for an expired session or a failed identity check', () => {
+it('keeps public support accessible with an expired session', () => {
   state.access = { identity: null, session: { access_token: 'expired' }, loading: false, error: 'AUTH_REQUIRED', retry: vi.fn() };
   mount(<ContactSupport />);
-  expect(screen.getByRole('alert')).toHaveTextContent(en.accountTools.sessionExpired);
-  expect(screen.queryByText('support@barberplusplus.com')).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: en.support.email })).toHaveAttribute('href', 'mailto:support@barberplusplus.com');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

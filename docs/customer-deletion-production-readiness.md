@@ -1,0 +1,83 @@
+# Customer account deletion: production preparation
+
+Status on 13 November 2026: owner accepted the hosted Test/native flow and
+approved production preparation. **Production deployment and App Review submission
+are not approved.** Reports phase 1 remains a separate unreleased feature.
+
+## Prepared and verified
+
+The default-off candidate is isolated on `codex/customer-deletion-production-candidate`,
+based on production main `55f7bb615cdd00d632e64d7eb352210c20854c34`.
+It adds only customer deletion, public support and matching privacy disclosures;
+Reports routes/services/migrations are excluded. The Test-based mail candidate is
+`codex/customer-deletion-mail-candidate`. Neither candidate changes dev or main.
+
+- Production mail adapter is implemented: the existing approved Resend sender
+  `Barber++ <noreply@barberplusplus.com>`, Zoho support Reply-To, branded English/
+  Arabic proof email, deterministic per-operation/send-generation idempotency,
+  bounded timeout, no automatic retries and safe generic errors. Provider tests
+  are injected mocks; no real deletion email was sent.
+- Function v2 and environment-binding migration are deployed on hosted Test only.
+  Test remains pinned to `qvkucvcjmojjbphlzlks`, capture-only and restricted to
+  trusted disposable QA identities. Captured branded Arabic mail, stable duplicate
+  start/receipt and valid proof were checked; the owner-review account was preserved.
+- Production activation requires exact site/API/backend binding, immutable database
+  deployment identity and **both** new-request and cleanup switches. Both switches
+  default off. Cleanup-only mode preserves accepted jobs and receipt recovery;
+  operator configuration refuses to abandon pending cleanups.
+- Main-based candidate checks: lint, 232 Function tests, 356 UI tests, 65 operational
+  tests and production build passed. The scoped business SQL assertions passed on
+  hosted Test inside a fully rolled-back transaction, with no Reports dependency.
+- All 16 workers passed compilation/closed-handler checks on the pinned official
+  Linux amd64 Edge image in `ops/release/runtime-lock.json`. Deletion returned the
+  exact default-disabled `503 NOT_ENABLED`; the read-only lookup returned 200.
+  Only synthetic settings were used, no public ports, credentials or real messages.
+  The disposable container was removed. This is **lock-image compatibility**, not
+  attestation of the image currently running on the server.
+- Native flow passed on 17 Pro and 16e, including purpose-bound proof, two explicit
+  future cancellations, anonymous past history, switched-account isolation and
+  lost-response receipt recovery. Duo remains blocked by simulator OS startup;
+  no Duo fold/device pass is claimed. No upload/install/submission is included.
+
+## Production inspection outcome
+
+Fresh one-hour DB-only access was approved through 16:02:44 UTC (19:02:44 Kuwait)
+on 13 November. SSH reached the host but rejected the existing key. No SSH policy,
+credential, production application, database or settings change was attempted.
+The existing Hostinger web console requires OS sign-in and was left at its login
+prompt. No customer rows, secret values or routine bodies were inspected.
+
+The original database firewall profile 367995 was restored and observed Active
+with its five original rules. Temporary profile 394280 is inactive, and only the
+added operator TCP22 rule was removed; it again contains its five original rules.
+Frontend access was never opened. Production metadata/image inspection remains
+blocked pending a human-authenticated console or restored existing read-only path.
+
+## Remaining release gates
+
+1. Run the prepared metadata-only `ops/account-deletion/inspect-runtime.py` and
+   `readiness.sql` against the actual production host through an authorized,
+   authenticated session. Confirm exact images, non-secret URL bindings, platform
+   columns/privileges/policies and current schema. Never display raw Docker Env,
+   credentials, Vault contents, customer rows or routine bodies.
+2. Rehearse the scoped migrations on exact production PostgreSQL/Auth/Storage
+   images and an approved schema-only baseline; verify session/Storage/Realtime
+   revocation, cleanup behavior, notification side effects and privileges. Do not
+   substitute the ordinary local CLI Test stack or claim live parity from a lock.
+3. Reconcile the migration ledger and expected schema with verified hashes. The
+   six Test migrations are a review candidate, not an automatically deployable
+   artifact. Do not replay unrelated Reports migrations or use a blanket merge.
+4. Review cleanup secret/cron, receipt expiry, no-PII operational monitoring,
+   backups and disable procedure. Stop new requests while keeping cleanup on until
+   accepted work finishes; anonymization cannot be reversed by disabling a flag.
+5. Accept the proposed public privacy wording and native App Privacy disclosures.
+   Automatic Apple revocation is absent: manual Apple Account revocation remains
+   the explicit fallback; no native signing key was copied. No App Store acceptance
+   or retention/legal approval is implied.
+6. Present the immutable release manifest, exact-image/schema evidence, native
+   limitations and enable/disable steps for owner approval before the normal
+   dev → main → production workflow. A live deletion demo would require a separate
+   disposable production identity and explicit permission.
+
+Already delivered emails, downloaded exports, external copies and provider/backups
+cannot be recalled by this feature. No arbitrary legal retention period is claimed.

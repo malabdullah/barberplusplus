@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "status": "PREPARATION_ONLY_NOT_DEPLOYABLE",
+  "branch": "codex/customer-deletion-production-candidate",
+  "baseCommit": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+  "deploymentAuthorized": false,
+  "requiredBeforeRelease": [
+    "actual-production-read-only-schema-and-image-inspection",
+    "exact-Postgres-Auth-Storage-rehearsal",
+    "migration-ledger-and-expected-schema-reconciliation",
+    "privacy-and-owner-final-release-approval"
+  ],
+  "reportsIncluded": false,
+  "files": [
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/production-preparation-results.json",
+      "sha256": "1d83041f214675e8d896ecf25e8073a7b60eda754e4c1e02c08a2a578da4dce4"
+    },
+    {
+      "path": "docs/customer-deletion-production-readiness.md",
+      "sha256": "36c113846f213e46ec615ff20abcf8602af9d302c98a29725d48adc8e617dbd4"
+    },
+    {
+      "path": "ops/account-deletion/README.md",
+      "sha256": "18493b57dfc99d74138ed56e214b3f7dcf1e45f9ce8032e3a5860f5aa542170e"
+    },
+    {
+      "path": "ops/account-deletion/inspect-runtime.py",
+      "sha256": "a8b1939d856f5bac1fa6024b85d38081fa05ef85523eb35052b2b5e65a9bfb78"
+    },
+    {
+      "path": "ops/account-deletion/production.env.example",
+      "sha256": "0eab489af740d1ed360b140aad28a7c977b970cdb265e769435977f6cba6994c"
+    },
+    {
+      "path": "ops/account-deletion/readiness.sql",
+      "sha256": "43feac301c83ef803d504ff54a47894e4f78c4062e97923b48a2d9c31bfb7a76"
+    },
+    {
+      "path": "ops/release/test-functions-image.py",
+      "sha256": "0b7b208e03672a6ff0748668ffe0cc4fa126c26798b7a8f8affa421f0c75f71f"
+    },
+    {
+      "path": "scripts/deletion-readiness.node-test.mjs",
+      "sha256": "7da3303dbfa761b870041855d86a8a6cffcd64d300ec5ef352d2e7b2aa649e3f"
+    },
+    {
+      "path": "src/App.jsx",
+      "sha256": "983b4859fc30cf8c1c0b5c786cbd712298aeb779a09124197567498070b3eb80"
+    },
+    {
+      "path": "src/i18n/locales/ar.json",
+      "sha256": "6bc4f597b4ae1ade93261c4a9eec2823588578cae2102533e1b78ef7d52e1c2e"
+    },
+    {
+      "path": "src/i18n/locales/en.json",
+      "sha256": "6944344bba8e311d1cefefb320a9d3a3930995d2bbc4a953db61a04426da58d1"
+    },
+    {
+      "path": "src/pages/AccountTools.test.jsx",
+      "sha256": "51fd81ce9862c877e78a6ac88d8bb2f1c42c3f0a089ce7123ecc1f6ff41c5820"
+    },
+    {
+      "path": "src/pages/ContactSupport.jsx",
+      "sha256": "a21679d996026c6b0fc41db5c17a5e6e0648a92dc1aaecb4702eae436bbf7f7e"
+    },
+    {
+      "path": "src/pages/CustomerAccount.jsx",
+      "sha256": "020f712da0ebedfbdf3f617d33878fd7c0301fc004e5291e5159f5fdfb4699ff"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.css",
+      "sha256": "023daaa17617424a48ea5bff9358d7702163fb54841ab09a8293fad70494b515"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.jsx",
+      "sha256": "3220595e7dd05652581ec7090a50b90a3baf93edd471bb9aa0649895a7eaf3cf"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.test.jsx",
+      "sha256": "3045d3ee1ab5065852701c41c2138eec9444d8e73a1ef1691452576d6aa9fa8a"
+    },
+    {
+      "path": "src/services/customerDeletion.service.js",
+      "sha256": "c7bf447a4d30747ded8fe97d5c717c7bc10eae5132ee07b7b2f222b088866900"
+    },
+    {
+      "path": "src/utils/customerDeletionReceipt.js",
+      "sha256": "f46f1343f19b38b62417c799e7113662d2733e93693bc41b77ea3580a3ae4c12"
+    },
+    {
+      "path": "src/utils/customerDeletionReceipt.test.js",
+      "sha256": "2ad7285eb105310380db11b10f85139323b212ac0d76b5527e91eb1e4b48aea6"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/configuration.ts",
+      "sha256": "2f759e0fc5b3a0fe4c2c223d0f4c08e4d6bf0802e205bef33518761d326e527e"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/configuration_test.ts",
+      "sha256": "f5ab964a6e5043986529cf98810c8321796200cee3250bffa5e00c55843df4c7"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/handler.ts",
+      "sha256": "9ef5978561a06bdcd5c10dd2e0976b790f8a723ae3b0401f2efc517307583df3"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/handler_test.ts",
+      "sha256": "8003ee0808d07a3ac0e5b330b1d0082b76aec53ac91b2557a9db6d79cc9fadc5"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/index.ts",
+      "sha256": "8cdd220dab582dac0229058a127102c6a86f03e65580ea05b9000355c36976cf"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/mail.ts",
+      "sha256": "c0f9a05ad3baaad8f04680e041338c4c89b010c33522b87163f102ad8557e91c"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/mail_test.ts",
+      "sha256": "716a11437740b8cfe0f65ce940db3c3e54f288ed513f55a15578f71f03941e0a"
+    },
+    {
+      "path": "supabase/migrations/20261113131730_customer_account_deletion.sql",
+      "sha256": "5b69234082c9a665a9f8868dec9bac181b3287f89fa57a85b7460c54edc19373"
+    },
+    {
+      "path": "supabase/migrations/20261113132148_customer_account_deletion_validation.sql",
+      "sha256": "cb9fbf39aad234a536c4aa439f8d868810334bab0e4bff47ffc73413ce04ee2d"
+    },
+    {
+      "path": "supabase/migrations/20261113134112_customer_deletion_auth_cleanup.sql",
+      "sha256": "2f36693101d090e5a50dda9aa95c650d3755990f6638c37fa9b760b7302b5efd"
+    },
+    {
+      "path": "supabase/migrations/20261113134447_customer_deletion_device_cleanup.sql",
+      "sha256": "e06ccc03614bad6f828af646742530b19755b547e63f6e7371fba3e165a2e8e8"
+    },
+    {
+      "path": "supabase/migrations/20261113140603_customer_deletion_verified_contact_cleanup.sql",
+      "sha256": "bbd52be27f3954f5e8ab8959f7e90840e922eac868d0cb812966a31b25ee265f"
+    },
+    {
+      "path": "supabase/migrations/20261113144103_customer_deletion_environment_binding.sql",
+      "sha256": "6b99aaca1698a0df16edf6ed416ac0ff0f85ae4a7e4e229f867227f45c2d1b94"
+    },
+    {
+      "path": "supabase/tests/055_customer_account_deletion_candidate.sql",
+      "sha256": "b5c1cf527cae9bdc20eff9b48bc38479bb2b43a96b081c66eb6a6bc506ecaec9"
+    }
+  ]
+}

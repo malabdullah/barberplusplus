@@ -1,0 +1,15 @@
+-- Read-only metadata only. Run on the reviewed production database, not Test.
+-- No table rows, routine bodies, environment secrets or Vault values are returned.
+begin read only;
+select jsonb_build_object(
+ 'serverVersion',current_setting('server_version'),
+ 'extensions',(select coalesce(jsonb_agg(jsonb_build_object('name',extname,'version',extversion)order by extname),'[]')from pg_extension where extname in('pgcrypto','pg_cron','pg_net','supabase_vault')),
+ 'relations',(select coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname,'rls',c.relrowsecurity,'kind',c.relkind,'columns',(select jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'notNull',a.attnotnull)order by a.attnum)from pg_attribute a where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped),'constraints',(select jsonb_agg(jsonb_build_object('name',t.conname,'type',t.contype,'definitionHash',md5(pg_get_constraintdef(t.oid)))order by t.conname)from pg_constraint t where t.conrelid=c.oid))order by n.nspname,c.relname),'[]')from pg_class c join pg_namespace n on n.oid=c.relnamespace where
+   (n.nspname='public'and c.relname in('customers','bookings','notifications','customer_staff_details','whatsapp_conversations','whatsapp_messages','whatsapp_logs','logs','audit_logs','suspicious_activities'))or
+   (n.nspname='auth'and c.relname in('users','sessions','identities','refresh_tokens'))or
+   (n.nspname='storage'and c.relname='objects')or
+   (n.nspname='private'and c.relkind in('r','p','v')and(c.relname like'customer_%'or c.relname like'account_%'or c.relname like'announcement_%'or c.relname like'staff_report_%'or c.relname in('phone_numbers','phone_sources','shop_barber_invitations','admin_password_reset_guards')))),
+ 'routines',(select coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',p.proname,'args',pg_get_function_identity_arguments(p.oid),'securityDefiner',p.prosecdef,'bodyHash',md5(p.prosrc),'anonymousExecute',has_function_privilege('anon',p.oid,'execute'),'authenticatedExecute',has_function_privilege('authenticated',p.oid,'execute'))order by n.nspname,p.proname),'[]')from pg_proc p join pg_namespace n on n.oid=p.pronamespace where(n.nspname in('public','private')and p.proname in('customer_session_is_live','current_account_session','customer_account_api','canonical_phone','guard_global_phone','guard_account_email','guard_booking_policy','guard_booking_integrity','guard_booking_history','notify_booking_change','capture_customer_push','capture_customer_booking_email','detach_customer_session_push','clear_customer_phone_verification','account_realtime_not_revoked'))),
+ 'policies',(select coalesce(jsonb_agg(jsonb_build_object('schema',schemaname,'table',tablename,'name',policyname,'command',cmd,'expressionHash',md5(coalesce(qual,'')||coalesce(with_check,'')))order by schemaname,tablename,policyname),'[]')from pg_policies where(schemaname='storage'and tablename='objects')or(schemaname='public'and tablename in('customers','bookings','notifications','whatsapp_conversations','whatsapp_messages')))
+)as account_deletion_readiness;
+rollback;
