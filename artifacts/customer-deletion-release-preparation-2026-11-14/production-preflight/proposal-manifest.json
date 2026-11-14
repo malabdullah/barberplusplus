@@ -10,16 +10,19 @@
   "productionConnected": false,
   "tests": {
     "syntheticOnly": true,
-    "passed": 13,
+    "passed": 15,
     "failed": 0
   },
   "files": {
-    "inspect_metadata.py": "09e378f248047585e0241fc8ab5befa5ed7c4920c29519f4a5ebb22e2e4bfca4",
-    "test_inspect_metadata.py": "2ffa55c7b83b4428f82e0cc266d8242eee85648aff0f0d93d6ac732bbcb49864",
-    "scope.md": "ce60cca193de06b23985f2c0804d4f522b7d15c93df670ca2a83c51a24c845d5",
+    "inspect_metadata.py": "8266d199d16a3c01dd35fbdb2ca2e8be113dfb84514a70964edb608c7ef06276",
+    "test_inspect_metadata.py": "9bb96e8e1775ad368a25f7903320988ed154366cfc2d92fa6906a543fffc9e8c",
+    "scope.md": "a833f0229deb05eb237368705f067200b33f5dd8a0cf9122e8a1527bd1d352c7",
     "wording-acceptance.json": "6fd418a830b301393b19a2cf468e2256a32aa5ac88e4f02f89ea1454d9e735b0"
   },
   "doesNotModifyHistoricalReviewManifest": true,
   "originalReviewManifestSHA256": "9bde582ac5558ad6a4e026b47520ec454192cb41f8fbabc8fb3f418ec6b22bd7",
-  "finalRehearsalReceiptSHA256": "e699b43042eb79a92059c4de88e9e76ffc29e2b3c9d5b6722334afd1fdb73b12"
+  "finalRehearsalReceiptSHA256": "e699b43042eb79a92059c4de88e9e76ffc29e2b3c9d5b6722334afd1fdb73b12",
+  "revision": 2,
+  "supersedesProposalSHA256": "4611b0ab4313d8b4da2d2bb3600415dfc40621e4b6c7a84ef28573e4f9142052",
+  "correction": "Quote PostgreSQL catalogue aliases; reject missing or wrongly typed routine metadata instead of reporting false permissions. Access scope unchanged."
 }

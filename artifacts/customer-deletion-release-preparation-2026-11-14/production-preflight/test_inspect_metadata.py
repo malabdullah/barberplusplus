@@ -1,4 +1,4 @@
-import base64, copy, importlib.util, json, pathlib, types, unittest
+import base64, copy, importlib.util, json, pathlib, re, types, unittest
 P=pathlib.Path(__file__).with_name('inspect_metadata.py')
 spec=importlib.util.spec_from_file_location('preflight',P);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 NOW=1800000000
@@ -77,6 +77,32 @@ class Tests(unittest.TestCase):
             if n=='queue':return{'pending':-1,'unscoped':SENTINEL,'user_ids':SENTINEL}
             return original(n)
         h.sql=sql;out=m.collect(h,NOW);self.assertNotIn(SENTINEL,json.dumps(out));self.assertIsNone(out['queue']['pending'])
+    def test_postgres_catalogue_alias_casing_preserves_permission_results(self):
+        # Derive row keys from the actual SQL aliases, applying PostgreSQL's
+        # unquoted-identifier folding. Do not supply assumed camelCase keys.
+        aliases=re.findall(r'\bas\s+("[^"]+"|[A-Za-z_][A-Za-z_0-9]*)',m.SQL['catalogue'],re.I)
+        keys=[a[1:-1]if a.startswith('"')else a.lower()for a in aliases]
+        expected={'bodyHash':'c'*32,'securityDefiner':True,'anonymousExecute':True,'authenticatedExecute':True}
+        row={'schema':'public','name':'customer_session_is_live'}
+        for key in keys:
+            if key.lower()in{k.lower()for k in expected}:
+                row[key]=next(v for k,v in expected.items()if k.lower()==key.lower())
+        h=FakeHost();original=h.sql
+        def sql(n):
+            value=original(n)
+            if n=='catalogue':value['routineMetadata']=[row]
+            return value
+        h.sql=sql
+        projected=m.collect(h,NOW)['database']['routineMetadata'][0]
+        for key,value in expected.items():self.assertEqual(projected[key],value)
+    def test_missing_or_wrong_case_routine_metadata_fails_closed(self):
+        h=FakeHost();original=h.sql
+        def sql(n):
+            value=original(n)
+            if n=='catalogue':value['routineMetadata']=[{'schema':'public','name':'customer_session_is_live','bodyhash':'c'*32,'securitydefiner':True,'anonymousexecute':True,'authenticatedexecute':True}]
+            return value
+        h.sql=sql
+        with self.assertRaisesRegex(ValueError,'UNEXPECTED_ROUTINE_METADATA'):m.collect(h,NOW)
     def test_host_sql_allows_only_fixed_read_only_queries(self):
         h=m.Host();calls=[]
         h.run=lambda args:calls.append(args)or'{}'

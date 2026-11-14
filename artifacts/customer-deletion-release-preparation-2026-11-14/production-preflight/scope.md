@@ -34,7 +34,7 @@ The script returns `METADATA_CAPTURED_REVIEW_REQUIRED`, never release approval. 
 
 ## Verification and limits
 
-Thirteen synthetic-only Python tests pass, covering whitelist/redaction, multiline JSON environment projection, malformed/expired metadata, wrong client/configuration, missing/drifted ledger, stale/future/wrong-system/incomplete backup evidence, fixed read-only queries and unapproved targets. These tests do not claim a real remote Docker/template execution; actual execution awaits access approval.
+Fifteen synthetic-only Python tests pass, covering whitelist/redaction, multiline JSON environment projection, malformed/expired metadata, wrong client/configuration, missing/drifted ledger, stale/future/wrong-system/incomplete backup evidence, fixed read-only queries, PostgreSQL alias casing, fail-closed routine metadata and unapproved targets. These tests do not claim a real remote Docker/template execution; actual execution awaits access approval.
 
 This scope cannot attest the frontend running image/commit, Dokploy routing, TLS, full Live schema drift, Apple key cryptographic suitability/portal scope, or a fresh backup restoration. It cannot provision Live deletion credentials, rotate keys, deploy migrations/Functions/frontend, activate deletion, create reviewer accounts, send email/SMS/push, use Apple authorization, publish accepted wording, upload, submit or publicly release the app. Each remaining necessary action will be prepared separately.
 
