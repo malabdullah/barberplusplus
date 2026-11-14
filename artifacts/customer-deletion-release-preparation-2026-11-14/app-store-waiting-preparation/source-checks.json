@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCAL_SOURCE_AND_SAVED_RECEIPT_CHECKS_ONLY",
+  "preparedAtUTC": "2026-11-14T08:40:15.524787+00:00",
+  "humanPreparationMessage": "01a1d92d-f5f8-77b1-9cad-1fe44e263c54",
+  "core": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "cachedRefs": {
+    "main": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+    "dev": "0a5da719201b2ec3162dbea89b69ff835c73cb3d",
+    "freshRemoteVerification": false,
+    "mainAheadOfDev": 8,
+    "devAheadOfMain": 0,
+    "devAncestorOfMain": true,
+    "mainAncestorOfCore": true
+  },
+  "migrationPrefix": {
+    "mainCount": 102,
+    "coreCount": 111,
+    "allMainFilesByteIdentical": true,
+    "pending": [
+      {
+        "name": "20261113131730_customer_account_deletion.sql",
+        "sha256": "5b69234082c9a665a9f8868dec9bac181b3287f89fa57a85b7460c54edc19373",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113132148_customer_account_deletion_validation.sql",
+        "sha256": "cb9fbf39aad234a536c4aa439f8d868810334bab0e4bff47ffc73413ce04ee2d",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113134112_customer_deletion_auth_cleanup.sql",
+        "sha256": "2f36693101d090e5a50dda9aa95c650d3755990f6638c37fa9b760b7302b5efd",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113134447_customer_deletion_device_cleanup.sql",
+        "sha256": "e06ccc03614bad6f828af646742530b19755b547e63f6e7371fba3e165a2e8e8",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113140603_customer_deletion_verified_contact_cleanup.sql",
+        "sha256": "bbd52be27f3954f5e8ab8959f7e90840e922eac868d0cb812966a31b25ee265f",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113144103_customer_deletion_environment_binding.sql",
+        "sha256": "6b99aaca1698a0df16edf6ed416ac0ff0f85ae4a7e4e229f867227f45c2d1b94",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113181421_customer_apple_revocation.sql",
+        "sha256": "4ad456f06e3241c3cdc7d081182ca1ebab6e3eb2704cb07591035eaa023ad558",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113182000_customer_apple_scope_binding.sql",
+        "sha256": "19b32cac7fc62ff9699e09a3dad2b23db5502469db3ade95dc13461b8110fc89",
+        "automaticSqlGuardAllows": false
+      },
+      {
+        "name": "20261113183235_customer_apple_actor_guard.sql",
+        "sha256": "c5eb5a15acf991b975c7e9c60bfbf56efc7634f3fed64a96b4c94d30eee4fe41",
+        "automaticSqlGuardAllows": false
+      }
+    ],
+    "allNineRequireSeparatelyReviewedDelivery": true
+  },
+  "protectedRuntimePathsByteIdenticalToCore": true,
+  "operatorFilesNotModifiedInPreparation": true,
+  "completedSetupReceiptSHA256": "94860601933ab75382c5eb00c4d1001c2c7554a90787d373918875570795d045",
+  "actualInstalledAtUTC": "2026-11-14T08:25:21Z",
+  "nextScheduledBackupUTC": "2026-11-15T00:15:00Z",
+  "postInstallBackupStatus": "NOT_CHECKED_NO_ACCESS",
+  "ownerHeldCurrentRecoveryCredentialsBinding": "NOT_VERIFIED_ARCHIVE_WRAPPER_OPENABILITY_REPORTED_ONLY",
+  "wording": {
+    "acceptedCopySHA256": "178a534ef2caf9dadc893abcc219158eff047eb87a01d497dd8d84108881608f",
+    "enArPrivacyAndDeletionMatchCoreLocales": true,
+    "publicationAuthorized": false
+  },
+  "sourceAnchors": {
+    "src/App.jsx": {
+      "sha256": "983b4859fc30cf8c1c0b5c786cbd712298aeb779a09124197567498070b3eb80",
+      "matches": [
+        {
+          "line": 169,
+          "text": "{customerFeaturesEnabled && <Route path=\"/customer/delete-account\" element={<Suspense fallback={null}><CustomerDeleteAccount /></Suspense>} />}"
+        },
+        {
+          "line": 170,
+          "text": "<Route path=\"/support\" element={<ContactSupport />} />"
+        },
+        {
+          "line": 173,
+          "text": "<Route path=\"/privacy\" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />"
+        }
+      ]
+    },
+    "src/pages/CustomerAccount.jsx": {
+      "sha256": "020f712da0ebedfbdf3f617d33878fd7c0301fc004e5291e5159f5fdfb4699ff",
+      "matches": [
+        {
+          "line": 144,
+          "text": "<div className=\"ca-profile-actions\"><Link to=\"/customer/favourites\">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden=\"true\" /></Link><Link to=\"/customer/password\">{t('customerPassword.title')}"
+        }
+      ]
+    },
+    "src/pages/CustomerDeleteAccount.jsx": {
+      "sha256": "976654371c2ce0f899f2d109bf9280a403ca3e4a210026c92bac86d3a867cfd2",
+      "matches": [
+        {
+          "line": 27,
+          "text": "if (clearDeletedBrowserAccount(saved.ownerId)) window.location.replace('/customer/delete-account');"
+        },
+        {
+          "line": 112,
+          "text": "<Link className=\"cb-text-button\" to=\"/support?audience=customer\">{t('settings.contactSupport')}</Link>"
+        }
+      ]
+    },
+    "src/pages/ContactSupport.jsx": {
+      "sha256": "a21679d996026c6b0fc41db5c17a5e6e0648a92dc1aaecb4702eae436bbf7f7e",
+      "matches": []
+    },
+    "src/pages/CustomerPrivacy.jsx": {
+      "sha256": "98c45e583a61541a050f6e48d7868a88462e291ca50d7a88fe3b18a122bce69a",
+      "matches": []
+    },
+    "src/pages/Landing.jsx": {
+      "sha256": "45bc6eeddf38af187a9c2c3ccb157ddb5c691f30bb4715d96208d132f538380d",
+      "matches": [
+        {
+          "line": 13,
+          "text": "const demoDate = new Date(`${addBookingDays(getKuwaitDate(), 1)}T14:30:00+03:00`);"
+        },
+        {
+          "line": 14,
+          "text": "const date = new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Kuwait' }).format(demoDate);"
+        },
+        {
+          "line": 15,
+          "text": "const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(demoDate);"
+        },
+        {
+          "line": 16,
+          "text": "const newTime = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kuwait' }).format(new Date(demoDate.getTime() + 90 * 60 * 1000));"
+        },
+        {
+          "line": 74,
+          "text": "<dl><dt>{tr('currentTime')}</dt><dd><time dateTime={demoDate.toISOString()}>{time}</time></dd></dl>"
+        },
+        {
+          "line": 76,
+          "text": "<dl className=\"lp-new-time\"><dt>{tr('newTime')}</dt><dd><time dateTime={new Date(demoDate.getTime() + 90 * 60 * 1000).toISOString()}>{newTime}</time></dd></dl>"
+        }
+      ]
+    },
+    "src/pages/SharedBooking.jsx": {
+      "sha256": "1c213ba0292da2b0890c0138b17178ec2cc877b75174938eedcd10e109c525ca",
+      "matches": [
+        {
+          "line": 51,
+          "text": "try { const url = new URL(value, window.location.origin); if (url.origin === window.location.origin && url.pathname.startsWith('/booking-demo/')) return url.href; return url.protocol === 'https:' && url.pathnam"
+        }
+      ]
+    },
+    "src/services/customerDeletion.service.js": {
+      "sha256": "c7bf447a4d30747ded8fe97d5c717c7bc10eae5132ee07b7b2f222b088866900",
+      "matches": []
+    },
+    "supabase/functions/customer-account-deletion/index.ts": {
+      "sha256": "60f3b0d9ed8174861a9dc31c21b012bdb52dc29ea2f4f4308fa52694d029dc03",
+      "matches": []
+    },
+    "supabase/functions/customer-account-deletion/configuration.ts": {
+      "sha256": "308a5042872a95006ae2d8cbd5c2bafede817248738d6549d8ac0871771030ed",
+      "matches": [
+        {
+          "line": 12,
+          "text": "export function deletionConfiguration(input: Input): DeletionConfiguration {"
+        }
+      ]
+    },
+    "supabase/functions/customer-account-deletion/handler.ts": {
+      "sha256": "1796c362f15d8511f9024ea913c848444b4e22e3d435ed5dc54115298fd925fd",
+      "matches": []
+    },
+    "supabase/functions/customer-account-deletion/apple.ts": {
+      "sha256": "4e1d9e83c7cdea8d073c37d59151cbcb79b16b471383c75cd9931bfa37cd82bf",
+      "matches": [
+        {
+          "line": 13,
+          "text": "export function appleConfiguration(deployment: DeletionConfiguration, enabled: string | undefined, clients: string | undefined, key: string | undefined, clock = Date.now): AppleConfiguration {"
+        }
+      ]
+    },
+    "supabase/functions/customer-booking/index.ts": {
+      "sha256": "bde4f9a884559c16133d18eadd9cc288dbde5288147960e3056f4229af6f92fe",
+      "matches": [
+        {
+          "line": 37,
+          "text": "const result = await admin.rpc('customer_checkout_policy');"
+        }
+      ]
+    },
+    "supabase/functions/customer-booking/handler.ts": {
+      "sha256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "matches": [
+        {
+          "line": 90,
+          "text": "const policyActions = ['phone-config', 'phone-start', 'phone-confirm', 'account-proof', 'guest-proof', 'book', 'claim-booking'];"
+        },
+        {
+          "line": 127,
+          "text": "if (body.action === 'phone-config') {"
+        }
+      ]
+    },
+    "ops/account-deletion/readiness.sql": {
+      "sha256": "43feac301c83ef803d504ff54a47894e4f78c4062e97923b48a2d9c31bfb7a76",
+      "matches": []
+    },
+    "ops/account-deletion/apple-readiness.sql": {
+      "sha256": "3ba34ff0c78b31791d3b69afb5ef9d743f2722327ae1ca6566c3c24a0e2432b2",
+      "matches": []
+    },
+    "ops/auth/apple_cleanup_recovery.py": {
+      "sha256": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4",
+      "matches": [
+        {
+          "line": 15,
+          "text": "SELECTED = {"
+        },
+        {
+          "line": 20,
+          "text": "TARGET_NAME = 'barber-apple-cleanup-verify-0743265'"
+        }
+      ]
+    },
+    "ops/auth/APPLE-CLEANUP-BOOTSTRAP-RECOVERY.md": {
+      "sha256": "ce34a7c6b4775920684f5ebd1c623787f0391a37252bc973a3c02a52c37a36ca",
+      "matches": []
+    },
+    "ops/release/backend.py": {
+      "sha256": "332dd2f02229d1312c6d0d47716f66ea5c64be96aa5f4b6e18ca6adc3fec185d",
+      "matches": [
+        {
+          "line": 26,
+          "text": "def automatic_sql(text):"
+        },
+        {
+          "line": 113,
+          "text": "if any(not automatic_sql((target / 'supabase/migrations' / x['name']).read_text()) for x in pending): raise ValueError('Migration needs a separately reviewed release')"
+        },
+        {
+          "line": 140,
+          "text": "def functions(self, target, commit):"
+        }
+      ]
+    },
+    "ops/release/controller.py": {
+      "sha256": "1ac4ae552fbf4a4fe9474526115de9fcc1a7928bc1b7d02d45ef920cf94233f0",
+      "matches": []
+    },
+    "ops/release/package.mjs": {
+      "sha256": "990dcc0878aaadbb81400c1a91f2572d52565ab3421a58804777ae4ba26b500a",
+      "matches": [
+        {
+          "line": 12,
+          "text": "const paths = ['supabase/functions', 'supabase/migrations', 'supabase/schema.expected.sql', 'scripts/normalize-schema.py', 'ops/release'];"
+        }
+      ]
+    },
+    ".github/workflows/ci.yml": {
+      "sha256": "f76548032a329f5137e65a7295427f9f426085214177aa625ebd733a994d3cfc",
+      "matches": [
+        {
+          "line": 4,
+          "text": "push:"
+        },
+        {
+          "line": 5,
+          "text": "branches: [dev]"
+        }
+      ]
+    },
+    ".github/workflows/release.yml": {
+      "sha256": "3a471a639c685106244fb77d062b23a687592a6baf3a58f38ff8a1a844962ea5",
+      "matches": [
+        {
+          "line": 3,
+          "text": "push:"
+        },
+        {
+          "line": 4,
+          "text": "branches: [main]"
+        },
+        {
+          "line": 38,
+          "text": "push: true"
+        }
+      ]
+    },
+    "supabase/migrations/20261113131730_customer_account_deletion.sql": {
+      "sha256": "5b69234082c9a665a9f8868dec9bac181b3287f89fa57a85b7460c54edc19373",
+      "matches": [
+        {
+          "line": 66,
+          "text": "create function private.deletion_actor(p_user uuid,p_session uuid) returns jsonb"
+        },
+        {
+          "line": 325,
+          "text": "select cron.schedule('customer-deletion-cleanup','* * * * *','select private.kick_customer_deletions()');"
+        }
+      ]
+    }
+  },
+  "existingPublicDemoAssets": [
+    "public/booking-demo/seafront.png",
+    "public/booking-demo/market-street.png",
+    "public/booking-demo/city-centre.png",
+    "public/landing/demo-barber.webp"
+  ],
+  "reviewerProposedEmail": "support@barberplusplus.com",
+  "reviewerIdentityOrDemoLookupPerformed": false,
+  "networkDockerHostedProviderCustomerBackupActions": false,
+  "devMainPushOrActivationOrUploadSubmission": false,
+  "newTestsOrBuildRepeated": false,
+  "operatorSourceHashesMatchApprovedTenFileSetupPayload": true,
+  "operatorPublicHashes": {
+    "apple_renewal.py": "810d3cb8fc618b70c8bb4a8e05c3306753ea4dba9d5515cf0ec20aa19b08ee23",
+    "apple_cleanup_renewal.py": "7bd0458b3989c3b394e302d78e2b2e29619abb0d86cbc37a70903b1e0c5b97e6",
+    "apple_cleanup_bootstrap.py": "9584809bac8309f2b8f1045299864fbfdb5a6921cecd6af98d254c0fd5c9c576",
+    "apple_cleanup_recovery.py": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4",
+    "apple-cleanup-renewal.config.example.json": "a369e434284d1d583999d1f0a8dfc7f8ef675869a425b6fe4a9828e3ee5e39b9",
+    "barber-apple-cleanup-renewal.service": "1fb39118f983bd1a8ebe36edd17882be8d134ea8ad68ac91bbf3414833ae99a2",
+    "barber-apple-cleanup-renewal.timer": "d7ed645a4757b95b06aa4db77b0692d12d4bcc191ba260048c9f7fb6c168db3d",
+    "barber-apple-cleanup-monitor.service": "cd0376e978b173c4e5ee67f2ff32284a9ce0a38836f22d3ef740db3631532cba",
+    "barber-apple-cleanup-monitor.timer": "eebad465b2fd90662b1f6c16337305762ff1d8d30e1a0b806131ad21a800ecbc",
+    "apple_cleanup_inherited_pin.py": "e9f15dd2fc26994043e70a462d9fdbaf08e96cecc762f2b7cc345c459b3fcc0d"
+  }
+}

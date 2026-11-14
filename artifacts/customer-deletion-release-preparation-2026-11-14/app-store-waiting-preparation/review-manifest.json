@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_PREPARATION_FOR_INDEPENDENT_REVIEW_NO_EXECUTION",
+  "preparedAtUTC": "2026-11-14T08:41:18.280834+00:00",
+  "humanPreparationMessage": "01a1d92d-f5f8-77b1-9cad-1fe44e263c54",
+  "frozenRuntimeCore": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "actualSetupReceiptSHA256": "94860601933ab75382c5eb00c4d1001c2c7554a90787d373918875570795d045",
+  "actualInstallUTC": "2026-11-14T08:25:21Z",
+  "nextScheduledBackupUTC": "2026-11-15T00:15:00Z",
+  "backupActualStatus": "NOT_CHECKED",
+  "files": {
+    "README.md": "6ffd97599a875f6232b27ac845a275db9429aa9db2ffc9b43cf1a4f609cd36e7",
+    "post-backup-plan.md": "05d88a04f6fabd97d0992a48a3ead79740da29a1663bed75c698b39f7ad05fef",
+    "release-order.md": "cdc98bb8dc1abe09f9eb48c52ef1dc3bc12084b903554eb4016a9fe04acc2abc",
+    "reviewer-proposal.md": "9cc5466c4906cd8ed0ac18d39c8ff5bfd215528f0ffcf814bdc78d50c3b9db37",
+    "source-checks.json": "ddd1e270ce0f4c1cd56c224062b335c93ac5045e7b352304326687539e1fd486"
+  },
+  "allWorkLocalOnly": true,
+  "remoteRefsFresh": false,
+  "operatorCoreChanged": false,
+  "newRuntimeTestsOrBuilds": false,
+  "newAccessOrProviderOrReviewerAccountActions": false,
+  "pushDeploymentActivationUploadSubmissionAuthorized": false
+}
