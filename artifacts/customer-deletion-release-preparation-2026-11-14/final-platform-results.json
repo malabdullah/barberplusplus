@@ -1,0 +1,289 @@
+{
+  "status": "PASS",
+  "checks": [
+    "official pinned Auth migrations applied before API startup",
+    "pinned PostgreSQL, Auth and Storage healthy; internal network, no public ports",
+    "rebuilt baseline matches every selected production relation/routine/policy",
+    "all committed main and scoped deletion migrations replayed",
+    "public schema matches reviewed snapshot, with only previously approved equivalent role ordering ignored",
+    "1144 database assertions passed",
+    "real pinned Auth creates and signs in isolated customer accounts",
+    "real Storage upload/read works only for the live owning customer",
+    "atomic cancellation revokes real refresh and old-JWT Storage access before cleanup",
+    "interrupted cleanup stays pending; backoff, fresh lease and stale-worker denial pass",
+    "501 owned objects clean up in bounded batches; missing files and repeated deletes are safe",
+    "real Auth/Storage cleanup and sessionless receipt recovery complete; other customer preserved",
+    "anonymous past value retained; future bookings cancelled; ratings, favourites and queued emails removed"
+  ],
+  "authorizationAssertions": 1144,
+  "platformImages": {
+    "supabase-db": {
+      "image": "supabase/postgres:17.6.1.136",
+      "imageId": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+      "digest": "supabase/postgres@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00"
+    },
+    "supabase-auth": {
+      "image": "supabase/gotrue:v2.189.0",
+      "imageId": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+      "digest": "supabase/gotrue@sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf"
+    },
+    "supabase-storage": {
+      "image": "supabase/storage-api:v1.60.4",
+      "imageId": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+      "digest": "supabase/storage-api@sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf"
+    }
+  },
+  "bootstrap": "stock verified images; no existing Test or production database dump",
+  "observedBaselineComparison": {
+    "comparedRelations": 56,
+    "comparedRoutines": 15,
+    "comparedPolicies": 49,
+    "differences": []
+  },
+  "databaseSuites": [
+    {
+      "suite": "001_baseline_security.sql",
+      "passed": true,
+      "assertions": 35
+    },
+    {
+      "suite": "002_booking_reminder_writes.sql",
+      "passed": true,
+      "assertions": 36
+    },
+    {
+      "suite": "003_legacy_function_hardening.sql",
+      "passed": true,
+      "assertions": 27
+    },
+    {
+      "suite": "004_avatar_storage.sql",
+      "passed": true,
+      "assertions": 14
+    },
+    {
+      "suite": "005_admin_password_reset_guard.sql",
+      "passed": true,
+      "assertions": 15
+    },
+    {
+      "suite": "006_customer_booking.sql",
+      "passed": true,
+      "assertions": 16
+    },
+    {
+      "suite": "007_customer_accounts.sql",
+      "passed": true,
+      "assertions": 27
+    },
+    {
+      "suite": "008_customer_social.sql",
+      "passed": true,
+      "assertions": 25
+    },
+    {
+      "suite": "009_customer_booking_ownership.sql",
+      "passed": true,
+      "assertions": 7
+    },
+    {
+      "suite": "010_customer_email_accounts.sql",
+      "passed": true,
+      "assertions": 17
+    },
+    {
+      "suite": "011_booking_schedule_guard.sql",
+      "passed": true,
+      "assertions": 11
+    },
+    {
+      "suite": "012_global_phone_uniqueness.sql",
+      "passed": true,
+      "assertions": 37
+    },
+    {
+      "suite": "013_canonical_customer_profiles.sql",
+      "passed": true,
+      "assertions": 38
+    },
+    {
+      "suite": "014_dashboard_notifications.sql",
+      "passed": true,
+      "assertions": 19
+    },
+    {
+      "suite": "015_customer_favourites.sql",
+      "passed": true,
+      "assertions": 20
+    },
+    {
+      "suite": "016_manager_chair.sql",
+      "passed": true,
+      "assertions": 14
+    },
+    {
+      "suite": "017_branch_manager_transfer.sql",
+      "passed": true,
+      "assertions": 18
+    },
+    {
+      "suite": "018_customer_booking_ratings.sql",
+      "passed": true,
+      "assertions": 13
+    },
+    {
+      "suite": "019_customer_appointment_actions.sql",
+      "passed": true,
+      "assertions": 14
+    },
+    {
+      "suite": "020_booking_change_policies.sql",
+      "passed": true,
+      "assertions": 27
+    },
+    {
+      "suite": "021_customer_checkout_phone.sql",
+      "passed": true,
+      "assertions": 9
+    },
+    {
+      "suite": "023_unified_customer_work_identity.sql",
+      "passed": true,
+      "assertions": 36
+    },
+    {
+      "suite": "024_customer_password_security.sql",
+      "passed": true,
+      "assertions": 33
+    },
+    {
+      "suite": "025_account_email_control.sql",
+      "passed": true,
+      "assertions": 27
+    },
+    {
+      "suite": "026_manager_journey_integrity.sql",
+      "passed": true,
+      "assertions": 18
+    },
+    {
+      "suite": "027_availability_approvals.sql",
+      "passed": true,
+      "assertions": 56
+    },
+    {
+      "suite": "028_granular_availability.sql",
+      "passed": true,
+      "assertions": 71
+    },
+    {
+      "suite": "029_shop_barber_invitations.sql",
+      "passed": true,
+      "assertions": 38
+    },
+    {
+      "suite": "030_shop_publishing.sql",
+      "passed": true,
+      "assertions": 22
+    },
+    {
+      "suite": "031_booking_discovery.sql",
+      "passed": true,
+      "assertions": 23
+    },
+    {
+      "suite": "032_barber_auto_confirm.sql",
+      "passed": true,
+      "assertions": 23
+    },
+    {
+      "suite": "033_service_packages.sql",
+      "passed": true,
+      "assertions": 56
+    },
+    {
+      "suite": "034_native_release.sql",
+      "passed": true,
+      "assertions": 33
+    },
+    {
+      "suite": "035_native_push_service_reads.sql",
+      "passed": true,
+      "assertions": 19
+    },
+    {
+      "suite": "039_managed_barbers.sql",
+      "passed": true,
+      "assertions": 36
+    },
+    {
+      "suite": "040_booking_emails.sql",
+      "passed": true,
+      "assertions": 62
+    },
+    {
+      "suite": "041_booking_share_links.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "042_admin_announcements.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "043_booking_push_defaults.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "044_admin_announcements_phase2.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "045_account_tools.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "046_checkout_email_policy.sql",
+      "passed": true,
+      "assertions": 38
+    },
+    {
+      "suite": "047_email_guest_push_receipts.sql",
+      "passed": true,
+      "assertions": 34
+    },
+    {
+      "suite": "048_apns_environment_credentials.sql",
+      "passed": true,
+      "assertions": 46
+    },
+    {
+      "suite": "049_notification_first_setup.sql",
+      "passed": true,
+      "assertions": 1
+    },
+    {
+      "suite": "050_staff_security.sql",
+      "passed": true,
+      "assertions": 14
+    },
+    {
+      "suite": "055_customer_account_deletion_candidate.sql",
+      "passed": true,
+      "assertions": 6
+    },
+    {
+      "suite": "056_customer_apple_revocation.sql",
+      "passed": true,
+      "assertions": 8
+    }
+  ],
+  "productionRowsCopied": 0,
+  "productionCredentials": false,
+  "publishedPorts": 0,
+  "network": "internal"
+}
