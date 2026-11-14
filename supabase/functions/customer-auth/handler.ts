@@ -16,7 +16,7 @@ type Dependencies = {
   identity: (token: string) => Promise<Identity | null>;
   emailSignup?: (name: string, email: string, password: string, returnTo: string) => Promise<void>;
   emailLink?: (email: string, purpose: 'confirm' | 'recovery', returnTo: string) => Promise<void>;
-  emailSignIn?: (email: string, password: string) => Promise<{ session: unknown; identity: Identity; name: string } | null>;
+  emailSignIn?: (email: string, password: string) => Promise<{ session: unknown; identity: Identity; name: string; mfaRequired?: boolean } | null>;
   emailName?: (token: string) => Promise<string>;
   socialIdentity?: (token: string) => Promise<(Identity & { name?: string }) | null>;
   resetPassword: (id: string, password: string, guardId?: string) => Promise<void>;
@@ -92,6 +92,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(typeof body.password!=='string' || !body.password || new TextEncoder().encode(body.password).length>72)return reply(401,{error:'INVALID_LOGIN'});
           const result=await deps.emailSignIn?.(email,body.password);
           if(!result)return reply(401,{error:'INVALID_LOGIN'});
+          if(result.mfaRequired)return reply(200,{session:result.session,mfaRequired:true});
           const profile=await deps.rpc('email-ensure',{...result.identity,name:result.name});
           if(!profile || (profile as Data).needsName)return reply(400,{error:'ACCOUNT_UNAVAILABLE'});
           return reply(200,{session:result.session,profile});

@@ -152,6 +152,10 @@ export const adminService = {
 
       if (managersError) throw managersError;
 
+      const { data: statuses, error: statusError } = await supabase.rpc('admin_manager_statuses');
+      if (statusError) throw statusError;
+      const enabledById = new Map(statuses.map(item => [item.id, item.is_active]));
+
       // Get all branches for branch counts
       const { data: branches, error: branchesError } = await supabase
         .from('branches')
@@ -181,9 +185,7 @@ export const adminService = {
         createdAt: m.created_at,
         branches: branchMap[m.id] || [],
         branchCount: branchMap[m.id]?.length || 0,
-        isActive: branchMap[m.id]?.length > 0
-          ? branchMap[m.id].every(b => b.isActive)
-          : true,
+        isActive: enabledById.get(m.id) === true,
       })) || [];
 
       // Apply search filter
@@ -284,21 +286,8 @@ export const adminService = {
    */
   toggleManagerStatus: async (managerId, newStatus) => {
     try {
-      const { error } = await supabase
-        .from('branches')
-        .update({ is_active: newStatus })
-        .eq('manager_id', managerId);
-
+      const { error } = await supabase.rpc('set_manager_account_enabled', { manager: managerId, enabled: newStatus });
       if (error) throw error;
-
-      // Create audit log
-      await adminService.createAuditLog({
-        actionType: newStatus ? 'manager_enabled' : 'manager_disabled',
-        targetUserId: managerId,
-        targetEntityType: 'manager',
-        targetEntityId: managerId,
-        newValues: { is_active: newStatus },
-      });
 
       return { success: true };
     } catch (error) {

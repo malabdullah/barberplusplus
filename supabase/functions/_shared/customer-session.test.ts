@@ -1,4 +1,15 @@
 import { customerIdentity } from './customer-session.ts';
+ Deno.test('service identity requires the validated token factor assertion', async () => {
+  const bearer = `header.${btoa(JSON.stringify({session_id:'df110000-0000-4000-8000-000000000001',aal:'aal1'}))}.sig`;
+  const client = {
+    auth:{getUser:()=>Promise.resolve({data:{user:{id:'staff',app_metadata:{role:'manager'}}},error:null})},
+    rpc:(name: string, data: Record<string, unknown>) => {
+      if (name === 'staff_token_factor_satisfied' && data.p_aal !== 'aal1') throw Error('Token assurance was lost');
+      return Promise.resolve({data:name === 'customer_session_is_live',error:null});
+    },
+  };
+  if (await customerIdentity(client,bearer)) throw Error('Unsatisfied token factor accepted');
+});
 const token = `header.${btoa(JSON.stringify({session_id:'df110000-0000-4000-8000-000000000001'}))}.sig`;
 for (const role of ['customer','manager','barber','admin','agent','unknown']) {
   Deno.test(`personal identity accepts only enabled account roles: ${role}`, async () => {

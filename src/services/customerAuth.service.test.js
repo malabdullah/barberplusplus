@@ -1,5 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
-const auth = vi.hoisted(() => ({ getSession: vi.fn(), signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn(), setSession: vi.fn(), signOut: vi.fn() }));
+const auth = vi.hoisted(() => ({ getSession: vi.fn(), signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), refreshSession: vi.fn(), verifyOtp: vi.fn(), setSession: vi.fn(), signOut: vi.fn(), mfa: { getAuthenticatorAssuranceLevel: vi.fn() } }));
+const redirectStaffMfa = vi.hoisted(() => vi.fn());
+vi.mock('../lib/staffMfaReturn', () => ({ redirectStaffMfa }));
 vi.mock('../lib/runtimeConfig', () => ({ isTest: true, customerFeaturesEnabled: true, appConfig: { supabaseUrl: 'http://127.0.0.1:55321', supabasePublishableKey: 'test-public-key' } }));
 vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth }, CUSTOMER_AUTH_STORAGE_KEY: 'barber-customer-auth' }));
 import { rememberPasswordProof } from '../lib/customerPasswordProof';
@@ -13,6 +15,16 @@ beforeEach(() => {
   request.mockResolvedValue({ ok: true, json: async () => ({ external: { google: true, apple: false } }) });
 });
 afterEach(() => vi.unstubAllGlobals());
+it('preserves the recovery proof while an enrolled staff session steps up', async () => {
+  const proof = 'af220000-0000-4000-8000-000000000004';
+  rememberPasswordProof({ proof, expiresIn: 300 });
+  auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null });
+  request.mockResolvedValue({ ok: false, json: async () => ({ error: 'AUTH_REQUIRED' }) });
+  await expect(customerAuthService.resetPassword({ password: 'Changed12!', confirmPassword: 'Changed12!' })).rejects.toThrow('MFA_REQUIRED');
+  expect(redirectStaffMfa).toHaveBeenCalledOnce();
+  expect(sessionStorage.getItem('barber-password-proof')).toContain(proof);
+  expect(auth.signOut).not.toHaveBeenCalled();
+});
 it('rejects self-service email changes before sending an Auth update',async()=>{
   await expect(customerAuthService.changeEmail('new@example.test')).rejects.toThrow('EMAIL_ADMIN_ONLY');
   expect(auth.setSession).not.toHaveBeenCalled();expect(request).not.toHaveBeenCalled();

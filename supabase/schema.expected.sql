@@ -136,6 +136,17 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."admin_manager_statuses"() RETURNS TABLE("id" "uuid", "is_active" boolean)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform public.enforce_account_session();
+  if private.live_staff_role() is distinct from 'admin' then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  return query select u.id,coalesce(u.banned_until<=now(),true) from auth.users u
+    where u.raw_app_meta_data->>'role'='manager' and u.deleted_at is null;
+end $$;
+ALTER FUNCTION "public"."admin_manager_statuses"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -1368,7 +1379,7 @@ CREATE OR REPLACE FUNCTION "public"."customer_session_is_live"("p_user" "uuid", 
     AS $$
   select exists (
     select 1 from auth.sessions s join auth.users u on u.id=s.user_id
-    where s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
+    where private.staff_session_factor_satisfied(p_user,p_session) and s.id=p_session and s.user_id=p_user and u.raw_app_meta_data->>'role' in ('customer','manager','barber')
       and (s.not_after is null or s.not_after>now()) and u.deleted_at is null
       and (u.banned_until is null or u.banned_until<=now())
   )
@@ -1506,7 +1517,9 @@ declare
   current_session uuid;
 begin
   if auth.jwt()->>'role' is distinct from 'authenticated' then return; end if;
-  current_session := private.current_account_session();
+  if public.staff_factor_satisfied() is not true then raise exception using errcode='42501', message=case
+    when exists(select 1 from auth.users where id=auth.uid() and raw_app_meta_data->>'role'='admin')
+      then 'ADMIN_MFA_REQUIRED' else 'MFA_REQUIRED' end; end if; current_session := private.current_account_session();
   if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
   if exists (
     select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role'='admin'
@@ -1757,6 +1770,173 @@ CREATE OR REPLACE FUNCTION "public"."manager_can_create_shop"() RETURNS boolean
     SET "search_path" TO ''
     AS $$ select private.live_staff_role()='manager'; $$;
 ALTER FUNCTION "public"."manager_can_create_shop"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."manager_finances"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    SET "statement_timeout" TO '25s'
+    AS $_$
+#variable_conflict use_column
+declare
+ actor uuid:=auth.uid(); shops uuid[]; shop uuid; request_id uuid; v_result jsonb; cached private.shop_finance_requests%rowtype;
+ b public.bookings%rowtype; expense private.shop_finance_expenses%rowtype; entry private.shop_finance_entries%rowtype;
+ run private.shop_finance_runs%rowtype; amount bigint; paid bigint; desired bigint; rid uuid;
+ first_day date;last_day date;today date:=(clock_timestamp()at time zone'Asia/Kuwait')::date;
+ method text;kind text;day date;reason text;after_id bigint; row_limit int; n bigint;
+begin
+ if actor is null or private.live_staff_role() is distinct from 'manager' or nullif(auth.jwt()->>'session_id','') is null then
+  raise exception 'FINANCE_FORBIDDEN' using errcode='42501';end if;
+ if jsonb_typeof(p_data)<>'object' or octet_length(p_data::text)>8192 then raise exception 'FINANCE_INVALID';end if;
+ if p_action='options' then
+  return jsonb_build_object('shops',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar)order by name,id),'[]')from public.branches where manager_id=actor));
+ end if;
+ if p_action in('get','rows') then
+  select *into run from private.shop_finance_runs where id=(p_data->>'id')::uuid and owner_id=actor;
+  if run.id is null or exists(select 1 from unnest(run.shop_ids)x where not exists(select 1 from public.branches s where s.id=x and s.manager_id=actor))then raise exception 'FINANCE_FORBIDDEN'using errcode='42501';end if;
+  if run.expires_at<=clock_timestamp()then raise exception 'FINANCE_EXPIRED';end if;
+  if p_action='get'then return run.result;end if;
+  after_id:=coalesce((p_data->>'after')::bigint,0);row_limit:=least(500,greatest(1,coalesce((p_data->>'limit')::int,25)));
+  return jsonb_build_object('rows',(select coalesce(jsonb_agg(payload||jsonb_build_object('ordinal',ordinal)order by ordinal),'[]')from(select *from private.shop_finance_rows where run_id=run.id and ordinal>after_id order by ordinal limit row_limit+1)q));
+ end if;
+ if p_data->'shopIds' is null or p_data->'shopIds'='[]'::jsonb then
+  select coalesce(array_agg(id),'{}')into shops from public.branches where manager_id=actor;
+ else select array_agg(distinct value::uuid)into shops from jsonb_array_elements_text(p_data->'shopIds');end if;
+ if coalesce(cardinality(shops),0)=0 then raise exception 'FINANCE_NO_SHOPS';end if;
+ if cardinality(shops)>500 or exists(select 1 from unnest(shops)x where not exists(select 1 from public.branches s where s.id=x and s.manager_id=actor))then raise exception 'FINANCE_FORBIDDEN'using errcode='42501';end if;
+ if p_action in('record','expense','void','reverse') then
+  -- Serialize records and ownership transfer at the shop; retries are exact and safe.
+  shop:=(p_data->>'shopId')::uuid;
+  if shop is null or not(shop=any(shops))then raise exception 'FINANCE_FORBIDDEN'using errcode='42501';end if;
+  perform 1 from public.branches where id=shop and manager_id=actor for update;
+  if not found then raise exception 'FINANCE_FORBIDDEN'using errcode='42501';end if;
+  request_id:=(p_data->>'requestId')::uuid;
+  if request_id is null then raise exception 'FINANCE_INVALID';end if;
+  perform pg_advisory_xact_lock(hashtextextended('finance-request:'||request_id::text,0));
+  select *into cached from private.shop_finance_requests where id=request_id;
+  if found then
+   if cached.actor_id<>actor or cached.request<>jsonb_build_object('action',p_action,'data',p_data)then raise exception 'FINANCE_DUPLICATE';end if;
+   return cached.result;
+  end if;
+  reason:=btrim(coalesce(p_data->>'reason',''));
+  day:=coalesce((p_data->>'date')::date,today);
+  if day>today or day<date'2000-01-01' or length(reason)>240 then raise exception 'FINANCE_INVALID';end if;
+  if p_action='expense'then
+   if coalesce(p_data->>'amountFils','')!~'^[0-9]{1,10}$'then raise exception 'FINANCE_INVALID_AMOUNT';end if;
+   amount:=(p_data->>'amountFils')::bigint;
+   if amount not between 1 and 1000000000 or coalesce(p_data->>'category','')not in('rent','supplies','utilities','wages','maintenance','other')or length(btrim(coalesce(p_data->>'description','')))not between 1 and 160 then raise exception 'FINANCE_INVALID';end if;
+   insert into private.shop_finance_expenses(shop_id,incurred_on,category,description,amount_fils,created_by)
+    values(shop,day,p_data->>'category',btrim(p_data->>'description'),amount,actor)returning id into rid;
+  elsif p_action='void'then
+   select *into expense from private.shop_finance_expenses where id=(p_data->>'expenseId')::uuid and shop_id=shop for update;
+   if expense.id is null or expense.voided_at is not null then raise exception 'FINANCE_NOT_FOUND';end if;
+   select coalesce(sum(signed_fils),0)into paid from private.shop_finance_entries where expense_id=expense.id;
+   if paid<>0 then raise exception 'FINANCE_EXPENSE_PAID';end if;
+   if length(reason)<3 then raise exception 'FINANCE_REASON_REQUIRED';end if;
+   update private.shop_finance_expenses set voided_at=clock_timestamp(),voided_by=actor,void_reason=reason where id=expense.id;
+   rid:=expense.id;
+  else
+   method:=coalesce(p_data->>'method','cash');kind:=p_data->>'kind';
+   if method not in('cash','card','transfer','other')or length(coalesce(p_data->>'reference',''))>100 then raise exception 'FINANCE_INVALID';end if;
+   if p_action='reverse'then
+    select *into entry from private.shop_finance_entries where id=(p_data->>'entryId')::uuid and shop_id=shop;
+    if entry.id is null or entry.kind='reversal'or exists(select 1 from private.shop_finance_entries where reverses_id=entry.id)then raise exception 'FINANCE_NOT_FOUND';end if;
+    if length(reason)<3 then raise exception 'FINANCE_REASON_REQUIRED';end if;
+    amount:=entry.amount_fils;desired:=-entry.signed_fils;kind:='reversal';method:=entry.method;
+    if day<entry.occurred_on then raise exception 'FINANCE_INVALID';end if;
+   else
+    if coalesce(p_data->>'amountFils','')!~'^[0-9]{1,10}$'then raise exception 'FINANCE_INVALID_AMOUNT';end if;
+    amount:=(p_data->>'amountFils')::bigint;
+    if amount not between 1 and 1000000000 or kind not in('receipt','refund','expense_payment')or kind is null then raise exception 'FINANCE_INVALID_AMOUNT';end if;
+    desired:=case when kind='refund'then-amount else amount end;
+   end if;
+   if (case when p_action='reverse'then entry.booking_id else(p_data->>'bookingId')::uuid end)is not null and kind<>'expense_payment'then
+    select *into b from public.bookings where id=(case when p_action='reverse'then entry.booking_id else(p_data->>'bookingId')::uuid end) and branch_id=shop for update;
+    if b.id is null then raise exception 'FINANCE_NOT_FOUND';end if;
+    select coalesce(sum(signed_fils),0)into paid from private.shop_finance_entries where booking_id=b.id;
+    if paid+desired<0 then raise exception 'FINANCE_REFUND_LIMIT';end if;
+    if kind='receipt'and (b.status not in('pending','confirmed','completed')or paid+amount>round(b.price*1000)::bigint)then raise exception 'FINANCE_PAYMENT_LIMIT';end if;
+    if kind='refund'and length(reason)<3 then raise exception 'FINANCE_REASON_REQUIRED';end if;
+    insert into private.shop_finance_entries(id,shop_id,booking_id,kind,amount_fils,signed_fils,occurred_on,method,reference,reason,reverses_id,created_by)
+     values(request_id,shop,b.id,kind,amount,desired,day,method,coalesce(p_data->>'reference',''),reason,entry.id,actor)returning id into rid;
+   else
+    select *into expense from private.shop_finance_expenses where id=(case when p_action='reverse'then entry.expense_id else(p_data->>'expenseId')::uuid end)and shop_id=shop for update;
+    if expense.id is null or expense.voided_at is not null then raise exception 'FINANCE_NOT_FOUND';end if;
+    select coalesce(sum(signed_fils),0)into paid from private.shop_finance_entries where expense_id=expense.id;
+    if paid+desired<0 or paid+desired>expense.amount_fils then raise exception 'FINANCE_PAYMENT_LIMIT';end if;
+    if day<expense.incurred_on then raise exception 'FINANCE_INVALID';end if;
+    insert into private.shop_finance_entries(id,shop_id,expense_id,kind,amount_fils,signed_fils,occurred_on,method,reference,reason,reverses_id,created_by)
+     values(request_id,shop,expense.id,kind,amount,desired,day,method,coalesce(p_data->>'reference',''),reason,entry.id,actor)returning id into rid;
+   end if;
+  end if;
+  v_result:=jsonb_build_object('id',rid);
+  insert into private.shop_finance_requests(id,actor_id,request,result)values(request_id,actor,jsonb_build_object('action',p_action,'data',p_data),v_result);
+  return v_result;
+ end if;
+ if p_action in('bookings','expenses')and coalesce((p_data->>'offset')::int,0)not between 0 and 100000 then raise exception 'FINANCE_TOO_LARGE';end if;
+ if p_action='bookings'then
+  return jsonb_build_object('rows',(select coalesce(jsonb_agg(item order by date desc,time desc,id),'[]')from(
+   select b.date,b.time,b.id,jsonb_build_object('id',b.id,'shopId',b.branch_id,'shopName',s.name,'customer',coalesce(c.name,''),'barber',r.name,'date',b.date,'time',b.time,'status',b.status,
+    'priceFils',round(b.price*1000)::bigint::text,'paidFils',coalesce(p.paid,0)::text,'dueFils',greatest(0,case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end-coalesce(p.paid,0))::text,
+    'creditFils',greatest(0,coalesce(p.paid,0)-case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end)::text)item
+   from public.bookings b join public.branches s on s.id=b.branch_id join public.barbers r on r.id=b.barber_id left join public.customers c on c.id=b.customer_id
+   left join lateral(select sum(signed_fils)paid from private.shop_finance_entries where booking_id=b.id)p on true
+   where b.branch_id=any(shops)and (coalesce(p_data->>'search','')=''or c.name ilike '%'||left(p_data->>'search',100)||'%'or b.id::text= p_data->>'search')
+   and(coalesce(p_data->>'status','')=''or b.status=p_data->>'status')
+   order by b.date desc,b.time desc,b.id limit 26 offset least(100000,greatest(0,coalesce((p_data->>'offset')::int,0))))q));
+ elsif p_action='expenses'then
+  return jsonb_build_object('rows',(select coalesce(jsonb_agg(item order by incurred_on desc,id),'[]')from(
+   select e.incurred_on,e.id,jsonb_build_object('id',e.id,'shopId',e.shop_id,'shopName',s.name,'date',e.incurred_on,'category',e.category,'description',e.description,'amountFils',e.amount_fils::text,'paidFils',coalesce(p.paid,0)::text,'voided',e.voided_at is not null)item
+   from private.shop_finance_expenses e join public.branches s on s.id=e.shop_id left join lateral(select sum(signed_fils)paid from private.shop_finance_entries where expense_id=e.id)p on true
+   where e.shop_id=any(shops)order by e.incurred_on desc,e.id limit 26 offset least(100000,greatest(0,coalesce((p_data->>'offset')::int,0))))q));
+ elsif p_action='history'then
+  if not exists(select 1 from public.bookings where id=(p_data->>'bookingId')::uuid and branch_id=any(shops))and not exists(select 1 from private.shop_finance_expenses where id=(p_data->>'expenseId')::uuid and shop_id=any(shops))then raise exception 'FINANCE_NOT_FOUND';end if;
+  return jsonb_build_object('rows',(select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'shopId',e.shop_id,'date',e.occurred_on,'kind',e.kind,'amountFils',e.amount_fils::text,'signedFils',e.signed_fils::text,'method',e.method,'reference',e.reference,'reason',e.reason,'reversed',exists(select 1 from private.shop_finance_entries x where x.reverses_id=e.id),'createdAt',e.created_at)order by e.created_at desc),'[]')from private.shop_finance_entries e where e.shop_id=any(shops)and(e.booking_id=(p_data->>'bookingId')::uuid or e.expense_id=(p_data->>'expenseId')::uuid)));
+ elsif p_action='generate'then
+  first_day:=(p_data->>'from')::date;last_day:=(p_data->>'to')::date;
+  if first_day is null or last_day is null or last_day<first_day or last_day-first_day>365 or last_day>today or first_day<date'2000-01-01'then raise exception 'FINANCE_INVALID_RANGE';end if;
+  perform pg_advisory_xact_lock(hashtextextended('finance-report:'||actor::text,0));
+  delete from private.shop_finance_runs where owner_id=actor and expires_at<=clock_timestamp();
+  if(select count(*)from private.shop_finance_runs where owner_id=actor and created_at>clock_timestamp()-interval'1 hour')>=30 then raise exception 'FINANCE_RATE_LIMIT';end if;
+  insert into private.shop_finance_runs(owner_id,shop_ids,from_date,to_date)values(actor,shops,first_day,last_day)returning *into run;
+  -- A single statement freezes sales, movements, expenses and live balances together.
+  -- Export never reads mutable operational tables; no customer contact data is stored.
+  insert into private.shop_finance_rows
+  with bp as materialized(select booking_id,sum(signed_fils)paid from private.shop_finance_entries where shop_id=any(shops)and booking_id is not null group by booking_id),
+  ep as materialized(select expense_id,sum(signed_fils)paid from private.shop_finance_entries where shop_id=any(shops)and expense_id is not null group by expense_id),
+  data as(
+   select b.branch_id shop_id,b.date as report_day,'sale'kind,b.id reference,round(b.price*1000)::bigint amount,0::bigint cash,0::bigint receivable,0::bigint credit,0::bigint payable,''category
+   from public.bookings b where b.branch_id=any(shops)and b.status='completed'and b.date between first_day and last_day
+   union all select e.shop_id,e.incurred_on,'expense',e.id,e.amount_fils,0,0,0,0,e.category from private.shop_finance_expenses e where e.shop_id=any(shops)and e.voided_at is null and e.incurred_on between first_day and last_day
+   union all select e.shop_id,e.occurred_on,e.kind,e.id,e.signed_fils,case when e.booking_id is not null then e.signed_fils else-e.signed_fils end,0,0,0,case when e.booking_id is null then'expense'else'booking'end from private.shop_finance_entries e where e.shop_id=any(shops)and e.occurred_on between first_day and last_day
+   union all select b.branch_id,today,'booking_balance',b.id,0,0,greatest(0,case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end-coalesce(bp.paid,0)),greatest(0,coalesce(bp.paid,0)-case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end),0,'' from public.bookings b left join bp on bp.booking_id=b.id where b.branch_id=any(shops)
+   union all select e.shop_id,today,'expense_balance',e.id,0,0,0,0,e.amount_fils-coalesce(ep.paid,0),e.category from private.shop_finance_expenses e left join ep on ep.expense_id=e.id where e.shop_id=any(shops)and e.voided_at is null
+  )select run.id,row_number()over(order by d.report_day,d.kind,d.reference),jsonb_build_object('shopId',d.shop_id,'shopName',s.name,'shopNameAr',s.name_ar,'date',d.report_day,'kind',d.kind,'reference',d.reference,'amountFils',amount::text,'cashFils',cash::text,'dueFils',receivable::text,'creditFils',credit::text,'payableFils',payable::text,'category',d.category,'method',movement.method,'paymentReference',movement.reference,'description',coalesce(ex.description,''),'reason',movement.reason,'targetId',coalesce(movement.booking_id,movement.expense_id),'reversesId',movement.reverses_id)
+   from data d join public.branches s on s.id=d.shop_id
+   left join private.shop_finance_entries movement on movement.id=d.reference and d.kind in('receipt','refund','expense_payment','reversal')
+   left join private.shop_finance_expenses ex on ex.id=coalesce(movement.expense_id,case when d.kind in('expense','expense_balance')then d.reference end) limit 100001;
+  get diagnostics n=row_count;
+  if n>100000 then raise exception 'FINANCE_TOO_LARGE';end if;
+  with grouped as(select payload->>'shopId'id,max(payload->>'shopName')name,max(payload->>'shopNameAr')name_ar,
+   coalesce(sum((payload->>'amountFils')::bigint)filter(where payload->>'kind'='sale'),0)sales,
+   coalesce(sum((payload->>'amountFils')::bigint)filter(where payload->>'kind'='expense'),0)expenses,
+   coalesce(sum((payload->>'cashFils')::bigint)filter(where payload->>'category'='booking'),0)receipts,
+   -coalesce(sum((payload->>'cashFils')::bigint)filter(where payload->>'category'='expense'),0)paid,
+   coalesce(sum((payload->>'dueFils')::bigint),0)due,coalesce(sum((payload->>'creditFils')::bigint),0)credit,coalesce(sum((payload->>'payableFils')::bigint),0)payable
+   from private.shop_finance_rows where run_id=run.id group by payload->>'shopId'),
+  scoped as(select s.id,s.name,s.name_ar,coalesce(g.sales,0)sales,coalesce(g.expenses,0)expenses,coalesce(g.receipts,0)receipts,coalesce(g.paid,0)paid,coalesce(g.due,0)due,coalesce(g.credit,0)credit,coalesce(g.payable,0)payable
+   from public.branches s left join grouped g on g.id=s.id::text where s.id=any(shops))
+  select jsonb_build_object('id',run.id,'from',first_day,'to',last_day,'createdAt',run.created_at,'expiresAt',run.expires_at,'total',n,
+   'summary',jsonb_build_object('salesFils',sum(sales)::text,'expenseFils',sum(expenses)::text,'netReceiptsFils',sum(receipts)::text,'expensePaidFils',sum(paid)::text,'operatingFils',sum(sales-expenses)::text,'cashFlowFils',sum(receipts-paid)::text,'dueFils',sum(due)::text,'creditFils',sum(credit)::text,'payableFils',sum(payable)::text),
+   'shops',coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar,'salesFils',sales::text,'expenseFils',expenses::text,'operatingFils',(sales-expenses)::text,'cashFlowFils',(receipts-paid)::text)order by name,id),'[]'))into v_result from scoped;
+  -- Empty reports still return numeric zeroes and the selected scope.
+  v_result:=jsonb_set(v_result,'{summary}',(select jsonb_object_agg(key,case when value='null'::jsonb then '"0"'::jsonb else value end)from jsonb_each(v_result->'summary')));
+  if exists(select 1 from jsonb_each_text(v_result->'summary')where abs(value::numeric)>9007199254740991)then raise exception 'FINANCE_TOO_LARGE';end if;
+  update private.shop_finance_runs set result=v_result where id=run.id;
+  return v_result;
+ end if;
+ raise exception 'FINANCE_INVALID';
+exception when invalid_text_representation or datetime_field_overflow or numeric_value_out_of_range then raise exception 'FINANCE_INVALID';
+end $_$;
+ALTER FUNCTION "public"."manager_finances"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -1869,6 +2049,28 @@ begin
  return jsonb_build_object('auto_confirm_bookings',p_enabled);
 end $$;
 ALTER FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  perform public.enforce_account_session();
+  if private.live_staff_role() is distinct from 'admin' then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  if enabled is null then raise exception 'INVALID_REQUEST'; end if;
+  update auth.users set banned_until=case when enabled then null else now()+interval '100 years' end,
+    updated_at=now()
+    where id=manager and raw_app_meta_data->>'role'='manager' and deleted_at is null;
+  if not found then raise exception 'MANAGER_NOT_FOUND'; end if;
+  if not enabled then
+    insert into private.account_revoked_sessions(session_id,user_id)
+      select id,user_id from auth.sessions where user_id=manager
+      on conflict(session_id) do nothing;
+    update auth.sessions set not_after=now() where user_id=manager;
+  end if;
+  insert into public.audit_logs(admin_user_id,action_type,target_user_id,new_values)
+    values(auth.uid(),case when enabled then 'manager_enabled' else 'manager_disabled' end,manager,jsonb_build_object('is_active',enabled));
+end $$;
+ALTER FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -2059,6 +2261,23 @@ begin
  return result;
 end $$;
 ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_factor_satisfied"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select not exists (
+    select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id
+    where u.id=auth.uid() and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent')
+      and f.status='verified'
+  ) or (
+    auth.jwt()->>'aal'='aal2' and exists (
+      select 1 from auth.sessions s join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
+      where s.id=(auth.jwt()->>'session_id')::uuid and s.user_id=auth.uid()
+        and (s.not_after is null or s.not_after>now()) and s.aal='aal2' and f.status='verified'
+    )
+  );
+$$;
+ALTER FUNCTION "public"."staff_factor_satisfied"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -2086,11 +2305,188 @@ begin
   'regular_price',(select sum((x->>'price')::numeric) from jsonb_array_elements(b.service_snapshot)x where (x->>'id')::uuid=any(array(select jsonb_array_elements_text(b.package_snapshot->'service_ids')::uuid))));
 end $$;
 ALTER FUNCTION "public"."staff_package_terms"("p_booking" "uuid") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_reports"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    SET "statement_timeout" TO '45s'
+    AS $$
+declare
+ actor uuid:=auth.uid(); role_name text:=private.live_staff_role(); j private.staff_report_runs%rowtype;
+ shops uuid[]; chairs uuid[]; own boolean; typ text; first_day date; last_day date;
+ at_time timestamptz:=clock_timestamp(); today date:=(clock_timestamp()at time zone'Asia/Kuwait')::date;
+ lower_at timestamptz; upper_at timestamptz; prev_lower timestamptz; prev_upper timestamptz;
+ n integer; report_result jsonb; grouping text; rows jsonb; lines jsonb; demand jsonb; trend jsonb; options jsonb;
+begin
+ if actor is null or role_name is null or role_name not in('manager','barber')
+ or nullif(auth.jwt()->>'session_id','') is null then raise exception 'REPORT_FORBIDDEN' using errcode='42501';end if;
+ if p_action='options' then
+  return jsonb_build_object('role',role_name,'shops',case when role_name='manager' then
+   (select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar)order by name,id),'[]')from public.branches where manager_id=actor)else '[]'::jsonb end,
+   'hasChair',exists(select 1 from public.barbers where user_id=actor));
+ end if;
+ if p_action='create' then
+  perform pg_advisory_xact_lock(hashtextextended('staff-report:'||actor::text,0));
+  -- Delete only expired report artifacts, never business records.
+  delete from private.staff_report_runs where owner_id=actor and expires_at<=at_time;
+  if (select count(*) from private.staff_report_runs where owner_id=actor and created_at>at_time-interval'1 hour')>=30
+   then raise exception 'REPORT_RATE_LIMIT';end if;
+  own:=role_name='barber' or coalesce((p_data->>'personal')::boolean,false);
+  typ:=coalesce(p_data->>'type','overview');
+  if typ not in('overview','shops','barbers','services','bookings','customers','demand','ratings') or own and typ in('shops','barbers') then raise exception 'REPORT_INVALID_FILTER';end if;
+  if own then
+   select array_agg(id)into chairs from public.barbers where user_id=actor;
+   if cardinality(coalesce(chairs,'{}'))=0 then raise exception 'REPORT_NO_CHAIR';end if;
+  end if;
+  if role_name='manager' then
+   if p_data->'shopIds' is null or p_data->'shopIds'='[]'::jsonb then
+    select coalesce(array_agg(id),'{}')into shops from public.branches where manager_id=actor;
+   else
+    select array_agg(distinct value::uuid)into shops from jsonb_array_elements_text(p_data->'shopIds');
+   end if;
+   if cardinality(coalesce(shops,'{}'))=0 then raise exception 'REPORT_NO_SHOPS';end if;
+   if cardinality(shops)>500 or exists(select 1 from unnest(shops)x where not exists(select 1 from public.branches b where b.id=x and b.manager_id=actor))
+    then raise exception 'REPORT_FORBIDDEN' using errcode='42501';end if;
+  else
+   if p_data->'shopIds' is not null and p_data->'shopIds'<>'[]'::jsonb then raise exception 'REPORT_FORBIDDEN'using errcode='42501';end if;
+   -- Personal history follows the existing linked barber ID, including old shops.
+   select coalesce(array_agg(distinct id),'{}')into shops from (
+    select branch_id id from public.barbers where id=any(chairs)
+    union select branch_id from public.bookings where barber_id=any(chairs)) s;
+  end if;
+  first_day:=(p_data->>'from')::date;last_day:=(p_data->>'to')::date;
+  if p_data->>'preset'='month' then first_day:=date_trunc('month',today)::date;last_day:=today;
+  elsif p_data->>'preset'='lastMonth' then first_day:=(date_trunc('month',today)-interval'1 month')::date;last_day:=date_trunc('month',today)::date-1;end if;
+  if first_day is null or last_day is null or last_day<first_day or last_day-first_day>365 or first_day<date'2000-01-01' or last_day>today+366 then raise exception 'REPORT_INVALID_RANGE';end if;
+  lower_at:=first_day::timestamp at time zone'Asia/Kuwait';
+  upper_at:=case when p_data->>'preset'='month' then at_time else (last_day+1)::timestamp at time zone'Asia/Kuwait' end;
+  if p_data->>'preset'='month' or first_day=date_trunc('month',first_day)::date and last_day=(first_day+interval'1 month')::date-1 then
+   prev_lower:=(first_day-interval'1 month')at time zone'Asia/Kuwait';
+   prev_upper:=case when p_data->>'preset'='month' then least(lower_at,prev_lower+(upper_at-lower_at)) else lower_at end;
+  else prev_upper:=lower_at;prev_lower:=lower_at-(upper_at-lower_at);end if;
+  insert into private.staff_report_runs(owner_id,actor_role,personal,shop_ids,barber_ids,report_type,from_date,to_date,current_from,current_until,previous_from,previous_until,created_at)
+   values(actor,role_name,own,shops,chairs,typ,first_day,last_day,lower_at,upper_at,prev_lower,prev_upper,at_time)returning *into j;
+  return jsonb_build_object('id',j.id,'state',j.state);
+ end if;
+ select *into j from private.staff_report_runs where id=(p_data->>'id')::uuid and owner_id=actor;
+ if j.id is null then raise exception 'REPORT_NOT_FOUND'using errcode='42501';end if;
+ if j.expires_at<=at_time then raise exception 'REPORT_EXPIRED';end if;
+ if j.actor_role<>role_name or role_name='manager'and exists(select 1 from unnest(j.shop_ids)x where not exists(select 1 from public.branches b where b.id=x and b.manager_id=actor))
+ or j.personal and exists(select 1 from unnest(j.barber_ids)x where not exists(select 1 from public.barbers b where b.id=x and b.user_id=actor))
+ then raise exception 'REPORT_FORBIDDEN'using errcode='42501';end if;
+ if p_action='fail' then
+  update private.staff_report_runs set state='failed',error_code='REPORT_FAILED'where id=j.id and state='queued';return '{}'::jsonb;
+ end if;
+ if p_action='build' then
+  select *into j from private.staff_report_runs where id=j.id for update;
+  if j.state<>'queued' then return jsonb_build_object('id',j.id,'state',j.state);end if;
+  begin
+   -- Capture both periods, identity, ratings, prices and customer classification
+   -- in ONE statement snapshot. All subsequent aggregates use only these rows.
+   insert into private.staff_report_rows(run_id,booking_id,ordinal,period,branch_id,barber_id,customer_id,day,starts_at,ends_at,minutes,amount,status,is_returning,shop_rating,barber_rating,payload)
+   select j.id,b.id,row_number()over(order by b.date desc,b.time desc,b.id),
+    case when (b.date+b.time)at time zone'Asia/Kuwait'>=j.current_from then 'current'else'previous'end,
+    b.branch_id,b.barber_id,b.customer_id,b.date,(b.date+b.time)at time zone'Asia/Kuwait',
+    (b.date+b.time+b.duration*interval'1 minute')at time zone'Asia/Kuwait',b.duration,b.price,b.status,
+    exists(select 1 from public.bookings old where old.customer_id=b.customer_id and old.status='completed'and old.branch_id=any(j.shop_ids)
+      and(not j.personal or old.barber_id=any(j.barber_ids))and old.date<case when (b.date+b.time)at time zone'Asia/Kuwait'>=j.current_from then j.from_date else(j.previous_from at time zone'Asia/Kuwait')::date end),
+    rating.shop_rating,rating.barber_rating,
+    jsonb_build_object('id',b.id,'shopId',b.branch_id,'barberId',b.barber_id,'customerId',b.customer_id,
+     'shopName',shop.name,'shopNameAr',shop.name_ar,'barberName',barber.name,'barberNameAr',barber.name_ar,
+     'customerName',customer.name,'customerNameAr',customer.name_ar,'date',b.date,'time',b.time,'duration',b.duration,
+     'salesFils',round(b.price*1000)::bigint::text,'status',b.status,'shopRating',rating.shop_rating,'barberRating',rating.barber_rating,'services',b.service_snapshot,'package',b.package_snapshot)
+   from public.bookings b join public.branches shop on shop.id=b.branch_id join public.barbers barber on barber.id=b.barber_id
+   left join public.customers customer on customer.id=b.customer_id left join private.customer_booking_ratings rating on rating.booking_id=b.id
+   where b.branch_id=any(j.shop_ids)and(not j.personal or b.barber_id=any(j.barber_ids))
+    and b.date between (j.previous_from at time zone'Asia/Kuwait')::date and j.to_date
+    and ((b.date+b.time)at time zone'Asia/Kuwait'>=j.current_from and(b.date+b.time)at time zone'Asia/Kuwait'<j.current_until
+      or(b.date+b.time)at time zone'Asia/Kuwait'>=j.previous_from and(b.date+b.time)at time zone'Asia/Kuwait'<j.previous_until)
+   order by b.date desc,b.time desc,b.id limit 200001;
+   get diagnostics n=row_count;
+   if n>200000 or(select count(*)from private.staff_report_rows where run_id=j.id and period='current')>100000 then raise exception 'REPORT_TOO_LARGE';end if;
+
+   select coalesce(jsonb_agg(jsonb_build_object('date',day,'salesFils',sales::text,'completed',completed)order by day),'[]')into trend from(
+    select day,coalesce(round(sum(amount)filter(where status='completed')*1000),0)::bigint sales,count(*)filter(where status='completed')completed
+    from private.staff_report_rows where run_id=j.id and period='current'group by day)t;
+   select coalesce(jsonb_agg(jsonb_build_object('dayOfWeek',dow,'hour',start_hour,'completed',completed,'minutes',minutes)order by dow,start_hour),'[]')into demand from(
+    select extract(isodow from day)::integer dow,extract(hour from starts_at at time zone'Asia/Kuwait')::integer start_hour,
+    count(*)filter(where status='completed') completed,coalesce(sum(minutes)filter(where status='completed'),0)minutes
+    from private.staff_report_rows where run_id=j.id and period='current'group by 1,2)d;
+
+   -- Package price once, standalone/add-on historical prices once; included
+   -- services are usage-only. Any mismatch has a visible reconciliation bucket.
+   with selected as(select *from private.staff_report_rows where run_id=j.id and period='current'and status='completed'),
+   item as(
+    select booking_id,'package:'||(payload->'package'->>'id') key,'package' kind,payload->'package'->>'name' name,payload->'package'->>'name_ar'name_ar,
+     private.report_number(payload->'package'->>'price')amount from selected where private.report_number(payload->'package'->>'price')is not null
+    union all
+    select r.booking_id,case when coalesce(r.payload->'package'->'service_ids','[]')? (x->>'id')then'included:'else'service:'end||(x->>'id'),
+     case when coalesce(r.payload->'package'->'service_ids','[]')?(x->>'id')then'included'else'service'end,x->>'name',x->>'name_ar',
+     case when coalesce(r.payload->'package'->'service_ids','[]')?(x->>'id')then null else private.report_number(x->>'price')*coalesce(private.report_number(x->>'quantity'),1)end
+    from selected r cross join lateral jsonb_array_elements(coalesce(r.payload->'services','[]'))x
+   ), allocations as(select booking_id,sum(amount)amount from item group by booking_id), reconciled as(
+    select *from item union all select r.booking_id,'unallocated','unallocated','Unallocated',null,r.amount-coalesce(a.amount,0)
+     from selected r left join allocations a on a.booking_id=r.booking_id where r.amount<>coalesce(a.amount,0)
+   )select coalesce(jsonb_agg(jsonb_build_object('id',key,'kind',kind,'name',name,'nameAr',name_ar,'completed',visits,'salesFils',case when amount is null then null else round(amount*1000)::bigint::text end)order by amount desc nulls last,key),'[]')into lines from(
+    select key,kind,max(name)name,max(name_ar)name_ar,count(distinct booking_id)visits,sum(amount)amount from reconciled group by key,kind)l;
+
+   grouping:=case when j.report_type='overview' then case when j.personal then 'services'when cardinality(j.shop_ids)=1 then'barbers'else'shops'end
+    when j.report_type in('ratings','demand','bookings') then case when j.personal then'services'else'barbers'end else j.report_type end;
+   select coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar)order by name,id),'[]')into options from public.branches where id=any(j.shop_ids);
+   if grouping='services'then
+    insert into private.staff_report_groups select j.id,ord,item from jsonb_array_elements(lines)with ordinality x(item,ord);
+   else
+    insert into private.staff_report_groups select j.id,ord,item from private.report_breakdown(j.id,grouping)with ordinality x(item,ord);
+   end if;
+   report_result:=jsonb_build_object('summary',private.report_totals(j.id,'current'),'previous',private.report_totals(j.id,'previous'),
+    'grouping',grouping,'breakdown',(select coalesce(jsonb_agg(payload order by ordinal),'[]')from(select payload,ordinal from private.staff_report_groups where run_id=j.id order by ordinal limit 20)g),
+    'breakdownTotal',(select count(*)from private.staff_report_groups where run_id=j.id),
+    'trend',trend,'demand',demand,'shops',options,
+    'coverage',jsonb_build_object('occupancy',false,'rescheduleEvents',false));
+   select count(*)into n from private.staff_report_rows where run_id=j.id and period='current';
+   update private.staff_report_runs set state='ready',result=report_result,row_count=n where id=j.id;
+  exception when others then
+   update private.staff_report_runs set state='failed',error_code=case when sqlerrm='REPORT_TOO_LARGE'then'REPORT_TOO_LARGE'else'REPORT_FAILED'end where id=j.id;
+  end;
+ end if;
+ select *into j from private.staff_report_runs where id=j.id;
+ if j.state='queued'and j.created_at<at_time-interval'3 minutes'then
+  update private.staff_report_runs set state='failed',error_code='REPORT_FAILED'where id=j.id returning *into j;
+ end if;
+ if p_action in('rows','groups') then
+  if j.state<>'ready'then raise exception 'REPORT_NOT_READY';end if;
+  n:=least(500,greatest(1,coalesce((p_data->>'limit')::integer,25)));
+  if p_action='groups'then
+   select coalesce(jsonb_agg(payload||jsonb_build_object('ordinal',ordinal)order by ordinal),'[]')into rows from(
+    select payload,ordinal from private.staff_report_groups where run_id=j.id and ordinal>greatest(0,coalesce((p_data->>'after')::bigint,0))order by ordinal limit n+1)g;
+   return jsonb_build_object('rows',rows,'total',j.result->'breakdownTotal');
+  end if;
+  select coalesce(jsonb_agg(payload||jsonb_build_object('ordinal',ordinal)order by ordinal),'[]')into rows from(
+   select payload,ordinal from private.staff_report_rows where run_id=j.id and period='current'and ordinal>greatest(0,coalesce((p_data->>'after')::bigint,0))
+    and(coalesce(p_data->>'status','')=''or case when p_data->>'status'='needs_status'then status in('pending','confirmed')and ends_at<=j.created_at else status=p_data->>'status'end)
+    and(coalesce(p_data->>'search','')=''or payload->>'customerName'ilike'%'||left(p_data->>'search',100)||'%'or payload->>'customerNameAr'ilike'%'||left(p_data->>'search',100)||'%')
+   order by ordinal limit n+1)page;
+  return jsonb_build_object('rows',rows,'total',j.row_count);
+ end if;
+ if p_action not in('get','build')then raise exception 'REPORT_INVALID_ACTION';end if;
+ return jsonb_build_object('id',j.id,'state',j.state,'error',j.error_code,'type',j.report_type,'personal',j.personal,
+  'from',j.from_date,'to',j.to_date,'currentUntil',j.current_until,'previousFrom',j.previous_from,'previousUntil',j.previous_until,
+  'createdAt',j.created_at,'expiresAt',j.expires_at,'total',j.row_count,'result',j.result);
+end $$;
+ALTER FUNCTION "public"."staff_reports"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO ''
     AS $$ select private.staff_save_booking(p_id,p_data); $$;
 ALTER FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select private.staff_session_factor_satisfied(p_user,p_session) and (
+    p_aal='aal2' or not exists(select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id
+      where u.id=p_user and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent') and f.status='verified'));
+$$;
+ALTER FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2505,6 +2901,9 @@ CREATE INDEX "barbers_discovery_order" ON "public"."barbers" USING "btree" ("low
 CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
 CREATE INDEX "bookings_active_schedule_gist" ON "public"."bookings" USING "gist" ("barber_id", "tsrange"(("date" + "time"), (("date" + "time") + (("duration")::double precision * '00:01:00'::interval)), '[)'::"text")) WHERE ("status" <> ALL (ARRAY['cancelled'::"text", 'no_show'::"text"]));
 CREATE INDEX "bookings_package_offer" ON "public"."bookings" USING "btree" ("package_offer_id") WHERE ("package_offer_id" IS NOT NULL);
+CREATE INDEX "bookings_report_barber_date" ON "public"."bookings" USING "btree" ("barber_id", "date", "id");
+CREATE INDEX "bookings_report_customer_completed" ON "public"."bookings" USING "btree" ("customer_id", "branch_id", "date") WHERE ("status" = 'completed'::"text");
+CREATE INDEX "bookings_report_shop_date" ON "public"."bookings" USING "btree" ("branch_id", "date", "id");
 CREATE INDEX "branches_discovery_city" ON "public"."branches" USING "btree" ("city", "name", "id") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
 CREATE INDEX "branches_discovery_name" ON "public"."branches" USING "gin" ("lower"((((("name" || ' '::"text") || COALESCE("name_ar", ''::"text")) || ' '::"text") || COALESCE("city", ''::"text"))) "extensions"."gin_trgm_ops") WHERE (("status" = 'active'::"text") AND ("publication_state" = 'published'::"text"));
 CREATE INDEX "idx_admin_settings_category" ON "public"."admin_settings" USING "btree" ("category");
@@ -2591,6 +2990,8 @@ CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "man
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
+CREATE OR REPLACE TRIGGER "finance_booking_history" BEFORE UPDATE OF "branch_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_finance_history"();
+CREATE OR REPLACE TRIGGER "finance_shop_history" BEFORE DELETE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_finance_history"();
 CREATE OR REPLACE TRIGGER "guard_barber_account_email" BEFORE UPDATE OF "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_account_contact_email"();
 CREATE OR REPLACE TRIGGER "guard_booking_history" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_history"();
 CREATE OR REPLACE TRIGGER "guard_booking_policy" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_policy"();
@@ -2765,6 +3166,27 @@ CREATE POLICY "Barbers view branch logs via barber record" ON "public"."logs" FO
    FROM "public"."barbers"
   WHERE ("barbers"."user_id" = "auth"."uid"()))));
 CREATE POLICY "Barbers view own logs" ON "public"."logs" FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'barber'::"text") AND ("user_id" = ( SELECT "auth"."uid"() AS "uid"))));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."admin_settings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."areas" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."audit_logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."barbers" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."booking_reminders" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."bookings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."branches" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."customer_staff_details" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."customers" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."governorates" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."notification_templates" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."notifications" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."rate_limits" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."services" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."suspicious_activities" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."user_notification_preferences" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."user_settings" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_logs" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Enrolled staff require verified MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied")) WITH CHECK (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
 CREATE POLICY "Internal trigger cancels reminders" ON "public"."booking_reminders" FOR UPDATE TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1)) WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
 CREATE POLICY "Internal trigger creates reminders" ON "public"."booking_reminders" FOR INSERT TO "barber_reminder_writer" WITH CHECK ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
 CREATE POLICY "Internal trigger reads reminder identifiers" ON "public"."booking_reminders" FOR SELECT TO "barber_reminder_writer" USING ((( SELECT "pg_trigger_depth"() AS "pg_trigger_depth") = 1));
@@ -2858,6 +3280,9 @@ REVOKE ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" 
 GRANT ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."admin_manager_statuses"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_push_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_push_worker"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
@@ -2982,8 +3407,7 @@ GRANT ALL ON FUNCTION "public"."get_managers"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_branch_ids"() TO "service_role";
-GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "anon";
-GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") TO "service_role";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
@@ -3006,6 +3430,8 @@ GRANT ALL ON FUNCTION "public"."manage_shop_publication"("p_branch" "uuid", "p_a
 REVOKE ALL ON FUNCTION "public"."manager_can_create_shop"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."manager_can_create_shop"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."manager_finances"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manager_finances"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
@@ -3019,6 +3445,9 @@ GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_c
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_barber_invitation_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PUBLIC;
@@ -3031,13 +3460,20 @@ GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "serv
 REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_factor_satisfied"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_package_terms"("p_booking" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."staff_reports"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_reports"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";

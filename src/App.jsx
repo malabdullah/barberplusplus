@@ -78,9 +78,11 @@ const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const SharedBooking = lazy(() => import('./pages/SharedBooking'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Finances = lazy(() => import('./pages/Finances'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
-  const { isAuthenticated, userRole, loading, adminVerified } = useApp();
+  const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
 
   // Show loading while auth state is being determined
   if (loading) {
@@ -114,7 +116,7 @@ function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
 
-  if (userRole === 'admin' && requireAdminMfa && !adminVerified) return <Navigate to="/mfa-setup" replace />;
+  if (staffMfaRequired && requireAdminMfa && !adminVerified) return <Navigate to="/mfa-setup" replace />;
   return children;
 }
 
@@ -198,7 +200,7 @@ function AppRoutes() {
       />
       <Route
         path="/mfa-setup"
-        element={<ProtectedRoute allowedRole="admin" requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
+        element={<ProtectedRoute requireAdminMfa={false}><MFASetup /></ProtectedRoute>}
       />
 
       </Route>
@@ -221,6 +223,8 @@ function AppRoutes() {
         <Route path="branches/:branchId/edit" element={<EditBranch />} />
         <Route path="branches/:branchId" element={<BranchDetails />} />
         <Route path="services" element={<Services />} />
+        <Route path="reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
+        <Route path="finances" element={<Suspense fallback={null}><Finances /></Suspense>} />
         <Route path="barbers" element={<Barbers />} />
         <Route path="barbers/new" element={<AddBarber />} />
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
@@ -249,6 +253,7 @@ function AppRoutes() {
         <Route path="bookings" element={<MyBookings />} />
         <Route path="availability" element={<MyAvailability />} />
         <Route path="profile" element={<MyProfile />} />
+        <Route path="performance" element={<Suspense fallback={null}><Reports personal /></Suspense>} />
         <Route path="logs" element={<MyLogs />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />

@@ -87,7 +87,8 @@ def main():
             ' TRIGGER auth users enforce_customer_password_proof ' in line or
             ' TRIGGER auth users guard_account_email ' in line or
             ' TRIGGER auth sessions detach_customer_session_push ' in line or
-            ' POLICY storage objects Barber avatars ' in line)) + '\n'
+            ' POLICY storage objects Barber avatars ' in line or
+            ' POLICY storage objects Enrolled staff require verified MFA ' in line)) + '\n'
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')
         # Verify the actual Vault encryption path, not just pgsodium's separate

@@ -35,6 +35,7 @@ export function AppProvider({ children }) {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminVerified, setAdminVerified] = useState(false);
+  const [staffMfaRequired, setStaffMfaRequired] = useState(false);
 
   const updateAdminAssurance = useCallback(session => {
     let aal;
@@ -45,8 +46,9 @@ export function AppProvider({ children }) {
       // Unreadable claims leave the admin route locked.
     }
     setAdminVerified(aal === 'aal2');
+    setStaffMfaRequired(session?.user?.app_metadata?.role === 'admin' || Boolean(session?.user?.factors?.some(factor => factor.status === 'verified')));
   }, []);
-  const hasStaffAccess = isAuthenticated && (userRole !== 'admin' || adminVerified);
+  const hasStaffAccess = isAuthenticated && (!staffMfaRequired || adminVerified);
   const [loading, setLoading] = useState(true);
   const [barberProfile, setBarberProfile] = useState(null);
   const [barberProfileLoading, setBarberProfileLoading] = useState(false);
@@ -738,10 +740,10 @@ export function AppProvider({ children }) {
       try {
         updated = await branchesService.update(branchId, data);
       } catch (error) {
-        if (imageFile && data.imageUrl) await storageService.deleteImage(data.imageUrl);
+        if (imageFile && data.imageUrl) await storageService.deleteImage(data.imageUrl, 'branches', branchId);
         throw error;
       }
-      if (imageFile && oldImageUrl) await storageService.deleteImage(oldImageUrl);
+      if (imageFile && oldImageUrl) await storageService.deleteImage(oldImageUrl, 'branches', branchId);
       setBranches(prev =>
         prev.map(b => b.id === branchId ? updated : b)
       );
@@ -795,10 +797,10 @@ export function AppProvider({ children }) {
       try {
         updated = await barbersService.update(barberId, data);
       } catch (error) {
-        if (profilePictureFile && data.avatarUrl) await storageService.deleteImage(data.avatarUrl);
+        if (profilePictureFile && data.avatarUrl) await storageService.deleteImage(data.avatarUrl, 'barbers', barberId);
         throw error;
       }
-      if (profilePictureFile && oldAvatarUrl) await storageService.deleteImage(oldAvatarUrl);
+      if (profilePictureFile && oldAvatarUrl) await storageService.deleteImage(oldAvatarUrl, 'barbers', barberId);
       setBarbers(prev =>
         prev.map(b => b.id === barberId ? updated : b)
       );
@@ -1300,6 +1302,7 @@ export function AppProvider({ children }) {
     metrics,
     isAuthenticated,
     adminVerified,
+    staffMfaRequired,
     loading,
     theme,
     language,
@@ -1358,7 +1361,7 @@ export function AppProvider({ children }) {
     user, userRole, isAdmin, isAgent, manager,
     branches, barbers, services, bookings,
     saveWorkProfile, selectedBranchId, selectedBranch, branchBarbers, branchServices, branchBookings,
-    metrics, isAuthenticated, adminVerified, loading, theme, language,
+    metrics, isAuthenticated, adminVerified, staffMfaRequired, loading, theme, language,
     // Barber state
     managerChair, createManagerChair,
     currentBarber, barberBookings, barberMetrics, barberServices, barberBranch,

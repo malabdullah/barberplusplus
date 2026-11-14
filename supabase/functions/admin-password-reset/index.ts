@@ -11,7 +11,10 @@ Deno.serve(withCloudTestGateway(createAdminPasswordResetHandler({
   appUrl: getAppUrl(),
   authenticate: async authorization => {
     const client = createClient(url, anon, {global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}});
-    const {data,error} = await client.auth.getUser(); return error ? null : data.user;
+    const {data,error} = await client.auth.getUser();
+    if (error || !data.user || data.user.app_metadata?.role !== 'admin') return null;
+    const assurance = await client.rpc('enforce_account_session');
+    return assurance.error ? null : data.user;
   },
   list: async page => {
     const {data,error} = await admin.auth.admin.listUsers({page,perPage:100});

@@ -47,7 +47,7 @@ function CustomerEmailAuth({ mode }) {
       } else if (reset && location.state?.recovery) {
         await resetPassword({ password: form.password, confirmPassword: form.confirmPassword }); setForm(current => ({ ...current, password: '', confirmPassword: '' })); setResetDone(true);
       }
-    } catch (failure) { setError(failure.message); }
+    } catch (failure) { if (failure.message === 'MFA_REQUIRED') return; setError(failure.message); }
     finally { setBusy(false); }
   };
   const passwordField = (key, label) => <div className="ca-field"><label className="cb-field-label" htmlFor={key}>{label}</label><div className="ca-password"><input className="cb-input" id={key} type={showPassword ? 'text' : 'password'} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} value={form[key]} onChange={event => update(key, event.target.value)} maxLength={72} required /><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={tr(showPassword ? 'hidePassword' : 'showPassword')}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></div></div>;

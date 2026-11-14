@@ -72,7 +72,7 @@ Deno.serve(createCustomerAuthHandler({
     if(error || !data.session)return null;
     if(!['customer','manager','barber'].includes(data.user.app_metadata.role) || !data.user.email_confirmed_at){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     const name=typeof data.user.user_metadata?.name==='string'?data.user.user_metadata.name:'';
-    return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name};
+    return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name,mfaRequired:['manager','barber'].includes(String(data.user.app_metadata.role)) && Boolean(data.user.factors?.some(f=>f.status==='verified'))};
   },
   emailName:async(token)=>{
     const {data,error}=await admin.auth.getUser(token);
@@ -174,8 +174,10 @@ Deno.serve(createCustomerAuthHandler({
     const role=data.user.app_metadata.role;
     if(['admin','agent'].includes(String(role)))throw Error('STAFF_ACCOUNT');
     if(!['customer','manager','barber'].includes(String(role)) || !data.user.identities?.some(item=>['google','apple'].includes(item.provider)))return null;
+    const identity=await customerIdentity(admin,token);
+    if(!identity)return null;
     const name=data.user.user_metadata?.name || data.user.user_metadata?.full_name;
-    return {user_id:data.user.id,session_id,name:typeof name==='string' ? name.slice(0,120) : ''};
+    return {...identity,name:typeof name==='string' ? name.slice(0,120) : ''};
   },
   resetPassword:async(id,password,guardId)=>{const {data,error}=await admin.auth.admin.getUserById(id);if(error || !['customer','manager','barber'].includes(data.user.app_metadata.role))throw Error('ACCOUNT_UNAVAILABLE');const result=await admin.auth.admin.updateUserById(id,{password,app_metadata:{barber_password_operation:guardId}});if(result.error)throw Error('UNAVAILABLE');},
 }));

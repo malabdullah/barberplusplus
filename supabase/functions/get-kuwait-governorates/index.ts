@@ -276,6 +276,14 @@ Deno.serve(withCloudTestGateway(async (req: Request) => {
 
     // POST with action=sync - sync data to database
     if (req.method === "POST" && action === "sync") {
+      const authorization = req.headers.get('authorization') || '';
+      const caller = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+        global: {headers: {Authorization: authorization}},
+      });
+      const {data: {user}, error} = await caller.auth.getUser(authorization.replace(/^Bearer /i, ''));
+      if (error || user?.app_metadata?.role !== 'admin') return new Response('Forbidden', {status:403});
+      const assurance = await caller.rpc('enforce_account_session');
+      if (assurance.error) return new Response('Forbidden', {status:403});
       const result = await syncToDatabase();
       return new Response(
         JSON.stringify({

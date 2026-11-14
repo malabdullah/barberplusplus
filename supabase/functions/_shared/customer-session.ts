@@ -14,7 +14,7 @@ type IdentityClient = {
       error: unknown;
     }>;
   };
-  rpc: (name: 'customer_session_is_live', params: { p_user: string; p_session: string }) =>
+  rpc: (name: 'customer_session_is_live' | 'staff_token_factor_satisfied', params: { p_user: string; p_session: string; p_aal?: string }) =>
     PromiseLike<{ data: unknown; error: unknown }>;
 };
 
@@ -24,5 +24,8 @@ export async function customerIdentity(admin: IdentityClient, token: string) {
   if (error || !data.user || !['customer', 'manager', 'barber'].includes(String(data.user?.app_metadata.role)) || !id) return null;
   const live = await admin.rpc('customer_session_is_live', { p_user: data.user.id, p_session: id });
   if (live.error || live.data !== true) return null;
+  const claims = JSON.parse(atob(token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/')));
+  const factor = await admin.rpc('staff_token_factor_satisfied', { p_user: data.user.id, p_session: id, p_aal: String(claims.aal || '') });
+  if (factor.error || factor.data !== true) return null;
   return { user_id: data.user.id, session_id: id };
 }

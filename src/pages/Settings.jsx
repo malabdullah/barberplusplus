@@ -166,10 +166,10 @@ export default function Settings() {
     try {
       if (photo) uploaded = await storageService.uploadImage(photo, 'profiles', user.id);
       await saveWorkProfile(profile, uploaded || null);
-      if (uploaded && user.user_metadata.avatar_url) await storageService.deleteImage(user.user_metadata.avatar_url);
+      if (uploaded && user.user_metadata.avatar_url) await storageService.deleteImage(user.user_metadata.avatar_url, 'profiles', user.id);
       setPhoto(null); setProfileSaved(true);
     } catch (error) {
-      if (uploaded) await storageService.deleteImage(uploaded).catch(() => {});
+      if (uploaded) await storageService.deleteImage(uploaded, 'profiles', user.id).catch(() => {});
       setProfileError(getErrorMessage(error, t('common.error'), t));
     } finally { setProfileSaving(false); }
   };

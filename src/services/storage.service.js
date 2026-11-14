@@ -46,7 +46,7 @@ export const storageService = {
    * @param {string} imageUrl - The full public URL of the image
    * @returns {Promise<void>}
    */
-  deleteImage: async (imageUrl) => {
+  deleteImage: async (imageUrl, folder, entityId) => {
     // Skip if no URL or if it's a base64 data URL (legacy)
     if (!imageUrl || imageUrl.startsWith('data:')) return;
 
@@ -69,7 +69,10 @@ export const storageService = {
       return;
     }
 
-    if (!filePath) return;
+    if (!filePath || !['branches', 'barbers', 'profiles'].includes(folder) || !entityId) return;
+    const expectedPrefix = `${folder}/${entityId}-`;
+    const suffix = filePath.slice(expectedPrefix.length);
+    if (!filePath.startsWith(expectedPrefix) || !/^[0-9]+\.(jpg|jpeg|png|webp|gif)$/.test(suffix)) return;
 
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
@@ -96,7 +99,7 @@ export const storageService = {
 
     // Delete old image in background (fire and forget)
     if (oldImageUrl && !oldImageUrl.startsWith('data:')) {
-      storageService.deleteImage(oldImageUrl).catch((err) => {
+      storageService.deleteImage(oldImageUrl, folder, entityId).catch((err) => {
         logErrorDev('Failed to delete old image:', err);
       });
     }
