@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_ADDITIVE_PREPARATION_FOR_REVIEW_NO_LIVE_APPROVAL",
+  "sourceCommit": "146ac5051646664b35ec80fe51bdd0a032dbd767",
+  "applicationSourceUnchanged": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "renewalOperatorSourceUnchanged": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "files": {
+    "ops/auth/APPLE-CLEANUP-BOOTSTRAP-RECOVERY.md": "ce34a7c6b4775920684f5ebd1c623787f0391a37252bc973a3c02a52c37a36ca",
+    "ops/auth/apple-cleanup-preparation.test.mjs": "30ad4a4095d201811ed4f877395f765ffca99cf7fd1daff4acbacd005cf63406",
+    "ops/auth/apple_cleanup_bootstrap.py": "9584809bac8309f2b8f1045299864fbfdb5a6921cecd6af98d254c0fd5c9c576",
+    "ops/auth/apple_cleanup_preparation_test.py": "74a04cf7b2256ec2c9f2bef6ed1aa42b514be32594499d64c25fcd1370f65482",
+    "ops/auth/apple_cleanup_recovery.py": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4"
+  },
+  "testResultsSHA256": "0a2b0207673e49808ba5aaba61c230b2b3330a3d90317836e9890f8d49407990",
+  "priorRenewalSupplementManifestSHA256": "6adb4de75ee69fafc880cd706a623ae8c79a5194a185a2011fb44f3defc68e45",
+  "unchangedCoreRehearsalReceiptSHA256": "e699b43042eb79a92059c4de88e9e76ffc29e2b3c9d5b6722334afd1fdb73b12",
+  "evidenceNotConflated": true,
+  "noFurtherPermissionQuestionIssued": true,
+  "independentRecoveryCustodyVerified": false,
+  "actualDefaultOffSetupActivationReleaseProviderReviewerUploadSubmission": "NOT_AUTHORIZED"
+}
