@@ -1774,7 +1774,7 @@ CREATE OR REPLACE FUNCTION "public"."manager_finances"("p_action" "text", "p_dat
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
     SET "statement_timeout" TO '25s'
-    AS $$
+    AS $_$
 #variable_conflict use_column
 declare
  actor uuid:=auth.uid(); shops uuid[]; shop uuid; request_id uuid; v_result jsonb; cached private.shop_finance_requests%rowtype;
@@ -1935,7 +1935,7 @@ begin
  end if;
  raise exception 'FINANCE_INVALID';
 exception when invalid_text_representation or datetime_field_overflow or numeric_value_out_of_range then raise exception 'FINANCE_INVALID';
-end $$;
+end $_$;
 ALTER FUNCTION "public"."manager_finances"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql"
