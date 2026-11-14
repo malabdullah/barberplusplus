@@ -6,6 +6,24 @@ it does not claim identical production platform configuration or copy any rows.
 """
 import hashlib, json, os, pathlib, re, subprocess, uuid
 
+def platform_objects_for_replay(toc):
+    # Application migrations recreate these only after their dependencies exist.
+    owned = (
+        ' TRIGGER auth users assign_default_manager_role ',
+        ' TRIGGER auth users block_guarded_role_changes ',
+        ' TRIGGER auth users block_customer_recovery_role_changes ',
+        ' TRIGGER auth users enforce_global_phone ',
+        ' TRIGGER auth users sync_customer_confirmed_email ',
+        ' TRIGGER auth users sync_personal_work_contact ',
+        ' TRIGGER auth users enforce_customer_password_proof ',
+        ' TRIGGER auth users guard_account_email ',
+        ' TRIGGER auth sessions detach_customer_session_push ',
+        ' POLICY storage objects Barber avatars ',
+        ' POLICY storage objects Enrolled staff require verified MFA ',
+        ' POLICY storage objects Storage requires a live account session ',
+    )
+    return '\n'.join(line for line in toc.splitlines() if not any(item in line for item in owned)) + '\n'
+
 def main():
     root = pathlib.Path.cwd()
     if os.environ.get('DOCKER_HOST') or os.environ.get('DOCKER_CONTEXT'): raise ValueError('Docker endpoint overrides refused')
@@ -77,18 +95,7 @@ def main():
         toc = docker('exec',name,'pg_restore','--list','/tmp/platform.dump').decode()
         # Exclude only application-owned Auth/Storage objects whose versioned
         # migrations reinstall them after their public/private dependencies.
-        toc = '\n'.join(line for line in toc.splitlines() if not (
-            ' TRIGGER auth users assign_default_manager_role ' in line or
-            ' TRIGGER auth users block_guarded_role_changes ' in line or
-            ' TRIGGER auth users block_customer_recovery_role_changes ' in line or
-            ' TRIGGER auth users enforce_global_phone ' in line or
-            ' TRIGGER auth users sync_customer_confirmed_email ' in line or
-            ' TRIGGER auth users sync_personal_work_contact ' in line or
-            ' TRIGGER auth users enforce_customer_password_proof ' in line or
-            ' TRIGGER auth users guard_account_email ' in line or
-            ' TRIGGER auth sessions detach_customer_session_push ' in line or
-            ' POLICY storage objects Barber avatars ' in line or
-            ' POLICY storage objects Enrolled staff require verified MFA ' in line)) + '\n'
+        toc = platform_objects_for_replay(toc)
         docker('exec','-i',name,'sh','-c','cat > /tmp/platform.list',data=toc.encode())
         docker('exec',name,'pg_restore','-h','/tmp','-U','postgres','-d','postgres','--no-owner','--clean','--if-exists','--exit-on-error','--use-list=/tmp/platform.list','/tmp/platform.dump')
         # Verify the actual Vault encryption path, not just pgsodium's separate
