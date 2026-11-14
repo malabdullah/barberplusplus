@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-14",
+  "checks": {
+    "functions": 247,
+    "deletionFunctionFocused": 37,
+    "ui": 361,
+    "operations": 65,
+    "testOverlayFunctions": 251,
+    "coreHostedRollbackGroups": 6,
+    "appleHostedRollbackGroups": 8,
+    "actualHostedApiGroups": 10,
+    "lint": "passed",
+    "types": "passed",
+    "build": "passed",
+    "migrationNames": "passed",
+    "hardcodedDomains": "passed",
+    "native25ActualHostedCompatibilityReported": 1,
+    "affectedUiAfterFinalCopy": 32,
+    "existingTestCredentialMetadataOffline": "passed"
+  },
+  "newExactImageRehearsal": "NOT_RUN_REQUIRES_APPROVAL",
+  "productionAccessOrKeyUse": false,
+  "productionDeployment": false,
+  "policyPublication": false,
+  "devMainPush": false,
+  "realProviderCalls": 0,
+  "newPersistentReviewerFixtures": false,
+  "unchangedMainMigrationPrefixCount": 102,
+  "pendingMigrationCount": 9,
+  "candidateSqlSuiteCount": 48
+}

@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-14T01:07:29.669Z",
+  "passed": 10,
+  "checks": [
+    "private Test gate intact",
+    "direct backend requires Test gateway secret",
+    "validated live bearer required",
+    "native and web capability remain disabled with honest legacy fallback",
+    "disabled registration stops before proof reservation or provider call",
+    "caller owner/client/destination injection rejected",
+    "unsupported platform rejected",
+    "existing synthetic customer preview and email proof contract retained",
+    "foreign origin rejected",
+    "non-Apple body limit retained"
+  ],
+  "environment": "cloud-test",
+  "functionVersion": 7,
+  "realProviderCalls": 0,
+  "deletionsRequested": 0,
+  "productionTouched": false
+}
