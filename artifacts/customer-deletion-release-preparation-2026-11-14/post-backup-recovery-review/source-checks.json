@@ -1,0 +1,22 @@
+{
+  "status": "PUBLIC_SOURCE_BINDING_ONLY_NO_PRIVATE_INPUT",
+  "sourceFiles": {
+    "ops/auth/apple_renewal.py": "810d3cb8fc618b70c8bb4a8e05c3306753ea4dba9d5515cf0ec20aa19b08ee23",
+    "ops/auth/apple_cleanup_renewal.py": "7bd0458b3989c3b394e302d78e2b2e29619abb0d86cbc37a70903b1e0c5b97e6",
+    "ops/auth/apple_cleanup_recovery.py": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4",
+    "ops/release/backup_policy.py": "9b7f45ef3390d80d662c064e162740b16be694dec6e0e63322057cc2ac7802c4",
+    "ops/auth/apple-cleanup-renewal.config.example.json": "a369e434284d1d583999d1f0a8dfc7f8ef675869a425b6fe4a9828e3ee5e39b9",
+    "ops/backup/config.example.json": "50671f9261ccbab1ef4f20641984872e2dc131d34ae26c8c7468d1f92ae31ee2",
+    "ops/backup/runtime.py": "df31d0a3b557298fac896f25815e08f500697044e7b14c1063b72b2c94856e5a",
+    "ops/backup/daily.py": "c9eeca39b481ef67b6d0c2f7ed47edadf853a7cda8e40cbf8cc2a4f778b486c0",
+    "ops/backup/daily_restore.py": "3ebe9fad6e11887df14c8fe79914685f42b1a0fe3b9c653a813354d44e95b25e",
+    "ops/backup/readiness.py": "99e87f7437e8adc1de84dfcf20deaa6646bc8339059ddd025d23bd0ab76be724",
+    "ops/auth/APPLE-CLEANUP-BOOTSTRAP-RECOVERY.md": "ce34a7c6b4775920684f5ebd1c623787f0391a37252bc973a3c02a52c37a36ca"
+  },
+  "setupResultSHA256": "94860601933ab75382c5eb00c4d1001c2c7554a90787d373918875570795d045",
+  "coreProtected": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "existingInstalledModulesRemainUnchanged": true,
+  "configOnlyOffCheckNotRuntimeEnvironmentProof": true,
+  "helperImportsDoNotCallPrivateSigningOrRenewal": "Only validate_config and function_env through unchanged verifier; no credentials()/signing.validate()/Host.activate()/main() calls",
+  "nowExecutionAuthorized": false
+}

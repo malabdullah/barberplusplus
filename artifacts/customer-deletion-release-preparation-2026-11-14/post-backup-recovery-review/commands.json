@@ -1,0 +1,130 @@
+{
+  "status": "FROZEN_FUTURE_COMMAND_PLAN_NOT_EXECUTED_NOT_AUTHORIZED",
+  "authoritativeWorktree": "/Users/malabdullah/Documents/Codex/Barber++/.cloud-test/worktrees/deletion-release-final",
+  "archivalNativeCopiesNotExecutable": true,
+  "actualInstallEpoch": 1794644721,
+  "actualInstallUTC": "2026-11-14T08:25:21Z",
+  "futureTarget": {
+    "hostname": "srv1073968",
+    "ipv4": "72.61.164.64",
+    "resource": 1073968,
+    "frontendAccess": false
+  },
+  "rootExecutor": {
+    "stdinOnly": true,
+    "file": "recover_selected.py",
+    "SHA256": "9902b775c3f4fe99732fc8105e3b7d676ea730f8e33d9148ec88ed85ee38ba1d",
+    "args": []
+  },
+  "existingPublicModules": {
+    "apple_renewal": "810d3cb8fc618b70c8bb4a8e05c3306753ea4dba9d5515cf0ec20aa19b08ee23",
+    "apple_cleanup_renewal": "7bd0458b3989c3b394e302d78e2b2e29619abb0d86cbc37a70903b1e0c5b97e6",
+    "apple_cleanup_recovery": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4",
+    "backup_policy": "9b7f45ef3390d80d662c064e162740b16be694dec6e0e63322057cc2ac7802c4"
+  },
+  "existingRestic": {
+    "path": "/var/lib/barber-release-backend/tools/restic-v0.19.1",
+    "version": "0.19.1",
+    "SHA256": "20d4142678d0d95ec11a4759def1b73fd9190abc9ca19e4b62d067c0b387e639",
+    "noVersionProbe": true
+  },
+  "privateReads": [
+    "/etc/barber-backup/config.json",
+    "/etc/barber-backup/b2.json",
+    "/etc/barber-backup/restic.password",
+    "/var/lib/barber-backup/repository-binding.json",
+    "/etc/barber-release/backup-readiness.json",
+    "/etc/barber-release/apple-cleanup-renewal/bootstrap/recovery-expected.json",
+    "/etc/barber-release/prepared-backend-runtime.override.json",
+    "/etc/barber-release/apple-cleanup-renewal/config.json",
+    "/etc/barber-release/recovery/customer-apple-encryption-v1"
+  ],
+  "metadataCommands": {
+    "dbInspect": "Exact fixed INSPECT list/template in executor; image/running/healthy only",
+    "systemIdentity": "Exact fixed SYSTEM list/read-only pg_control_system SQL in executor; no business table",
+    "maximum": 2
+  },
+  "resticCommandPrefix": [
+    "/var/lib/barber-release-backend/tools/restic-v0.19.1",
+    "--no-cache",
+    "--no-lock"
+  ],
+  "orderedResticSuffixes": [
+    [
+      "cat",
+      "config"
+    ],
+    [
+      "dump",
+      "receipt.object_snapshot",
+      "/etc/barber-release/prepared-backend-runtime.override.json"
+    ],
+    [
+      "dump",
+      "receipt.object_snapshot",
+      "/etc/barber-release/apple-cleanup-renewal/config.json"
+    ],
+    [
+      "dump",
+      "receipt.object_snapshot",
+      "/etc/barber-release/recovery/customer-apple-encryption-v1"
+    ]
+  ],
+  "snapshotSource": "Only full64hex from untouched original successful post-install B2 daily-v1 receipt after original policy/current system/repository validation",
+  "limits": {
+    "resticCommandsAtMost": 4,
+    "selectedFilesAtMost": 3,
+    "selectedFileBytes": 2097152,
+    "metadataJSONBytes": 65536,
+    "localResultBytes": 16384,
+    "publicSourceBytes": 65536,
+    "remoteCommandSecondsAtMost": 120,
+    "localTransportSecondsAtMost": 1200,
+    "stopNewWorkAfterActivationSeconds": 2700,
+    "hardAccessSeconds": 3600,
+    "operatorRetries": 0,
+    "internalResticNetworkRequestBudget": "Not a fixed count; internal encrypted-pack reads/retries may occur"
+  },
+  "temporaryServerWrites": {
+    "lease": "/dev/shm/barber-apple-cleanup-verify-0743265.lease.json",
+    "target": "/dev/shm/barber-apple-cleanup-verify-0743265",
+    "files": [
+      "runtime-override.json",
+      "renewal-config.json",
+      "encryption-v1"
+    ],
+    "exclusiveTmpfsOnly": true,
+    "noUnknownCleanup": true
+  },
+  "futureLocalLauncher": [
+    "python3",
+    "-B",
+    "artifacts/customer-deletion-release-preparation-2026-11-14/post-backup-recovery-review/run_once.py"
+  ],
+  "futureLocalPrivateDirectory": ".release-private/post-backup-recovery-2026-11-15",
+  "futureAccessReceiptSchema": {
+    "manifestSHA256": "Actual independently reviewed final manifest hash",
+    "directHumanApprovalVerified": "boolean true only after read_thread of NEW owner approval",
+    "requestId": "Actual approval call_...",
+    "messageId": "Actual direct human message UUID",
+    "target": "72.61.164.64",
+    "sourceIPv4": "One freshly approved global IPv4, no slash",
+    "activationEpoch": "Integer actual activation-request A",
+    "stopEpoch": "A+2700",
+    "hardEpoch": "A+3600",
+    "originalFirewallProfile": 367995,
+    "temporaryFirewallProfile": 400860,
+    "originalRulesVerified": "true from actual pre-change UI evidence",
+    "restorePathVerified": "true from actual current UI evidence"
+  },
+  "freshApprovalAndWindowCreatedNow": false,
+  "accessRestoration": "Immediately restore original367995/remove only temporaryIPsource from400860/verifyoriginalfive andclosedTCP22+noSSH; maximum1hour, reserve15min. No retries on uncertainty.",
+  "excluded": [
+    "P8/WAL-G/DB password/offline archive reads",
+    "backup listing/latest/general restore/remote write/retention",
+    "business/config/service writes except exact temporaryRAMlease+3files",
+    "new key/credential/role/account/booking/message/provider action",
+    "deployment/activation/dev-main push/native upload/submission"
+  ],
+  "preparationOnly": true
+}

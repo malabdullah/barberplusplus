@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "LOCAL_POST_BACKUP_SELECTED_RECOVERY_EXECUTION_PROPOSAL",
+  "status": "FROZEN_AWAITING_INDEPENDENT_REVIEW_AND_FRESH_OWNER_APPROVAL",
+  "preparedAtUTC": "2026-11-14T10:41:09.768619+00:00",
+  "coreSource": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "files": {
+    "recover_selected.py": "9902b775c3f4fe99732fc8105e3b7d676ea730f8e33d9148ec88ed85ee38ba1d",
+    "run_once.py": "7565c70d729f6d1131c2580c10d4b67b0f46e220df3248a1fc85ca1be45562de",
+    "test_recover_selected.py": "3ac5a19474aa1188955831f0ddb983ea7fe14e69ee6a945a0d7b6cb38d318cf4",
+    "test_run_once.py": "0a4a569584cf8f842b4930c405eb2e02707f80591cc14ab302f86a3683c021b6",
+    "scope.md": "49b02c8b3ecf4959e5fc7af95ce97c9a4a8f590e527e2a1a1f060055047c3eaf",
+    "commands.json": "c8b3c83e23b900baeab6ed571e2d2f5e52182eda2f20fe4ee6d5202d51a5071d",
+    "test-results.json": "356bb47e0b1963f75b02f51ecda069c9c726b21e03b6c84c5436c4b182a26e80",
+    "source-checks.json": "ddd53d07102db6c6688b18b9d91de91046145ee1bf1a751d3df19936068f4197"
+  },
+  "executionAuthorized": false,
+  "backupOrCredentialsRead": false,
+  "accessOpened": false
+}
