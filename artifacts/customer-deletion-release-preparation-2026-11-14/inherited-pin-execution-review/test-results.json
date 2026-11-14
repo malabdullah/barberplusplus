@@ -1,0 +1,19 @@
+{
+  "status": "PASS_SYNTHETIC_ONLY",
+  "tests": 10,
+  "failures": 0,
+  "errors": 0,
+  "checks": [
+    "public payload and map exact binding",
+    "read-atime tolerance and modification rejection",
+    "rotating healthlog tolerance vs ID/start/env drift",
+    "post-rename original/candidate/unknown recognition",
+    "partial issuance/entropy counters without values",
+    "activation-bound45/60minute parameters",
+    "remaining-window command caps and hard rollback deadline",
+    "stderr/secret failure suppression",
+    "fixed host/root guards prevent local production IO",
+    "exact new timer/rollback scope and Functions follow-up identity check"
+  ],
+  "realProductionDockerKeySystemdCalls": false
+}
