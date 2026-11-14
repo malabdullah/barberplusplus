@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCAL_PUBLIC_WRAPPER_SOURCE_SEMANTICS_VERIFIED",
+  "unchangedProposalManifestSHA256": "7b8d0120b412ac8668949b091d50b28c2d7dbfc75fdaff3c6c72498df4b776fb",
+  "successfulSubmittedWrapperOperations": [
+    "assert os.geteuid()==0 and exact hostname",
+    "os.umask(0o077)",
+    "root.mkdir(mode=0o700)",
+    "os.open(root/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)",
+    "fdopen wb; write; flush; fsync"
+  ],
+  "localSyntheticCreationCases": [
+    {
+      "inheritedUmask": "0000",
+      "wrapperUmask": "0077",
+      "directoryMode": "0700",
+      "fileMode": "0600",
+      "regularSingleLink": true
+    },
+    {
+      "inheritedUmask": "0022",
+      "wrapperUmask": "0077",
+      "directoryMode": "0700",
+      "fileMode": "0600",
+      "regularSingleLink": true
+    },
+    {
+      "inheritedUmask": "0077",
+      "wrapperUmask": "0077",
+      "directoryMode": "0700",
+      "fileMode": "0600",
+      "regularSingleLink": true
+    },
+    {
+      "inheritedUmask": "0777",
+      "wrapperUmask": "0077",
+      "directoryMode": "0700",
+      "fileMode": "0600",
+      "regularSingleLink": true
+    }
+  ],
+  "creationModeGuaranteedBySource": true,
+  "rootOwnershipGuaranteedAtCreationBySourceGuard": true,
+  "actualCurrentServerCacheMetadataVerified": false,
+  "serverReconnectedOrFileReadOrChmod": false,
+  "cacheGuardChangeRequired": false,
+  "futureReuseRequiresOriginalOwnerModesNineHashes": true
+}
