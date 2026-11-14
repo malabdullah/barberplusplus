@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "status": "COMPLETED_READ_ONLY_ACCESS_RESTORED_REVIEW_REQUIRED",
+  "files": {
+    "safe-result.json": "fccb3f0e6797709633e076e7a191fa814f36dc322019af69245ae0e87c4a6545",
+    "receipt.json": "ec20e6bb924c91496a560f629ae6ec4be21d35d1c5486f14fe7bcd19885059a0",
+    "README.md": "d021d2c987a5ae352c57e1904816282161655f213e3a36ec2d72ca88b2f05458"
+  }
+}

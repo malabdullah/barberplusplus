@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "SINGLE_READ_ONLY_REVIEWER_LOOKUP_NOT_PROVISIONING_OR_RELEASE",
+  "approval": {
+    "chat": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "messageId": "01a1d968-fe2c-7c61-bf52-220fea033e04",
+    "request": "call_19ec53ce254947ee90da4238b7a0ce3a",
+    "answer": "Approve the read-only check",
+    "directHumanReplyVerified": true
+  },
+  "reviewedPacket": {
+    "commit": "54c3867",
+    "manifestSHA256": "a1e74859c40ed6c1eb4a20ff69f1332cc20269f01966422615fe1322bf6b22ce",
+    "wrapperSHA256": "b735208e58de919287b36516a93bb01512e226c53a7b829b3d2876759fcc75c0",
+    "sqlSHA256": "44e7f2a5d66e7e7f9b7439b74a5e94eb59b2607d0e0bad0370d4028fe2eef65e"
+  },
+  "accessWindow": {
+    "activationRequestEpoch": 1794649081,
+    "activationRequestUTC": "2026-11-14T09:38:01+00:00",
+    "stopEpoch": 1794651781,
+    "hardEpoch": 1794652681,
+    "target": "72.61.164.64",
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "source": "31.203.237.4/32",
+    "originalFiveRulesObserved": true,
+    "temporaryOnlyAddsExactTCP22Source": true,
+    "restorePathObserved": true
+  },
+  "closure": {
+    "checkedAtUTC": "2026-11-14T09:40:45.139434+00:00",
+    "originalProfile": 367995,
+    "originalActiveObserved": true,
+    "originalRulesPreserved": true,
+    "originalRuleCount": 5,
+    "temporaryProfile": 400860,
+    "temporaryInactiveObserved": true,
+    "temporaryRuleRemovedObserved": true,
+    "temporaryRuleCount": 5,
+    "sshPortReachable": false,
+    "closureProbe": "Single TCP22 connect probe only; no SSH/authentication/SQL retry",
+    "localSSHProcessesToTarget": 0,
+    "elapsedSinceActivationRequestSeconds": 164,
+    "withinApprovedHour": true,
+    "screenshots": {
+      "firewall-restored.png": "d624b2fa1efe80c893ce3689a40cf1115e9cb4867b76af53aaa904636df8d4ea"
+    },
+    "stateSHA256": "b52554b3347e144bf504875d548e49b0b5bea2d16e3c1b359a7a9e5fda1f4f1e"
+  },
+  "invocations": 1,
+  "retryAttempted": false,
+  "readOnlyTransaction": true,
+  "writesAttempted": false,
+  "accountOrDemoReuseAuthorized": false,
+  "noAccountOrBookingChanges": true,
+  "realMessages": 0,
+  "providerCalls": 0,
+  "backupOrKeyReads": false,
+  "frontendAccess": false,
+  "mainDevPush": false,
+  "deploymentOrNativeUploadOrSubmission": false,
+  "deletionFlagsChanged": false,
+  "deletionFlagsLastKnownState": "ALL_OFF; this lookup did not read or alter flag configuration",
+  "actualActivationConfirmationTimestamp": "UI activation confirmed after activationRequestUTC; no separate exact confirmation timestamp recorded",
+  "restorationTiming": "Original profile was restored immediately after lookup and before temporary-rule removal and closure verification; exact intermediate click time not separately recorded",
+  "files": {
+    "safe-result.json": "fccb3f0e6797709633e076e7a191fa814f36dc322019af69245ae0e87c4a6545"
+  },
+  "privateEvidence": {
+    "ip-check.json": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/ip-check.json",
+      "sha256": "2a51f304d7e9d3a42a934c517c55dcceb56373a6c2fbc15c528106db6d7a320c"
+    },
+    "access-window.json": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/access-window.json",
+      "sha256": "77db89ae513ecb631cf9c136dd9db7d7efd6b7985795396636c2af69ed882043"
+    },
+    "single-invocation-started.json": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/single-invocation-started.json",
+      "sha256": "28342f4ba620f5254cc376a956e3a2d67c1c59fda750385a5b1edda3725a72f5"
+    },
+    "safe-lookup-result.json": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/safe-lookup-result.json",
+      "sha256": "fccb3f0e6797709633e076e7a191fa814f36dc322019af69245ae0e87c4a6545"
+    },
+    "access-closed.json": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/access-closed.json",
+      "sha256": "59d898553a60f355c5d206a9bc2b9ff9a5cf3ddd8b5c183c7e99ef2135647ca4"
+    },
+    "firewall-restored-state.txt": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/firewall-restored-state.txt",
+      "sha256": "b52554b3347e144bf504875d548e49b0b5bea2d16e3c1b359a7a9e5fda1f4f1e"
+    },
+    "firewall-restored.png": {
+      "path": ".release-private/reviewer-eligibility-2026-11-14/firewall-restored.png",
+      "sha256": "d624b2fa1efe80c893ce3689a40cf1115e9cb4867b76af53aaa904636df8d4ea"
+    }
+  }
+}
