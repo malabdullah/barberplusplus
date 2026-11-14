@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "status": "DIAGNOSTIC_COMPLETED_ACCESS_RESTORED_REPAIR_NOT_AUTHORIZED",
+  "approvalHumanMessage": "01a1d90c-57a2-7af1-a4cc-c7414a2de960",
+  "reviewManifestSHA256": "6a93bd45fd4c49b6536b094049d8387bdc3beefc9cc01d1e0e444940239129b5",
+  "scriptSHA256": "8a01ab7583a6f7fdf957855bbae454bc2c02f27483245ed4f3b37b27b83b2e13",
+  "invocations": 1,
+  "actual": {
+    "sshExitCode": 0,
+    "completedAtUTC": "2026-11-14T07:58:03.821817+00:00",
+    "diagnostic": {
+      "effectiveRuntime": {
+        "APP_ENV": {
+          "matchesExpected": true,
+          "present": true
+        },
+        "APP_URL": {
+          "matchesExpected": true,
+          "present": true
+        },
+        "CUSTOMER_ACCOUNT_DELETION_BACKEND_URL": {
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_ACCOUNT_DELETION_CLEANUP_ENABLED": {
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_ACCOUNT_DELETION_ENABLED": {
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_APPLE_ENCRYPTION_KEY": {
+          "present": false
+        },
+        "CUSTOMER_APPLE_REVOCATION_CLIENTS": {
+          "present": false
+        },
+        "CUSTOMER_APPLE_REVOCATION_ENABLED": {
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_PUBLIC_API_URL": {
+          "matchesExpected": true,
+          "present": true
+        },
+        "SUPABASE_URL": {
+          "matchesExpected": true,
+          "present": true
+        }
+      },
+      "explicitOverride": {
+        "APP_ENV": {
+          "containsInterpolation": false,
+          "matchesExpected": true,
+          "present": true
+        },
+        "APP_URL": {
+          "containsInterpolation": false,
+          "matchesExpected": true,
+          "present": true
+        },
+        "CUSTOMER_ACCOUNT_DELETION_BACKEND_URL": {
+          "containsInterpolation": false,
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_ACCOUNT_DELETION_CLEANUP_ENABLED": {
+          "containsInterpolation": false,
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_ACCOUNT_DELETION_ENABLED": {
+          "containsInterpolation": false,
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_APPLE_ENCRYPTION_KEY": {
+          "present": false
+        },
+        "CUSTOMER_APPLE_REVOCATION_CLIENTS": {
+          "present": false
+        },
+        "CUSTOMER_APPLE_REVOCATION_ENABLED": {
+          "containsInterpolation": false,
+          "matchesExpected": false,
+          "present": false
+        },
+        "CUSTOMER_PUBLIC_API_URL": {
+          "containsInterpolation": false,
+          "matchesExpected": true,
+          "present": true
+        },
+        "SUPABASE_URL": {
+          "containsInterpolation": false,
+          "matchesExpected": false,
+          "present": false
+        },
+        "compoundPredicate": {
+          "flagsAbsentOrFalse": true,
+          "fourExplicitPinsMatch": false,
+          "optionalBackendAbsentOrExpected": true,
+          "pairAndEncryptionAbsent": true
+        }
+      },
+      "functionsMetadata": {
+        "composeHashMatchesRuntime": true,
+        "healthy": true,
+        "matchesReviewedImage": true,
+        "running": true
+      },
+      "interpretationRequiresReview": true,
+      "mutationsAttempted": false,
+      "status": "READ_ONLY_DIAGNOSTIC_REVIEW_REQUIRED"
+    }
+  },
+  "finding": {
+    "failedMember": "fourExplicitPinsMatch",
+    "missingExplicitOverrideField": "SUPABASE_URL",
+    "effectiveRuntimeExpectedMatch": true,
+    "composeModelMatchesRuntime": true,
+    "otherThreeExplicitPinsMatch": true,
+    "flagsAbsentInSourceAndRuntime": true,
+    "pairAndEncryptionAbsentInSourceAndRuntime": true,
+    "optionalBackendAbsentInSourceAndRuntime": true,
+    "interpretation": "Expected SUPABASE_URL is effective through the Compose model but absent in the explicit override. Existing bootstrap expects explicit binding. No configuration normalization or source-guard change performed."
+  },
+  "privateSigningKeyAccess": false,
+  "signingOrCredentialGeneration": false,
+  "configurationOrRuntimeWrites": false,
+  "setupRetry": false,
+  "sqlBackupProviderCustomerActions": false,
+  "frontendAccess": false,
+  "devMainPushOrPublication": false,
+  "firewallRestoration": {
+    "status": "ORIGINAL_FIREWALL_RESTORED",
+    "restoredAndRemovalVerifiedAtUTC": "2026-11-14T08:00:00.822985+00:00",
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "originalActiveVisiblyVerified": true,
+    "originalFiveRulesVerifiedBeforeAndNotEdited": true,
+    "originalRulesSHA256": "2f3bdaa87b77437472b2f8d6ba7a75c4d57d39c165942d7164dabc39a50d7d7e",
+    "temporaryProfileInactive": true,
+    "temporarySourceRuleRemoved": true,
+    "temporaryRemainingRules": 5,
+    "sshProcesses": 0,
+    "secondsSinceActivationRequest": 176,
+    "frontendAccess": false
+  }
+}
