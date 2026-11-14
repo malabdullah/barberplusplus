@@ -1,5 +1,8 @@
 -- Synthetic 5,000-appointment benchmark, rolled back in full.
 begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
 create temp table report_benchmark(result jsonb);
 do $$
 declare m uuid:=gen_random_uuid();sid uuid:=gen_random_uuid();shop uuid:=gen_random_uuid();service uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();
@@ -26,5 +29,7 @@ begin
  if octet_length(r::text)>30000 then raise exception 'BENCHMARK_RESPONSE_NOT_BOUNDED';end if;
  insert into report_benchmark values(jsonb_build_object('appointments',5000,'barbers',25,'buildMs',round(elapsed,1),'previewBytes',octet_length(r::text),'groupPages',2,'salesFils',15000000));
 end $$;
-select result from report_benchmark;
+select diag(result::text)from report_benchmark;
+select ok((select (result->>'appointments')::int=5000 and (result->>'buildMs')::numeric>0 from report_benchmark),'production-size report generation and complete pagination');
+select *from finish();
 rollback;

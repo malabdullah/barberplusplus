@@ -1,5 +1,8 @@
 -- Synthetic 5,000-appointment benchmark, rolled back in full.
 begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
 create temp table finance_benchmark(result jsonb);
 do $$
 declare m uuid:=gen_random_uuid();sid uuid:=gen_random_uuid();shop uuid:=gen_random_uuid();service uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();
@@ -37,5 +40,7 @@ begin
  insert into finance_benchmark values(jsonb_build_object('appointments',5000,'barbers',25,'buildMs',round(elapsed,1),'previewBytes',octet_length(r::text),'rows',r->>'total'));
 
 end $$;
-select result from finance_benchmark;
+select diag(result::text)from finance_benchmark;
+select ok((select (result->>'appointments')::int=5000 and (result->>'buildMs')::numeric>0 from finance_benchmark),'production-size report generation and complete pagination');
+select *from finish();
 rollback;
