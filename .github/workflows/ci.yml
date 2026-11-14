@@ -74,6 +74,8 @@ jobs:
       - run: npm run check:schema
       - name: Replay on the exact production PostgreSQL image
         run: python3 ops/release/test-postgres-image.py
+      - name: Rehearse deletion with pinned Auth and Storage
+        run: python3 ops/account-deletion/rehearse-platform.py
       - name: Verify local backend across service boundaries
         run: node scripts/probe-local-backend.mjs
       - name: Verify synthetic invitations and local email

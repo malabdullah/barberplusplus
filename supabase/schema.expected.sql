@@ -1942,7 +1942,7 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('finance-request:'||request_id::text,0));
   select *into cached from private.shop_finance_requests where id=request_id;
   if found then
-   if cached.actor_id<>actor or cached.request<>jsonb_build_object('action',p_action,'data',p_data)then raise exception 'FINANCE_DUPLICATE';end if;
+   if cached.actor_id<>actor or (case when cached.request ? '_deletedCustomerHash' then cached.request->>'_deletedCustomerHash'<>encode(extensions.digest(jsonb_build_object('action',p_action,'data',p_data)::text,'sha256'),'hex') else cached.request<>jsonb_build_object('action',p_action,'data',p_data) end)then raise exception 'FINANCE_DUPLICATE';end if;
    return cached.result;
   end if;
   reason:=btrim(coalesce(p_data->>'reason',''));

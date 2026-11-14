@@ -142,7 +142,7 @@ def main():
         observed = root / '.release-private/production-readiness.jsonl'
         baseline_comparison = None
         for migration in migrations:
-            if migration.name == '20261113131730_customer_account_deletion.sql' and observed.exists():
+            if migration.name.endswith('_customer_account_deletion.sql') and observed.exists():
                 baseline = json.loads(sql((root / 'ops/account-deletion/readiness.sql').read_text()))
                 production = next(json.loads(line)['catalogue'] for line in observed.read_text().splitlines() if 'catalogue' in json.loads(line))
                 differences = []
