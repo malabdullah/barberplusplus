@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "status": "SYNTHETIC_OPERATOR_CHECKS_PASS_NOT_INSTALLED",
+  "testsRun": 31,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "cases": [
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_activation_or_health_failure_rolls_back_exact_file_and_runtime",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_actual_core_renewal_through_mocked_host_commands",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_actual_host_preflight_and_verify_path_with_mocked_docker",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_actual_host_refuses_compose_key_encryption_or_binding_drift",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_actual_host_verify_refuses_unrelated_environment_or_service_restart",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_actual_runtime_identity_and_health_guards",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_bad_signature_scope_or_clock_prevents_restart",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_cleanup_only_mode_preserves_accepted_work_capability",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_critical_boundary_and_due_boundary",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_due_pair_changes_only_two_cleanup_secrets",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_earliest_expiry_drives_both_platforms",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_expired_pair_renews_after_downtime_and_monitor_is_critical",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_failure_recording_completion_restores_before_exiting",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_fresh_pair_no_restart_or_signing",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_insecure_files_and_symlink_state_are_refused",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_interrupt_refuses_unknown_override_or_changed_config",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_interrupt_restores_before_retry_and_check_never_repairs",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_main_monitor_opens_existing_lock_read_only_and_reports_critical_exit",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_main_wrong_host_refuses_before_private_file_access",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_missing_encryption_or_wrong_namespace_binding_fails_closed",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_missing_partial_unknown_or_mixed_test_pair_fails_before_writes",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_monitoring_and_journal_never_contain_credentials",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_preflight_and_candidate_errors_dont_change_active",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_production_config_is_exact_and_install_paths_are_pinned",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_public_install_example_matches_frozen_runtime_lock",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_read_only_check_never_creates_journal_or_signs_or_restarts",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_rollback_failure_retains_unresolved_journal_for_operator_review",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_runtime_health_wait_is_bounded_without_real_sleep",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_second_signature_failure_never_installs_a_partial_pair",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_tampered_backup_and_unknown_journal_are_not_replayed",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_renewal_test.CleanupRenewalTests.test_units_keep_monitor_read_only_and_use_same_companion",
+      "status": "PASS"
+    }
+  ],
+  "signing": "MOCKED_DETERMINISTIC_NON_JWT_PLACEHOLDERS",
+  "commands": "MOCKED_OPENSSL_DOCKER_NO_EXTERNAL_PROCESS",
+  "nodeCIWrapper": "PASS_1_TEST_CONTAINING_SAME_31_CASES",
+  "pythonAST": "PASS",
+  "systemdTargetVerify": "NOT_RUN_MAC_HAS_NO_TARGET_LINUX_INSTALL",
+  "hostedDeployment": "NOT_APPLICABLE_OPERATOR_ONLY_NO_MANAGED_TEST_INSTALL_TARGET",
+  "dockerStarted": false,
+  "realSecretGeneratedOrRead": false,
+  "providerOrMessageCalls": false,
+  "productionConnectedOrChanged": false,
+  "originalRehearsalRepeated": false
+}

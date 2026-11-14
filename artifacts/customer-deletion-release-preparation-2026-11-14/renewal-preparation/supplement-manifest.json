@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_OPERATOR_SUPPLEMENT_FOR_REVIEW_NOT_LIVE_APPROVAL",
+  "sourceCommit": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "unchangedApplicationSource": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "files": {
+    "ops/auth/APPLE-CLEANUP-RENEWAL.md": "67be76d023844de151e20f3d67e2fed545219c1665654cce14f17e98ba0afef5",
+    "ops/auth/apple-cleanup-renewal.config.example.json": "a369e434284d1d583999d1f0a8dfc7f8ef675869a425b6fe4a9828e3ee5e39b9",
+    "ops/auth/apple-cleanup-renewal.test.mjs": "6f65c2fd81c776d9667f02c25bbaf6a7b05644f064f8cc455f0be4fdd6daa11d",
+    "ops/auth/apple_cleanup_renewal.py": "7bd0458b3989c3b394e302d78e2b2e29619abb0d86cbc37a70903b1e0c5b97e6",
+    "ops/auth/apple_cleanup_renewal_test.py": "729c3229d94524702b2459654c09f38e60ea71038d9174fe9bb0aa707f6c6b9f",
+    "ops/auth/barber-apple-cleanup-monitor.service": "cd0376e978b173c4e5ee67f2ff32284a9ce0a38836f22d3ef740db3631532cba",
+    "ops/auth/barber-apple-cleanup-monitor.timer": "eebad465b2fd90662b1f6c16337305762ff1d8d30e1a0b806131ad21a800ecbc",
+    "ops/auth/barber-apple-cleanup-renewal.service": "1fb39118f983bd1a8ebe36edd17882be8d134ea8ad68ac91bbf3414833ae99a2",
+    "ops/auth/barber-apple-cleanup-renewal.timer": "d7ed645a4757b95b06aa4db77b0692d12d4bcc191ba260048c9f7fb6c168db3d"
+  },
+  "testResultsSHA256": "0057e6bf0b8cd530e2b599f37883f015b0962a03585a67396a86a2870d5c2c3b",
+  "unchangedPathsVerified": [
+    "src",
+    "public",
+    "supabase",
+    "package.json",
+    "package-lock.json",
+    "ops/release",
+    "ops/auth/apple_renewal.py",
+    "ops/auth/apple_renewal_test.py",
+    "ops/auth/barber-apple-renewal.service",
+    "ops/auth/barber-apple-renewal.timer"
+  ],
+  "unchangedEvidence": {
+    "reviewManifestSHA256": "9bde582ac5558ad6a4e026b47520ec454192cb41f8fbabc8fb3f418ec6b22bd7",
+    "exactApplicationRehearsalReceiptSHA256": "e699b43042eb79a92059c4de88e9e76ffc29e2b3c9d5b6722334afd1fdb73b12",
+    "liveMetadataReceiptSHA256": "30871421c5df4f552f14c5dfb8882adaff2eb68ada5d564625def328674b1eb7"
+  },
+  "doesNotClaimNewDockerOrCryptographicProof": true,
+  "realKeyUseCredentialCreationInstallActivationUploadSubmissionApproved": false
+}
