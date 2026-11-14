@@ -9,6 +9,7 @@ import {
   Clock,
   User,
   Settings,
+  BarChart3,
   X,
   Loader2,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/barber/bookings', icon: Calendar, labelKey: 'nav.myBookings' },
   { path: '/barber/availability', icon: Clock, labelKey: 'nav.availability' },
   { path: '/barber/profile', icon: User, labelKey: 'nav.profile' },
+  { path: '/barber/performance', icon: BarChart3, labelKey: 'reports.personal' },
   { path: '/barber/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
@@ -137,6 +139,7 @@ export default function BarberSidebar({ isOpen, onClose }) {
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.exact}
               onClick={handleNavClick}
               className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
               style={{ animationDelay: `${index * 50}ms` }}
