@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "status": "PREPARED_NOT_EXECUTED_ACCESS_APPROVAL_PENDING",
+  "sourceCandidate": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "targetIPv4": "72.61.164.64",
+  "targetResource": 1073968,
+  "frontendAccess": false,
+  "publicIPLookupPerformed": false,
+  "firewallChanged": false,
+  "productionConnected": false,
+  "tests": {
+    "syntheticOnly": true,
+    "passed": 13,
+    "failed": 0
+  },
+  "files": {
+    "inspect_metadata.py": "09e378f248047585e0241fc8ab5befa5ed7c4920c29519f4a5ebb22e2e4bfca4",
+    "test_inspect_metadata.py": "2ffa55c7b83b4428f82e0cc266d8242eee85648aff0f0d93d6ac732bbcb49864",
+    "scope.md": "ce60cca193de06b23985f2c0804d4f522b7d15c93df670ca2a83c51a24c845d5",
+    "wording-acceptance.json": "6fd418a830b301393b19a2cf468e2256a32aa5ac88e4f02f89ea1454d9e735b0"
+  },
+  "doesNotModifyHistoricalReviewManifest": true,
+  "originalReviewManifestSHA256": "9bde582ac5558ad6a4e026b47520ec454192cb41f8fbabc8fb3f418ec6b22bd7",
+  "finalRehearsalReceiptSHA256": "e699b43042eb79a92059c4de88e9e76ffc29e2b3c9d5b6722334afd1fdb73b12"
+}
