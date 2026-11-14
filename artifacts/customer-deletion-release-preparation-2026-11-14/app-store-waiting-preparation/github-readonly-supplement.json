@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "status": "FRESH_READ_ONLY_GITHUB_METADATA_NO_MUTATIONS",
+  "checkedAtUTC": "2026-11-14T08:43:47.371Z",
+  "supplementsManifestSHA256": "c1392d3f5ae5b589a063f6533df32d62eb791d99ee2e6cf6c96e72eb89e5aff1",
+  "repository": "malabdullah/barberplusplus",
+  "method": "Connected GitHub GET branch/main, branch/dev, exact-SHA compare and main check-runs; no git fetch/ref mutation",
+  "refs": {
+    "main": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+    "dev": "0a5da719201b2ec3162dbea89b69ff835c73cb3d",
+    "mainRequiredChecks": [
+      "application",
+      "browser",
+      "database",
+      "dependency-review",
+      "secret-scan"
+    ],
+    "mainProtected": true,
+    "devProtected": false
+  },
+  "compare": {
+    "base": "0a5da719201b2ec3162dbea89b69ff835c73cb3d",
+    "head": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+    "status": "ahead",
+    "aheadBy": 8,
+    "behindBy": 0,
+    "mergeBase": "0a5da719201b2ec3162dbea89b69ff835c73cb3d",
+    "changedFileCount": 29,
+    "addedMigrationNames": [
+      "supabase/migrations/20261112165450_require_live_role_for_barber_transfers.sql",
+      "supabase/migrations/20261112171007_resolve_staff_security_findings.sql",
+      "supabase/migrations/20261113062931_preserve_mfa_return_and_session_revocation.sql",
+      "supabase/migrations/20261113063144_restrict_legacy_customer_statistics.sql",
+      "supabase/migrations/20261113065304_preserve_admin_mfa_error.sql"
+    ]
+  },
+  "currentMainChecks": [
+    {
+      "name": "package",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131755525495",
+      "completedAt": "2026-11-13T07:32:30Z"
+    },
+    {
+      "name": "validate / browser",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131751450981",
+      "completedAt": "2026-11-13T07:31:08Z"
+    },
+    {
+      "name": "validate / database",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131751450953",
+      "completedAt": "2026-11-13T07:25:25Z"
+    },
+    {
+      "name": "validate / application",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131751450892",
+      "completedAt": "2026-11-13T07:23:01Z"
+    },
+    {
+      "name": "validate / dependency-review",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131751450867",
+      "completedAt": "2026-11-13T07:20:51Z"
+    },
+    {
+      "name": "validate / secret-scan",
+      "status": "completed",
+      "conclusion": "success",
+      "htmlUrl": "https://github.com/malabdullah/barberplusplus/actions/runs/43385051393/job/131751450589",
+      "completedAt": "2026-11-13T07:20:38Z"
+    }
+  ],
+  "limits": {
+    "futureCandidateCIPass": false,
+    "productionRuntimeVerified": false,
+    "serverAccess": false,
+    "pushMergeDispatchRerun": false,
+    "backupOrCustomerLookup": false,
+    "uploadOrSubmission": false
+  },
+  "conclusion": "Fresh refs match prior cached refs: dev is eight commits behind main with no unique commits. Preserve existing main security/MFA/session changes. These successful existing-main checks do not cover core e32cfb9 or a future delivery commit."
+}

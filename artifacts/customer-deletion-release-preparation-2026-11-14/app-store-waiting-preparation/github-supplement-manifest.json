@@ -1,0 +1,8 @@
+{
+  "status": "READ_ONLY_GITHUB_ADDENDUM_NO_PRODUCTION_ACTION",
+  "baseManifestSHA256": "c1392d3f5ae5b589a063f6533df32d62eb791d99ee2e6cf6c96e72eb89e5aff1",
+  "files": {
+    "github-readonly-supplement.json": "872b2c8669e3982576363bf9a380691b80b3c2ad02a203ae2b1597812bbbd646"
+  },
+  "priorFrozenFilesUnchanged": true
+}
