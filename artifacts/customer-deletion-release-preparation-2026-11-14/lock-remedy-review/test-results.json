@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "status": "SYNTHETIC_FOCUSED_CHECKS_PASS_NOT_RUN_ON_HOST",
+  "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s artifacts/customer-deletion-release-preparation-2026-11-14/lock-remedy-review -p test_lock_permission.py",
+  "testsRun": 14,
+  "failures": 0,
+  "errors": 0,
+  "cases": [
+    "test_root_actor_fixture_0644_and_0640_tighten_same_empty_inode",
+    "test_secure_file_is_noop_without_fchmod",
+    "test_other_modes_never_change",
+    "test_wrong_file_owner_never_changes",
+    "test_wrong_parent_owner_or_mode_never_opens_file",
+    "test_nonempty_file_contents_never_read_or_changed",
+    "test_symlink_and_hardlink_refused_without_mutation",
+    "test_directory_and_fifo_are_refused_before_open",
+    "test_busy_lock_does_not_wait_or_change",
+    "test_race_in_file_identity_fails_before_chmod",
+    "test_locked_metadata_drift_fails_before_chmod",
+    "test_fchmod_failure_never_claims_success",
+    "test_wrong_host_cli_refuses_before_file_metadata",
+    "test_safe_cli_output_is_metadata_only"
+  ],
+  "scriptSHA256": "383ff12a641842c6e2a21c0fd086dd8242e2e32f82ac43eb8427ea79ae67ab4e",
+  "literalOriginalPredicate": "info.st_uid==0 and stat.S_ISREG(info.st_mode)and not info.st_mode&0o077",
+  "literalPredicateASTSemantics": "not (info.st_mode & 0o077)",
+  "literalPredicateTruthTableCasesPassed": 5,
+  "fullModeEqualityOrDecimal600Bug": false,
+  "actualHostUidGidModeTypeParentKnown": false,
+  "productionConnectionOrChmodDuringPreparation": false,
+  "existingCoreOperatorTestsRepeated": false
+}

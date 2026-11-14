@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "status": "CONDITIONAL_METADATA_REMEDY_RESUME_FOR_INDEPENDENT_REVIEW_NOT_APPROVED",
+  "baseHead": "a655b9cf7fb10cf57db43f40e24e954db55628d5",
+  "files": {
+    "lock_permission.py": "383ff12a641842c6e2a21c0fd086dd8242e2e32f82ac43eb8427ea79ae67ab4e",
+    "test_lock_permission.py": "4a4a754499da8c28baacdf1790292aa169e15ad34305700ffb3aa0dc0ec3165a",
+    "scope.md": "1a132a78fbf183a4a2c96443cc8aeea573b38edf54b5c9a2e5a8444b7143c087",
+    "test-results.json": "e13f742dd3447ef077b612d57ff375ad0bd21311a21549731ed929bd98f826c5"
+  },
+  "priorStoppedResultSHA256": "4752c5fdddd62d4032cb1580c0ce7cec99964c64c62798d0b4142cef3c7a5fb9",
+  "originalDefaultOffPacketSHA256": "51031d3a3401d573b4e64705019dc0113132b91836a34f0927bdda82e68696ef",
+  "originalCoreOperatorBootstrapSourcesUnchanged": true,
+  "oneFixedLockOnly": true,
+  "conditionalModesAllowed": [
+    "0600_NOOP",
+    "0640_TO_0600",
+    "0644_TO_0600"
+  ],
+  "canonicalParentRoot0700Required": true,
+  "rootRegularSingleLinkEmptySameInodeRequired": true,
+  "existingLockContentsRead": false,
+  "hostMetadataNotAssumed": true,
+  "newAccessOrExceptionOrResumeApproved": false,
+  "newOwnerQuestionIssued": false
+}
