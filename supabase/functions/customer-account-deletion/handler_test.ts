@@ -71,3 +71,10 @@ Deno.test('disabled deployment and failures do not leak backend details', async 
   equal((await setup({ enabled: false }).request({ action: 'preview' })).status, 503);
   const response = await setup({ rpc: async () => { throw Error('postgres password contact token'); } }).request({ action: 'preview' }); equal(await response.json(), { error: 'UNAVAILABLE' });
 });
+Deno.test('Apple actions are authenticated, bounded and cannot accept owner/client/URL overrides', async () => {
+  const calls: unknown[]=[];const {request}=setup({apple:async(...args:unknown[])=>{calls.push(args);return{available:false,registered:false,legacyManualFallback:true};}});
+  equal((await request({action:'apple-status',platform:'ios'},'expired')).status,401);
+  for(const field of ['user_id','clientId','redirectUri'])equal((await request({action:'apple-register',platform:'ios',[field]:'forged'})).status,400);
+  equal((await request({action:'apple-register',platform:'ios',identityToken:'a'.repeat(33000)})).status,400);
+  equal((await request({action:'apple-status',platform:'ios'})).status,200);equal(calls.length,1);equal((calls[0]as unknown[])[2],actor);
+});

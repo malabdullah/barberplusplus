@@ -1,3 +1,5 @@
+> Updated successor for review (14 November 2026): see [final contract](customer-account-deletion-release.md). Earlier evidence below predates the production-compatible Apple additions and is not final release authorization.
+
 # Customer account deletion: production preparation
 
 Status on 13 November 2026: owner accepted the hosted Test/native flow and

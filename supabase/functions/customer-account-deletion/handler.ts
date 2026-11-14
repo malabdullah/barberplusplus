@@ -8,10 +8,11 @@ type Dependencies = {
   password: (userId: string, password: string) => Promise<boolean>;
   process: (id: string) => Promise<void>;
   retain: (work: Promise<void>) => void;
+  apple?: (action: string, value: Data, trusted: Data) => Promise<Data>;
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const receiptPattern = /^[A-Za-z0-9_-]{43}$/;
-const safeErrors = new Set(['AUTH_REQUIRED','LINKED_WORK_ACCOUNT','PROFILE_REQUIRED','ACCOUNT_SCOPE_CONFLICT','TEST_ACCOUNT_ONLY','DELETION_IN_PROGRESS','RATE_LIMITED','RECEIPT_INVALID','INVALID_REQUEST','CODE_EXPIRED','INVALID_CODE','REAUTH_REQUIRED','CONFIRMATION_REQUIRED','EMAIL_UNAVAILABLE']);
+const safeErrors = new Set(['AUTH_REQUIRED','LINKED_WORK_ACCOUNT','PROFILE_REQUIRED','ACCOUNT_SCOPE_CONFLICT','TEST_ACCOUNT_ONLY','DELETION_IN_PROGRESS','RATE_LIMITED','RECEIPT_INVALID','INVALID_REQUEST','CODE_EXPIRED','INVALID_CODE','REAUTH_REQUIRED','CONFIRMATION_REQUIRED','EMAIL_UNAVAILABLE','APPLE_NOT_AVAILABLE','APPLE_PROOF_INVALID','APPLE_UNAVAILABLE']);
 export async function digest(value: string) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(v => v.toString(16).padStart(2, '0')).join('');
 }
@@ -37,10 +38,11 @@ function code() {
 async function body(req: Request): Promise<Data> {
   const reader = req.body?.getReader(); if (!reader) throw Error('INVALID_REQUEST');
   const parts: Uint8Array[] = []; let length = 0;
-  while (true) { const next = await reader.read(); if (next.done) break; length += next.value.length; if (length > 4096) { await reader.cancel(); throw Error('INVALID_REQUEST'); } parts.push(next.value); }
+  while (true) { const next = await reader.read(); if (next.done) break; length += next.value.length; if (length > 32768) { await reader.cancel(); throw Error('INVALID_REQUEST'); } parts.push(next.value); }
   const bytes = new Uint8Array(length); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw Error('INVALID_REQUEST'); }
+  if (length > 4096 && value?.action !== 'apple-register') throw Error('INVALID_REQUEST');
   if (!value || Array.isArray(value) || typeof value !== 'object') throw Error('INVALID_REQUEST'); return value;
 }
 function masked(email: string) { const [name, domain] = email.split('@'); return domain ? name.slice(0,1) + '***@' + domain : ''; }
@@ -48,7 +50,7 @@ function preview(value: Data) {
   const email = typeof value.email === 'string' ? value.email : '';
   return { upcoming: value.upcoming, upcomingCount: value.upcomingCount, hasMore: value.hasMore, digest: value.digest, providers: value.providers,
     destination: masked(email), methods: [...(email ? ['email_code'] : []), ...(value.hasPassword ? ['password'] : [])],
-    appleRevocation: Array.isArray(value.providers) && value.providers.includes('apple') ? 'manual_required' : 'not_applicable' };
+    appleRevocation: value.appleRevocation === 'registered' ? 'registered' : Array.isArray(value.providers) && value.providers.includes('apple') ? 'manual_required' : 'not_applicable' };
 }
 export function createDeletionHandler(deps: Dependencies) {
   return async (req: Request): Promise<Response> => {
@@ -61,13 +63,17 @@ export function createDeletionHandler(deps: Dependencies) {
     if (req.method !== 'POST') return reply(405, { error: 'METHOD_NOT_ALLOWED' });
     try {
       const value = await body(req); const action = String(value.action || '');
-      const allowed: Record<string, string[]> = { preview: [], start: ['id','language'], resend: ['id','receipt','language'], verify: ['id','receipt','code'], password: ['id','receipt','password'], confirm: ['id','receipt','digest','confirmCancellation'], status: ['id','receipt'], retry: ['id','receipt'] };
+      const allowed: Record<string, string[]> = { 'apple-status': ['platform'], 'apple-register': ['platform','identityToken','rawNonce','authorizationCode','providerRefreshToken'], preview: [], start: ['id','language'], resend: ['id','receipt','language'], verify: ['id','receipt','code'], password: ['id','receipt','password'], confirm: ['id','receipt','digest','confirmCancellation'], status: ['id','receipt'], retry: ['id','receipt'] };
       if (!allowed[action] || Object.keys(value).some(key => key !== 'action' && !allowed[action].includes(key))) return reply(400, { error: 'INVALID_REQUEST' });
       if (deps.newRequestsEnabled === false && !['status','retry'].includes(action)) return reply(503, { error: 'NOT_ENABLED' });
       const authenticated = !['status','retry'].includes(action);
       const identity = authenticated ? await deps.identity((req.headers.get('authorization') || '').replace(/^Bearer /i, '')) : null;
       if (authenticated && !identity) return reply(401, { error: 'AUTH_REQUIRED' });
       const trusted = identity ? { user_id: identity.user_id, session_id: identity.session_id } : {};
+      if (action === 'apple-status' || action === 'apple-register') {
+        if (!deps.apple) throw Error('APPLE_NOT_AVAILABLE');
+        return reply(200, await deps.apple(action, value, trusted));
+      }
       if (action === 'preview') return reply(200, preview(await deps.rpc('preview', trusted)));
       const id = String(value.id || ''); if (!uuid.test(id)) return reply(400, { error: 'INVALID_REQUEST' });
       if (action === 'start') {
@@ -111,7 +117,7 @@ export function createDeletionHandler(deps: Dependencies) {
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       const safe = safeErrors.has(message) ? message : 'UNAVAILABLE';
-      return reply(safe === 'AUTH_REQUIRED' ? 401 : safe === 'RATE_LIMITED' ? 429 : safe === 'UNAVAILABLE' ? 503 : 400, { error: safe });
+      return reply(safe === 'AUTH_REQUIRED' ? 401 : safe === 'RATE_LIMITED' ? 429 : ['UNAVAILABLE','APPLE_NOT_AVAILABLE','APPLE_UNAVAILABLE'].includes(safe) ? 503 : 400, { error: safe });
     }
   };
 }

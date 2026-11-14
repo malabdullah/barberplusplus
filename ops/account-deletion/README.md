@@ -1,3 +1,5 @@
+> Updated successor for review (14 November 2026): see [final contract](../../docs/customer-account-deletion-release.md). The earlier evidence below predates the production-compatible Apple additions. It is not final release authorization.
+
 # Account deletion release controls
 
 This is a default-off candidate, not production approval. Test retains its exact

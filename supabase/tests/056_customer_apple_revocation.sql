@@ -1,0 +1,67 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(8);
+select ok(not has_table_privilege('authenticated','private.customer_apple_credentials','SELECT')and not has_table_privilege('service_role','private.customer_apple_credentials','SELECT'),'encrypted provider store has no direct API grants');
+select ok(not has_function_privilege('service_role','private.customer_deletion_base_v1(text,jsonb)','EXECUTE')and not has_function_privilege('authenticated','public.customer_deletion_service(text,jsonb)','EXECUTE'),'neither client nor service API can bypass wrapper');
+do $$
+declare u uuid:=gen_random_uuid();v uuid:=gen_random_uuid();s uuid:=gen_random_uuid();vs uuid:=gen_random_uuid();job uuid:=gen_random_uuid();attempt uuid;expired uuid;val jsonb;lease jsonb;scope jsonb;blocked boolean;
+begin
+ perform set_config('request.jwt.claims','{}',true);
+ insert into auth.users(id,aud,role,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)
+ values(u,'authenticated','authenticated','apple-'||u||'@example.test',now(),'{"role":"customer","deletion_qa":true}','{}'),
+ (v,'authenticated','authenticated','apple-'||v||'@example.test',now(),'{"role":"customer","deletion_qa":true}','{}');
+ insert into auth.identities(id,user_id,provider_id,provider,identity_data)values(gen_random_uuid(),u,'apple-'||u,'apple',jsonb_build_object('sub','apple-'||u)),(gen_random_uuid(),v,'apple-'||v,'apple',jsonb_build_object('sub','apple-'||v));
+ insert into auth.sessions(id,user_id)values(s,u),(vs,v);
+ update private.customer_deletion_runtime set allowed_test_users=array[u,v],function_url='https://qvkucvcjmojjbphlzlks.supabase.co/functions/v1/customer-account-deletion'where singleton;
+ perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+ scope:=jsonb_build_object('user_id',u,'session_id',s,'platform','ios','subject','apple-'||u);
+ assert not exists(select 1 from private.customer_accounts where user_id=u),'new Apple identity must be tested before canonical profile creation';
+ val:=public.customer_deletion_service('apple-subject',scope);assert val->>'subject'='apple-'||u and val->>'registered'='false';
+ val:=public.customer_deletion_service('apple-reserve',scope||jsonb_build_object('proof_hash',repeat('a',64)));attempt:=(val->>'attempt')::uuid;
+ blocked:=false;begin perform public.customer_deletion_service('apple-reserve',scope||jsonb_build_object('proof_hash',repeat('a',64)));exception when others then assert sqlerrm='APPLE_PROOF_INVALID',sqlerrm;blocked:=true;end;assert blocked;
+ blocked:=false;begin perform public.customer_deletion_service('apple-store',scope||jsonb_build_object('user_id',v,'session_id',vs,'attempt',attempt,'cipher',repeat('x',64),'key_id','v1'));exception when others then assert sqlerrm='APPLE_PROOF_INVALID',sqlerrm;blocked:=true;end;assert blocked;
+ perform public.customer_deletion_service('apple-store',scope||jsonb_build_object('attempt',attempt,'cipher',repeat('x',64),'key_id','v1'));
+ blocked:=false;begin perform public.customer_deletion_service('apple-store',scope||jsonb_build_object('attempt',attempt,'cipher',repeat('x',64),'key_id','v1'));exception when others then assert sqlerrm='APPLE_PROOF_INVALID',sqlerrm;blocked:=true;end;assert blocked;
+ assert(public.customer_deletion_service('preview',scope)->>'appleRevocation')='registered';
+ raise notice 'credential ownership, replay, consumption and registered preview pass';
+ val:=public.customer_deletion_service('apple-reserve',scope||jsonb_build_object('proof_hash',repeat('b',64)));expired:=(val->>'attempt')::uuid;
+ update private.customer_apple_attempts set created_at=clock_timestamp()-interval'3 minutes'where id=expired;
+ blocked:=false;begin perform public.customer_deletion_service('apple-store',scope||jsonb_build_object('attempt',expired,'cipher',repeat('x',64),'key_id','v1'));exception when others then assert sqlerrm='APPLE_PROOF_INVALID',sqlerrm;blocked:=true;end;assert blocked;
+ scope:=scope||jsonb_build_object('id',job,'receipt_hash',repeat('c',64),'receipt_box','synthetic','code_hash',repeat('d',64));
+ val:=public.customer_deletion_service('preview',scope);
+ perform public.customer_deletion_service('start',scope);
+ perform public.customer_deletion_service('verify',scope);
+ perform public.customer_deletion_service('confirm',scope||jsonb_build_object('digest',val->>'digest','confirmCancellation',true));
+ assert not exists(select 1 from private.customer_apple_credentials where user_id=u);
+ assert not exists(select 1 from private.customer_apple_attempts where user_id=u);
+ assert(select count(*)from private.customer_apple_tasks where job_id=job)=1;
+ blocked:=false;begin perform public.customer_deletion_service('apple-reserve',scope||jsonb_build_object('proof_hash',repeat('e',64)));exception when others then assert sqlerrm='AUTH_REQUIRED',sqlerrm;blocked:=true;end;assert blocked;
+ lease:=public.customer_deletion_service('claim',jsonb_build_object('id',job));assert jsonb_array_length(lease->'appleTasks')=1;
+ assert(public.customer_deletion_service('status',scope)->>'appleRevocation')='pending';
+ blocked:=false;begin perform public.customer_deletion_service('finish',lease);exception when others then assert sqlerrm='CLEANUP_PENDING',sqlerrm;blocked:=true;end;assert blocked;
+ assert public.customer_deletion_service('apple-complete',lease||jsonb_build_object('lease',gen_random_uuid(),'task',lease->'appleTasks'->0->>'id'))='false';
+ update private.customer_deletion_jobs set leased_until=clock_timestamp()-interval'1 second'where id=job;
+ assert public.customer_deletion_service('apple-complete',lease||jsonb_build_object('task',lease->'appleTasks'->0->>'id'))='false';
+ update private.customer_deletion_jobs set leased_until=clock_timestamp()+interval'2 minutes'where id=job;
+ assert public.customer_deletion_service('apple-complete',lease||jsonb_build_object('task',lease->'appleTasks'->0->>'id'))='true';
+ assert not exists(select 1 from private.customer_apple_tasks where job_id=job);
+ assert(public.customer_deletion_service('status',scope)->>'appleRevocation')='revoked';
+ assert(public.customer_deletion_service('status',scope)->>'appleManualRevocation')='false';
+ -- No provider token for the second legacy identity: local erasure still allowed.
+ scope:=jsonb_build_object('user_id',v,'session_id',vs,'id',gen_random_uuid(),'receipt_hash',repeat('f',64),'receipt_box','synthetic','code_hash',repeat('a',64));
+ val:=public.customer_deletion_service('preview',scope);assert val->>'appleRevocation'='manual_required';
+ perform public.customer_deletion_service('start',scope);perform public.customer_deletion_service('verify',scope);
+ perform public.customer_deletion_service('confirm',scope||jsonb_build_object('digest',val->>'digest','confirmCancellation',true));
+ assert(public.customer_deletion_service('status',scope)->>'appleManualRevocation')='true';
+ assert not exists(select 1 from private.customer_apple_tasks where user_id=v);
+ assert not public.customer_session_is_live(v,vs);
+end $$;
+select pass('live ownership, subject binding, one-use reservation and consumed-attempt checks pass');
+select pass('expired registration cannot overwrite a saved credential');
+select pass('confirmation atomically freezes encrypted tokens and erases registration attempts');
+select pass('revoked session cannot register; pending tokens prevent false cleanup completion');
+select pass('only a current job lease acknowledges provider cleanup; token material removed');
+select pass('legacy no-token account still erases locally and reports manual revocation');
+select *from finish();
+rollback;

@@ -1995,13 +1995,13 @@
   },
   "customerPrivacy": {
     "title": "Privacy policy",
-    "updated": "Updated 13 November 2026",
+    "updated": "Updated 14 November 2026",
     "intro": "This page explains how the Barber++ website and customer iPhone app use information for accounts, appointments and support.",
     "back": "Back to booking",
     "sections": [
       {
         "title": "Account and booking information",
-        "text": "An email account uses your name, email address and password. Signed-in customers use a verified mobile number when booking. Guests provide a name and email address; their mobile number is optional, and neither guest contact is verified. Booking records include your chosen shop, barber, services, appointment time, contact details and any notes you enter."
+        "text": "Accounts use your name and email address; email/password accounts also use a password. Bookings use your name, email and any mobile number provided. Guests must provide an email address; guest email and optional phone numbers are not verified. Where a checkout flow requires mobile verification, the screen asks you to verify the number before confirming. Booking records include the shop, barber, services, appointment time, contact details and any notes you enter."
       },
       {
         "title": "Why information is used",
@@ -2009,7 +2009,7 @@
       },
       {
         "title": "Google and Apple sign-in",
-        "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password."
+        "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password. For Apple account cleanup, a revocable Apple authorization token may be stored encrypted on our server. The temporary code used to obtain it is not retained."
       },
       {
         "title": "Sharing an appointment",
@@ -2029,7 +2029,7 @@
       },
       {
         "title": "Deleting your customer account",
-        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. Apple sign-in access may also need to be revoked in Apple Account settings. Contact support if deletion is unavailable for your account."
+        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account."
       },
       {
         "title": "Copies outside your account",

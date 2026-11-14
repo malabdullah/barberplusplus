@@ -23,7 +23,7 @@ export default function CustomerDeleteAccount() {
   const receive = (value, saved) => {
     setState(value.state);
     if (['cleanup_pending', 'complete'].includes(value.state)) {
-      update({ ...saved, phase: 'cleanup', appleManualRevocation: value.appleManualRevocation === true || saved.appleManualRevocation === true }); setPassword(''); setCode(''); setPreview(null);
+      update({ ...saved, phase: 'cleanup', appleManualRevocation: value.appleManualRevocation === true }); setPassword(''); setCode(''); setPreview(null);
       if (clearDeletedBrowserAccount(saved.ownerId)) window.location.replace('/customer/delete-account');
     }
   };

@@ -55,3 +55,11 @@ it('does not apply a delayed start response after switching accounts', async () 
   state.callback('SIGNED_IN', { user: { id: 'another-account' } }); resolve({ ...preview, receipt: 'b'.repeat(43) });
   expect(await screen.findByText(en.customerDeletion.switched)).toBeVisible(); expect(state.clear).not.toHaveBeenCalled(); expect(state.saved.receipt).toBeUndefined();
 });
+
+it('uses the final provider result instead of keeping a stale manual-revocation warning', async () => {
+  state.saved = { id: owner, ownerId: owner, receipt: 'b'.repeat(43), phase: 'cleanup', appleManualRevocation: true };
+  state.request.mockResolvedValue({ state: 'complete', appleManualRevocation: false, appleRevocation: 'revoked' });
+  mount(); await screen.findByText(en.customerDeletion.complete);
+  expect(screen.queryByText(en.customerDeletion.appleHelp, { exact: false })).not.toBeInTheDocument();
+  expect(state.saved.appleManualRevocation).toBe(false);
+});

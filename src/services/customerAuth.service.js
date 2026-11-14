@@ -1,3 +1,4 @@
+import { registerWebApple } from './customerApple.service';
 import { customerCapable } from '../lib/accountSession';
 import { redirectStaffMfa } from '../lib/staffMfaReturn';
 import { passwordProof, rememberPasswordProof, forgetPasswordProof } from '../lib/customerPasswordProof';
@@ -64,6 +65,7 @@ async function clearCustomerSession(alreadyRevoked = false) {
   await customerSupabase.auth.signOut({ scope: 'local' });
 }
 const OAUTH_RETURN_KEY = 'barber-customer-oauth-return';
+const OAUTH_PROVIDER_KEY = 'barber-customer-oauth-provider';
 let callbackExchange;
 const destination = value => value === '/book' ? '/book' : '/customer/account';
 
@@ -84,6 +86,7 @@ export const customerAuthService = {
     if (!enabled[provider]) throw new Error('PROVIDER_UNAVAILABLE');
     if (returnTo === '/book') rememberBookingReturn({ preserveDraft: true });
     localStorage.setItem(OAUTH_RETURN_KEY, destination(returnTo));
+    localStorage.setItem(OAUTH_PROVIDER_KEY, provider);
     callbackExchange = null;
     const { error } = await customerSupabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/customer/auth-callback` } });
     if (error) { localStorage.removeItem(OAUTH_RETURN_KEY); throw new Error('SOCIAL_SIGN_IN_FAILED'); }
@@ -94,8 +97,10 @@ export const customerAuthService = {
     const code = callback.searchParams.get('code');
     if (callback.searchParams.has('error') || !code || !returnTo) throw new Error('SOCIAL_SIGN_IN_FAILED');
     callbackExchange ||= customerSupabase.auth.exchangeCodeForSession(code);
-    const { error } = await callbackExchange;
+    const { data, error } = await callbackExchange;
     if (error) throw new Error('SOCIAL_SIGN_IN_FAILED');
+    if (localStorage.getItem(OAUTH_PROVIDER_KEY) === 'apple') await registerWebApple(data?.session, CUSTOMER_AUTH_STORAGE_KEY);
+    localStorage.removeItem(OAUTH_PROVIDER_KEY);
     localStorage.removeItem(OAUTH_RETURN_KEY);
     return destination(returnTo);
   },

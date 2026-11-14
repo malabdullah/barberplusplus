@@ -5,6 +5,8 @@ import { customerIdentity } from '../_shared/customer-session.ts';
 import { createDeletionHandler, digest } from './handler.ts';
 import { deletionConfiguration, deletionRuntimeMatches, withDeletionActivation, type RuntimeConfiguration } from './configuration.ts';
 import { createDeletionMailer } from './mail.ts';
+import { createDeletionCleanup } from './cleanup.ts';
+import { appleConfiguration, createAppleActions, createAppleProvider } from './apple.ts';
 declare const EdgeRuntime: { waitUntil: (work: Promise<void>) => void };
 const url = Deno.env.get('SUPABASE_URL') || '';
 const appUrl = Deno.env.get('APP_URL') || '';
@@ -24,27 +26,13 @@ async function rpc(action: string, data: Record<string, unknown> = {}) {
   if (result.error) throw Error(result.error.message);
   return result.data;
 }
-async function process(id: string) {
-  let job;
-  try {
-    job = await rpc('claim', { id }); if (!job) return;
-    const buckets = new Map<string, string[]>();
-    for (const object of job.objects as { bucket: string; name: string }[]) buckets.set(object.bucket, [...(buckets.get(object.bucket) || []), object.name]);
-    for (const [bucket, names] of buckets) {
-      const { error } = await admin.storage.from(bucket).remove(names);
-      if (error) throw Error('CLEANUP_PENDING');
-    }
-    for (const userId of job.userIds as string[]) {
-      const { error } = await admin.auth.admin.deleteUser(userId);
-      if (error && error.status !== 404 && error.code !== 'user_not_found') throw Error('CLEANUP_PENDING');
-    }
-    await rpc('finish', { id: job.id, lease: job.lease });
-  } catch {
-    if (job) await rpc('retry', { id: job.id, lease: job.lease }).catch(() => {});
-    // No identity, code, token, contact, provider response or receipt is logged.
-    console.warn('Account deletion cleanup is pending retry');
-  }
-}
+const apple = createAppleProvider(appleConfiguration(configuration, Deno.env.get('CUSTOMER_APPLE_REVOCATION_ENABLED'), Deno.env.get('CUSTOMER_APPLE_REVOCATION_CLIENTS'), Deno.env.get('CUSTOMER_APPLE_ENCRYPTION_KEY')));
+const process = createDeletionCleanup({ rpc, revoke: task => apple.revoke(task),
+  remove: (bucket, names) => admin.storage.from(bucket).remove(names),
+  deleteUser: id => admin.auth.admin.deleteUser(id),
+  // No identity, code, token, contact, provider response or receipt is logged.
+  warn: () => console.warn('Account deletion cleanup is pending retry'),
+});
 async function runtimeConfiguration(): Promise<RuntimeConfiguration | null> {
   const { data, error } = await admin.rpc('customer_deletion_runtime_configuration');
   if (error) throw Error('NOT_ENABLED');
@@ -59,6 +47,7 @@ const deliverMail = createDeletionMailer({ configuration, resendKey: Deno.env.ge
 const handler = withCloudTestGateway(withDeletionActivation(configuration, runtimeConfiguration, createDeletionHandler({
   enabled: configuration.enabled, newRequestsEnabled: configuration.newRequestsEnabled, appUrl, pepper: serviceKey,
   identity: token => customerIdentity(admin, token), rpc, process,
+  apple: createAppleActions({ provider: apple, rpc }),
   retain: work => EdgeRuntime.waitUntil(work),
   password: async (userId, password) => {
     const existing = await admin.auth.admin.getUserById(userId);
