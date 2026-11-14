@@ -1,0 +1,47 @@
+# Next production setup/release proposal — review draft
+
+**Proposal only. No execution authority.** Based on the completed14November metadata result. Main/dev/production and held native25 remain unchanged. This draft is for Website/iOS technical review before presenting a concrete approval request; it is not an executable credential or deployment packet yet.
+
+## 1. Close the renewal engineering gap before requesting Live changes
+
+The installed `ops/auth/apple_renewal.py` matches its reviewed source and renews the current login secret. It does not rotate the new native/web Edge cleanup pair. Do not activate deletion with a one-off180-day secret and assume login renewal maintains it.
+
+Prepare a narrowly scoped extension or companion that supports both pinned Live subjects, atomic protected JSON replacement, metadata-only expiry alarms, and safe failure/recovery. It must preserve existing login credentials/settings, mail credentials, cron keys and unrelated Function configuration. Keep the independent encryption key/version stable; secret renewal must never rotate that key or delete stored envelopes/tasks. Require compatibility with cleanup-only mode, uncertain provider results and interrupted replacement. Review it locally and test with synthetic configuration; deploy/verify only the new relevant parts on hosted barber-test under separately authorized Test scope. If release source changes, freeze a new runtime source and run checks/rehearsal justified by the change. Do not repeat the already-passed Test/Docker suites just to refresh dates.
+
+Deliverables before a production setup question: exact renewal source/hash, required install/config/timer changes, protected-file paths/permissions/atomic update and restore procedure, redacted test evidence, expiry monitoring, recovery-key custodianship and precisely bounded operational commands. Current read-only approval does not authorize implementation or installation of new credentials/helpers.
+
+## 2. Proposed Live credential and recovery scope (approval required later)
+
+- Target existing DB VPS72.61.164.64 only for setup. Existing login client/key metadata was observed; it does not authorize reuse for token revocation. Obtain explicit permission to inspect Apple portal client/key scope and use only the reviewed existing Live signing key for this new purpose. Do not export its bytes to this Mac, Git, chat, Test or another service. If key scope differs, stop and prepare the exact alternative; do not create/revoke a key implicitly.
+- After approved key-scope verification, create one protected native+web client-secret pair on the server for `com.barberplusplus.customer` and `com.barberplusplus.authentication.prod.web`, teamD49RFZQ6BT, ES256, exact Apple audience, lifetime at most180days. Verify locally with derived public-key material and do not export bearer values. This does not establish real Apple grant/revoke acceptance; a real provider check needs its own exact account/action scope.
+- Create one independent random256-bit/64-hex encryption key on-server, root-only, version1, and install it with the pair through the tested protected update mechanism. Never reuse the Test encryption key. Keep all flags default-off throughout setup.
+- Preserve a separately protected encrypted recovery copy, outside the database, and verify the existing off-host configuration recovery includes the files. Name the recovery destination, encryption identity/custodian and verification procedure in the final execution packet; none is inferred or provisioned by this draft. A same-host copy alone does not close recovery readiness.
+- Install only the reviewed renewal/monitoring changes and verify both pair expiries, timer state and clean rollback of a failed update, without a real customer/provider operation. No unrelated config, existing Apple login key, Resend key, backup policy or active customer data changes.
+
+## 3. Proposed coordinated release scope (approval required later)
+
+- Freeze source based on e32cfb9 plus only any newly reviewed renewal work. Preserve all102 applied migration hashes. The pending list remains the exact nine migration names/hashes in the immutable rehearsal manifest unless a deliberate reviewed source change is made. Exclude Reports, temporary Apple probe routes/schema/keys and Test gateway configuration.
+- Prepare dev→main promotion, PR and required CI, immutable release manifest, attested backend archive/frontend image, source digests and retained compatible rollback. A source review manifest or signed native archive is not an attested website image; fill the exact workflow/image/artifact identities before execution approval. No dev/main push is authorized now.
+- At release time, separately approve fresh bounded IP/firewall access for both servers only if frontend deployment verification requires it. The completed DB-only access is closed, not reusable authorization. Preserve original firewalls and restore/remove temporary rules immediately after checks.
+- Recheck current platform IDs, actual ledger and required full drift evidence, original fresh26-hour B2 receipt and available compatible rollback. Do not refresh receipt timestamps, fabricate passes, replay baseline, modify applied migrations or upgrade the platform. Record any mismatch before proceeding.
+- Apply only nine reviewed pending migrations transactionally through the reviewed operator path. Deploy only reviewed Functions/frontend and renewal support. Preserve existing Auth/mail/Storage and private gateway configuration. Keep normal deletion off during installation.
+- Verify fixed production environment, APP_URL, public API and internal `http://api-gw:8000` binding. Verify private-table RLS/API denials and service-only wrapper/bypass closure using reviewed readiness SQL, no customer values. Verify actual `customer-deletion-cleanup` schedule and transport; also use correct existing names `customer-native-push-dispatch` and `customer-booking-email-dispatch` for preservation checks. Their state was not established by the narrower preflight.
+- Once all setup/deployment gates pass, configure only the fixed production deletion target with an empty Test allowlist, and activate cleanup/Apple/normal-delete flags in the reviewed safe order. The final packet must bind exact switches/commands, health evidence and rollback boundary. An owner-approved release must explicitly cover activation, not just upload or source merging.
+- Publish only accepted EN/AR privacy/deletion/support copy with SHA178a534ef2caf9dadc893abcc219158eff047eb87a01d497dd8d84108881608f, verifying final checkout/privacy behavior. No new email/contact policy is included.
+- Verify actual running website image/commit, HTTPS/SPA route, Auth/REST/Storage/Functions health and native API compatibility. Default checks read-only; mail/provider/destructive acceptance remains separately scoped below. Report limitations honestly.
+
+## 4. Recovery requirements in the final packet
+
+Stop new requests first; keep cleanup, Apple capability, dispatcher target and correct credentials/encryption available until accepted tasks finish. Keep lease/backoff/receipt recovery intact. Never delete a pending task or envelope, force-complete a provider acknowledgement, rotate away its encryption key, reverse SQL, or overwrite live customer writes from a backup. Compatible frontend rollback may retain the new deletion backend. Prepare a retained compatible Functions/config rollback and reconcile actual worker state before any downgrade. Restore all temporary access even on failure; do not hold firewall access open waiting for another decision.
+
+## 5. Later Live acceptance and reviewer scope — separate, not included above
+
+`support@barberplusplus.com` is only an owner-proposed inbox. A later exact packet must request a minimal eligibility lookup (existing Auth/app-role collision booleans, no unrelated identity export), owner inbox control/delivery confirmation and one dedicated customer-only reviewer account with separate Barber++ credentials. Mailbox credentials are never App Review credentials. If the inbox is already linked to staff/admin or unsuitable, report the collision and ask for another dedicated address rather than merging/changing an account. Do not use a production owner account or silently assign roles.
+
+Specify exact fixtures, message destinations/counts, appointment scope if needed, account-deletion test and cleanup preservation before asking. A real Apple verification test needs an explicitly authorized suitable Apple grant/account and its consequences; existing personal authorization is not disposable by default. Email-password reviewer access does not prove Apple token exchange/revocation. No real messages, customer lookup, fixture creation, account deletion or Apple grant/revoke is authorized by this draft.
+
+Native25 privacy/disclosures and website wording acceptance are recorded, but App Privacy publication, held build upload, selecting/submitting the build and public release remain explicit separate owner approvals in the iOS chat. Upload/submission must not be bundled into infrastructure approval.
+
+## Ready for the next question?
+
+Not yet for production writes. First review this plan with the iOS agent and complete the exact renewal/recovery/source/artifact scope. Then present one concrete, bounded question for genuinely related credential/setup/release work, separating any still-unknown provider/reviewer actions and upload/submission. No permanent production access or blanket approval is proposed.

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "status": "READ_ONLY_PREFLIGHT_COMPLETED_RELEASE_NOT_AUTHORIZED",
+  "sourceCandidate": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "proposalManifestSHA256": "365a3eb12c89cdd49297343d11b06b2ed22977b76a9109c429dc92ef6b598b88",
+  "scriptSHA256": "8266d199d16a3c01dd35fbdb2ca2e8be113dfb84514a70964edb608c7ef06276",
+  "approval": {
+    "hostId": "local",
+    "threadId": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "messageId": "01a1d7d0-6bef-7110-b672-a2afb63cb414",
+    "directHumanMessageVerified": true
+  },
+  "attempts": 1,
+  "sshExitCode": 0,
+  "privateResultSHA256": "bc197af270fb82ef784222162a17e4e1619158be4d649df4f9c3b8e416dbc50f",
+  "retainedMetadataSHA256": "f96fabf0f0596fc41307e603334745da83e5ee224fa8ea465eb579dccc2ae104",
+  "firewallRestoration": {
+    "restoredAtUTC": "2026-11-14T02:16:39.917037+00:00",
+    "databaseResource": 1073968,
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "originalActiveVerifiedViaUI": true,
+    "originalFiveRulesUnchangedVerifiedViaUI": true,
+    "originalRulesSHA256": "2f3bdaa87b77437472b2f8d6ba7a75c4d57d39c165942d7164dabc39a50d7d7e",
+    "temporaryProfileInactiveVerifiedViaUI": true,
+    "temporaryOperatorRuleRemovedVerifiedViaUI": true,
+    "temporaryProfileRemainingRuleCount": 5,
+    "inspectionSSHProcessCount": 0,
+    "frontendAccessPerformed": false,
+    "secondsSinceActivationRequest": 169,
+    "automaticTTLClaimed": false
+  },
+  "privateRestorationReceiptSHA256": "53e9510eadbc83e52085f9e787f8526dbfd15b63d1550d74ec8b5f34b699707b",
+  "scopeDeviations": [],
+  "inspectionLimitations": [
+    "The cron result covers the exact approved names only. Two notification filters used names different from the committed schedules; this does not establish their presence or absence. No expanded query/reconnection was performed.",
+    "Stored schema fingerprint is not an actual full Live drift check.",
+    "Apple JWT metadata is not signature/Apple-portal-scope/provider validation.",
+    "No frontend deployment, reviewer-account eligibility, delivery or provisioning was inspected."
+  ],
+  "applicationChanges": false,
+  "devMainPush": false,
+  "productionDeployment": false,
+  "credentialCreatedOrUsedForNewPurpose": false,
+  "privateKeyContentsRead": false,
+  "providerCalls": false,
+  "messagesSent": false,
+  "customerRowsRead": false
+}

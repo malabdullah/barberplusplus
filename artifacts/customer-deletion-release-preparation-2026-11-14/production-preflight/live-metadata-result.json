@@ -1,0 +1,228 @@
+{
+  "appleStoreCounts": null,
+  "auth": {
+    "appleLoginCredential": {
+      "algorithm": "ES256",
+      "client": "com.barberplusplus.authentication.prod.web",
+      "expectedAudience": true,
+      "expectedTeam": true,
+      "expired": false,
+      "expiresAtUTC": "2027-04-29T16:28:04+00:00",
+      "issuedAtUTC": "2026-10-31T16:28:04+00:00",
+      "keyId": "G2ANJ69763",
+      "parseable": true,
+      "present": true,
+      "secondsToExpiry": 14393620,
+      "signatureVerified": false
+    },
+    "configuration": {
+      "GOTRUE_EXTERNAL_APPLE_CLIENT_ID": {
+        "approvedIds": [
+          "com.barberplusplus.authentication.prod.web",
+          "com.barberplusplus.customer"
+        ],
+        "configured": true,
+        "duplicates": false,
+        "unexpectedIdCount": 0,
+        "webFirst": true
+      },
+      "GOTRUE_EXTERNAL_APPLE_ENABLED": "true"
+    },
+    "secretPresent": {
+      "CRON_SHARED_SECRET": false,
+      "CUSTOMER_APPLE_ENCRYPTION_KEY": false,
+      "RESEND_API_KEY": false,
+      "SUPABASE_ANON_KEY": false,
+      "SUPABASE_SERVICE_ROLE_KEY": false
+    }
+  },
+  "backend": {
+    "appUrlMatches": true,
+    "backupEvidencePathMatches": true,
+    "configurationPresent": true,
+    "enabled": true,
+    "recordedCommit": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+    "recordedPhase": "FUNCTIONS_APPLIED",
+    "stateDirectoryMatches": true
+  },
+  "backup": {
+    "b2DailyReceiptMetadataPass": true,
+    "bindingFieldsPresent": true,
+    "captureAgeSeconds": 7143,
+    "capturedAtUTC": "2026-11-14T00:15:20.187028+00:00",
+    "freshWithin26Hours": true,
+    "policy": "daily-v1",
+    "provider": "b2",
+    "receiptPresent": true,
+    "restoreSeconds": 13.65,
+    "systemBindingMatches": true,
+    "verifiedAtUTC": "2026-11-14T00:15:56.951030+00:00",
+    "verifiedFlags": {
+      "configuration_restored": true,
+      "database_restored": true,
+      "encrypted_offsite": true,
+      "functions_restored": true,
+      "isolated_target_removed": true,
+      "storage_restored": true
+    }
+  },
+  "checkedAtUTC": "2026-11-14T02:14:23.652256+00:00",
+  "cron": [],
+  "database": {
+    "deletionTablesPresent": false,
+    "routineMetadata": [
+      {
+        "anonymousExecute": false,
+        "authenticatedExecute": false,
+        "bodyHash": "4ba1709e089b5d2c2db9b100c4aa2391",
+        "name": "customer_session_is_live",
+        "schema": "public",
+        "securityDefiner": true
+      }
+    ],
+    "serverVersion": "17.6",
+    "supabaseHistoryPresent": true,
+    "temporaryProbeUnexpectedlyPresent": false
+  },
+  "functions": {
+    "configuration": {
+      "APP_ENV": "production",
+      "APP_URL": "https://www.barberplusplus.com",
+      "CUSTOMER_PUBLIC_API_URL": "https://srv1073968.hstgr.cloud",
+      "SUPABASE_URL": "http://api-gw:8000"
+    },
+    "secretPresent": {
+      "CRON_SHARED_SECRET": true,
+      "CUSTOMER_APPLE_ENCRYPTION_KEY": false,
+      "RESEND_API_KEY": true,
+      "SUPABASE_ANON_KEY": true,
+      "SUPABASE_SERVICE_ROLE_KEY": true
+    }
+  },
+  "helpers": {
+    "appleRenewal": {
+      "matchesReviewedSource": true,
+      "sha256": "810d3cb8fc618b70c8bb4a8e05c3306753ea4dba9d5515cf0ec20aa19b08ee23"
+    },
+    "backend": {
+      "matchesReviewedSource": true,
+      "sha256": "332dd2f02229d1312c6d0d47716f66ea5c64be96aa5f4b6e18ca6adc3fec185d"
+    },
+    "backupPolicy": {
+      "matchesReviewedSource": true,
+      "sha256": "9b7f45ef3390d80d662c064e162740b16be694dec6e0e63322057cc2ac7802c4"
+    }
+  },
+  "hostArchitecture": "x86_64",
+  "ledger": {
+    "appliedCount": 102,
+    "equalsReviewedMainPrefix": true,
+    "matchesCandidatePrefix": true,
+    "pendingCandidateNames": [
+      "20261113131730_customer_account_deletion.sql",
+      "20261113132148_customer_account_deletion_validation.sql",
+      "20261113134112_customer_deletion_auth_cleanup.sql",
+      "20261113134447_customer_deletion_device_cleanup.sql",
+      "20261113140603_customer_deletion_verified_contact_cleanup.sql",
+      "20261113144103_customer_deletion_environment_binding.sql",
+      "20261113181421_customer_apple_revocation.sql",
+      "20261113182000_customer_apple_scope_binding.sql",
+      "20261113183235_customer_apple_actor_guard.sql"
+    ],
+    "present": true,
+    "storedFingerprint": "9e021f53e00ec5e057009e20285fdbd4f8ca9b23dc68ffc6f4d72c4e88a922c4"
+  },
+  "limits": {
+    "credentialExported": false,
+    "customerRows": false,
+    "encryptionKeyValueReadByProbe": false,
+    "freshRestoreOrArchiveDownloadPerformed": false,
+    "frontendInspected": false,
+    "fullLiveSchemaDriftAttested": false,
+    "jwtSignatureOrAppleKeyScopeVerified": false,
+    "privateKeyReadOrUsed": false,
+    "productionWrites": false,
+    "providerCalls": false,
+    "routineBodiesExported": false
+  },
+  "mode": "READ_ONLY_METADATA_NO_RELEASE",
+  "queue": null,
+  "renewal": {
+    "approvedAcceptedClients": [
+      "com.barberplusplus.authentication.prod.web",
+      "com.barberplusplus.customer"
+    ],
+    "client": "com.barberplusplus.authentication.prod.web",
+    "configurationPresent": true,
+    "keyId": "G2ANJ69763",
+    "keyReference": {
+      "configuredReferenceAllowed": true,
+      "present": true,
+      "privatePermissions": true,
+      "regularFile": true,
+      "rootOwned": true
+    },
+    "productionNamespace": true,
+    "state": {
+      "checkedAt": "2026-11-14T01:09:15+00:00",
+      "expiresAt": "2027-04-29T16:28:04+00:00",
+      "phase": "HEALTHY_NOT_DUE",
+      "present": true,
+      "renewAfter": "2027-03-30T16:28:04+00:00"
+    },
+    "stateDirectoryMatches": true,
+    "teamId": "D49RFZQ6BT",
+    "unexpectedClientCount": 0
+  },
+  "runtime": [
+    {
+      "health": "healthy",
+      "imageId": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+      "matchesReviewedParent": true,
+      "name": "supabase-db",
+      "running": true
+    },
+    {
+      "health": "healthy",
+      "imageId": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+      "matchesReviewedParent": true,
+      "name": "supabase-auth",
+      "running": true
+    },
+    {
+      "health": "healthy",
+      "imageId": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+      "matchesReviewedParent": true,
+      "name": "supabase-storage",
+      "running": true
+    },
+    {
+      "health": "healthy",
+      "imageId": "sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+      "matchesReviewedParent": true,
+      "name": "supabase-edge-functions",
+      "running": true
+    }
+  ],
+  "schemaVersion": 1,
+  "sourceCandidate": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "status": "METADATA_CAPTURED_REVIEW_REQUIRED",
+  "timers": {
+    "barber-apple-renewal.timer": {
+      "ActiveState": "active",
+      "LastTriggerUSec": "Sat 2026-11-14 01:09:14 UTC",
+      "LoadState": "loaded",
+      "NextElapseUSecRealtime": "Sun 2026-11-15 01:07:34 UTC",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    },
+    "barber-backup-daily.timer": {
+      "ActiveState": "active",
+      "LastTriggerUSec": "Sat 2026-11-14 00:15:14 UTC",
+      "LoadState": "loaded",
+      "NextElapseUSecRealtime": "Sun 2026-11-15 00:15:00 UTC",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    }
+  }
+}
