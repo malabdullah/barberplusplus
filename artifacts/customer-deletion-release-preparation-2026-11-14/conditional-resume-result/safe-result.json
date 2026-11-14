@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCK_TIGHTENED_SETUP_STOPPED_BEFORE_KEY_ACCESS",
+  "approvedHumanMessage": "01a1d8fb-ae8e-75a0-a9c7-c77dfec2e30c",
+  "conditionalPacketSHA256": "7b8d0120b412ac8668949b091d50b28c2d7dbfc75fdaff3c6c72498df4b776fb",
+  "originalDefaultOffPacketSHA256": "51031d3a3401d573b4e64705019dc0113132b91836a34f0927bdda82e68696ef",
+  "actualLockMetadata": {
+    "path": "/var/lib/barber-release-backend/backend.lock",
+    "status": "TIGHTENED_SAME_INODE",
+    "modeChanged": true,
+    "contentsRead": false,
+    "inodeReplaced": false,
+    "ownershipChanged": false,
+    "parent": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0700",
+      "regular": false,
+      "directory": true,
+      "symlink": false,
+      "links": 53,
+      "size": 12288,
+      "device": 2049,
+      "inode": 1600537
+    },
+    "before": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0644",
+      "regular": true,
+      "directory": false,
+      "symlink": false,
+      "links": 1,
+      "size": 0,
+      "device": 2049,
+      "inode": 1599787
+    },
+    "after": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0600",
+      "regular": true,
+      "directory": false,
+      "symlink": false,
+      "links": 1,
+      "size": 0,
+      "device": 2049,
+      "inode": 1599787
+    }
+  },
+  "preflight": {
+    "status": "DEFAULT_OFF_PREFLIGHT_STOPPED",
+    "guard": "FIXED_LIVE_DEFAULT_OFF_BINDINGS",
+    "reason": "AssertionError",
+    "privateKeyRead": false,
+    "secretsGenerated": false,
+    "runtimeChanged": false
+  },
+  "passedBeforeBindingStop": [
+    "exactRootPrivateNinePublicFilesAndHashes",
+    "originalInstalledLoginHelperHash",
+    "originalSecureLockGuard",
+    "canonicalPrivateSourcesAndLoginMetadata",
+    "newConfigurationHelperUnitsRecoveryPathsAbsent"
+  ],
+  "sourceBindingsFailedPredicateGroup": [
+    "fourExplicitOverridePins",
+    "cleanupPairAndEncryptionKeyNamesAbsent",
+    "threeFlagsAbsentOrFalse",
+    "optionalBackendAbsentOrExpected"
+  ],
+  "individualMismatch": "UNKNOWN_NOT_EXPORTED_NO_RECONNECT",
+  "effectiveRuntimeCurrentBindings": "NOT_INSPECTED_AFTER_STOP",
+  "P8ReadOrSigned": false,
+  "secretsGenerated": false,
+  "newPrivateConfigOrKeysOrRecoveryCopyCreated": false,
+  "helpersOrUnitsInstalledOrEnabled": false,
+  "runtimeChanged": false,
+  "sqlFunctionSourceFrontendDevMainChanged": false,
+  "providerCustomerMessageOrArchiveActions": false,
+  "secure0600Retained": true,
+  "firewallRestoration": {
+    "status": "ORIGINAL_FIREWALL_RESTORED",
+    "restoredAtUTC": "2026-11-14T07:45:38.098317+00:00",
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "originalActiveVisiblyVerified": true,
+    "originalFiveRulesUnchangedVisiblyVerified": true,
+    "originalRulesSHA256": "2f3bdaa87b77437472b2f8d6ba7a75c4d57d39c165942d7164dabc39a50d7d7e",
+    "temporaryProfileInactive": true,
+    "temporarySourceRuleRemoved": true,
+    "temporaryRemainingRules": 5,
+    "sshProcesses": 0,
+    "secondsSinceActivationRequest": 418,
+    "frontendAccess": false
+  },
+  "timestamps": {
+    "activationRequestedAtUTC": "2026-11-14T07:38:40.526711+00:00",
+    "lockReceiptSavedAtUTC": "2026-11-14T07:38:43.056688+00:00",
+    "guardStopReceiptSavedAtUTC": "2026-11-14T07:39:43.567472+00:00"
+  }
+}
