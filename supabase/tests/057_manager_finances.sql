@@ -1,0 +1,98 @@
+-- Isolated synthetic fixtures; the entire transaction rolls back.
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
+create temp table finance_checks(label text);
+create function pg_temp.fa(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'FINANCE_ASSERT: %',label;end if;insert into finance_checks values(label);end$$;
+create function pg_temp.fe(action text,data jsonb,code text)returns boolean language plpgsql as $$begin perform public.manager_finances(action,data);return false;exception when others then if sqlerrm<>code then raise exception 'Unexpected %; wanted %',sqlerrm,code;end if;return true;end$$;
+do $test$
+#variable_conflict use_variable
+declare
+ m uuid:=gen_random_uuid();other_m uuid:=gen_random_uuid();u uuid:=gen_random_uuid();cu uuid:=gen_random_uuid();ms uuid:=gen_random_uuid();os uuid:=gen_random_uuid();us uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();
+ a uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();c uuid:=gen_random_uuid();s uuid:=gen_random_uuid();b uuid:=gen_random_uuid();cancelled uuid:=gen_random_uuid();deposit uuid:=gen_random_uuid();
+ claims text;oclaims text;value jsonb;data jsonb;report jsonb;empty_report jsonb;expense_id uuid;receipt_id uuid;refund_id uuid;expense_paid uuid;rid uuid;today date:=(now()at time zone'Asia/Kuwait')::date;
+begin
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values(m,m||'@example.test',now(),'{"role":"manager"}'),(other_m,other_m||'@example.test',now(),'{"role":"manager"}'),(u,u||'@example.test',now(),'{"role":"barber"}'),(cu,cu||'@example.test',now(),'{"role":"customer"}');
+ insert into auth.sessions(id,user_id)values(ms,m),(os,other_m),(us,u),(cs,cu);
+ claims:=jsonb_build_object('sub',m,'session_id',ms,'role','authenticated','aal','aal1')::text;
+ oclaims:=jsonb_build_object('sub',other_m,'session_id',os,'role','authenticated','aal','aal1')::text;
+ perform set_config('request.jwt.claims','{}',true);
+ insert into public.branches(id,manager_id,name,status)values(a,m,'Finance QA','active'),(outside,other_m,'Outside','active');
+ insert into public.customers(id,name)values(c,'Finance synthetic customer');
+ insert into public.services(id,branch_id,name,duration,price)values(s,a,'Cut',30,100);
+ insert into public.barbers(id,user_id,branch_id,name,status,service_ids)values(ba,u,a,'Finance barber','active',array[s]);
+ insert into public.bookings(id,branch_id,barber_id,customer_id,date,time,service_ids,duration,price,status,added_by_type)values
+ (b,a,ba,c,today-1,'09:00',array[s],30,100,'completed','customer'),
+ (cancelled,a,ba,c,today-1,'10:00',array[s],30,20,'confirmed','customer'),
+ (deposit,a,ba,c,today+5,'11:00',array[s],30,15,'confirmed','customer');
+ perform set_config('request.jwt.claims',claims,true);
+ perform pg_temp.fa(jsonb_array_length(public.manager_finances('options')->'shops')=1,'only owned shops');
+ data:=jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',b,'kind','receipt','amountFils','60000','date',today,'method','cash');
+ value:=public.manager_finances('record',data);receipt_id:=(value->>'id')::uuid;
+ perform pg_temp.fa(public.manager_finances('record',data)=value,'idempotent exact retry');
+ perform pg_temp.fa(pg_temp.fe('record',data||'{"amountFils":"59000"}','FINANCE_DUPLICATE'),'changed retry denied');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'amountFils','41000'),'FINANCE_PAYMENT_LIMIT'),'overpayment denied');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'amountFils','0'),'FINANCE_INVALID_AMOUNT'),'zero payment denied');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'amountFils','1.5'),'FINANCE_INVALID_AMOUNT'),'fractional fils denied');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'date',today+1),'FINANCE_INVALID'),'future payment denied');
+ value:=public.manager_finances('expense',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'amountFils','30000','category','rent','description','Rent','date',today));expense_id:=(value->>'id')::uuid;
+ data:=jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'expenseId',expense_id,'kind','expense_payment','amountFils','10000','date',today,'method','transfer');
+ expense_paid:=(public.manager_finances('record',data)->>'id')::uuid;
+ report:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today));
+ perform pg_temp.fa(report->'summary'->>'salesFils'='100000','sales use completed price');
+ perform pg_temp.fa(report->'summary'->>'expenseFils'='30000','incurred expense is independent of payments');
+ perform pg_temp.fa(report->'summary'->>'operatingFils'='70000','operating result 100 minus 30');
+ perform pg_temp.fa(report->'summary'->>'netReceiptsFils'='60000','customer receipts 60');
+ perform pg_temp.fa(report->'summary'->>'expensePaidFils'='10000','expense payments 10');
+ perform pg_temp.fa(report->'summary'->>'cashFlowFils'='50000','cash flow 60 minus 10');
+ perform pg_temp.fa(report->'summary'->>'dueFils'='75000','current customer due includes future appointments');
+ perform pg_temp.fa(report->'summary'->>'payableFils'='20000','partial expense payment leaves payable 20');
+ perform pg_temp.fa(pg_temp.fe('void',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'expenseId',expense_id,'reason','duplicate'),'FINANCE_EXPENSE_PAID'),'paid expense cannot be voided');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'amountFils','21000'),'FINANCE_PAYMENT_LIMIT'),'expense overpayment denied');
+ empty_report:=public.manager_finances('generate',jsonb_build_object('from',today-100,'to',today-90));
+ perform pg_temp.fa(empty_report->'summary'->>'salesFils'='0'and empty_report->'summary'->>'cashFlowFils'='0','empty period has zero totals');
+ data:=jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',cancelled,'kind','receipt','amountFils','20000','date',today,'method','card');
+ perform public.manager_finances('record',data);
+ perform set_config('request.jwt.claims','{}',true);update public.bookings set status='cancelled'where id=cancelled;perform set_config('request.jwt.claims',claims,true);
+ value:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today));
+ perform pg_temp.fa(value->'summary'->>'creditFils'='20000','cancellation creates refund due, not automatic refund');
+ perform pg_temp.fa(value->'summary'->>'netReceiptsFils'='80000','cancellation preserves money received');
+ data:=jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',cancelled,'kind','refund','amountFils','5000','date',today,'method','card','reason','Customer cancellation');
+ refund_id:=(public.manager_finances('record',data)->>'id')::uuid;
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'amountFils','16000'),'FINANCE_REFUND_LIMIT'),'refund over net received denied');
+ perform pg_temp.fa(pg_temp.fe('record',data||jsonb_build_object('requestId',gen_random_uuid(),'reason',''),'FINANCE_REASON_REQUIRED'),'refund reason required');
+ value:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today));
+ perform pg_temp.fa(value->'summary'->>'creditFils'='15000','partial refund leaves refund due');
+ perform pg_temp.fa(public.manager_finances('get',jsonb_build_object('id',report->>'id'))=report,'snapshot immutable after later movements');
+ perform public.manager_finances('record',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',deposit,'kind','receipt','amountFils','5000','date',today,'method','cash'));
+ value:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today));
+ perform pg_temp.fa(value->'summary'->>'salesFils'='100000'and value->'summary'->>'netReceiptsFils'='80000','deposit is cash now, not completed sale');
+ perform public.manager_finances('reverse',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'entryId',expense_paid,'reason','Wrong amount entered','date',today));
+ perform pg_temp.fa(pg_temp.fe('reverse',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'entryId',expense_paid,'reason','again'),'FINANCE_NOT_FOUND'),'same entry cannot be reversed twice');
+ perform public.manager_finances('void',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'expenseId',expense_id,'reason','Duplicate expense'));
+ perform pg_temp.fa((select count(*)from private.shop_finance_entries where shop_finance_entries.expense_id=expense_id)>0,'correction preserves original history');
+ perform pg_temp.fa(jsonb_array_length(public.manager_finances('history',jsonb_build_object('bookingId',cancelled))->'rows')=2,'history includes receipt and partial refund');
+ perform pg_temp.fa(not(public.manager_finances('rows',jsonb_build_object('id',report->>'id'))::text~'"(email|phone|customer|notes)"'),'snapshot excludes contact details');
+ perform pg_temp.fa(pg_temp.fe('generate',jsonb_build_object('from',today-400,'to',today),'FINANCE_INVALID_RANGE'),'report max one year');
+ perform set_config('request.jwt.claims',oclaims,true);
+ perform pg_temp.fa(pg_temp.fe('get',jsonb_build_object('id',report->>'id'),'FINANCE_FORBIDDEN'),'other manager cannot read snapshot');
+ perform pg_temp.fa(pg_temp.fe('record',jsonb_build_object('shopId',a,'requestId',gen_random_uuid()),'FINANCE_FORBIDDEN'),'other manager cannot write ledger');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'session_id',us,'role','authenticated','aal','aal1')::text,true);
+ perform pg_temp.fa(pg_temp.fe('options','{}','FINANCE_FORBIDDEN'),'barber cannot see finances');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',cu,'session_id',cs,'role','authenticated','aal','aal1')::text,true);
+ perform pg_temp.fa(pg_temp.fe('options','{}','FINANCE_FORBIDDEN'),'customer cannot see finances');
+ perform set_config('request.jwt.claims','{}',true);
+ update public.branches set manager_id=other_m where id=a;perform set_config('request.jwt.claims',claims,true);
+ perform pg_temp.fa(pg_temp.fe('get',jsonb_build_object('id',report->>'id'),'FINANCE_FORBIDDEN'),'transferred shop revokes old snapshot');
+ perform set_config('request.jwt.claims','{}',true);update public.branches set manager_id=m where id=a;update auth.users set banned_until=now()+interval'1 hour'where id=m;perform set_config('request.jwt.claims',claims,true);
+ perform pg_temp.fa(pg_temp.fe('options','{}','FINANCE_FORBIDDEN'),'suspended manager denied');
+ perform set_config('request.jwt.claims','{}',true);update auth.users set banned_until=null where id=m;delete from auth.sessions where id=ms;perform set_config('request.jwt.claims',claims,true);
+ perform pg_temp.fa(pg_temp.fe('options','{}','FINANCE_FORBIDDEN'),'revoked session denied');
+ perform pg_temp.fa(not has_table_privilege('authenticated','private.shop_finance_entries','SELECT'),'ledger direct select denied');
+ perform pg_temp.fa(not has_table_privilege('authenticated','private.shop_finance_entries','INSERT'),'ledger direct insert denied');
+ perform pg_temp.fa(not has_function_privilege('anon','public.manager_finances(text,jsonb)','EXECUTE'),'anonymous endpoint denied');
+end$test$;
+select ok((select count(*)from finance_checks)>=39,'finance authorization and calculation checks: '||(select count(*)from finance_checks));
+select *from finish();
+rollback;
