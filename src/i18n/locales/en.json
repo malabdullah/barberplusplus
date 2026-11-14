@@ -3188,7 +3188,10 @@
       "credit": "Refund due (KWD)",
       "payable": "Expense due (KWD)",
       "category": "Category",
-      "id": "Report reference"
-    }
+      "id": "Report reference",
+      "target": "Booking / expense reference",
+      "correction": "Corrects entry"
+    },
+    "historyPreventsRemoval": "This shop has financial records and cannot be deleted. Pause the shop to preserve its history."
   }
 }

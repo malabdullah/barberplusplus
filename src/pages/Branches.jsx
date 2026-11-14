@@ -149,7 +149,7 @@ export default function Branches() {
     try {
       await deleteBranch(deletingBranch.id);
     } catch (error) {
-      setDeleteError(t(error.message === 'BOOKING_DELETE_FORBIDDEN'
+      setDeleteError(t(error.message === 'FINANCE_HISTORY_PREVENTS_REMOVAL' ? 'finance.historyPreventsRemoval' : error.message === 'BOOKING_DELETE_FORBIDDEN'
         ? 'bookings.historyPreventsRemoval' : 'common.error'));
     }
   }, [deletingBranch, deleteBranch, t]);

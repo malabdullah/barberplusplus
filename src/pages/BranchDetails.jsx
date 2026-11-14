@@ -61,7 +61,7 @@ export default function BranchDetails() {
       await deleteBranch(branchId);
       navigate('/dashboard/branches');
     } catch (error) {
-      setDeleteError(t(error.message === 'BOOKING_DELETE_FORBIDDEN'
+      setDeleteError(t(error.message === 'FINANCE_HISTORY_PREVENTS_REMOVAL' ? 'finance.historyPreventsRemoval' : error.message === 'BOOKING_DELETE_FORBIDDEN'
         ? 'bookings.historyPreventsRemoval' : 'common.error'));
     }
   };

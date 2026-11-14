@@ -72,14 +72,21 @@ export default function Finances() {
     const check = async () => {
       if (document.hidden || checking) return;
       checking = true;
-      try { await financesService.options(); if (report) await financesService.get(report.id); }
+      try {
+        await financesService.options();
+        if (report) await financesService.get(report.id);
+        if (tab !== 'overview') {
+          const latest = await financeRpc(tab, { shopIds: filters.shopIds, offset: page * 25, search: query, status });
+          if (current) setRows(latest.rows);
+        }
+      }
       catch (failure) { if (current) fail(failure); }
       finally { checking = false; }
     };
     window.addEventListener('focus', check); document.addEventListener('visibilitychange', check);
     const timer = setInterval(check, 60000);
     return () => { current = false; clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
-  }, [report?.id, options]);
+  }, [report?.id, options, tab, filters.shopIds, page, query, status]);
   async function generate(event) {
     event?.preventDefault();
     const current = ++sequence.current;

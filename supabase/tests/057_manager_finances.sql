@@ -10,15 +10,15 @@ do $test$
 #variable_conflict use_variable
 declare
  m uuid:=gen_random_uuid();other_m uuid:=gen_random_uuid();u uuid:=gen_random_uuid();cu uuid:=gen_random_uuid();ms uuid:=gen_random_uuid();os uuid:=gen_random_uuid();us uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();
- a uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();c uuid:=gen_random_uuid();s uuid:=gen_random_uuid();b uuid:=gen_random_uuid();cancelled uuid:=gen_random_uuid();deposit uuid:=gen_random_uuid();
- claims text;oclaims text;value jsonb;data jsonb;report jsonb;empty_report jsonb;expense_id uuid;receipt_id uuid;refund_id uuid;expense_paid uuid;rid uuid;today date:=(now()at time zone'Asia/Kuwait')::date;
+ outside_barber uuid:=gen_random_uuid();outside_service uuid:=gen_random_uuid();empty_shop uuid:=gen_random_uuid();a uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();c uuid:=gen_random_uuid();s uuid:=gen_random_uuid();b uuid:=gen_random_uuid();cancelled uuid:=gen_random_uuid();deposit uuid:=gen_random_uuid();
+ claims text;oclaims text;value jsonb;data jsonb;report jsonb;empty_report jsonb;expense_id uuid;receipt_id uuid;refund_id uuid;expense_paid uuid;rid uuid;denied boolean;today date:=(now()at time zone'Asia/Kuwait')::date;
 begin
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values(m,m||'@example.test',now(),'{"role":"manager"}'),(other_m,other_m||'@example.test',now(),'{"role":"manager"}'),(u,u||'@example.test',now(),'{"role":"barber"}'),(cu,cu||'@example.test',now(),'{"role":"customer"}');
  insert into auth.sessions(id,user_id)values(ms,m),(os,other_m),(us,u),(cs,cu);
  claims:=jsonb_build_object('sub',m,'session_id',ms,'role','authenticated','aal','aal1')::text;
  oclaims:=jsonb_build_object('sub',other_m,'session_id',os,'role','authenticated','aal','aal1')::text;
  perform set_config('request.jwt.claims','{}',true);
- insert into public.branches(id,manager_id,name,status)values(a,m,'Finance QA','active'),(outside,other_m,'Outside','active');
+ insert into public.branches(id,manager_id,name,status)values(a,m,'Finance QA','active'),(outside,other_m,'Outside','active'),(empty_shop,m,'Empty finance shop','active');
  insert into public.customers(id,name)values(c,'Finance synthetic customer');
  insert into public.services(id,branch_id,name,duration,price)values(s,a,'Cut',30,100);
  insert into public.barbers(id,user_id,branch_id,name,status,service_ids)values(ba,u,a,'Finance barber','active',array[s]);
@@ -27,7 +27,9 @@ begin
  (cancelled,a,ba,c,today-1,'10:00',array[s],30,20,'confirmed','customer'),
  (deposit,a,ba,c,today+5,'11:00',array[s],30,15,'confirmed','customer');
  perform set_config('request.jwt.claims',claims,true);
- perform pg_temp.fa(jsonb_array_length(public.manager_finances('options')->'shops')=1,'only owned shops');
+ perform pg_temp.fa(jsonb_array_length(public.manager_finances('options')->'shops')=2,'only owned shops');
+ empty_report:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today,'shopIds',jsonb_build_array(empty_shop)));
+ perform pg_temp.fa(empty_report->'summary'->>'salesFils'='0'and jsonb_array_length(empty_report->'shops')=1,'empty shop remains in report scope');
  data:=jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',b,'kind','receipt','amountFils','60000','date',today,'method','cash');
  value:=public.manager_finances('record',data);receipt_id:=(value->>'id')::uuid;
  perform pg_temp.fa(public.manager_finances('record',data)=value,'idempotent exact retry');
@@ -68,13 +70,26 @@ begin
  perform public.manager_finances('record',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'bookingId',deposit,'kind','receipt','amountFils','5000','date',today,'method','cash'));
  value:=public.manager_finances('generate',jsonb_build_object('from',today-1,'to',today));
  perform pg_temp.fa(value->'summary'->>'salesFils'='100000'and value->'summary'->>'netReceiptsFils'='80000','deposit is cash now, not completed sale');
- perform public.manager_finances('reverse',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'entryId',expense_paid,'reason','Wrong amount entered','date',today));
+ -- A forged booking ID must never redirect an expense correction to customer money.
+ perform public.manager_finances('reverse',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'entryId',expense_paid,'bookingId',b,'reason','Wrong amount entered','date',today));
+ perform pg_temp.fa((select sum(signed_fils)from private.shop_finance_entries where booking_id=b)=60000,'correction target cannot be redirected by payload');
+
  perform pg_temp.fa(pg_temp.fe('reverse',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'entryId',expense_paid,'reason','again'),'FINANCE_NOT_FOUND'),'same entry cannot be reversed twice');
  perform public.manager_finances('void',jsonb_build_object('shopId',a,'requestId',gen_random_uuid(),'expenseId',expense_id,'reason','Duplicate expense'));
  perform pg_temp.fa((select count(*)from private.shop_finance_entries where shop_finance_entries.expense_id=expense_id)>0,'correction preserves original history');
  perform pg_temp.fa(jsonb_array_length(public.manager_finances('history',jsonb_build_object('bookingId',cancelled))->'rows')=2,'history includes receipt and partial refund');
  perform pg_temp.fa(not(public.manager_finances('rows',jsonb_build_object('id',report->>'id'))::text~'"(email|phone|customer|notes)"'),'snapshot excludes contact details');
  perform pg_temp.fa(pg_temp.fe('generate',jsonb_build_object('from',today-400,'to',today),'FINANCE_INVALID_RANGE'),'report max one year');
+ perform set_config('request.jwt.claims','{}',true);
+ insert into public.services(id,branch_id,name,duration,price)values(outside_service,outside,'Outside cut',30,100);
+ insert into public.barbers(id,branch_id,name,status,service_ids)values(outside_barber,outside,'Outside barber','active',array[outside_service]);
+ denied:=false;begin update public.bookings set branch_id=outside,barber_id=outside_barber,service_ids=array[outside_service]where id=b;exception when others then if sqlerrm<>'FINANCE_SHOP_CHANGE_FORBIDDEN'then raise;end if;denied:=true;end;
+ perform pg_temp.fa(denied,'paid appointment cannot move money across shops');
+ insert into private.shop_finance_expenses(shop_id,incurred_on,category,description,amount_fils,created_by)values(empty_shop,today,'other','Retained audit history',1,m);
+ denied:=false;begin delete from public.branches where id=empty_shop;exception when others then if sqlerrm<>'FINANCE_HISTORY_PREVENTS_REMOVAL'then raise;end if;denied:=true;end;
+ perform pg_temp.fa(denied and exists(select 1 from public.branches where id=empty_shop),'shop with financial history cannot be deleted');
+ perform pg_temp.fa((select count(*)from pg_constraint where conrelid='private.shop_finance_entries'::regclass and contype='f')=4,'ledger references preserve booking, shop, expense and corrections');
+ perform pg_temp.fa(not exists(select 1 from pg_constraint where conrelid in('private.shop_finance_entries'::regclass,'private.shop_finance_expenses'::regclass)and confrelid in('public.customers'::regclass,'auth.users'::regclass)),'financial references do not block identity removal');
  perform set_config('request.jwt.claims',oclaims,true);
  perform pg_temp.fa(pg_temp.fe('get',jsonb_build_object('id',report->>'id'),'FINANCE_FORBIDDEN'),'other manager cannot read snapshot');
  perform pg_temp.fa(pg_temp.fe('record',jsonb_build_object('shopId',a,'requestId',gen_random_uuid()),'FINANCE_FORBIDDEN'),'other manager cannot write ledger');
@@ -93,6 +108,6 @@ begin
  perform pg_temp.fa(not has_table_privilege('authenticated','private.shop_finance_entries','INSERT'),'ledger direct insert denied');
  perform pg_temp.fa(not has_function_privilege('anon','public.manager_finances(text,jsonb)','EXECUTE'),'anonymous endpoint denied');
 end$test$;
-select ok((select count(*)from finance_checks)>=39,'finance authorization and calculation checks: '||(select count(*)from finance_checks));
+select ok((select count(*)from finance_checks)>=46,'finance authorization and calculation checks: '||(select count(*)from finance_checks));
 select *from finish();
 rollback;

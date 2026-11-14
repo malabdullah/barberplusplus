@@ -43,7 +43,7 @@ shop access. Transfers, revoked sessions and suspensions revoke access. Snapshot
 expire after 24 hours. Report limits: one year, up to 500 shops, 30 requests/hour,
 100,000 frozen detail/balance rows, 500-row export pages, 25-record UI pages.
 Snapshots omit customer names, phone numbers, email addresses and booking notes.
-Stable UUID references connect financial entries without preventing customer deletion.
+Stable booking UUID references preserve financial history without preventing customer identity deletion. Shops with financial history cannot be deleted; pause them instead. Paid bookings cannot move to another shop; cancel/refund and create a new booking instead. Expired snapshots are cleaned hourly.
 
 ## Tables
 

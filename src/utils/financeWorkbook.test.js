@@ -6,7 +6,7 @@ import en from '../i18n/locales/en.json';
 import ar from '../i18n/locales/ar.json';
 describe('financial amounts and exports', () => {
   it('parses decimal KWD without float rounding or accepting extra precision', () => {
-    for (const [input, expected] of [['0.001', '1'], ['3.1', '3100'], ['10', '10000'], ['1000000', '1000000000']]) expect(parseFinanceAmount(input)).toBe(expected);
+    for (const [input, expected] of [['0.001', '1'], ['3.1', '3100'], ['٣٫١٢٥', '3125'], ['۱۲.۰۰۱', '12001'], ['10', '10000'], ['1000000', '1000000000']]) expect(parseFinanceAmount(input)).toBe(expected);
     for (const input of ['', '0', '-3', '3.0001', '1e3', 'Infinity', 'NaN', '1,000', '1000000.001', '=3+1']) expect(parseFinanceAmount(input)).toBeNull();
   });
   for (const [language, labels] of [['en', en.finance], ['ar', ar.finance]]) it(`exports typed, literal and complete ${language} financial snapshot`, async () => {

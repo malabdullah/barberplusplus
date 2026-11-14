@@ -26,12 +26,12 @@ export function createFinanceWorkbook(report, labels, language) {
   for (const key of [...financeMetrics, 'dueFils', 'creditFils', 'payableFils']) add(summary, [labels.metrics[key], Number(report.summary[key]) / 1000], [1]);
   const shops = sheet(e.shops, [e.shop, ...['salesFils', 'expenseFils', 'operatingFils', 'cashFlowFils'].map(key => labels.metrics[key])], [38, 24, 24, 24, 24]);
   for (const row of report.shops) add(shops, [localizedReportName(row, language), ...['salesFils', 'expenseFils', 'operatingFils', 'cashFlowFils'].map(key => Number(row[key]) / 1000)], [1, 2, 3, 4]);
-  const entries = sheet(e.entries, [e.shop, e.date, e.kind, e.reference, e.amount, e.cash, e.due, e.credit, e.payable, e.category], [36, 22, 28, 40, 24, 24, 24, 24, 24, 24]);
+  const entries = sheet(e.entries, [e.shop, e.date, e.kind, e.reference, e.amount, e.cash, e.due, e.credit, e.payable, e.category, labels.method, labels.reference, labels.description, labels.reason, e.target, e.correction], [36, 22, 28, 40, 24, 24, 24, 24, 24, 24, 24, 30, 40, 50, 40, 40]);
   const definitions = sheet(e.definitions, [e.metric, e.value], [36, 110]);
   add(definitions, [e.summary, labels.definition]); add(definitions, [labels.currentBalances, labels.balanceDefinition]); add(definitions, [e.id, report.id]);
   definitions.getColumn(2).alignment = { wrapText: true, vertical: 'top' };
   return {
-    addRows(rows) { for (const row of rows) add(entries, [language.startsWith('ar') && row.shopNameAr || row.shopName, new Date(`${row.date}T00:00:00Z`), labels.kinds[row.kind], row.reference, ...['amountFils', 'cashFils', 'dueFils', 'creditFils', 'payableFils'].map(key => Number(row[key]) / 1000), labels.categories[row.category] || row.category], [4, 5, 6, 7, 8], [1]); },
+    addRows(rows) { for (const row of rows) add(entries, [language.startsWith('ar') && row.shopNameAr || row.shopName, new Date(`${row.date}T00:00:00Z`), labels.kinds[row.kind], row.reference, ...['amountFils', 'cashFils', 'dueFils', 'creditFils', 'payableFils'].map(key => Number(row[key]) / 1000), labels.categories[row.category] || row.category, labels.methods[row.method] || '', row.paymentReference || '', row.description || '', row.reason || '', row.targetId || '', row.reversesId || ''], [4, 5, 6, 7, 8], [1]); },
     async finish() {
       for (const s of [shops, entries]) s.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, s.rowCount), column: s.columnCount } };
       return workbook.xlsx.writeBuffer();

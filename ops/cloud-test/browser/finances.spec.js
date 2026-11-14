@@ -7,8 +7,15 @@ async function login(page, role = 'manager') {
   await page.goto('/login');
   await page.getByLabel('Email address', { exact: true }).fill(qa.users[role].email);
   await page.getByLabel('Password', { exact: true }).fill(qa.password);
+  const preferences = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings?') && response.request().method() === 'GET');
   await page.locator('button[type="submit"]').click();
   await expect(page).not.toHaveURL(/\/login/);
+  await preferences;
+  if (await page.locator('html').getAttribute('dir') === 'rtl') {
+    await page.locator('.preferences-selector').first().locator('button').first().click();
+    const saved = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings') && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'English', exact: true }).click(); await saved;
+  }
 }
 async function ready(page) {
   await login(page); await page.goto('/dashboard/finances');
@@ -101,6 +108,7 @@ test('mobile and Arabic, dark/light, dialog controls and responsive tables', asy
   await page.screenshot({ path: '.cloud-test/finances-mobile-en.png', fullPage: true });
   await page.getByRole('button', { name: /language/i }).click(); await page.getByRole('button', { name: /العربية/ }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect.poll(async () => (await page.locator('.sidebar').boundingBox()).x).toBeGreaterThanOrEqual(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.cloud-test/finances-mobile-ar.png', fullPage: true });
   await page.getByRole('button', { name: 'المصروفات', exact: true }).click();
@@ -118,6 +126,24 @@ test('barber retains personal performance and cannot open manager finance page',
 test.afterEach(async ({ page }) => {
   if (page.isClosed() || !page.url().includes('/dashboard/finances')) return;
   const selectors = page.locator('.preferences-selector');
-  if (await page.locator('html').getAttribute('dir') === 'rtl') { await selectors.first().locator('button').first().click(); await page.getByRole('button', { name: 'English', exact: true }).click(); }
+  if (await page.locator('html').getAttribute('dir') === 'rtl') { await selectors.first().locator('button').first().click(); const saved = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings') && response.request().method() === 'POST'); await page.getByRole('button', { name: 'English', exact: true }).click(); await saved; }
   if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).click();
+});
+
+test('read-only finance totals, Safari Excel, history and revoked-access clearing', async ({ page }) => {
+  await ready(page); await generate(page);
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export Excel', exact: true }).click();
+  const book = new ExcelJS.Workbook(); await book.xlsx.readFile(await (await download).path());
+  expect(book.worksheets[0].getCell('B4').value).toBe(100);
+  expect(book.worksheets[0].getCell('B9').value).toBe(50);
+  await page.getByRole('button', { name: 'Booking payments', exact: true }).click();
+  await expect(record(page, fixture.completed)).toContainText('60.000');
+  await record(page, fixture.completed).getByRole('button', { name: 'Payment history', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('QA refund recorded by mistake');
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+  await page.route('**/rest/v1/rpc/manager_finances', route => route.request().postDataJSON().p_action === 'bookings' ? route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: '42501', message: 'FINANCE_FORBIDDEN' }) }) : route.continue());
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('alert')).toContainText('no longer have access');
+  await expect(page.locator('.finance-record')).toHaveCount(0);
 });

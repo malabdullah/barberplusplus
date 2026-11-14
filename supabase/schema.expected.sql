@@ -1909,7 +1909,10 @@ begin
    union all select e.shop_id,e.occurred_on,e.kind,e.id,e.signed_fils,case when e.booking_id is not null then e.signed_fils else-e.signed_fils end,0,0,0,case when e.booking_id is null then'expense'else'booking'end from private.shop_finance_entries e where e.shop_id=any(shops)and e.occurred_on between first_day and last_day
    union all select b.branch_id,today,'booking_balance',b.id,0,0,greatest(0,case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end-coalesce(bp.paid,0)),greatest(0,coalesce(bp.paid,0)-case when b.status in('cancelled','no_show')then 0 else round(b.price*1000)::bigint end),0,'' from public.bookings b left join bp on bp.booking_id=b.id where b.branch_id=any(shops)
    union all select e.shop_id,today,'expense_balance',e.id,0,0,0,0,e.amount_fils-coalesce(ep.paid,0),e.category from private.shop_finance_expenses e left join ep on ep.expense_id=e.id where e.shop_id=any(shops)and e.voided_at is null
-  )select run.id,row_number()over(order by report_day,kind,reference),jsonb_build_object('shopId',d.shop_id,'shopName',s.name,'shopNameAr',s.name_ar,'date',report_day,'kind',kind,'reference',reference,'amountFils',amount::text,'cashFils',cash::text,'dueFils',receivable::text,'creditFils',credit::text,'payableFils',payable::text,'category',category)from data d join public.branches s on s.id=d.shop_id limit 100001;
+  )select run.id,row_number()over(order by d.report_day,d.kind,d.reference),jsonb_build_object('shopId',d.shop_id,'shopName',s.name,'shopNameAr',s.name_ar,'date',d.report_day,'kind',d.kind,'reference',d.reference,'amountFils',amount::text,'cashFils',cash::text,'dueFils',receivable::text,'creditFils',credit::text,'payableFils',payable::text,'category',d.category,'method',movement.method,'paymentReference',movement.reference,'description',coalesce(ex.description,''),'reason',movement.reason,'targetId',coalesce(movement.booking_id,movement.expense_id),'reversesId',movement.reverses_id)
+   from data d join public.branches s on s.id=d.shop_id
+   left join private.shop_finance_entries movement on movement.id=d.reference and d.kind in('receipt','refund','expense_payment','reversal')
+   left join private.shop_finance_expenses ex on ex.id=coalesce(movement.expense_id,case when d.kind in('expense','expense_balance')then d.reference end) limit 100001;
   get diagnostics n=row_count;
   if n>100000 then raise exception 'FINANCE_TOO_LARGE';end if;
   with grouped as(select payload->>'shopId'id,max(payload->>'shopName')name,max(payload->>'shopNameAr')name_ar,
@@ -1918,10 +1921,12 @@ begin
    coalesce(sum((payload->>'cashFils')::bigint)filter(where payload->>'category'='booking'),0)receipts,
    -coalesce(sum((payload->>'cashFils')::bigint)filter(where payload->>'category'='expense'),0)paid,
    coalesce(sum((payload->>'dueFils')::bigint),0)due,coalesce(sum((payload->>'creditFils')::bigint),0)credit,coalesce(sum((payload->>'payableFils')::bigint),0)payable
-   from private.shop_finance_rows where run_id=run.id group by payload->>'shopId')
+   from private.shop_finance_rows where run_id=run.id group by payload->>'shopId'),
+  scoped as(select s.id,s.name,s.name_ar,coalesce(g.sales,0)sales,coalesce(g.expenses,0)expenses,coalesce(g.receipts,0)receipts,coalesce(g.paid,0)paid,coalesce(g.due,0)due,coalesce(g.credit,0)credit,coalesce(g.payable,0)payable
+   from public.branches s left join grouped g on g.id=s.id::text where s.id=any(shops))
   select jsonb_build_object('id',run.id,'from',first_day,'to',last_day,'createdAt',run.created_at,'expiresAt',run.expires_at,'total',n,
    'summary',jsonb_build_object('salesFils',sum(sales)::text,'expenseFils',sum(expenses)::text,'netReceiptsFils',sum(receipts)::text,'expensePaidFils',sum(paid)::text,'operatingFils',sum(sales-expenses)::text,'cashFlowFils',sum(receipts-paid)::text,'dueFils',sum(due)::text,'creditFils',sum(credit)::text,'payableFils',sum(payable)::text),
-   'shops',coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar,'salesFils',sales::text,'expenseFils',expenses::text,'operatingFils',(sales-expenses)::text,'cashFlowFils',(receipts-paid)::text)order by name,id),'[]'))into v_result from grouped;
+   'shops',coalesce(jsonb_agg(jsonb_build_object('id',id,'name',name,'nameAr',name_ar,'salesFils',sales::text,'expenseFils',expenses::text,'operatingFils',(sales-expenses)::text,'cashFlowFils',(receipts-paid)::text)order by name,id),'[]'))into v_result from scoped;
   -- Empty reports still return numeric zeroes and the selected scope.
   v_result:=jsonb_set(v_result,'{summary}',(select jsonb_object_agg(key,case when value='null'::jsonb then '"0"'::jsonb else value end)from jsonb_each(v_result->'summary')));
   if exists(select 1 from jsonb_each_text(v_result->'summary')where abs(value::numeric)>9007199254740991)then raise exception 'FINANCE_TOO_LARGE';end if;
@@ -2985,6 +2990,8 @@ CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "man
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
+CREATE OR REPLACE TRIGGER "finance_booking_history" BEFORE UPDATE OF "branch_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_finance_history"();
+CREATE OR REPLACE TRIGGER "finance_shop_history" BEFORE DELETE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_finance_history"();
 CREATE OR REPLACE TRIGGER "guard_barber_account_email" BEFORE UPDATE OF "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_account_contact_email"();
 CREATE OR REPLACE TRIGGER "guard_booking_history" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_history"();
 CREATE OR REPLACE TRIGGER "guard_booking_policy" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_policy"();

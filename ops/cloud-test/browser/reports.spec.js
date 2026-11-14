@@ -8,8 +8,15 @@ async function login(page, email) {
   await page.goto('/login');
   await page.getByLabel('Email address', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(qa.password);
+  const preferences = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings?') && response.request().method() === 'GET');
   await page.locator('button[type="submit"]').click();
   await expect(page).not.toHaveURL(/\/login/);
+  await preferences;
+  if (await page.locator('html').getAttribute('dir') === 'rtl') {
+    await page.locator('.preferences-selector').first().locator('button').first().click();
+    const saved = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings') && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'English', exact: true }).click(); await saved;
+  }
 }
 async function generate(page) {
   await page.getByRole('button', { name: 'Generate report', exact: true }).click();
@@ -59,7 +66,8 @@ test('manager report types, detail pagination, exact Excel snapshot and dirty fi
   await expect(page.getByText('Completed booking value', { exact: true })).toBeVisible();
   await page.getByRole('combobox', { name: 'Report', exact: true }).first().selectOption('overview');
   await generate(page);
-  await page.getByRole('button', { name: 'Switch to light mode', exact: true }).click();
+  if (await page.locator('html').getAttribute('data-theme') !== 'light') await page.getByRole('button', { name: 'Switch to light mode', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.screenshot({ path: '.cloud-test/reports-manager.png', fullPage: true });
   expect(errors).toEqual([]);
 });
@@ -124,7 +132,8 @@ test.afterEach(async ({ page }) => {
   if (!await selectors.count()) return;
   if (await page.locator('html').getAttribute('dir') === 'rtl') {
     await selectors.first().locator('button').first().click();
-    await page.getByRole('button', { name: 'English', exact: true }).click();
+    const saved = page.waitForResponse(response => response.url().includes('/rest/v1/user_settings') && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'English', exact: true }).click(); await saved;
   }
   if (await page.locator('html').getAttribute('data-theme') !== 'dark') await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).click();
 });
