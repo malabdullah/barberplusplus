@@ -16,6 +16,10 @@ def main():
     args = parser.parse_args()
     root = pathlib.Path(args.source).resolve()
     evidence = (root / args.evidence).resolve()
+    private_directory = root / '.release-private'
+    if private_directory.is_symlink():
+        raise ValueError('Private evidence directory must not be a symlink')
+    private_directory.mkdir(mode=0o700, exist_ok=True)
     if os.environ.get('DOCKER_HOST') or os.environ.get('DOCKER_CONTEXT'):
         raise ValueError('Docker endpoint overrides refused')
     lock = json.loads((root / 'ops/release/runtime-lock.json').read_text())
