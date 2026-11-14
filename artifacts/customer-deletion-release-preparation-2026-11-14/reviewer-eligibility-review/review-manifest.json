@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_NEW_READ_ONLY_LOOKUP_PROPOSAL_REQUIRES_INDEPENDENT_REVIEW_AND_FRESH_OWNER_APPROVAL",
+  "preparedAtUTC": "2026-11-14T09:20:50.479967+00:00",
+  "existingWaitingManifestSHA256": "c1392d3f5ae5b589a063f6533df32d62eb791d99ee2e6cf6c96e72eb89e5aff1",
+  "protectedCore": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "existingMainSchemaSource": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+  "files": {
+    "inspect_reviewer.py": "b735208e58de919287b36516a93bb01512e226c53a7b829b3d2876759fcc75c0",
+    "lookup.sql": "44e7f2a5d66e7e7f9b7439b74a5e94eb59b2607d0e0bad0370d4028fe2eef65e",
+    "required-schema.json": "48fd72a2b631bdf5f7271e04176c267c4709ae9a6e9dae4bb3c0fc59df9d8d47",
+    "schema-source-checks.json": "016c84765a13c7be3d84e202411edf57e0ff5fd80f82eac0e09872fc73ed13f8",
+    "test_inspect_reviewer.py": "fae1caf29064af8aefd162743540b4a011ad16881828ee9ab651c8a1b985476a",
+    "test-results.json": "f9a382ae16ba9fa9832e82aef5a4964b4d03fe58821ab79b3110927c550923e1",
+    "commands.json": "d40969be8ed1430d00de22046fdd7c6913ff7dc0fb5d9fffa4eddfb9a32d00d3",
+    "scope.md": "478df42f9fb82981210397a28a057fbca6429808b2a85d29a0714fc0ca74d3db"
+  },
+  "executionAuthorized": false,
+  "accessOpened": false,
+  "accountOrDemoReuseAuthorized": false,
+  "sqlOrLiveEligibilityVerified": false,
+  "revision": 2,
+  "supersedesDraftManifestSHA256": "685c672962be8116ca1674e4e52e3ecb5ed2fabbdfcb22388c825f4ca5e5451c"
+}
