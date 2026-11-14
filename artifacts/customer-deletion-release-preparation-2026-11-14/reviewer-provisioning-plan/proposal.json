@@ -1,0 +1,54 @@
+{
+  "status": "LOCAL_PROPOSAL_ONLY_NOT_EXECUTED",
+  "identity": {
+    "name": "Barber++ App Review",
+    "email": "support@barberplusplus.com",
+    "role": "customer",
+    "phone": null,
+    "passwordState": "NOT_CREATED_OR_STORED",
+    "verifiedState": "ONLY_NORMAL_OWNER_EMAIL_PROOF_IF_LATER_APPROVED",
+    "phoneHandling": "Leave absent; never fabricate"
+  },
+  "messageBudget": {
+    "recipient": "support@barberplusplus.com",
+    "initialSignupConfirmationRequests": 1,
+    "resends": 0,
+    "recovery": 0,
+    "deletionCode": 0,
+    "SMS": 0,
+    "push": 0,
+    "bookingUpdates": 0,
+    "scopeApproved": false
+  },
+  "proposedCredentialDestination": "Owner-managed Apple Passwords entry; later separate App Review credential disclosure approval",
+  "fixturePolicy": {
+    "preseedAppointments": false,
+    "favouriteWritesRequired": false,
+    "demoReuseApproved": false,
+    "slotVerified": false,
+    "fullDeletionEligibilityVerified": false
+  },
+  "checkout": {
+    "observedScalar": "email_only",
+    "observedAtUTC": "2026-11-14T09:39:03.614604+00:00",
+    "requiredNativeHTTPFields": {
+      "checkoutPolicy": "email_only",
+      "phoneVerificationRequired": false,
+      "phoneRequired": false,
+      "guestContactMode": "email"
+    },
+    "actualHTTPAndNativeAcceptance": "PENDING_NOT_CALLED"
+  },
+  "execution": {
+    "accessOpened": false,
+    "IPOrHTTPOrSSHOrSQLOrMailboxActions": false,
+    "accountOrCredentialCreated": false,
+    "messagesSent": 0,
+    "providerOrBookingOrPushOrBackupActions": false,
+    "pushDeployUploadSubmit": false
+  },
+  "choices": [
+    "Approve/defer one ordinary account and exact bounded owner-verified signup scope; optional exact demo browsing permission",
+    "Confirm private credential destination; Apple disclosure and destructive acceptance remain separate"
+  ]
+}
