@@ -8,7 +8,7 @@ for (const [name, engine] of [['chrome', chromium], ['safari', webkit]]) {
   try {
     for (const [scenario, parent, callback] of [
       ['old-policy', 'same-origin', 'same-origin'],
-      ['scoped-policy', 'same-origin-allow-popups', 'unsafe-none'],
+      ['scoped-policy', 'unsafe-none', 'unsafe-none'],
     ]) {
       const context = await browser.newContext();
       try {
@@ -21,8 +21,8 @@ for (const [name, engine] of [['chrome', chromium], ['safari', webkit]]) {
             body = '<button onclick="history.pushState(null,\'\',\'/customer/account\');document.querySelector(\'a\').hidden=false">My account</button><a href="/customer/delete-account" hidden>Delete account</a>';
           } else if (url.origin === 'https://app.example.test' && url.pathname === '/customer/delete-account') {
             policy = parent;
-            body = '<button onclick="window.p=window.open(\'https://provider.example.test/auth\')">Connect Apple</button><script>window.result=null;addEventListener("message",e=>{if(e.origin===location.origin&&e.source===p&&e.data==="synthetic")window.result="passed"})</script>';
-          } else if (url.origin === 'https://provider.example.test') {
+            body = '<button onclick="window.p=window.open(\'about:blank\');setTimeout(()=>p.location.replace(\'https://auth.other.test/auth\'),200)">Connect Apple</button><script>window.result=null;addEventListener("message",e=>{if(e.origin===location.origin&&e.source===p&&e.data==="synthetic")window.result="passed"})</script>';
+          } else if (url.origin === 'https://auth.other.test') {
             policy = 'unsafe-none';
             body = '<script>setTimeout(()=>location.replace("https://app.example.test/customer/auth-callback?code=synthetic"),100)</script>';
           } else if (url.origin === 'https://app.example.test' && url.pathname === '/customer/auth-callback') {

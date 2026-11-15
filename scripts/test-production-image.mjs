@@ -23,6 +23,7 @@ try {
     await delay(1000);
   }
   assert.ok(healthy, 'image did not become healthy');
+  docker('exec', name, 'nginx', '-t');
   assert.notEqual(docker('exec', name, 'id', '-u'), '0');
   const route = await fetch(`${base}/dashboard/bookings`);
   assert.ok(route.ok); assert.match(await route.text(), /<html/);
@@ -34,8 +35,8 @@ try {
   assert.match(route.headers.get('x-robots-tag'), /index, follow/);
   assert.equal(route.headers.get('cross-origin-opener-policy'), 'same-origin');
   for (const [path, policy] of [
-    ['/customer/delete-account', 'same-origin-allow-popups'],
-    ['/customer/delete-account?return=1', 'same-origin-allow-popups'],
+    ['/customer/delete-account', 'unsafe-none'],
+    ['/customer/delete-account?return=1', 'unsafe-none'],
     ['/customer/auth-callback?deletion_apple=synthetic&code=synthetic-callback-canary', 'unsafe-none'],
     ['/customer/auth-callback-other', 'same-origin'],
     ['/customer/account', 'same-origin'],

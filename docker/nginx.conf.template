@@ -21,7 +21,7 @@ map $uri $barber_referrer {
 # Use the original URI: the SPA fallback rewrites $uri to /index.html.
 map $request_uri $barber_opener_policy {
   default "same-origin";
-  ~^/customer/delete-account(?:\?|$) "same-origin-allow-popups";
+  ~^/customer/delete-account(?:\?|$) "unsafe-none";
   ~^/customer/auth-callback(?:\?|$) "unsafe-none";
 }
 map $request_uri $barber_auth_cache {

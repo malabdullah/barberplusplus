@@ -104,8 +104,8 @@ test('announcements use the gated named endpoints, never expose the queue worker
 test('Apple reconnection document headers match the bounded production exceptions', async () => {
   for (const [path, policy] of [
     ['/book', 'same-origin'], ['/customer/account', 'same-origin'],
-    ['/customer/delete-account', 'same-origin-allow-popups'],
-    ['/customer/delete-account?return=1', 'same-origin-allow-popups'],
+    ['/customer/delete-account', 'unsafe-none'],
+    ['/customer/delete-account?return=1', 'unsafe-none'],
     ['/customer/auth-callback?deletion_apple=synthetic&code=synthetic', 'unsafe-none'],
     ['/customer/auth-callback-other', 'same-origin'], ['/dashboard', 'same-origin'],
   ]) {
