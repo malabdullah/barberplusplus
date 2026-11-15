@@ -74,6 +74,16 @@ jobs:
       - run: npm run check:migrations
       - run: npx supabase test db
       - run: npm run check:schema
+      - name: Retain synthetic schema diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-schema-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .local-test/schema.actual.sql
+            .local-test/schema.diff
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Replay on the exact production PostgreSQL image
         run: python3 ops/release/test-postgres-image.py
       - name: Rehearse deletion with pinned Auth and Storage
