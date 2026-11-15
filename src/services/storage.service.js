@@ -1,4 +1,5 @@
 import { validateImageFile } from '../utils/imageValidation';
+import { optimizeUploadImage } from '../utils/imageOptimization';
 import { supabase } from '../lib/supabase';
 import { logErrorDev } from '../utils/security';
 
@@ -18,7 +19,8 @@ export const storageService = {
     // Security: Validate file before upload
     storageService.validateFile(file);
 
-    const fileExt = file.name.split('.').pop().toLowerCase();
+    const uploadFile = ['branches', 'barbers'].includes(folder) ? await optimizeUploadImage(file) : file;
+    const fileExt = uploadFile.name.split('.').pop().toLowerCase();
     // Sanitize entityId to prevent path traversal
     const sanitizedEntityId = entityId.replace(/[^a-zA-Z0-9-]/g, '');
     const fileName = `${sanitizedEntityId}-${Date.now()}.${fileExt}`;
@@ -26,10 +28,10 @@ export const storageService = {
 
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
-      .upload(filePath, file, {
+      .upload(filePath, uploadFile, {
         cacheControl: '3600',
         upsert: false,
-        contentType: file.type, // Explicitly set content type
+        contentType: uploadFile.type,
       });
 
     if (error) throw error;
