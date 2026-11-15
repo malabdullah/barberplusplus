@@ -43,6 +43,8 @@ jobs:
       - name: Prepare reliable browser dependency downloads
         run: sudo python3 .github/scripts/prepare-ubuntu-apt.py
       - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify scoped Apple popup transport without provider calls
+        run: node scripts/check-apple-popup-policy.mjs
       - run: npm run test:e2e
       - run: npm run test:e2e:qa
       - name: Report bounded synthetic setup diagnostics

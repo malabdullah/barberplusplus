@@ -85,6 +85,10 @@ export default {
     result.headers.set('X-Content-Type-Options', 'nosniff');
     result.headers.set('Referrer-Policy', 'no-referrer');
     result.headers.set('X-Frame-Options', 'DENY');
+    // Match the production document policy, including both ends of the optional
+    // Apple popup. Normal navigation enters deletion with a document reload.
+    result.headers.set('Cross-Origin-Opener-Policy', url.pathname === '/customer/auth-callback' ? 'unsafe-none'
+      : url.pathname === '/customer/delete-account' ? 'same-origin-allow-popups' : 'same-origin');
     result.headers.set('Cache-Control', 'private, no-store');
     result.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: ${env.SUPABASE_URL}; connect-src 'self' ${env.SUPABASE_URL} ${env.SUPABASE_URL.replace('https:', 'wss:')}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
     return result;

@@ -100,3 +100,18 @@ test('announcements use the gated named endpoints, never expose the queue worker
     assert.equal((await worker.fetch(new Request(`${origin}/test-api/admin-push-dispatch`,{headers:{authorization:login().headers.get('authorization')}}),env)).status,404);
   } finally { globalThis.fetch = original; }
 });
+
+test('Apple reconnection document headers match the bounded production exceptions', async () => {
+  for (const [path, policy] of [
+    ['/book', 'same-origin'], ['/customer/account', 'same-origin'],
+    ['/customer/delete-account', 'same-origin-allow-popups'],
+    ['/customer/delete-account?return=1', 'same-origin-allow-popups'],
+    ['/customer/auth-callback?deletion_apple=synthetic&code=synthetic', 'unsafe-none'],
+    ['/customer/auth-callback-other', 'same-origin'], ['/dashboard', 'same-origin'],
+  ]) {
+    const response = await worker.fetch(new Request(origin + path, {headers:{authorization:login().headers.get('authorization')}}), env);
+    assert.equal(response.headers.get('cross-origin-opener-policy'), policy, path);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  }
+});

@@ -144,7 +144,7 @@ export default function CustomerAccount() {
           <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/support?audience=customer">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link></div>
           <section className="ca-account-controls" aria-label={tr('account.actions')}>
             <CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} />
-            <Link className="ca-delete-account-link" to="/customer/delete-account"><Trash2 size={18} aria-hidden="true" /><span>{t('customerDeletion.title')}</span></Link>
+            <Link className="ca-delete-account-link" to="/customer/delete-account" reloadDocument><Trash2 size={18} aria-hidden="true" /><span>{t('customerDeletion.title')}</span></Link>
           </section>
         </section>
         <section className="ca-appointments" aria-labelledby="appointments">
