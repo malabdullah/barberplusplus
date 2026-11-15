@@ -13,6 +13,7 @@ for (const [table, id, field] of [
 ]) {
   test(`${table}: optimizes a real upload and preserves transparent images`, async ({ page, request, browserName }) => {
     expect(state.projectRef).toBe('qvkucvcjmojjbphlzlks');
+    expect(fixture.projectRef).toBe(state.projectRef);
     const apikey = config.vars.SUPABASE_PUBLISHABLE_KEY;
     const login = await request.post(`${backend}/auth/v1/token?grant_type=password`, {
       headers: { apikey }, data: { email: fixture.email, password: fixture.password },
@@ -47,7 +48,7 @@ for (const [table, id, field] of [
       const editPath = `/dashboard/${table}/${id}/edit`;
       await page.goto(editPath);
       await page.locator('input[type="file"]').setInputFiles({ name: 'synthetic-shop.png', mimeType: 'image/png', buffer: source });
-      await page.locator('form button[type="submit"]').click();
+      await page.locator('form:has(input[type="file"]) button[type="submit"]').click();
       await expect(page).toHaveURL(new RegExp(`/dashboard/${table}$`));
       const saved = await read();
       expect(saved[field]).toMatch(/\.(webp|jpg)$/);
@@ -70,7 +71,7 @@ for (const [table, id, field] of [
         return canvas.toDataURL('image/png').split(',')[1];
       });
       await page.locator('input[type="file"]').setInputFiles({ name: 'transparent-logo.png', mimeType: 'image/png', buffer: Buffer.from(transparent, 'base64') });
-      await page.locator('form button[type="submit"]').click();
+      await page.locator('form:has(input[type="file"]) button[type="submit"]').click();
       await expect(page).toHaveURL(new RegExp(`/dashboard/${table}$`));
       const withAlpha = await read();
       expect(withAlpha[field]).toMatch(/\.(webp|png)$/);

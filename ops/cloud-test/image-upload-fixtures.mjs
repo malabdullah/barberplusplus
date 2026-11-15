@@ -16,7 +16,8 @@ if (process.argv[2] === 'cleanup') {
   const fixture = JSON.parse(await fs.readFile(fixturePath));
   assert.equal(fixture.projectRef, state.projectRef);
   assert(fixture.email.startsWith('image-upload-') && fixture.email.endsWith('@example.test'));
-  const session = check(await admin.auth.signInWithPassword({ email: fixture.email, password: fixture.password }));
+  const user = createClient(backend, keys.find(key => key.name === 'anon').api_key, options);
+  const session = check(await user.auth.signInWithPassword({ email: fixture.email, password: fixture.password }));
   check(await admin.auth.admin.signOut(session.session.access_token, 'global'));
   check(await admin.from('barbers').delete().eq('id', fixture.barberId).eq('branch_id', fixture.shopId));
   check(await admin.from('branches').delete().eq('id', fixture.shopId).eq('manager_id', fixture.managerId));
