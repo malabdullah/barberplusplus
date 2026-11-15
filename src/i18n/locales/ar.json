@@ -2010,7 +2010,8 @@
       "appointmentsIntro": "راجع حجوزاتك وتفاصيل مواعيدك.",
       "noAppointmentsTitle": "موعدك القادم يبدأ هنا",
       "findShop": "ابحث عن صالون",
-      "timezone": "جميع المواعيد بتوقيت الكويت (UTC+3)."
+      "timezone": "جميع المواعيد بتوقيت الكويت (UTC+3).",
+      "actions": "إجراءات الحساب"
     }
   },
   "customerPrivacy": {

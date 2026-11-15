@@ -19,6 +19,14 @@
 .ca-profile-actions :is(a, button):hover:not(:disabled) { color: var(--booking-link); }
 .ca-profile-actions svg { color: var(--booking-muted); flex-shrink: 0; }
 .ca-profile-actions button:disabled { opacity: .6; }
+.ca-account-controls { display: grid; gap: 12px; margin-top: 20px; padding-top: 24px; border-top: 1px solid var(--booking-divider); }
+.ca-account-controls .customer-sign-out { margin-top: 0; }
+.ca-delete-account-link { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 16px; border-radius: 8px; color: #b42318; font-size: 14px; font-weight: 600; line-height: 1.5; text-decoration: none; }
+.ca-delete-account-link:hover { color: #b42318; background: #b423180d; }
+.ca-delete-account-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.ca-delete-account-link svg { flex-shrink: 0; }
+[data-theme='dark'] .ca-delete-account-link { color: #ffaaa0; }
+[data-theme='dark'] .ca-delete-account-link:hover { color: #ffaaa0; background: #ffaaa014; }
 .ca-profile-field + .ca-profile-field { margin-top: 20px; }
 .ca-account .ca-profile-field .cb-field-label { margin-top: 0; }
 .ca-profile-field .cb-helper { margin: 10px 0 0; font-size: 13px; line-height: 1.5; }

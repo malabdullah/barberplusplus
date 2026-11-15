@@ -1990,7 +1990,8 @@
       "appointmentsIntro": "Review your bookings and appointment details.",
       "noAppointmentsTitle": "Your next appointment starts here",
       "findShop": "Find a shop",
-      "timezone": "All appointment times are in Kuwait time (UTC+3)."
+      "timezone": "All appointment times are in Kuwait time (UTC+3).",
+      "actions": "Account actions"
     }
   },
   "customerPrivacy": {
