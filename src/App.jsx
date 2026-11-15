@@ -66,6 +66,7 @@ import EnvironmentBanner from './components/EnvironmentBanner';
 import { customerFeaturesEnabled } from './lib/runtimeConfig';
 import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
+import CustomerDocumentBoundary from './components/Customer/CustomerDocumentBoundary';
 
 const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerification'));
 const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
@@ -324,7 +325,7 @@ export default function App() {
       <EnvironmentBanner />
       <AccountSessionNotice />
       <AppProvider>
-        <CustomerAuthProvider><CustomerFavouritesProvider><AppRoutes /></CustomerFavouritesProvider></CustomerAuthProvider>
+        <CustomerAuthProvider><CustomerFavouritesProvider><CustomerDocumentBoundary><AppRoutes /></CustomerDocumentBoundary></CustomerFavouritesProvider></CustomerAuthProvider>
       </AppProvider>
     </>
   );
