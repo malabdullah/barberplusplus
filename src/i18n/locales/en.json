@@ -2015,7 +2015,7 @@
       },
       {
         "title": "Sharing an appointment",
-        "text": "Shared links show a snapshot of the shop, barber, services, time, price and status when shared. Your name, email, phone and private notes are excluded. Later appointment changes do not rewrite the snapshot. Links expire 24 hours after the captured appointment ends. Recipients can forward links or save copies. There is no customer sharing-management screen."
+        "text": "Each booking has a permanent viewing link showing its latest shop, barber, services, date, time, price and status. Your name, email, phone and private notes are excluded. Anyone with the link can view or forward it. Links remain available after the appointment and account deletion while the anonymized booking is retained. Links cannot manage the booking and there are no sharing-management controls."
       },
       {
         "title": "Service providers",
@@ -2031,7 +2031,7 @@
       },
       {
         "title": "Deleting your customer account",
-        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account. Anonymous payment, refund and expense records remain for shop financial reports. Personal payment references and reasons are removed. Deleting your account does not issue a refund or settle an outstanding balance."
+        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites and ratings are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account. Anonymous payment, refund and expense records remain for shop financial reports. Personal payment references and reasons are removed. Deleting your account does not issue a refund or settle an outstanding balance."
       },
       {
         "title": "Copies outside your account",

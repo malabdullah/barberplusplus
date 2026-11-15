@@ -3,10 +3,11 @@ const assert=(v:unknown,message='Assertion failed')=>{if(!v)throw Error(message)
 const origin='http://localhost:5173',secret='only-a-synthetic-test-secret-not-a-credential';
 const bookingId='bb110000-0000-4000-8000-000000000001';
 function setup(){
- const calls:{action:string;data:Record<string,unknown>}[]=[];let saved:Record<string,unknown>|null=null;
+ const calls:{action:string;data:Record<string,unknown>}[]=[];const publicId='9'.repeat(64);let saved:Record<string,unknown>|null=null;
  const handler=createBookingShareHandler({environment:'test',appUrl:origin,publicUrl:'http://localhost:55321',secret,
   identity:token=>Promise.resolve(token==='owner'?{user_id:'owner-id',session_id:'live-session'}:null),
-  rpc:(action,data)=>{calls.push({action,data});if(action==='create'){saved||=data;return Promise.resolve({...saved,expiresAt:'2027-01-02T12:00:00Z'});}if(action==='view'){if(!saved||data.hash!==saved.hash)throw Error('LINK_UNAVAILABLE');return Promise.resolve({date:'2027-01-01',time:'12:00',status:'confirmed'});}saved=null;return Promise.resolve({sharing:false});}});
+  rpc:(action,data)=>{calls.push({action,data});if(action==='create'){saved||={publicId};return Promise.resolve(saved);}if(action==='view'){if(!saved||data.token!==publicId)throw Error('LINK_UNAVAILABLE');return Promise.resolve({date:'2027-01-01',time:'12:00',status:'confirmed'});}throw Error('PERMANENT_LINK');}});
+
  const request=(body:unknown,token='owner',headers={})=>handler(new Request(origin,{method:'POST',headers:{Origin:origin,...(token?{Authorization:'Bearer '+token}:{}),...headers},body:JSON.stringify(body)}));
  return {request,calls,handler};
 }
@@ -20,11 +21,12 @@ Deno.test('share URL uses a stable independent token fragment; no booking identi
  assert(viewed.headers.get('cache-control')==='private, no-store');assert(viewed.headers.get('referrer-policy')==='no-referrer');
  assert(s.calls.at(-1)?.data.hash===await tokenHash(url.hash.slice(1)));
 });
-Deno.test('revoke invalidates old URL; new sharing creates an independent token',async()=>{
+Deno.test('retired revoke returns explicit permanent-link error without replacing the canonical URL',async()=>{
  const s=setup();const old=await(await s.request({action:'create',bookingId})).json();
- assert((await s.request({action:'revoke',bookingId})).status===200);
- assert((await s.request({action:'view',token:new URL(old.url).hash.slice(1)},'')).status===404);
- const next=await(await s.request({action:'create',bookingId})).json();assert(next.url!==old.url);
+ const response=await s.request({action:'revoke',bookingId});assert(response.status===409);assert((await response.json()).error==='PERMANENT_LINK');
+ const next=await(await s.request({action:'create',bookingId})).json();assert(next.url===old.url);
+ assert(old.permanent===true&&old.sharingVersion===2&&old.expiresAt==='9999-12-31T23:59:59.000Z');
+ assert((await s.request({action:'view',token:new URL(old.url).hash.slice(1)},'')).status===200);
 });
 Deno.test('anonymous or stale customer cannot mint or revoke a link, body cannot impersonate identity',async()=>{
  for(const action of ['create','revoke'])for(const token of ['', 'expired']){
@@ -59,4 +61,8 @@ Deno.test('SQL ownership denial is generic and operational errors do not echo se
   const response=await handler(new Request(origin,{method:'POST',headers:{Origin:origin,Authorization:'Bearer owner'},body:JSON.stringify({action:'create',bookingId})}));
   assert(response.status===(message==='LINK_UNAVAILABLE'?404:message==='AUTH_REQUIRED'?401:503));assert(!(await response.text()).includes('secret'));
  }
+});
+
+Deno.test('internal receipt lookup cannot be called from HTTP, even by a signed-in caller',async()=>{
+ const s=setup();assert((await s.request({action:'receipt',bookingId})).status===400);assert(!s.calls.length);
 });

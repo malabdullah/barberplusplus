@@ -4,7 +4,7 @@ import { Loader2, Share2 } from 'lucide-react';
 import { bookingShareService } from '../../services/bookingShare.service';
 import './BookingShare.css';
 
-export default function BookingShareControls({ bookingId, receipt, revision = '', menuItem = false }) {
+export default function BookingShareControls({ bookingId, receipt, shareUrl, menuItem = false }) {
   const { t } = useTranslation();
   const [preparing, setPreparing] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -24,7 +24,8 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
     link.current = null; pending.current = true;
     setPreparing(true); setError(''); setMessage(''); setManualUrl('');
     try {
-      const result = await bookingShareService.create(bookingId, receipt);
+      const supplied = typeof shareUrl === 'string' && shareUrl.startsWith(`${window.location.origin}/booking/share#`) && /^#[a-f0-9]{64}$/.test(new URL(shareUrl).hash);
+      const result = supplied ? { url: shareUrl } : await bookingShareService.create(bookingId, receipt);
       if (id !== requestId.current) return null;
       link.current = result;
       return result;
@@ -32,7 +33,7 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
       if (id === requestId.current) setError(failure.message);
       return null;
     } finally { if (id === requestId.current) { pending.current = false; setPreparing(false); } }
-  }, [bookingId, receipt]);
+  }, [bookingId, receipt, shareUrl]);
 
   useEffect(() => {
     mounted.current = true;
@@ -40,10 +41,10 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
     // Prepare while the action becomes visible, before the click. Safari's
     // system share/clipboard APIs need the click's transient user activation.
     const ready = () => { if (!submitting.current && !pending.current && !link.current && (!menu || menu.open)) prepare(); };
-    const focus = () => { if (!submitting.current) { link.current = null; ready(); } };
+    const focus = ready;
     const toggle = () => {
       if (menu.open) ready();
-      else { requestId.current += 1; link.current = null; pending.current = false; setPreparing(true); }
+
     };
     ready();
     menu?.addEventListener('toggle', toggle);
@@ -53,7 +54,7 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
       menu?.removeEventListener('toggle', toggle);
       window.removeEventListener('focus', focus);
     };
-  }, [prepare, revision]);
+  }, [prepare]);
 
   async function share() {
     if (submitting.current) return;
@@ -66,7 +67,7 @@ export default function BookingShareControls({ bookingId, receipt, revision = ''
     };
     try {
       let ready = link.current;
-      if (!ready || new Date(ready.expiresAt).getTime() <= Date.now()) ready = await prepare();
+      if (!ready) ready = await prepare();
       if (!ready || !mounted.current) return;
       const operation = requestId.current;
       const current = () => mounted.current && requestId.current === operation;

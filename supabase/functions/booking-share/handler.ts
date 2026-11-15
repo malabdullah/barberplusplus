@@ -10,8 +10,6 @@ const hex=(bytes:ArrayBuffer)=>Array.from(new Uint8Array(bytes),x=>x.toString(16
 export async function tokenHash(value:string){return hex(await crypto.subtle.digest('SHA-256',encoder.encode(value)));}
 export function createBookingShareHandler(deps:Dependencies){
  const runtime=customerRuntime(deps);
- const key=crypto.subtle.importKey('raw',encoder.encode('booking-share-link-v1:'+deps.secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
- const tokenFor=async(id:string,nonce:string)=>hex(await crypto.subtle.sign('HMAC',await key,encoder.encode(id+':'+nonce)));
  async function receipt(value:unknown):Promise<Data|null>{
   if(typeof value!=='string'||value.length>3000)return null;
   try{
@@ -44,21 +42,21 @@ export function createBookingShareHandler(deps:Dependencies){
    const action=String(body.action);
    if(action==='view'){
     if(typeof body.token!=='string'||!/^[0-9a-f]{64}$/.test(body.token))return reply(404,{error:'LINK_UNAVAILABLE'});
-    return reply(200,{booking:await deps.rpc('view',{hash:await tokenHash(body.token)})});
+    return reply(200,{booking:await deps.rpc('view',{hash:await tokenHash(body.token),token:body.token})});
    }
    if(!uuid.test(String(body.bookingId)))return reply(400,{error:'INVALID_REQUEST'});
    let auth:Data;
    if(body.receipt){const proof=await receipt(body.receipt);if(!proof||proof.id!==body.bookingId)return reply(403,{error:'LINK_UNAVAILABLE'});auth={receipt:proof};}
    else{const bearer=req.headers.get('authorization')?.replace(/^Bearer /i,'')||'';const identity=bearer?await deps.identity(bearer):null;if(!identity)return reply(401,{error:'AUTH_REQUIRED'});auth=identity;}
-   const id=crypto.randomUUID(),nonce=crypto.randomUUID(),candidate=await tokenFor(id,nonce);
-   const result=await deps.rpc(action,{...auth,booking_id:body.bookingId,id,nonce,hash:await tokenHash(candidate)});
-   if(action==='revoke')return reply(200,{sharing:false});
-   if(!uuid.test(String(result.id))||!uuid.test(String(result.nonce)))throw Error('UNAVAILABLE');
-   const token=await tokenFor(String(result.id),String(result.nonce));if(await tokenHash(token)!==result.hash)throw Error('UNAVAILABLE');
-   // Fragment tokens never enter page access logs, HTTP referrers or chat metadata.
-   return reply(200,{url:new URL('/booking/share#'+token,deps.appUrl).href,expiresAt:result.expiresAt});
+   const result=await deps.rpc(action,{...auth,booking_id:body.bookingId});
+   if(typeof result.publicId!=='string'||!/^[0-9a-f]{64}$/.test(result.publicId))throw Error('UNAVAILABLE');
+   // Existing iOS28 requires the exact bare-hex fragment and a decodable date.
+   // expiresAt is a legacy decoding shim, never a link lifetime or UI expiry.
+   return reply(200,{url:new URL('/booking/share#'+result.publicId,deps.appUrl).href,
+    expiresAt:'9999-12-31T23:59:59.000Z',permanent:true,sharingVersion:2});
   }catch(error){
    const name=error instanceof Error?error.message:'';
+   if(/PERMANENT_LINK/.test(name))return reply(409,{error:'PERMANENT_LINK'});
    if(/LINK_UNAVAILABLE/.test(name))return reply(404,{error:'LINK_UNAVAILABLE'});
    if(/AUTH_REQUIRED/.test(name))return reply(401,{error:'AUTH_REQUIRED'});
    return reply(503,{error:'UNAVAILABLE'});
