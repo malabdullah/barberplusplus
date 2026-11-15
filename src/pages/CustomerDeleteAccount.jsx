@@ -5,6 +5,7 @@ import { Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
 import { customerSupabase } from '../lib/customerSupabase';
 import { deletionRequest } from '../services/customerDeletion.service';
+import { connectAppleForDeletion } from '../services/customerAppleDeletion.service';
 import { clearDeletedBrowserAccount, deletionReceipt, saveDeletionReceipt } from '../utils/customerDeletionReceipt';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './CustomerDeleteAccount.css';
@@ -16,6 +17,8 @@ export default function CustomerDeleteAccount() {
   const [code, setCode] = useState(''); const [password, setPassword] = useState(''); const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [resendAt, setResendAt] = useState(0);
   const [clock, setClock] = useState(Date.now()); const alive = useRef(true); const owner = useRef(''); const generation = useRef(0);
+  const [appleSkipped, setAppleSkipped] = useState(false);
+  const appleAbort = useRef(null);
   const operationRef = useRef(operation); operationRef.current = operation;
   usePublicNavigationBusy(busy);
   const fail = failure => { setPassword(''); setError(failure.message || 'UNAVAILABLE'); if (['CODE_EXPIRED', 'REAUTH_REQUIRED'].includes(failure.message)) { setState('awaiting_code'); setConfirmed(false); setCode(''); } };
@@ -46,7 +49,7 @@ export default function CustomerDeleteAccount() {
       } catch (failure) { if (alive.current) { setState('preview'); fail(failure); } }
     };
     load(); const timer = setInterval(() => setClock(Date.now()), 1000);
-    return () => { alive.current = false; generation.current++; data.subscription.unsubscribe(); clearInterval(timer); };
+    return () => { alive.current = false; generation.current++; appleAbort.current?.abort(); data.subscription.unsubscribe(); clearInterval(timer); };
   }, []);
   useEffect(() => {
     if (state !== 'cleanup_pending' || !operation?.receipt) return undefined;
@@ -93,6 +96,19 @@ export default function CustomerDeleteAccount() {
   });
   const resend = () => run(async current => { await deletionRequest('resend', { id: operation.id, receipt: operation.receipt, language: i18n.language.startsWith('ar') ? 'ar' : 'en' }); if (current()) { setState('awaiting_code'); setCode(''); setResendAt(Date.now() + 60000); } });
   const retry = () => run(async current => { const value = await deletionRequest('retry', { id: operation.id, receipt: operation.receipt }); if (current()) receive(value, operation); });
+  const connectApple = () => run(async current => {
+    setConfirmed(false);
+    const controller = new AbortController(); appleAbort.current = controller;
+    try { await connectAppleForDeletion(controller.signal); }
+    finally { if (appleAbort.current === controller) appleAbort.current = null; }
+    if (!current()) return;
+    const value = await deletionRequest('preview');
+    if (!current()) return;
+    setPreview(value); setAppleSkipped(false);
+    // Refresh booking details and require a fresh explicit final confirmation.
+  });
+  const legacyApple = preview?.providers?.includes('apple') && preview.appleRevocation !== 'registered';
+  const needsAppleChoice = legacyApple && !appleSkipped;
   return <CustomerAuthLayout title={tr(state === 'complete' ? 'completeTitle' : 'title')} backTo={['complete', 'cleanup_pending', 'uncertain'].includes(state) ? '/' : '/customer/account'} backLabel={t('common.back')}>
     {error && <p className="cb-alert" role="alert">{t(`customerDeletion.errors.${error}`, { defaultValue: tr('errors.UNAVAILABLE') })}</p>}
     {state === 'loading' ? <p role="status"><Loader2 className="cb-spinner" size={20} />{t('common.loading')}</p> : state === 'complete' ? <div className="ca-result"><CheckCircle2 size={34} aria-hidden="true" /><p role="status">{tr('complete')}</p>{operation?.appleManualRevocation && <p>{tr('appleHelp')} <a href="https://account.apple.com" target="_blank" rel="noopener noreferrer">{tr('appleSettings')}</a></p>}<Link className="cb-primary ca-submit" to="/">{tr('home')}</Link></div> : ['cleanup_pending', 'uncertain'].includes(state) ? <div role="status"><p>{tr(state === 'uncertain' ? 'uncertain' : 'pending')}</p><button className="cb-secondary ca-submit" disabled={busy} onClick={retry}>{tr('checkStatus')}</button></div> : state === 'switched' ? <p role="status">{tr('switched')}</p> : preview && <>
@@ -102,11 +118,15 @@ export default function CustomerDeleteAccount() {
       {preview.upcoming?.length > 0 && <ul className="ca-deletion-bookings">{preview.upcoming.map(booking => <li key={booking.id}><strong>{i18n.dir() === 'rtl' && booking.shopAr || booking.shop}</strong><span>{i18n.dir() === 'rtl' && booking.barberAr || booking.barber}</span><bdi>{new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuwait' }).format(new Date(`${booking.date}T${booking.time}+03:00`))}</bdi></li>)}</ul>}
       {preview.hasMore && <p>{tr('moreAppointments')}</p>}
       <p>{tr('history')}</p>
+      {legacyApple && <section className="ca-deletion-apple" aria-label={tr('appleTitle')}>
+        <h2>{tr('appleTitle')}</h2><p>{tr('appleIntro')}</p>
+        {!appleSkipped && <div className="ca-deletion-apple-actions"><button className="cb-secondary" disabled={busy} onClick={connectApple}>{tr('appleConnect')}</button><button className="cb-text-button" disabled={busy} onClick={() => { setAppleSkipped(true); setError(''); }}>{tr('appleSkip')}</button></div>}
+      </section>}
       {state === 'preview' ? <button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !preview.methods?.length} onClick={start}><Trash2 size={18} aria-hidden="true" />{tr('continue')}</button> : state === 'awaiting_code' ? <form onSubmit={verify}>
         {preview.methods?.length > 1 && <label className="ca-field">{tr('method')}<select className="cb-input" value={method} onChange={event => { setMethod(event.target.value); setPassword(''); setCode(''); }}>{preview.methods.map(item => <option key={item} value={item}>{tr(item)}</option>)}</select></label>}
         {method === 'password' ? <label className="ca-field">{tr('password')}<input className="cb-input" type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={event => setPassword(event.target.value)} /></label> : <><p>{tr('codeSent', { destination: preview.destination })}</p><label className="ca-field">{tr('code')}<input className="cb-input" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></label><button className="cb-text-button" type="button" disabled={busy || clock < resendAt} onClick={resend}>{tr('resend')}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)})` : ''}</button></>}
         <button className="cb-primary ca-submit" disabled={busy}>{tr('verify')}</button>
-      </form> : state === 'verified' ? <><label className="ca-deletion-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={busy} />{tr('confirm')}</label><button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !confirmed} onClick={confirm}><Trash2 size={18} aria-hidden="true" />{tr('delete')}</button></> : null}
+      </form> : state === 'verified' ? <><label className="ca-deletion-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={busy || needsAppleChoice} />{tr('confirm')}</label><button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !confirmed || needsAppleChoice} onClick={confirm}><Trash2 size={18} aria-hidden="true" />{tr('delete')}</button></> : null}
     </>}
     {error === 'AUTH_REQUIRED' && <Link className="cb-primary ca-submit" to="/customer/sign-in">{t('customerAuth.signIn')}</Link>}
     <Link className="cb-text-button" to="/support?audience=customer">{t('settings.contactSupport')}</Link>

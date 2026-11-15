@@ -21,7 +21,7 @@ export function clearDeletedBrowserAccount(ownerId) {
     if (current?.user?.id !== ownerId) return false;
     for (const key of [ACCOUNT_AUTH_STORAGE_KEY, `${ACCOUNT_AUTH_STORAGE_KEY}-code-verifier`, `${ACCOUNT_AUTH_STORAGE_KEY}-user`]) localStorage.removeItem(key);
     for (const storage of [localStorage, sessionStorage]) {
-      for (const key of ['barber-customer-booking-draft', 'barber-customer-booking-receipt', 'barber-customer-booking-return', 'barber-customer-favourite-intent', 'barber-customer-email-pending', 'barber-password-proof', 'barber-customer-oauth-return']) storage.removeItem(key);
+      for (const key of ['barber-customer-booking-draft', 'barber-customer-booking-receipt', 'barber-customer-booking-return', 'barber-customer-favourite-intent', 'barber-customer-email-pending', 'barber-password-proof', 'barber-customer-oauth-return', 'barber-customer-oauth-provider']) storage.removeItem(key);
     }
     return true;
   } catch { return false; }

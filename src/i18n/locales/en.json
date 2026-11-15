@@ -2819,7 +2819,7 @@
     "home": "Back to home",
     "switched": "You switched accounts. Refresh this page to continue with the current account.",
     "providers": "Connected sign-in: {{providers}}.",
-    "appleHelp": "If you used Sign in with Apple, you can also stop using Apple for Barber++ in your Apple Account settings.",
+    "appleHelp": "Your Barber++ account is deleted. To disconnect Apple sign-in, open your Apple Account settings.",
     "appleSettings": "Apple Account settings",
     "errors": {
       "UNAVAILABLE": "We could not finish this step. Your saved deletion request is kept. Please try again or contact support.",
@@ -2836,8 +2836,21 @@
       "CONFIRMATION_REQUIRED": "Confirm that you understand the effect of deleting your account.",
       "EMAIL_UNAVAILABLE": "We could not send the verification code. Try Resend code or contact support.",
       "DELETION_IN_PROGRESS": "A deletion request is already in progress. Check its saved status.",
-      "NOT_ENABLED": "Account deletion is not enabled in this environment."
-    }
+      "NOT_ENABLED": "Account deletion is not enabled in this environment.",
+      "APPLE_POPUP_BLOCKED": "Allow pop-ups for Barber++ and try again, or continue account deletion without reconnecting Apple.",
+      "APPLE_NOT_AVAILABLE": "Apple reconnection is unavailable. You can still continue account deletion.",
+      "APPLE_UNAVAILABLE": "Apple could not be reconnected. Try again or continue account deletion.",
+      "APPLE_CANCELLED": "Apple reconnection was cancelled. Nothing has been deleted.",
+      "APPLE_TIMEOUT": "Apple reconnection timed out. Try again or continue account deletion.",
+      "APPLE_ACCOUNT_CHANGED": "You switched accounts. Refresh this page before continuing.",
+      "APPLE_PROOF_INVALID": "Use the same Apple account linked to this Barber++ account. Nothing has been deleted.",
+      "APPLE_TOKEN_UNAVAILABLE": "Apple did not return the details needed to disconnect it automatically. You can still continue account deletion."
+    },
+    "appleTitle": "Disconnect Apple sign-in",
+    "appleIntro": "You can reconnect Apple to disconnect it automatically when your account is deleted, or continue and disconnect it later in Apple Account settings.",
+    "appleConnect": "Continue with Apple",
+    "appleSkip": "Continue account deletion",
+    "appleReturn": "Return to the original tab to continue account deletion."
   },
   "reports": {
     "title": "Reports",
