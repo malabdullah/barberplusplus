@@ -3,6 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
+select ok(not has_function_privilege('anon','public.account_activity(bigint)','EXECUTE'),'anonymous cannot call account activity');
+select ok(not has_function_privilege('anon','public.shop_reviews(integer)','EXECUTE'),'anonymous cannot call private shop reviews');
 insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)values
  ('ad151500-0000-4000-8000-000000000001','hierarchy-super@example.test',now(),'{"role":"admin"}','{"name":"QA Super Admin"}'),
  ('ad151500-0000-4000-8000-000000000002','hierarchy-admin@example.test',now(),'{"role":"agent"}','{"name":"QA Admin"}'),

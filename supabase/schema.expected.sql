@@ -104,6 +104,58 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
     CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
 );
 ALTER TABLE "public"."branches" OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."account_activity"("p_before" bigint DEFAULT NULL::bigint) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+  customer_account uuid;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select private.live_staff_role() into viewer_role;
+  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
+  if viewer_role='customer' then
+    select coalesce((select account_user_id from private.customer_social_identities where user_id=viewer), viewer)
+      into customer_account;
+  end if;
+
+  return (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'id',e.id,'happened_at',e.happened_at,'kind',e.kind,
+      'shop',b.name,'shop_ar',b.name_ar,
+      'reference',upper(left(replace(e.booking_id::text,'-',''),10)),
+      'actor_role',coalesce(e.actor_role,case when e.kind='booking_created' and own.booking_id is not null then 'customer' end),
+      'actor_name',case when e.actor_user_id=viewer then null
+        when viewer_role in ('admin','manager') and e.actor_role in ('admin','manager','barber','agent','whatsapp_agent')
+        then left(u.raw_user_meta_data->>'name',120) end,
+      'by_you',coalesce(e.actor_user_id=viewer,false) or (viewer_role='customer' and e.kind='booking_created' and
+        e.actor_role is null and own.account_user_id=customer_account)
+    ) order by e.id desc), '[]'::jsonb)
+    from (
+      select a.* from private.account_activity a
+      where (p_before is null or a.id<p_before) and (
+        viewer_role='admin' or
+        (viewer_role='manager' and a.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and a.barber_id in (
+          select x.id from public.barbers x where x.user_id=viewer and x.status='active'
+        )) or
+        (viewer_role='agent' and a.actor_user_id=viewer) or
+        (viewer_role='customer' and a.booking_id in (
+          select o.booking_id from private.customer_booking_owners o where o.account_user_id=customer_account
+        ))
+      )
+      order by a.id desc limit 25
+    ) e
+    left join public.branches b on b.id=e.branch_id
+    left join private.customer_booking_owners own on own.booking_id=e.booking_id
+    left join auth.users u on u.id=e.actor_user_id
+  );
+end;
+$$;
+ALTER FUNCTION "public"."account_activity"("p_before" bigint) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."account_deletion_access_allowed"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -145,6 +197,64 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."admin_invitation_service"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+declare inv private.admin_invitations%rowtype;person auth.users%rowtype;job private.admin_deletions%rowtype;op uuid;
+begin
+ if p_action='delete-finish'then
+  select *into job from private.admin_deletions where operation=(p_data->>'operation')::uuid and user_id=(p_data->>'userId')::uuid for update;
+  if job.user_id is null or not exists(select 1 from auth.users where id=job.user_id and deleted_at is not null)then raise exception 'ADMIN_DELETION_PENDING';end if;
+  if job.state<>'done'then
+   update private.admin_deletions set state='done'where user_id=job.user_id;
+   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
+    values(job.actor,job.user_id,'user_deleted','user',job.user_id,'{"source":"admin_account_management","auditRetained":true}');
+  end if;
+  return '{"success":true}';
+ end if;
+ select *into inv from private.admin_invitations where id=(p_data->>'id')::uuid and token_hash=p_data->>'tokenHash' for update;
+ if inv.id is null then raise exception 'INVITE_INVALID';end if;
+ if p_action='delivery'then
+  if p_data->>'delivery'not in('sent','failed')then raise exception 'INVALID_REQUEST';end if;
+  update private.admin_invitations set delivery=p_data->>'delivery'where id=inv.id;return '{"success":true}';
+ end if;
+ if inv.state='accepted'then raise exception 'INVITE_USED';end if;
+ if inv.state='cancelled'then raise exception 'INVITE_CANCELLED';end if;
+ if inv.expires_at<=now()then raise exception 'INVITE_EXPIRED';end if;
+ if not private.admin_inviter_allowed(inv.created_by)then raise exception 'INVITE_INVALID';end if;
+ if p_action='release'then
+  update private.admin_invitations set state='pending',operation=null,lease_until=null
+   where id=inv.id and operation=(p_data->>'operation')::uuid and state='processing';return '{"success":true}';
+ end if;
+ select *into person from auth.users where deleted_at is null and lower(email)=inv.email;
+ if person.id is not null and(person.raw_app_meta_data->>'role'is distinct from 'admin_invited'
+  or person.raw_app_meta_data->>'admin_invitation_id'is distinct from inv.id::text)then raise exception 'EMAIL_IN_USE';end if;
+ if p_action='resolve'then return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email);end if;
+ if p_action='prepare'then
+  if inv.state='processing'and inv.lease_until>now()then raise exception 'INVITE_PROCESSING';end if;
+  op:=gen_random_uuid();
+  update private.admin_invitations set state='processing',operation=op,lease_until=now()+interval'2 minutes'where id=inv.id;
+  return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email,'operation',op,'setupUser',person.id);
+ end if;
+ if p_action='finish'then
+  if inv.state<>'processing'or inv.operation is distinct from(p_data->>'operation')::uuid or inv.lease_until<=now()
+   or person.id is null or person.id is distinct from(p_data->>'userId')::uuid then raise exception 'INVITE_INVALID';end if;
+  if p_data->>'password' is null or length(p_data->>'password')<12 or octet_length(p_data->>'password')>72
+   or p_data->>'password'!~'[A-Z]'or p_data->>'password'!~'[a-z]'or p_data->>'password'!~'[0-9]'or p_data->>'password'!~'[!@#$%^&*(),.?":{}|<>]'then raise exception 'WEAK_PASSWORD';end if;
+  -- Choose the credential and confirm the bound email in one locked transition.
+  -- A competing public signup cannot substitute a password before confirmation.
+  update auth.users set encrypted_password=extensions.crypt(p_data->>'password',extensions.gen_salt('bf',10)),email_confirmed_at=now(),confirmation_token='',confirmation_sent_at=null,
+   raw_app_meta_data=(coalesce(raw_app_meta_data,'{}')-'admin_invitation_id')||'{"role":"agent"}',
+   raw_user_meta_data=coalesce(raw_user_meta_data,'{}')||jsonb_build_object('name',inv.name),updated_at=now()where id=person.id;
+  update private.admin_invitations set state='accepted',accepted_user_id=person.id,operation=null,lease_until=null where id=inv.id;
+  insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
+   values(inv.created_by,person.id,'role_assigned','user',person.id,jsonb_build_object('source','admin_invitation','invitationId',inv.id,'role','admin'));
+  return jsonb_build_object('success',true,'email',inv.email);
+ end if;
+ raise exception 'INVALID_REQUEST';
+end $_$;
+ALTER FUNCTION "public"."admin_invitation_service"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."admin_manager_statuses"() RETURNS TABLE("id" "uuid", "is_active" boolean)
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1678,8 +1788,10 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."enforce_password_session"() OWNER TO "postgres";
-create or replace function public.finish_admin_password_reset(p_guard uuid,p_actor uuid,p_target uuid)returns boolean
-language plpgsql security definer set search_path=''as $$
+CREATE OR REPLACE FUNCTION "public"."finish_admin_password_reset"("p_guard" "uuid", "p_actor" "uuid", "p_target" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
 begin
  perform 1 from private.admin_password_reset_guards where id=p_guard and actor_id=p_actor and target_id=p_target for update;
  if not found then raise exception 'Password reset guard not found';end if;
@@ -1797,12 +1909,10 @@ CREATE OR REPLACE FUNCTION "public"."is_super_admin"() RETURNS boolean
     AS $$
  select public.is_admin()and exists(select 1 from auth.users where id=auth.uid()and raw_app_meta_data->>'role'='admin');$$;
 ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION public.manage_administrators(p_action text, p_data jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+CREATE OR REPLACE FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
 declare actor uuid:=auth.uid();target auth.users%rowtype;inv private.admin_invitations%rowtype;
  page_number integer;rows jsonb;more boolean;address text;full_name text;result jsonb;job private.admin_deletions%rowtype;
 begin
@@ -1908,117 +2018,12 @@ begin
   end if;
  else raise exception 'INVALID_REQUEST';end if;
  return jsonb_build_object('success',true);
-end $function$;
+end $_$;
 ALTER FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION public.account_activity(p_before bigint DEFAULT NULL::bigint)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
-declare
-  viewer uuid := auth.uid();
-  viewer_role text;
-  customer_account uuid;
-begin
-  perform public.enforce_account_session();
-  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
-  select private.live_staff_role() into viewer_role;
-  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
-  if viewer_role='customer' then
-    select coalesce((select account_user_id from private.customer_social_identities where user_id=viewer), viewer)
-      into customer_account;
-  end if;
-
-  return (
-    select coalesce(jsonb_agg(jsonb_build_object(
-      'id',e.id,'happened_at',e.happened_at,'kind',e.kind,
-      'shop',b.name,'shop_ar',b.name_ar,
-      'reference',upper(left(replace(e.booking_id::text,'-',''),10)),
-      'actor_role',coalesce(e.actor_role,case when e.kind='booking_created' and own.booking_id is not null then 'customer' end),
-      'actor_name',case when e.actor_user_id=viewer then null
-        when viewer_role in ('admin','manager') and e.actor_role in ('admin','manager','barber','agent','whatsapp_agent')
-        then left(u.raw_user_meta_data->>'name',120) end,
-      'by_you',coalesce(e.actor_user_id=viewer,false) or (viewer_role='customer' and e.kind='booking_created' and
-        e.actor_role is null and own.account_user_id=customer_account)
-    ) order by e.id desc), '[]'::jsonb)
-    from (
-      select a.* from private.account_activity a
-      where (p_before is null or a.id<p_before) and (
-        viewer_role='admin' or
-        (viewer_role='manager' and a.branch_id in (select public.get_user_branch_ids())) or
-        (viewer_role='barber' and a.barber_id in (
-          select x.id from public.barbers x where x.user_id=viewer and x.status='active'
-        )) or
-        (viewer_role='agent' and a.actor_user_id=viewer) or
-        (viewer_role='customer' and a.booking_id in (
-          select o.booking_id from private.customer_booking_owners o where o.account_user_id=customer_account
-        ))
-      )
-      order by a.id desc limit 25
-    ) e
-    left join public.branches b on b.id=e.branch_id
-    left join private.customer_booking_owners own on own.booking_id=e.booking_id
-    left join auth.users u on u.id=e.actor_user_id
-  );
-end;
-$function$;
-CREATE OR REPLACE FUNCTION public.shop_reviews(p_page integer DEFAULT 1)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
-declare
-  viewer uuid := auth.uid();
-  viewer_role text;
-begin
-  perform public.enforce_account_session();
-  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
-  select private.live_staff_role() into viewer_role;
-  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
-  if viewer_role not in ('admin','manager','barber') or viewer_role is null then
-    raise exception 'REVIEWS_FORBIDDEN' using errcode='42501';
-  end if;
-  if p_page is null or p_page<1 or p_page>1000000 then raise exception 'INVALID_PAGE'; end if;
-  -- Written reviews remain a separate, unreleased capability.
-  if pg_catalog.to_regclass('private.customer_booking_reviews') is null then
-    return jsonb_build_object('total',0,'rows','[]'::jsonb);
-  end if;
-
-  return (
-    with accessible as (
-      select v.booking_id,v.body,v.updated_at,r.shop_rating,r.barber_rating,
-        b.branch_id,b.barber_id,b.customer_id
-      from private.customer_booking_reviews v
-      join private.customer_booking_ratings r on r.booking_id=v.booking_id
-      join public.bookings b on b.id=v.booking_id
-      where b.status='completed' and (
-        viewer_role='admin' or
-        (viewer_role='manager' and b.branch_id in (select public.get_user_branch_ids())) or
-        (viewer_role='barber' and b.barber_id in (select id from public.barbers where user_id=viewer and status='active'))
-      )
-    ), page as (
-      select * from accessible order by updated_at desc,booking_id limit 25 offset (p_page-1)*25
-    )
-    select jsonb_build_object('total',(select count(*) from accessible),'rows',
-      coalesce((select jsonb_agg(jsonb_build_object(
-        'id',p.booking_id,'review',p.body,'updated_at',p.updated_at,
-        'shop_rating',p.shop_rating,'barber_rating',p.barber_rating,
-        'shop',br.name,'shop_ar',br.name_ar,'barber',ba.name,'barber_ar',ba.name_ar,
-        'reference',upper(left(replace(p.booking_id::text,'-',''),10))
-      ) order by p.updated_at desc,p.booking_id)
-      from page p join public.branches br on br.id=p.branch_id join public.barbers ba on ba.id=p.barber_id),'[]'::jsonb)
-    )
-  );
-end;
-$function$;
-CREATE OR REPLACE FUNCTION public.manage_booking_policy(p_branch uuid, p_changes jsonb DEFAULT NULL::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+CREATE OR REPLACE FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb" DEFAULT NULL::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
 declare
   cancel_value integer;
   reschedule_value integer;
@@ -2051,7 +2056,7 @@ begin
   end if;
   return private.booking_policy(p_branch);
 end
-$function$;
+$_$;
 ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2586,6 +2591,55 @@ CREATE OR REPLACE FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") RET
   where exists(select 1 from public.branches where id=p_branch and status='active')
 $$;
 ALTER FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."shop_reviews"("p_page" integer DEFAULT 1) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select private.live_staff_role() into viewer_role;
+  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
+  if viewer_role not in ('admin','manager','barber') or viewer_role is null then
+    raise exception 'REVIEWS_FORBIDDEN' using errcode='42501';
+  end if;
+  if p_page is null or p_page<1 or p_page>1000000 then raise exception 'INVALID_PAGE'; end if;
+  -- Written reviews remain a separate, unreleased capability.
+  if pg_catalog.to_regclass('private.customer_booking_reviews') is null then
+    return jsonb_build_object('total',0,'rows','[]'::jsonb);
+  end if;
+
+  return (
+    with accessible as (
+      select v.booking_id,v.body,v.updated_at,r.shop_rating,r.barber_rating,
+        b.branch_id,b.barber_id,b.customer_id
+      from private.customer_booking_reviews v
+      join private.customer_booking_ratings r on r.booking_id=v.booking_id
+      join public.bookings b on b.id=v.booking_id
+      where b.status='completed' and (
+        viewer_role='admin' or
+        (viewer_role='manager' and b.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and b.barber_id in (select id from public.barbers where user_id=viewer and status='active'))
+      )
+    ), page as (
+      select * from accessible order by updated_at desc,booking_id limit 25 offset (p_page-1)*25
+    )
+    select jsonb_build_object('total',(select count(*) from accessible),'rows',
+      coalesce((select jsonb_agg(jsonb_build_object(
+        'id',p.booking_id,'review',p.body,'updated_at',p.updated_at,
+        'shop_rating',p.shop_rating,'barber_rating',p.barber_rating,
+        'shop',br.name,'shop_ar',br.name_ar,'barber',ba.name,'barber_ar',ba.name_ar,
+        'reference',upper(left(replace(p.booking_id::text,'-',''),10))
+      ) order by p.updated_at desc,p.booking_id)
+      from page p join public.branches br on br.id=p.branch_id join public.barbers ba on ba.id=p.barber_id),'[]'::jsonb)
+    )
+  );
+end;
+$$;
+ALTER FUNCTION "public"."shop_reviews"("p_page" integer) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3629,6 +3683,8 @@ GRANT ALL ON TABLE "public"."barbers" TO "service_role";
 GRANT ALL ON TABLE "public"."branches" TO "anon";
 GRANT ALL ON TABLE "public"."branches" TO "authenticated";
 GRANT ALL ON TABLE "public"."branches" TO "service_role";
+REVOKE ALL ON FUNCTION "public"."account_activity"("p_before" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_activity"("p_before" bigint) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."account_deletion_access_allowed"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."account_deletion_access_allowed"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."account_deletion_access_allowed"() TO "service_role";
@@ -3636,6 +3692,8 @@ REVOKE ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" 
 GRANT ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."admin_invitation_service"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."admin_invitation_service"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_manager_statuses"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_manager_statuses"() TO "service_role";
@@ -3821,6 +3879,8 @@ REVOKE ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") FROM PU
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "service_role";
@@ -3922,75 +3982,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-ALTER FUNCTION public.account_activity(bigint) OWNER TO postgres;
-REVOKE ALL ON FUNCTION public.account_activity(bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.account_activity(bigint) TO authenticated;
-
-ALTER FUNCTION public.shop_reviews(integer) OWNER TO postgres;
-REVOKE ALL ON FUNCTION public.shop_reviews(integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.shop_reviews(integer) TO authenticated;
-
-CREATE OR REPLACE FUNCTION public.admin_invitation_service(p_action text, p_data jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
-declare inv private.admin_invitations%rowtype;person auth.users%rowtype;job private.admin_deletions%rowtype;op uuid;
-begin
- if p_action='delete-finish'then
-  select *into job from private.admin_deletions where operation=(p_data->>'operation')::uuid and user_id=(p_data->>'userId')::uuid for update;
-  if job.user_id is null or not exists(select 1 from auth.users where id=job.user_id and deleted_at is not null)then raise exception 'ADMIN_DELETION_PENDING';end if;
-  if job.state<>'done'then
-   update private.admin_deletions set state='done'where user_id=job.user_id;
-   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
-    values(job.actor,job.user_id,'user_deleted','user',job.user_id,'{"source":"admin_account_management","auditRetained":true}');
-  end if;
-  return '{"success":true}';
- end if;
- select *into inv from private.admin_invitations where id=(p_data->>'id')::uuid and token_hash=p_data->>'tokenHash' for update;
- if inv.id is null then raise exception 'INVITE_INVALID';end if;
- if p_action='delivery'then
-  if p_data->>'delivery'not in('sent','failed')then raise exception 'INVALID_REQUEST';end if;
-  update private.admin_invitations set delivery=p_data->>'delivery'where id=inv.id;return '{"success":true}';
- end if;
- if inv.state='accepted'then raise exception 'INVITE_USED';end if;
- if inv.state='cancelled'then raise exception 'INVITE_CANCELLED';end if;
- if inv.expires_at<=now()then raise exception 'INVITE_EXPIRED';end if;
- if not private.admin_inviter_allowed(inv.created_by)then raise exception 'INVITE_INVALID';end if;
- if p_action='release'then
-  update private.admin_invitations set state='pending',operation=null,lease_until=null
-   where id=inv.id and operation=(p_data->>'operation')::uuid and state='processing';return '{"success":true}';
- end if;
- select *into person from auth.users where deleted_at is null and lower(email)=inv.email;
- if person.id is not null and(person.raw_app_meta_data->>'role'is distinct from 'admin_invited'
-  or person.raw_app_meta_data->>'admin_invitation_id'is distinct from inv.id::text)then raise exception 'EMAIL_IN_USE';end if;
- if p_action='resolve'then return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email);end if;
- if p_action='prepare'then
-  if inv.state='processing'and inv.lease_until>now()then raise exception 'INVITE_PROCESSING';end if;
-  op:=gen_random_uuid();
-  update private.admin_invitations set state='processing',operation=op,lease_until=now()+interval'2 minutes'where id=inv.id;
-  return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email,'operation',op,'setupUser',person.id);
- end if;
- if p_action='finish'then
-  if inv.state<>'processing'or inv.operation is distinct from(p_data->>'operation')::uuid or inv.lease_until<=now()
-   or person.id is null or person.id is distinct from(p_data->>'userId')::uuid then raise exception 'INVITE_INVALID';end if;
-  if p_data->>'password' is null or length(p_data->>'password')<12 or octet_length(p_data->>'password')>72
-   or p_data->>'password'!~'[A-Z]'or p_data->>'password'!~'[a-z]'or p_data->>'password'!~'[0-9]'or p_data->>'password'!~'[!@#$%^&*(),.?":{}|<>]'then raise exception 'WEAK_PASSWORD';end if;
-  -- Choose the credential and confirm the bound email in one locked transition.
-  -- A competing public signup cannot substitute a password before confirmation.
-  update auth.users set encrypted_password=extensions.crypt(p_data->>'password',extensions.gen_salt('bf',10)),email_confirmed_at=now(),confirmation_token='',confirmation_sent_at=null,
-   raw_app_meta_data=(coalesce(raw_app_meta_data,'{}')-'admin_invitation_id')||'{"role":"agent"}',
-   raw_user_meta_data=coalesce(raw_user_meta_data,'{}')||jsonb_build_object('name',inv.name),updated_at=now()where id=person.id;
-  update private.admin_invitations set state='accepted',accepted_user_id=person.id,operation=null,lease_until=null where id=inv.id;
-  insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
-   values(inv.created_by,person.id,'role_assigned','user',person.id,jsonb_build_object('source','admin_invitation','invitationId',inv.id,'role','admin'));
-  return jsonb_build_object('success',true,'email',inv.email);
- end if;
- raise exception 'INVALID_REQUEST';
-end $function$;
-
-ALTER FUNCTION public.admin_invitation_service(text,jsonb) OWNER TO postgres;
-REVOKE ALL ON FUNCTION public.admin_invitation_service(text,jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.admin_invitation_service(text,jsonb) TO service_role;
