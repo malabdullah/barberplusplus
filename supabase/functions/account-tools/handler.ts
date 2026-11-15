@@ -45,7 +45,7 @@ export function createAccountToolsHandler(deps: Dependencies) {
           identity.role,
         )
       ) return reply(403, { error: "FORBIDDEN" });
-      if (identity.role === "admin" && identity.aal !== "aal2") {
+      if (["admin", "agent"].includes(identity.role) && identity.aal !== "aal2") {
         return reply(403, { error: "ADMIN_MFA_REQUIRED" });
       }
       const reader = request.body?.getReader();

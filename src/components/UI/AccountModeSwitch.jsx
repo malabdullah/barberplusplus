@@ -11,7 +11,7 @@ export default function AccountModeSwitch({ personal = false, full = false, disa
   const { t } = useTranslation();
   const { userRole } = useApp();
   const customerWorkspace = workDestination(userRole);
-  const workspace = customerWorkspace || { admin: '/admin', agent: '/agent' }[userRole];
+  const workspace = customerWorkspace || { super_admin: '/admin', admin: '/admin', agent: '/admin' }[userRole];
   if (!workspace || (!personal && (!customerFeaturesEnabled || !customerWorkspace))) return null;
   const label = t(personal ? 'accountMode.toWork' : 'accountMode.toCustomer');
   const Icon = personal ? Briefcase : UserRound;

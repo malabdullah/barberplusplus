@@ -281,7 +281,7 @@ Deno.serve(withCloudTestGateway(async (req: Request) => {
         global: {headers: {Authorization: authorization}},
       });
       const {data: {user}, error} = await caller.auth.getUser(authorization.replace(/^Bearer /i, ''));
-      if (error || user?.app_metadata?.role !== 'admin') return new Response('Forbidden', {status:403});
+      if (error || !['admin', 'agent'].includes(user?.app_metadata?.role)) return new Response('Forbidden', {status:403});
       const assurance = await caller.rpc('enforce_account_session');
       if (assurance.error) return new Response('Forbidden', {status:403});
       const result = await syncToDatabase();

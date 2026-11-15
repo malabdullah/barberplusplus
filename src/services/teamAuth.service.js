@@ -3,7 +3,7 @@ import { teamOAuthSupabase, TEAM_OAUTH_STORAGE_KEY } from '../lib/teamOAuthSupab
 import { appConfig } from '../lib/runtimeConfig';
 const pendingKey = 'barber-team-oauth-pending';
 const providers = ['google', 'apple'];
-export const staffDestination = role => ({ manager: '/dashboard', admin: '/admin', barber: '/barber', agent: '/agent' })[role] || '/login';
+export const staffDestination = role => ({ manager: '/dashboard', super_admin: '/admin', admin: '/admin', barber: '/barber', agent: '/admin' })[role] || '/login';
 async function clearTemporarySession() {
   // The accepted session belongs to the main client. Do not revoke it here.
   sessionStorage.removeItem(TEAM_OAUTH_STORAGE_KEY);

@@ -169,3 +169,10 @@ Deno.test("phase2 lifecycle and saved audience requests remain identity-bound an
   );
   assert(data.name === "Returning" && !("mode" in data));
 });
+
+Deno.test("Admin shares campaign access only with verified MFA", async () => {
+ for (const aal of ["aal1","aal2"]) {
+  let calls=0; const handle=createAdminPushHandler({...runtime,authenticate:async()=>({...identity,role:"agent",aal}),rpc:async()=>{calls++;return {};}});
+  assert((await handle(request({action:"history"}))).status===(aal==="aal2"?200:403));assert(calls===(aal==="aal2"?1:0));
+ }
+});

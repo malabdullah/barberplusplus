@@ -1,0 +1,226 @@
+{
+  "source": "4c01bb8935dfd88a632c2a40bf124cdfd429a5d8",
+  "project": "qvkucvcjmojjbphlzlks",
+  "base": [
+    {
+      "name": "002_booking_reminder_writes.sql",
+      "results": {
+        "failed": null,
+        "passed": 36,
+        "summary": null
+      }
+    },
+    {
+      "name": "005_admin_password_reset_guard.sql",
+      "results": {
+        "failed": null,
+        "passed": 15,
+        "summary": null
+      }
+    },
+    {
+      "name": "013_canonical_customer_profiles.sql",
+      "results": {
+        "failed": null,
+        "passed": 38,
+        "summary": [
+          "1..38"
+        ]
+      }
+    },
+    {
+      "name": "017_branch_manager_transfer.sql",
+      "results": {
+        "failed": null,
+        "passed": 18,
+        "summary": null
+      }
+    },
+    {
+      "name": "020_booking_change_policies.sql",
+      "results": {
+        "failed": null,
+        "passed": 27,
+        "summary": null
+      }
+    },
+    {
+      "name": "025_account_email_control.sql",
+      "results": {
+        "failed": null,
+        "passed": 27,
+        "summary": [
+          "1..27"
+        ]
+      }
+    },
+    {
+      "name": "027_availability_approvals.sql",
+      "results": {
+        "failed": null,
+        "passed": 56,
+        "summary": [
+          "1..56"
+        ]
+      }
+    },
+    {
+      "name": "030_shop_publishing.sql",
+      "results": {
+        "failed": null,
+        "passed": 22,
+        "summary": [
+          "1..22"
+        ]
+      }
+    },
+    {
+      "name": "039_managed_barbers.sql",
+      "results": {
+        "failed": null,
+        "passed": 36,
+        "summary": [
+          "1..36"
+        ]
+      }
+    },
+    {
+      "name": "040_booking_emails.sql",
+      "results": {
+        "failed": null,
+        "passed": 62,
+        "summary": [
+          "1..62"
+        ]
+      }
+    },
+    {
+      "name": "042_admin_announcements.sql",
+      "results": {
+        "failed": null,
+        "passed": 1,
+        "summary": null
+      }
+    },
+    {
+      "name": "044_admin_announcements_phase2.sql",
+      "results": {
+        "failed": null,
+        "passed": 1,
+        "summary": null
+      }
+    },
+    {
+      "name": "045_account_tools.sql",
+      "results": {
+        "failed": null,
+        "passed": 1,
+        "summary": null
+      }
+    },
+    {
+      "name": "046_checkout_email_policy.sql",
+      "results": {
+        "failed": null,
+        "passed": 38,
+        "summary": [
+          "1..38"
+        ]
+      }
+    },
+    {
+      "name": "050_staff_security.sql",
+      "results": {
+        "failed": null,
+        "passed": 14,
+        "summary": [
+          "1..14"
+        ]
+      }
+    },
+    {
+      "name": "060_platform_admin_hierarchy.sql",
+      "results": {
+        "failed": null,
+        "passed": 57,
+        "summary": [
+          "1..57"
+        ]
+      }
+    }
+  ],
+  "lowerAdminVariants": [
+    {
+      "name": "017_branch_manager_transfer.sql",
+      "results": {
+        "failed": null,
+        "passed": 18,
+        "summary": null
+      }
+    },
+    {
+      "name": "020_booking_change_policies.sql",
+      "results": {
+        "failed": null,
+        "passed": 27,
+        "summary": null
+      }
+    },
+    {
+      "name": "027_availability_approvals.sql",
+      "status": "expired",
+      "message": "This confirmation expired after 2 minutes. Call `execute_sql` again to get a new confirmation."
+    },
+    {
+      "name": "030_shop_publishing.sql",
+      "results": {
+        "failed": null,
+        "passed": 22,
+        "summary": [
+          "1..22"
+        ]
+      }
+    },
+    {
+      "name": "042_admin_announcements.sql",
+      "results": {
+        "failed": null,
+        "passed": 1,
+        "summary": null
+      }
+    },
+    {
+      "name": "044_admin_announcements_phase2.sql",
+      "results": {
+        "failed": null,
+        "passed": 1,
+        "summary": null
+      }
+    }
+  ],
+  "advisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 66
+    },
+    {
+      "name": "anon_security_definer_function_executable",
+      "level": "WARN",
+      "count": 3
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "count": 40
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1
+    }
+  ],
+  "browserAcceptance": "browser-acceptance.json",
+  "migrationHistoryAligned": true,
+  "mainAndProductionChanged": false
+}

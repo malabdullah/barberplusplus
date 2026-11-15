@@ -24,7 +24,7 @@ Deno.test('phone-only non-admin accounts can be selected',async()=>{
  const phoneUser={id:'40000000-0000-4000-8000-000000000004',phone:'96500000000',app_metadata:{role:'customer'}};
  const {handler}=setup({list:async()=>({users:[phoneUser],hasMore:false})});const r=await handler(request({action:'list',page:1}));equal(await r.json(),{users:[{id:phoneUser.id,phone:phoneUser.phone,role:'customer'}],hasMore:false});
 });
-for(const caller of [null,{...admin,app_metadata:{role:'manager'}},{...admin,app_metadata:{role:'agent'}},{...admin,app_metadata:{}},{...admin,app_metadata:{},user_metadata:{role:'admin'}}]) {
+for(const caller of [null,{...admin,app_metadata:{role:'manager'}},{...admin,app_metadata:{}},{...admin,app_metadata:{},user_metadata:{role:'admin'}}]) {
  Deno.test(`untrusted caller denied ${JSON.stringify(caller)}`,async()=>{const {handler,calls}=setup({authenticate:async()=>caller});const r=await handler(request(valid));equal(r.status,caller ? 403 : 401);equal(calls,{begin:0,update:0,complete:0});});
 }
 for(const user of [null,{...target,app_metadata:{role:'admin'}},{...target,app_metadata:{}},{...target,app_metadata:{role:'unknown'}}]) {
@@ -37,3 +37,12 @@ for(const body of [{...valid,password:'weak'}, {...valid,password:'A1!'+ 'a'.rep
  Deno.test(`invalid request rejected ${JSON.stringify(body)?.slice(0,50)}`,async()=>{const {handler,calls}=setup();const r=await handler(request(body));if(![400,403].includes(r.status))throw new Error('Invalid input accepted');equal(calls.update,0);});
 }
 Deno.test('hostile origin and oversized stream refused',async()=>{const {handler,calls}=setup();equal((await handler(request(valid,{...headers,Origin:'https://hostile.invalid'}))).status,403);equal((await handler(request({...valid,password:'x'.repeat(3000)}))).status,413);equal(calls.update,0);});
+
+Deno.test('Admin can reset ordinary accounts but cannot reset another Admin or Super Admin',async()=>{
+ const caller={...admin,app_metadata:{role:'agent'}};
+ const allowed=setup({authenticate:async()=>caller});equal((await allowed.handler(request(valid))).status,200);
+ for(const protectedRole of ['admin','agent']){const denied=setup({authenticate:async()=>caller,get:async()=>({...target,app_metadata:{role:protectedRole}})});equal((await denied.handler(request(valid))).status,403);equal(denied.calls.update,0);}
+});
+Deno.test('Super Admin retains lower Admin password administration',async()=>{
+ const lower={...target,app_metadata:{role:'agent'}};const {handler,calls}=setup({get:async()=>lower});equal((await handler(request(valid))).status,200);equal(calls.update,1);
+});

@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "results": [
+    {
+      "scenario": "super requires MFA before administrative access",
+      "result": "PASS"
+    },
+    {
+      "scenario": "super signs in with verified MFA",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Desktop light mode",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Desktop dark mode",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Mobile layout without page overflow",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Arabic mobile layout",
+      "result": "PASS"
+    },
+    {
+      "scenario": "admin requires MFA before administrative access",
+      "result": "PASS"
+    },
+    {
+      "scenario": "admin signs in with verified MFA",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted admin-password-reset permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted account-tools permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted admin-push permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Admin sessions return to correct settings",
+      "result": "PASS"
+    }
+  ]
+}

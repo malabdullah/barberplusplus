@@ -1,0 +1,101 @@
+{
+  "status": "PASS",
+  "scenarios": [
+    {
+      "scenario": "super requires MFA before administrative access",
+      "result": "PASS"
+    },
+    {
+      "scenario": "super signs in with verified MFA",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Super Admin sees Administrators management",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Super Admin grants Admin to the verified QA account after confirmation",
+      "result": "PASS"
+    },
+    {
+      "scenario": "admin requires MFA before administrative access",
+      "result": "PASS"
+    },
+    {
+      "scenario": "admin signs in with verified MFA",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Admin shares administrative dashboard but has no management link",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Admin deep link to administrative management redirects safely",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Direct Admin API call cannot bypass Super Admin boundary",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Admin email tools omit administrative identities",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Super Admin suspends only the QA Admin",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Suspension denies the already-open Admin session",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Super Admin restores QA Admin without reviving the ended session",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Desktop light mode",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Desktop dark mode",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Mobile layout without page overflow",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Arabic mobile layout",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted admin-password-reset permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted account-tools permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Hosted admin-push permits verified Admin read",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Admin sessions return to correct settings",
+      "result": "PASS"
+    },
+    {
+      "scenario": "Closed Arabic drawer finishes outside the viewport",
+      "result": "PASS"
+    }
+  ],
+  "cleanup": {
+    "status": "PASS",
+    "removedQaAccounts": 2,
+    "projectRef": "qvkucvcjmojjbphlzlks",
+    "existingAccountsChanged": false,
+    "productionTouched": false
+  },
+  "automationAdjustments": "Wait for MFA initialization and read the collapsed QA-only setup key without displaying it; select the requested theme from the current theme; wait for drawer animation before screenshots."
+}

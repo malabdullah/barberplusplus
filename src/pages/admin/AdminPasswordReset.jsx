@@ -1,3 +1,4 @@
+import { persistedRoleKey } from '../../lib/platformRoles';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,7 @@ export default function AdminPasswordReset() {
         <label htmlFor="reset-user">{t('admin.passwordReset.account')}</label>
         <select id="reset-user" className="form-input" value={userId} onChange={event => setUserId(event.target.value)} disabled={loading || busy} required>
           <option value="">{loading ? t('common.loading') : t('admin.passwordReset.select')}</option>
-          {users.map(user => <option key={user.id} value={user.id}>{user.email || user.phone} ({t(user.role === 'customer' ? 'bookings.customer' : `common.${user.role}`)})</option>)}
+          {users.map(user => <option key={user.id} value={user.id}>{user.email || user.phone} ({t(user.role === 'customer' ? 'bookings.customer' : persistedRoleKey(user.role))})</option>)}
         </select>
         <div className="password-reset-pagination">
           <button type="button" className="btn btn-secondary" disabled={page === 1 || loading || busy} onClick={() => setPage(value => value - 1)}>{t('admin.passwordReset.previous')}</button>

@@ -38,7 +38,7 @@ export function createAdminPushHandler(deps: Dependencies) {
         req.headers.get("authorization")?.replace(/^Bearer /i, "") || "";
       const identity = token ? await deps.authenticate(token) : null;
       if (!identity) return reply(401, { error: "AUTH_REQUIRED" });
-      if (identity.role !== "admin") return reply(403, { error: "FORBIDDEN" });
+      if (!["admin", "agent"].includes(identity.role)) return reply(403, { error: "FORBIDDEN" });
       if (identity.aal !== "aal2") {
         return reply(403, { error: "ADMIN_MFA_REQUIRED" });
       }

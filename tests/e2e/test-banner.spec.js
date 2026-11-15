@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { verifyLocalAdmin } from './fixtures/admin-mfa';
 
-for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']]) {
+for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/admin'], ['barber', '/barber']]) {
   test(`${role} Test banner leaves navigation and drawer controls unobscured`, async ({ page }) => {
     test.setTimeout(120000);
     const base = new URL(test.info().project.use.baseURL || 'http://127.0.0.1:5173');
@@ -16,7 +16,7 @@ for (const [role, home] of [['admin', '/admin'], ['manager', '/dashboard'], ['ag
     await page.getByLabel('Email address', { exact: true }).fill(`${role}@barber.test`);
     await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
     await page.locator('button[type="submit"]').click();
-    if (role === 'admin') await verifyLocalAdmin(page);
+    if (['admin', 'agent'].includes(role)) await verifyLocalAdmin(page);
     await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));
     const heightBefore = await page.locator('.environment-banner').evaluate(element => element.getBoundingClientRect().height);
     await page.locator('.environment-banner').evaluate(element => { element.style.fontSize = '2rem'; });

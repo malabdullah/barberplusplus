@@ -60,7 +60,7 @@ export default function MFASetup() {
     try {
       await authService.verifyTotp(enrollment?.id || factor.id, code);
       const returnTo = new URLSearchParams(window.location.search).get('returnTo');
-      navigate(returnTo ? staffMfaReturn(returnTo) : ({admin:'/admin',manager:'/dashboard',barber:'/barber',agent:'/agent'})[userRole] || '/login', { replace: true });
+      navigate(returnTo ? staffMfaReturn(returnTo) : ({super_admin:'/admin',admin:'/admin',manager:'/dashboard',barber:'/barber',agent:'/admin'})[userRole] || '/login', { replace: true });
     } catch {
       setCode('');
       setError('mfa.invalidCode');
@@ -79,7 +79,7 @@ export default function MFASetup() {
         ) : adminVerified ? (
           <>
             <p>{t('mfa.accountSecure')}</p>
-            <Link className="cb-secondary" to={userRole === 'admin' ? '/admin/settings' : '/dashboard'}>{t('common.back')}</Link>
+            <Link className="cb-secondary" to={['admin', 'super_admin'].includes(userRole) ? '/admin/settings' : '/dashboard'}>{t('common.back')}</Link>
           </>
         ) : factor || enrollment ? (
           <>

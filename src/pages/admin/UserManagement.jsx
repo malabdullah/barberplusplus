@@ -1,3 +1,4 @@
+import { useApp } from '../../context/AppContext';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -7,6 +8,7 @@ import './AdminPages.css';
 
 export default function UserManagement() {
   const { t } = useTranslation();
+  const { userRole } = useApp();
   const [counts, setCounts] = useState({ managers: '-', barbers: '-' });
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function UserManagement() {
   }, []);
 
   const sections = [
+    ...(userRole === 'super_admin' ? [{ icon: Users, title:t('administrators.title'),description:t('administrators.manage'),path:'/admin/users/administrators',count:'-' }] : []),
     { icon: Mail, title:t('accountEmail.title'),description:t('accountEmail.description'),path:'/admin/users/emails',count:'-' },
     {
       icon: Users,

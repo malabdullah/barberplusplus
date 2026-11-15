@@ -7,7 +7,7 @@ import AccountAccessState from '../components/AccountAccessState';
 import { accountToolsService } from '../services/accountTools.service';
 import './CustomerBooking.css';
 import './AccountTools.css';
-export const accountSettingsPath = role => ({ admin: '/admin/settings', manager: '/dashboard/settings', barber: '/barber/settings', agent: '/agent/settings' })[role] || '/customer/account';
+export const accountSettingsPath = role => ({ super_admin: '/admin/settings', admin: '/admin/settings', manager: '/dashboard/settings', barber: '/barber/settings', agent: '/admin/settings' })[role] || '/customer/account';
 export function deviceName(agent, t) {
   const system = /\biPhone\b/i.test(agent) ? 'iPhone' : /\biPad\b/i.test(agent) ? 'iPad' : /Android/i.test(agent) ? 'Android' : /Windows/i.test(agent) ? 'Windows' : /Macintosh|Mac OS/i.test(agent) ? 'Mac' : /Linux/i.test(agent) ? 'Linux' : '';
   const browser = /Edg/i.test(agent) ? 'Edge' : /Firefox|FxiOS/i.test(agent) ? 'Firefox' : /Chrome|CriOS/i.test(agent) ? 'Chrome' : /Safari/i.test(agent) ? 'Safari' : '';

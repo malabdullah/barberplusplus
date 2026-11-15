@@ -131,6 +131,7 @@ const TopBar = memo(function TopBar({
   const handleViewAllNotifications = useCallback(() => {
     setNotificationsOpen(false);
     const routes = {
+      super_admin: '/admin/notifications',
       admin: '/admin/notifications',
       barber: '/barber/notifications',
       manager: '/dashboard/notifications',

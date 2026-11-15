@@ -1,0 +1,1 @@
+{"status":"PASS","results":[{"scenario":"super requires MFA before administrative access","result":"PASS"},{"scenario":"super signs in with verified MFA","result":"PASS"},{"scenario":"Closed Arabic drawer finishes outside the viewport","result":"PASS"}]}

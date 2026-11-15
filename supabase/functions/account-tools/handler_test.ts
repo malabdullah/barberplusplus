@@ -25,7 +25,7 @@ Deno.test("account tools rejects guest, unknown role, admin without MFA and untr
     const [who, status] of [[null, 401], [
       { ...identity, role: "unknown" },
       403,
-    ], [{ ...identity, role: "admin" }, 403]] as const
+    ], [{ ...identity, role: "admin" }, 403], [{ ...identity, role: "agent" }, 403]] as const
   ) {
     let calls = 0;
     const handle = createAccountToolsHandler({

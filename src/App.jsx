@@ -1,3 +1,4 @@
+import Administrators from './pages/admin/Administrators';
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
@@ -7,6 +8,7 @@ import AdminLayout from './components/Layout/AdminLayout';
 import Landing from './pages/Landing';
 import PublicLayout from './components/Public/PublicLayout';
 import Login from './pages/Login';
+import AcceptAdminInvitation from './pages/AcceptAdminInvitation';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -107,13 +109,14 @@ function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
   }
 
   // Missing or mismatched trusted roles must never enter a protected route.
-  if (allowedRole && userRole !== allowedRole) {
+  if (allowedRole && userRole !== allowedRole && !(allowedRole === 'admin' && userRole === 'super_admin')) {
     // Redirect to role-appropriate dashboard
     const defaultRoutes = {
+      super_admin: '/admin',
       admin: '/admin',
       manager: '/dashboard',
       barber: '/barber',
-      agent: '/agent'
+      agent: '/admin'
     };
     return <Navigate to={defaultRoutes[userRole] || '/login'} replace />;
   }
@@ -129,10 +132,11 @@ function AppRoutes() {
   const getDefaultRoute = () => {
     if (!isAuthenticated) return '/';
     const routes = {
+      super_admin: '/admin',
       admin: '/admin',
       manager: '/dashboard',
       barber: '/barber',
-      agent: '/agent'
+      agent: '/admin'
     };
     return routes[userRole] || '/dashboard';
   };
@@ -142,7 +146,7 @@ function AppRoutes() {
   // Keep that public callback mounted while staff data loads: its one-time URL
   // has already been cleared, so remounting would report a false expired link.
   // Invitation acceptance also refreshes the role/session while its callback settles.
-  if (loading && !['/customer/email-callback', '/accept-invite'].includes(location.pathname)) {
+  if (loading && !['/customer/email-callback', '/accept-invite', '/accept-admin-invite'].includes(location.pathname)) {
     return (
       <div style={{
         display: 'flex',
@@ -192,6 +196,10 @@ function AppRoutes() {
       <Route
         path="/forgot-password"
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <ForgotPassword />}
+      />
+      <Route
+        path="/accept-admin-invite"
+        element={<AcceptAdminInvitation />}
       />
       <Route
         path="/accept-invite"
@@ -275,6 +283,7 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<UserManagement />} />
+        <Route path="users/administrators" element={<ProtectedRoute allowedRole="super_admin"><Administrators /></ProtectedRoute>} />
         <Route path="users/passwords" element={<AdminPasswordReset />} />
         <Route path="users/emails" element={<AccountEmails />} />
         <Route path="users/managers" element={<ManagersList />} />

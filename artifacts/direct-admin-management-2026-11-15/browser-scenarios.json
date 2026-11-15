@@ -1,0 +1,93 @@
+{
+  "status": "PASS",
+  "results": [
+    {
+      "scenario": "Super Admin signs in with MFA",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Occupied email gets a clear error without converting any account",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Name and email create an invitation directly",
+      "status": "PASS"
+    },
+    {
+      "scenario": "All three invitation emails are captured only in Test",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Another signed-in account is not silently replaced",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Invitation token is removed from the address bar",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Recipient sets a password and verifies the invited email without customer signup",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Invited Admin enrolls MFA and enters Admin dashboard",
+      "status": "PASS"
+    },
+    {
+      "scenario": "An accepted link cannot be reused",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Invited Admin cannot access Super Admin account management",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Super Admin edits name and email on the same page",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Changing email ends the existing Admin session",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Edited email signs in with the same password and MFA",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Password reset works on the same page and revokes the old session",
+      "status": "PASS"
+    },
+    {
+      "scenario": "New password and existing MFA sign in successfully",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Suspend blocks an already-open Admin session",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Reactivate does not revive an ended session",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Cancel removes a pending invitation and invalidates its link",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Resend invalidates the old link and its replacement loads in the same tab",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Unified directory works in light and dark mode",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Mobile cards keep actions visible in English and Arabic",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Confirmed deletion removes the selected Admin and blocks its open session",
+      "status": "PASS"
+    }
+  ]
+}

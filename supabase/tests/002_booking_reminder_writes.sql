@@ -10,6 +10,13 @@ insert into auth.users(id,email,raw_app_meta_data) values
 ('ee020000-0000-4000-8000-000000000003','reminder-agent@example.test','{"role":"agent"}'),
 ('ee020000-0000-4000-8000-000000000004','reminder-barber@example.test','{"role":"barber"}'),
 ('ee020000-0000-4000-8000-000000000005','reminder-other@example.test','{"role":"manager"}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('3eeaa963-459f-003e-cabb-e87771509e00','ee020000-0000-4000-8000-000000000003','totp','verified',now(),now());
+insert into auth.sessions(id,user_id,aal,factor_id)values('97851315-6fc1-6143-4fc0-fd092697fb01','ee020000-0000-4000-8000-000000000003','aal2','3eeaa963-459f-003e-cabb-e87771509e00');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('720f0eea-a02b-015a-ee04-1cdb89dbec40','ee020000-0000-4000-8000-000000000001','totp','verified',now(),now());
+insert into auth.sessions(id,user_id,aal,factor_id)values('029bc87f-ec50-6c4a-8381-f6f74aca1157','ee020000-0000-4000-8000-000000000001','aal2','720f0eea-a02b-015a-ee04-1cdb89dbec40');
+update auth.sessions set aal='aal2',factor_id='3eeaa963-459f-003e-cabb-e87771509e00' where user_id='ee020000-0000-4000-8000-000000000003';
 insert into public.branches(id,manager_id,name,working_hours)
 select v.id::uuid,v.manager::uuid,'Reminder fixture',jsonb_object_agg(day,'{"open":"09:00","close":"18:00"}'::jsonb)
 from (values('ee020100-0000-4000-8000-000000000001','ee020000-0000-4000-8000-000000000002'),('ee020100-0000-4000-8000-000000000002','ee020000-0000-4000-8000-000000000005')) v(id,manager)
@@ -72,14 +79,14 @@ select throws_ok('select * from public.booking_reminders', '42501');
 reset role;
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"ee020000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"}}', true);
+select set_config('request.jwt.claims', '{"sub":"ee020000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"agent"},"aal":"aal2","session_id":"97851315-6fc1-6143-4fc0-fd092697fb01"}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status, customer_id, service_ids, duration, price)
   values ('61000000-0000-4000-8000-000000000003', 'ee020100-0000-4000-8000-000000000001', 'ee020300-0000-4000-8000-000000000001', current_date + 5, '12:30', 'confirmed','ee020400-0000-4000-8000-000000000001',array['ee020200-0000-4000-8000-000000000001']::uuid[],30,3)$$, 'trusted agent retains existing booking authorization');
 select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000003'$$, 'trusted agent cancels booking');
 reset role;
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"ee020000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"ee020000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"},"session_id":"029bc87f-ec50-6c4a-8381-f6f74aca1157"}', true);
 select lives_ok($$insert into public.bookings (id, branch_id, barber_id, date, time, status, customer_id, service_ids, duration, price)
   values ('61000000-0000-4000-8000-000000000004', 'ee020100-0000-4000-8000-000000000001', 'ee020300-0000-4000-8000-000000000001', current_date + 6, '12:30', 'confirmed','ee020400-0000-4000-8000-000000000001',array['ee020200-0000-4000-8000-000000000001']::uuid[],30,3)$$, 'admin retains existing booking authorization');
 select lives_ok($$update public.bookings set status = 'cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id = '61000000-0000-4000-8000-000000000004'$$, 'admin cancels booking');

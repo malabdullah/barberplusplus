@@ -75,7 +75,7 @@ describe('simple public navigation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('/book');
     expect(header().queryByRole('group', { name: 'Shops' })).not.toBeInTheDocument();
   });
-  it.each([['admin','/admin'],['manager','/dashboard'],['agent','/agent'],['barber','/barber']])('takes signed-in %s back to the correct workspace', (role, path) => {
+  it.each([['admin','/admin'],['manager','/dashboard'],['agent','/admin'],['super_admin','/admin'],['barber','/barber']])('takes signed-in %s back to the correct workspace', (role, path) => {
     state.isAuthenticated = true; state.userRole = role;
     mount();
     expect(header().getByRole('link', { name: 'Work mode' })).toHaveAttribute('href', path);

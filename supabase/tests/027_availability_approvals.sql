@@ -33,6 +33,7 @@ insert into auth.sessions(id,user_id)values
 ('ec080000-0000-4000-8000-000000000002','ec080000-0000-4000-8000-000000000002'),
 ('ec080000-0000-4000-8000-000000000003','ec080000-0000-4000-8000-000000000003'),
 ('ec080000-0000-4000-8000-000000000004','ec080000-0000-4000-8000-000000000004');
+update auth.sessions set aal='aal2',factor_id='affb0096-623c-8cc3-c006-d85ee6b85826' where user_id='ec080000-0000-4000-8000-000000000005';
 set local role authenticated;
 select set_config('availability.saved',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',0,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
 select is(current_setting('availability.saved')::jsonb->'request'->>'status','pending','barber submits a pending proposal');
@@ -134,6 +135,7 @@ insert into public.branches(id,manager_id,name)
 values ('ec080000-0000-4000-8000-000000000103','ec080000-0000-4000-8000-000000000001','Second managed shop');
 insert into auth.sessions(id,user_id)
 values ('ec080000-0000-4000-8000-000000000011','ec080000-0000-4000-8000-000000000001');
+update auth.sessions set aal='aal2',factor_id='affb0096-623c-8cc3-c006-d85ee6b85826' where user_id='ec080000-0000-4000-8000-000000000005';
 -- Deliberately omit the session for this denial case.
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000103'),'transfer requires a session ID');
@@ -144,9 +146,12 @@ select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000102'
 select set_config('request.jwt.claims','{}',true);
 insert into auth.users(id,email,raw_app_meta_data)
 values ('ec080000-0000-4000-8000-000000000005','transfer-admin@example.test','{"role":"admin"}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('affb0096-623c-8cc3-c006-d85ee6b85826','ec080000-0000-4000-8000-000000000005','totp','verified',now(),now());
 insert into auth.sessions(id,user_id)
 values ('ec080000-0000-4000-8000-000000000015','ec080000-0000-4000-8000-000000000005');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000005","session_id":"ec080000-0000-4000-8000-000000000015","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+update auth.sessions set aal='aal2',factor_id='affb0096-623c-8cc3-c006-d85ee6b85826' where user_id='ec080000-0000-4000-8000-000000000005';
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000005","session_id":"ec080000-0000-4000-8000-000000000015","role":"authenticated","app_metadata":{"role":"admin"},"aal":"aal2"}',true);
 select ok(private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'live admin session retains transfer authority');
 update auth.users set raw_app_meta_data='{"role":"barber"}' where id='ec080000-0000-4000-8000-000000000005';
 select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000102'),'demotion removes authority from an existing admin session');

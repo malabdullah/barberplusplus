@@ -6,7 +6,7 @@ async function chooseTheme(page, theme) {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 }
 
-const roles = [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/agent'], ['barber', '/barber']];
+const roles = [['admin', '/admin'], ['manager', '/dashboard'], ['agent', '/admin'], ['barber', '/barber']];
 const sizes = [[360, 800], [390, 844], [430, 932], [768, 1024], [1023, 900], [1024, 900], [1025, 900], [1365, 900]];
 for (const [role, home] of roles) {
   test(`${role} navigation across responsive, language and theme states`, async ({ page }) => {
@@ -18,7 +18,7 @@ for (const [role, home] of roles) {
     await page.getByLabel('Email address', { exact: true }).fill(`${role}@barber.test`);
     await page.getByLabel('Password', { exact: true }).fill('LocalOnly123!');
     await page.locator('button[type="submit"]').click();
-    if (role === 'admin') await verifyLocalAdmin(page);
+    if (['admin', 'agent'].includes(role)) await verifyLocalAdmin(page);
     await expect(page).toHaveURL(new RegExp(`${home}(?:/|$)`));
     const original = await page.evaluate(() => ({ language: localStorage.getItem('barber-language') || 'en', theme: localStorage.getItem('barber-theme') || 'dark' }));
     try {

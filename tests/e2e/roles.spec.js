@@ -30,13 +30,14 @@ test('manager sees only their own tenant branch', async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/);
 });
 
-test('agent reaches only the agent workspace', async ({ page }) => {
-  await login(page, 'agent@barber.test', '/agent');
-  await expect(page.locator('a[href*="conversations"]')).toHaveCount(0);
-  await page.goto('/agent/conversations');
-  await expect(page).toHaveURL(/\/agent\/?$/);
-  await page.goto('/admin');
-  await expect(page).toHaveURL(/\/agent(?:\/|$)/);
+test('Admin has the administration workspace but cannot manage administrative accounts', async ({ page }) => {
+  await login(page, 'agent@barber.test', '/mfa-setup');
+  await verifyLocalAdmin(page);
+  await expect(page.locator('a[href="/admin/users/administrators"]')).toHaveCount(0);
+  await page.goto('/admin/users/administrators');
+  await expect(page).toHaveURL(/\/admin\/?$/);
+  await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/admin(?:\/|$)/);
 });
 
 test('barber reaches only the barber workspace', async ({ page }) => {

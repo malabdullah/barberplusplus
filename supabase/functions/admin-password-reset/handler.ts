@@ -8,7 +8,8 @@ type Dependencies = {
   update: (id: string, password: string, guardId: string) => Promise<boolean>;
   complete: (guardId: string, adminId: string, targetId: string) => Promise<boolean>;
 };
-const allowedRoles = new Set(['manager', 'barber', 'agent', 'customer']);
+const allowedRoles = new Set(['manager', 'barber', 'customer']);
+const canManage = (caller: User, target: User) => allowedRoles.has(role(target)) || role(caller) === 'admin' && role(target) === 'agent';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const role = (user: User) => typeof user.app_metadata?.role === 'string' ? user.app_metadata.role.toLowerCase() : '';
 const passwordValid = (value: unknown): value is string => typeof value === 'string' && value.length >= 12 && new TextEncoder().encode(value).length <= 72 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value);
@@ -25,7 +26,7 @@ export function createAdminPasswordResetHandler(deps: Dependencies) {
     try {
       const caller = await deps.authenticate(authorization);
       if (!caller) return reply(401, {error:'Unauthorized'});
-      if (role(caller) !== 'admin') return reply(403, {error:'Forbidden'});
+      if (!['admin', 'agent'].includes(role(caller))) return reply(403, {error:'Forbidden'});
       const reader = req.body?.getReader();
       if (!reader) return reply(400, {error:'Invalid request'});
       const chunks: Uint8Array[] = []; let size = 0;
@@ -36,12 +37,12 @@ export function createAdminPasswordResetHandler(deps: Dependencies) {
       if (body.action === 'list') {
         if (!Number.isSafeInteger(body.page) || Number(body.page) < 1 || Number(body.page) > 1000) return reply(400, {error:'Invalid page'});
         const result = await deps.list(Number(body.page));
-        return reply(200, {users: result.users.filter(user => allowedRoles.has(role(user)) && (user.email || user.phone)).map(user => ({id:user.id,...(user.email ? {email:user.email} : {phone:user.phone}),role:role(user)})), hasMore:result.hasMore});
+        return reply(200, {users: result.users.filter(user => canManage(caller, user) && (user.email || user.phone)).map(user => ({id:user.id,...(user.email ? {email:user.email} : {phone:user.phone}),role:role(user)})), hasMore:result.hasMore});
       }
       if (body.action !== 'reset' || typeof body.userId !== 'string' || !uuid.test(body.userId) || !passwordValid(body.password)) return reply(400, {error:'Invalid request'});
       if (body.userId === caller.id) return reply(403, {error:'Forbidden'});
       const target = await deps.get(body.userId);
-      if (!target || !allowedRoles.has(role(target))) return reply(403, {error:'Forbidden'});
+      if (!target || !canManage(caller, target)) return reply(403, {error:'Forbidden'});
       const guard = await deps.begin(caller.id, target.id);
       if (!guard) return reply(503, {error:'Reset unavailable'});
       if (!(await deps.update(target.id, body.password, guard))) return reply(503, {error:'Reset unavailable'});

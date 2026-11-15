@@ -11,9 +11,12 @@ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
 ('dc090000-0000-4000-8000-000000000103','appointment-manager@example.test',now(),'{"role":"manager"}'),
 ('dc090000-0000-4000-8000-000000000104','policy-admin@example.test',now(),'{"role":"admin"}'),
 ('dc090000-0000-4000-8000-000000000105','policy-barber@example.test',now(),'{"role":"barber"}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('8a62a756-e06f-93e0-6773-45b6de6e6d52','dc090000-0000-4000-8000-000000000104','totp','verified',now(),now());
 insert into auth.sessions(id,user_id) values
 ('dc090000-0000-4000-8000-000000000201','dc090000-0000-4000-8000-000000000101'),
 ('dc090000-0000-4000-8000-000000000202','dc090000-0000-4000-8000-000000000102');
+update auth.sessions set aal='aal2',factor_id='8a62a756-e06f-93e0-6773-45b6de6e6d52' where user_id='dc090000-0000-4000-8000-000000000104';
 select set_config('appointments.owner','{"user_id":"dc090000-0000-4000-8000-000000000101","session_id":"dc090000-0000-4000-8000-000000000201","name":"Appointment Owner"}',true);
 select set_config('appointments.other','{"user_id":"dc090000-0000-4000-8000-000000000102","session_id":"dc090000-0000-4000-8000-000000000202","name":"Appointment Other"}',true);
 select set_config('appointments.day',((now() at time zone 'Asia/Kuwait')::date+1)::text,true);
@@ -65,6 +68,7 @@ insert into auth.sessions(id,user_id)values
 ('dc090000-0000-4000-8000-000000000103','dc090000-0000-4000-8000-000000000103'),
 ('dc090000-0000-4000-8000-000000000104','dc090000-0000-4000-8000-000000000104'),
 ('dc090000-0000-4000-8000-000000000105','dc090000-0000-4000-8000-000000000105');
+update auth.sessions set aal='aal2',factor_id='8a62a756-e06f-93e0-6773-45b6de6e6d52' where user_id='dc090000-0000-4000-8000-000000000104';
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"dc090000-0000-4000-8000-000000000103","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"dc090000-0000-4000-8000-000000000103"}',true);
 select throws_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":0,"reschedule_minutes":0}')$$,

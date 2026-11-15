@@ -7,12 +7,15 @@ insert into auth.users(id,email,raw_app_meta_data) values
 ('fa150000-0000-4000-8000-000000000002','publish-other@example.test','{"role":"manager"}'),
 ('fa150000-0000-4000-8000-000000000003','publish-barber@example.test','{"role":"barber"}'),
 ('fa150000-0000-4000-8000-000000000004','publish-admin@example.test','{"role":"admin"}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('d0038693-3fa5-56dc-14fa-65e156c7f313','fa150000-0000-4000-8000-000000000004','totp','verified',now(),now());
 insert into auth.sessions(id,user_id) values
 ('fa150000-0000-4000-8000-000000000011','fa150000-0000-4000-8000-000000000001'),
 ('fa150000-0000-4000-8000-000000000012','fa150000-0000-4000-8000-000000000002'),
 ('fa150000-0000-4000-8000-000000000014','fa150000-0000-4000-8000-000000000004');
+update auth.sessions set aal='aal2',factor_id='d0038693-3fa5-56dc-14fa-65e156c7f313' where user_id='fa150000-0000-4000-8000-000000000004';
 insert into public.branches(id,name,manager_id,governorate_id,area_id) values
-('fa150000-0000-4000-8000-000000000101','Publish QA Shop','fa150000-0000-4000-8000-000000000001',9001,9001);
+('fa150000-0000-4000-8000-000000000101','Publish QA Shop','fa150000-0000-4000-8000-000000000001',(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1));
 select is((select publication_state from public.branches where id='fa150000-0000-4000-8000-000000000101'),'draft','new shops start as draft');
 select ok(not has_function_privilege('anon','public.manage_shop_publication(uuid,text,text)','EXECUTE'),'anonymous publication access is denied');
 select set_config('request.jwt.claims','{"sub":"fa150000-0000-4000-8000-000000000001","role":"authenticated","session_id":"fa150000-0000-4000-8000-000000000011","app_metadata":{"role":"manager"}}',true);
@@ -48,7 +51,7 @@ select lives_ok($$select public.staff_save_booking((current_setting('publish.boo
 reset role;
 select set_config('request.jwt.claims','{}',true);
 select throws_ok($$select public.customer_booking('slots',current_setting('publish.input')::jsonb)$$,'P0001','INVALID_SELECTION','public slots reject paused shops despite a stale catalog');
-select set_config('request.jwt.claims','{"sub":"fa150000-0000-4000-8000-000000000004","role":"authenticated","session_id":"fa150000-0000-4000-8000-000000000014","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"fa150000-0000-4000-8000-000000000004","role":"authenticated","session_id":"fa150000-0000-4000-8000-000000000014","app_metadata":{"role":"admin"},"aal":"aal2"}',true);
 set local role authenticated;
 select is(public.manage_shop_publication('fa150000-0000-4000-8000-000000000101','allow-manual','paused')->>'paused_manual_booking_allowed','true','admin may grant a paused-shop manual exception');
 reset role;

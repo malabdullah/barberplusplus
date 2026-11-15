@@ -1,0 +1,59 @@
+{
+  "status": "PASS",
+  "environment": "hosted Test",
+  "projectRef": "qvkucvcjmojjbphlzlks",
+  "applicationSource": "2d959892c9ab331cb7b578f98087002f45d1932d",
+  "browserScenarios": 22,
+  "frontendTests": 433,
+  "frontendTestFiles": 85,
+  "functionTests": 261,
+  "operationsTests": 69,
+  "cloudGatewayTests": 8,
+  "hostedSQL": {
+    "directInvitations": {
+      "failed": null,
+      "passed": 52
+    },
+    "hierarchy": {
+      "passed": 57,
+      "failed": 0
+    },
+    "accountEmailControls": {
+      "passed": 27,
+      "failed": 0
+    }
+  },
+  "cleanup": {
+    "invitationsRemoved": 3,
+    "capturedEmailsRemoved": 4,
+    "hardDeletedQaAccounts": 1,
+    "anonymizedAuditActorTombstones": 1,
+    "activeQaAccounts": 0,
+    "remainingQaInvitations": 0,
+    "remainingQaMail": 0,
+    "remainingSessions": 0,
+    "remainingFactors": 0,
+    "remainingDeletionJobs": 0,
+    "retainedAuditEvents": 13,
+    "retainedDeletionAudit": 1,
+    "localCredentialsAndLinksRemoved": true,
+    "shopsUnchanged": true,
+    "bookingsUnchanged": true,
+    "customerLinksUnchanged": true
+  },
+  "tracking": {
+    "approvedCorrections": 2,
+    "alignedSourceVersions": [
+      "20261115161553",
+      "20261115163257",
+      "20261115164425"
+    ]
+  },
+  "branches": {
+    "dev": "caa3caa95dd538c3a4149d7b53544a7763974906",
+    "main": "0c0e15b60aac6159e79625aef71ef55091580450",
+    "pushed": false
+  },
+  "productionChanged": false,
+  "nativeChanged": false
+}

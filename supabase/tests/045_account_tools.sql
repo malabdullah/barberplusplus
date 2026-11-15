@@ -18,7 +18,8 @@ begin
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
  (m,m::text||'@example.test',now(),'{"role":"manager"}'),(b,b::text||'@example.test',now(),'{"role":"barber"}'),(c,c::text||'@example.test',now(),'{"role":"customer"}'),(a,a::text||'@example.test',now(),'{"role":"admin"}'),(g,g::text||'@example.test',now(),'{"role":"agent"}'),(other_user,other_user::text||'@example.test',now(),'{"role":"manager"}');
  insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values(factor,a,'QA','totp','verified','synthetic-only',now(),now());
- insert into auth.sessions(id,user_id,aal,factor_id,created_at)values(ms,m,'aal1',null,now()),(bs,b,'aal1',null,now()),(cs,c,'aal1',null,now()),(ads,a,'aal2',factor,now()),(gs,g,'aal1',null,now()),(os,other_user,'aal1',null,now());
+ insert into auth.mfa_factors(id,user_id,friendly_name,factor_type,status,secret,created_at,updated_at)values('a0450000-0000-4000-8000-000000000001',g,'Admin QA','totp','verified','synthetic-only',now(),now());
+ insert into auth.sessions(id,user_id,aal,factor_id,created_at)values(ms,m,'aal1',null,now()),(bs,b,'aal1',null,now()),(cs,c,'aal1',null,now()),(ads,a,'aal2',factor,now()),(gs,g,'aal2','a0450000-0000-4000-8000-000000000001',now()),(os,other_user,'aal1',null,now());
  insert into public.branches(id,manager_id,name)values(shop,m,'Account tools QA'),(other_shop,other_user,'Other tools QA');
  insert into public.services(id,branch_id,name,duration,price)values(svc,shop,'Tools cut',30,3),(other_svc,other_shop,'Other cut',30,3);
  insert into public.barbers(id,user_id,branch_id,name,email,service_ids)values(chair,b,shop,'Tools barber',b::text||'@example.test',array[svc]);
@@ -43,8 +44,8 @@ begin
  perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25 and not exists(select 1 from jsonb_array_elements(got->'rows')e where e->>'actorName'is not null or e->>'shop'is distinct from 'Account tools QA'),'customer only owned booking without staff identity');
  denied:=false;begin perform public.account_tools_api('activity',jsonb_build_object('user_id',c,'session_id',cs,'view','work'));exception when others then denied:=sqlerrm='FORBIDDEN';end;perform pg_temp.tools_assert(denied,'customer work view denied');
  denied:=false;begin perform public.account_tools_api('activity',who||'{"view":"customer"}');exception when others then denied:=sqlerrm='FORBIDDEN';end;perform pg_temp.tools_assert(denied,'manager without personal profile cannot read customer activity');
- got:=public.account_tools_api('activity',jsonb_build_object('user_id',g,'session_id',gs,'view','work'));
- perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=1 and got->'rows'->0->>'kind'='booking_deadlines_changed','agent only own actions');
+ got:=public.account_tools_api('activity',jsonb_build_object('user_id',g,'session_id',gs,'aal','aal2','view','work'));
+ perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25,'Admin sees full work activity');
  got:=public.account_tools_api('activity',jsonb_build_object('user_id',a,'session_id',ads,'aal','aal2','view','work'));perform pg_temp.tools_assert(jsonb_array_length(got->'rows')=25,'admin MFA scope');
  denied:=false;begin perform public.account_tools_api('status',jsonb_build_object('user_id',a,'session_id',ads,'aal','aal1'));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;perform pg_temp.tools_assert(denied,'admin AAL1 denied');
 

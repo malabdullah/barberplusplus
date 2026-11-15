@@ -190,12 +190,12 @@ select ok(
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'is_agent'
-      and not p.prosecdef
+      and p.prosecdef
       and 'search_path=""' = any (p.proconfig)
-      and pg_get_functiondef(p.oid) ilike '%app_metadata%'
+      and pg_get_functiondef(p.oid) ilike '%raw_app_meta_data%'
       and pg_get_functiondef(p.oid) not ilike '%user_metadata%'
   ),
-  'is_agent is a hardened invoker helper using only app_metadata'
+  'is_agent is a hardened live-role helper using trusted Auth metadata'
 );
 
 select ok(
