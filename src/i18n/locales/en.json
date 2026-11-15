@@ -2030,7 +2030,7 @@
       },
       {
         "title": "Deleting your customer account",
-        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account."
+        "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account. Anonymous payment, refund and expense records remain for shop financial reports. Personal payment references and reasons are removed. Deleting your account does not issue a refund or settle an outstanding balance."
       },
       {
         "title": "Copies outside your account",
@@ -2800,7 +2800,7 @@
     "future_one": "Your upcoming appointment will be cancelled.",
     "future_other": "Your {{count}} upcoming appointments will be cancelled.",
     "future_zero": "You have no upcoming appointments.",
-    "history": "Past appointment totals stay anonymous in shop reports. Your name, contact details, notes, favourites and ratings are removed.",
+    "history": "Anonymous booking and financial records remain in shop reports. Personal details, notes, favourites and ratings are removed.",
     "moreAppointments": "The first 50 appointments are shown. All upcoming appointments will be cancelled.",
     "continue": "Continue",
     "delete": "Delete my account",
