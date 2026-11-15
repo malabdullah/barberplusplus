@@ -66,6 +66,7 @@ import EnvironmentBanner from './components/EnvironmentBanner';
 import { customerFeaturesEnabled } from './lib/runtimeConfig';
 import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
+import CustomerDocumentBoundary from './components/Customer/CustomerDocumentBoundary';
 
 const CustomerEmailVerification = lazy(() => import('./pages/CustomerEmailVerification'));
 const TeamAuthCallback = lazy(() => import('./pages/TeamAuthCallback'));
@@ -77,6 +78,7 @@ const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const SharedBooking = lazy(() => import('./pages/SharedBooking'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
+const CustomerDeleteAccount = lazy(() => import('./pages/CustomerDeleteAccount'));
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Finances = lazy(() => import('./pages/Finances'));
@@ -167,6 +169,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
+      {customerFeaturesEnabled && <Route path="/customer/delete-account" element={<Suspense fallback={null}><CustomerDeleteAccount /></Suspense>} />}
       <Route path="/support" element={<ContactSupport />} />
       <Route path="/customer/sessions" element={<AccountTools view="sessions" customer />} />
       <Route path="/customer/activity" element={<AccountTools view="activity" customer />} />
@@ -322,7 +325,7 @@ export default function App() {
       <EnvironmentBanner />
       <AccountSessionNotice />
       <AppProvider>
-        <CustomerAuthProvider><CustomerFavouritesProvider><AppRoutes /></CustomerFavouritesProvider></CustomerAuthProvider>
+        <CustomerAuthProvider><CustomerFavouritesProvider><CustomerDocumentBoundary><AppRoutes /></CustomerDocumentBoundary></CustomerFavouritesProvider></CustomerAuthProvider>
       </AppProvider>
     </>
   );

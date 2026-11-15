@@ -1,0 +1,35 @@
+{
+  "status": "PASS_SYNTHETIC_AND_STATIC_ONLY",
+  "tests": 18,
+  "failures": 0,
+  "errors": 0,
+  "command": "python3 -m unittest discover -s artifacts/customer-deletion-release-preparation-2026-11-14/reviewer-eligibility-review -p 'test_inspect_reviewer.py' -v",
+  "initialScannerCorrection": "Initial static function-name scanner also matched parenthesized SQL keywords; excluded keyword tokens without changing query or function allowlist. Final18checks pass.",
+  "checks": [
+    "fixedSQLhash/literals",
+    "read-only transaction/meta-command/builtin allowlists",
+    "balanced SQL delimiters static-only",
+    "main public column references",
+    "unknown schema",
+    "unused/existing ordinarycustomer capture without provisioning",
+    "ambiguous customer/demo stop",
+    "work/link/invitation conflict stop",
+    "unknown policy/schedule stop",
+    "inactive or mismatched demo stop",
+    "type/extra/duplicate/size/multipleJSON/no-leak guards",
+    "activation-bound45/60min deadlines and command cap",
+    "fixedroot CLI no localproductionIO"
+  ],
+  "realPostgresParserOrSQLOrDockerOrHostedTests": false,
+  "serverOrIPOrProviderOrAccountLookup": false,
+  "checkedAtUTC": "2026-11-14T09:20:50.479528+00:00",
+  "reviewFeedbackApplied": {
+    "canonicalCustomerIdsDistinct": true,
+    "pendingInvitationEmailCaseInsensitive": true,
+    "regularHoursMeansConfigurationOverlapOnly": true,
+    "futureSlotAndFullDeletionEligibilityRemainFalse": true
+  },
+  "lookupSqlSHA256": "44e7f2a5d66e7e7f9b7439b74a5e94eb59b2607d0e0bad0370d4028fe2eef65e",
+  "wrapperSHA256": "b735208e58de919287b36516a93bb01512e226c53a7b829b3d2876759fcc75c0",
+  "testSourceSHA256": "fae1caf29064af8aefd162743540b4a011ad16881828ee9ab651c8a1b985476a"
+}

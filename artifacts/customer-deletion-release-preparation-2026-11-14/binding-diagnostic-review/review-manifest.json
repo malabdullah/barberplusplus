@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_LOCAL_PREPARATION_ONLY_REQUIRES_REVIEW_AND_FRESH_APPROVAL",
+  "preparedAtUTC": "2026-11-14T07:52:38.435456+00:00",
+  "runtimeSource": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "stoppedAttemptReceiptSHA256": "f29469ca625889702a59ba74014e4842d618b09245829bd6a0093084fc163260",
+  "files": {
+    "inspect_bindings.py": "8a01ab7583a6f7fdf957855bbae454bc2c02f27483245ed4f3b37b27b83b2e13",
+    "test_inspect_bindings.py": "29a1c432c1601764c2e9382fb380ec61cf30e4dc95083e99038acea6be74d0dc",
+    "scope.md": "b8e1a664ebff7f373a208663546e6cc4e843c3289da73845ebff0fe73e585a18",
+    "test-results.json": "9e9e946cbd41028901af73d1993acf9fe5c7b70671822529c97766434b8b0dc5"
+  },
+  "executionAuthorized": false,
+  "maximumProposedInvocations": 1,
+  "target": "DB VPS72.61.164.64 only",
+  "operation": "read-only explicit override / effective runtime markers / Compose hash comparison",
+  "setupRetryIncluded": false,
+  "sourceGuardModificationIncluded": false,
+  "productionMutationsIncluded": false
+}

@@ -26,7 +26,13 @@ select set_config('availability.proposal',(private.availability_snapshot(b)||jso
 select ok(not has_table_privilege('authenticated','private.availability_requests','SELECT'),'requests cannot be enumerated through raw table access');
 select ok((select relrowsecurity from pg_class where oid='private.availability_requests'::regclass),'request history has RLS');
 select ok(not has_function_privilege('anon','public.barber_availability(text,jsonb)','EXECUTE'),'anonymous cannot call availability API');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"ec080000-0000-4000-8000-000000000002"}',true);
+-- Successful staff actions use real live sessions; all fixtures roll back.
+insert into auth.sessions(id,user_id)values
+('ec080000-0000-4000-8000-000000000001','ec080000-0000-4000-8000-000000000001'),
+('ec080000-0000-4000-8000-000000000002','ec080000-0000-4000-8000-000000000002'),
+('ec080000-0000-4000-8000-000000000003','ec080000-0000-4000-8000-000000000003'),
+('ec080000-0000-4000-8000-000000000004','ec080000-0000-4000-8000-000000000004');
 set local role authenticated;
 select set_config('availability.saved',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',0,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
 select is(current_setting('availability.saved')::jsonb->'request'->>'status','pending','barber submits a pending proposal');
@@ -36,12 +42,12 @@ select throws_ok($$update public.barbers set vacations=current_setting('availabi
 select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.saved')::jsonb->'request'->>'id','base_revision',0))$$,'42501','NOT_AUTHORIZED','barber cannot approve their own request');
 select throws_ok($$update public.barbers set branch_id='ec080000-0000-4000-8000-000000000102',service_ids='{}' where id='ec080000-0000-4000-8000-000000000301'$$,'42501','NOT_AUTHORIZED','barber cannot transfer themselves to bypass manager ownership');
 reset role;
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ec080000-0000-4000-8000-000000000003"}',true);
 set local role authenticated;
 select is(jsonb_array_length(public.barber_availability('list')->'requests'),0,'another manager cannot list this request');
 select throws_ok($$select public.barber_availability('get','{"barber_id":"ec080000-0000-4000-8000-000000000301"}')$$,'42501','NOT_AUTHORIZED','another manager cannot inspect the proposal');
 reset role;
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ec080000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 select is(jsonb_array_length(public.barber_availability('preview',jsonb_build_object('request_id',current_setting('availability.saved')::jsonb->'request'->>'id'))->'conflicts'),2,'review lists both affected appointments');
 select is((public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.saved')::jsonb->'request'->>'id','base_revision',0))->>'blocked')::boolean,true,'approval is blocked until appointments are resolved');
@@ -60,21 +66,21 @@ reset role;
 select is((select count(*) from private.availability_writes),0::bigint,'no write permit remains after approval');
 select is((select count(*) from public.notifications where entity_type='availability_request' and recipient_user_id='ec080000-0000-4000-8000-000000000001'),1::bigint,'one manager notification despite retried submission');
 select is((select count(*) from public.notifications where entity_type='availability_request' and recipient_user_id='ec080000-0000-4000-8000-000000000002'),1::bigint,'barber receives the approval decision');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"ec080000-0000-4000-8000-000000000002"}',true);
 set local role authenticated;
 select set_config('availability.second',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',1,'proposal',jsonb_set(current_setting('availability.proposal')::jsonb,'{vacations,0,endDate}',to_jsonb(((clock_timestamp() at time zone 'Asia/Kuwait')::date+3)::text))))::text,true);
 reset role;
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ec080000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 select is(public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.second')::jsonb->'request'->>'id','base_revision',1,'value',jsonb_build_object('id','qa-vacation','startDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text,'endDate',((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text)))->'request'->>'status','approved','manager can modify then approve the proposal');
 reset role;
 select is((select jsonb_array_length(proposal->'vacations') from private.availability_requests where id=(current_setting('availability.second')::jsonb->'request'->>'id')::uuid),1,'original submitted proposal is retained in history');
 select is((select approved_value->>'startDate' from private.availability_requests where id=(current_setting('availability.second')::jsonb->'request'->>'id')::uuid),((clock_timestamp() at time zone 'Asia/Kuwait')::date+4)::text,'manager-modified approval is recorded separately');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"ec080000-0000-4000-8000-000000000002"}',true);
 set local role authenticated;
 select set_config('availability.third',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
 reset role;
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ec080000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 select throws_ok($$select public.barber_availability('decline',jsonb_build_object('request_id',current_setting('availability.third')::jsonb->'request'->>'id','note',''))$$,'P0001','AVAILABILITY_REASON_REQUIRED','declining requires a reason');
 select is(public.barber_availability('decline',jsonb_build_object('request_id',current_setting('availability.third')::jsonb->'request'->>'id','note','Please choose different dates'))->'request'->>'status','declined','manager can decline with a clear reason');
@@ -86,7 +92,7 @@ select set_config('request.jwt.claims','{}',true);
 insert into public.barbers(id,branch_id,name,service_ids,availability,availability_approved_at) values('ec080000-0000-4000-8000-000000000302','ec080000-0000-4000-8000-000000000101','Pending new barber',array['ec080000-0000-4000-8000-000000000201']::uuid[],'{}',null);
 select ok((select availability_approved_at is null and availability='{}' from public.barbers where id='ec080000-0000-4000-8000-000000000302'),'new invited barbers start without approved public hours');
 reset role;
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"customer"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"customer"},"session_id":"ec080000-0000-4000-8000-000000000004"}',true);
 set local role authenticated;
 select throws_ok($$select public.barber_availability('list')$$,'42501','NOT_AUTHORIZED','customer cannot access staff availability requests');
 reset role;
@@ -108,7 +114,7 @@ insert into public.bookings(id,branch_id,barber_id,customer_id,service_ids,date,
 select 'ec080000-0000-4000-8000-000000000503','ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000301','ec080000-0000-4000-8000-000000000401',array['ec080000-0000-4000-8000-000000000201']::uuid[],
  (clock_timestamp() at time zone 'Asia/Kuwait')::date,((clock_timestamp() at time zone 'Asia/Kuwait')-interval '5 minutes')::time,30,3,'confirmed','customer';
 select ok(private.availability_conflicts('ec080000-0000-4000-8000-000000000301',current_setting('availability.boundary')::jsonb||jsonb_build_object('vacations',jsonb_build_array(jsonb_build_object('startDate',(clock_timestamp() at time zone 'Asia/Kuwait')::date,'endDate',(clock_timestamp() at time zone 'Asia/Kuwait')::date)))) @> '[{"id":"ec080000-0000-4000-8000-000000000503"}]','ongoing appointment appears in approval conflicts');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"ec080000-0000-4000-8000-000000000002"}',true);
 set local role authenticated;
 select throws_ok($$select public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',1,'proposal',current_setting('availability.proposal')::jsonb))$$,'P0001','AVAILABILITY_STALE','barber with stale approved revision must reload');
 select set_config('availability.fourth',public.barber_availability('submit',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000301','base_revision',2,'proposal',current_setting('availability.proposal')::jsonb))::text,true);
@@ -116,7 +122,7 @@ select set_config('availability.fifth',public.barber_availability('submit',jsonb
 reset role;
 select is((select status from private.availability_requests where id=(current_setting('availability.fourth')::jsonb->'request'->>'id')::uuid),'superseded','updated proposal supersedes old request');
 select is((select count(*) from private.availability_requests where barber_id='ec080000-0000-4000-8000-000000000301' and status='pending'),1::bigint,'only one pending request exists per barber');
-select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ec080000-0000-4000-8000-000000000001"}',true);
 set local role authenticated;
 select throws_ok($$select public.barber_availability('approve',jsonb_build_object('request_id',current_setting('availability.fourth')::jsonb->'request'->>'id','base_revision',2))$$,'P0001','AVAILABILITY_STALE','superseded request cannot be approved');
 select throws_ok($$select public.barber_availability('get',jsonb_build_object('barber_id','ec080000-0000-4000-8000-000000000302','request_id',current_setting('availability.fifth')::jsonb->'request'->>'id'))$$,'42501','NOT_AUTHORIZED','request cannot be displayed under a different barber route');
@@ -128,6 +134,7 @@ insert into public.branches(id,manager_id,name)
 values ('ec080000-0000-4000-8000-000000000103','ec080000-0000-4000-8000-000000000001','Second managed shop');
 insert into auth.sessions(id,user_id)
 values ('ec080000-0000-4000-8000-000000000011','ec080000-0000-4000-8000-000000000001');
+-- Deliberately omit the session for this denial case.
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
 select ok(not private.can_transfer_barber('ec080000-0000-4000-8000-000000000101','ec080000-0000-4000-8000-000000000103'),'transfer requires a session ID');
 select set_config('request.jwt.claims','{"sub":"ec080000-0000-4000-8000-000000000001","session_id":"ec080000-0000-4000-8000-000000000011","role":"authenticated","app_metadata":{"role":"manager"}}',true);

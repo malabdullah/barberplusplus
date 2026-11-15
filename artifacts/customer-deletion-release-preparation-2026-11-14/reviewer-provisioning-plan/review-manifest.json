@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "LOCAL_REVIEWER_PROVISIONING_ACCEPTANCE_PROPOSAL_NOT_AUTHORIZATION",
+  "preparedAtUTC": "2026-11-14T09:52:00.759888+00:00",
+  "completedLookupCommit": "f54e5f8",
+  "completedLookupManifestSHA256": "f652b6d20dd8b24e0f60df4c0e4b1d4648e8937a28f2f8765f09a64e79520645",
+  "files": {
+    "plan.md": "c1f5927b292f65ef6309303d55ffc70e39fe99bec2f5385851b3e8efd458aa2b",
+    "proposal.json": "f32c2b1ec098773744409ec39065e91cb984f10508eb33428a6a683c22a8bb5c",
+    "source-anchors.json": "902bb8d4e6bf456af4cbfb1a7580711b8396c24e47eb213467a4b42a7b0a5171"
+  },
+  "validation": "Local source/hash/JSON/line-anchor review only; no tests or external execution repeated",
+  "executionAuthorized": false
+}

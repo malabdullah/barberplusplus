@@ -1,0 +1,215 @@
+{
+  "status": "unpublished-owner-review-draft",
+  "date": "2026-11-14",
+  "copy": {
+    "en": {
+      "customerPrivacy": {
+        "title": "Privacy policy",
+        "updated": "Updated 14 November 2026",
+        "intro": "This page explains how the Barber++ website and customer iPhone app use information for accounts, appointments and support.",
+        "back": "Back to booking",
+        "sections": [
+          {
+            "title": "Account and booking information",
+            "text": "Accounts use your name and email address; email/password accounts also use a password. Bookings use your name, email and any mobile number provided. Guests must provide an email address; guest email and optional phone numbers are not verified. Where a checkout flow requires mobile verification, the screen asks you to verify the number before confirming. Booking records include the shop, barber, services, appointment time, contact details and any notes you enter."
+          },
+          {
+            "title": "Why information is used",
+            "text": "Information is used to sign you in, confirm your email, recover your account, manage your profile, arrange appointments and display your booking history. Booking confirmations and updates are sent to the account email or the address provided by a guest. Your chosen shop and its authorized staff can access the booking and contact information needed to manage your appointment. Entering an email as a guest does not sign you in or automatically link a booking to an account."
+          },
+          {
+            "title": "Google and Apple sign-in",
+            "text": "If you choose Google or Apple, that provider authenticates you and supplies account information such as your name and email address. Your provider profile may also include a profile picture. Apple may supply a private relay email address when you choose Hide My Email. Barber++ does not request access to Gmail, Google Drive or your Apple password. For Apple account cleanup, a revocable Apple authorization token may be stored encrypted on our server. The temporary code used to obtain it is not retained."
+          },
+          {
+            "title": "Sharing an appointment",
+            "text": "Shared links show a snapshot of the shop, barber, services, time, price and status when shared. Your name, email, phone and private notes are excluded. Later appointment changes do not rewrite the snapshot. Links expire 24 hours after the captured appointment ends. Recipients can forward links or save copies. There is no customer sharing-management screen."
+          },
+          {
+            "title": "Service providers",
+            "text": "Hosting, database, network and email services process information needed to operate and protect the website. Resend delivers account messages and booking updates. Zoho hosts support conversations. Google and Apple process sign-in under their own privacy policies when you choose those options. Where mobile verification is required, Google Identity Platform processes the phone number and verification request."
+          },
+          {
+            "title": "Optional announcements",
+            "text": "If you enable announcements, authorized administrators can select eligible audiences using account names, email addresses, phone numbers, booking history, shop or area, and app/device eligibility. These details may therefore support Barber++ announcements as well as core booking functions. Announcement preferences are separate from essential account emails and booking updates. Barber++ does not use cross-app advertising tracking."
+          },
+          {
+            "title": "Device storage and technical information",
+            "text": "The website stores sessions, preferences and temporary booking drafts in the browser. The iPhone app stores credentials securely on the device. Face ID and Touch ID templates stay with iOS; Barber++ does not receive them. If notifications are enabled, device push identifiers, preferences and delivery records support booking updates and permitted announcements. Service logs support security and diagnostics. Google Sign-In and Firebase Authentication may process identifiers, IP-derived approximate location, usage and diagnostic data under their policies. Barber++ does not request GPS access for booking. Signing out does not delete your account."
+          },
+          {
+            "title": "Deleting your customer account",
+            "text": "Deletion requires a fresh identity check and explicit confirmation. Future appointments are cancelled. Sign-in access, personal profile details, notes, favourites, ratings and sharing links are removed. Anonymous booking dates, services and amounts remain for shop history and reports. Deletion cannot be undone. Interrupted background cleanup can be checked using its saved status without signing in again. Accounts with shop or staff responsibilities require support review first. When a usable Apple authorization token is available, it is revoked during background cleanup. For older Apple sign-ins without a stored token, you are directed to revoke access in Apple Account settings. Contact support if deletion is unavailable for your account."
+          },
+          {
+            "title": "Copies outside your account",
+            "text": "Deletion does not recall delivered emails, exported files or copies saved by recipients. Support correspondence, security records and provider backups may follow separate retention processes; the account-deletion flow does not claim to erase external copies immediately. Contact support about those records. Any requirement to retain identifiable data must be explained separately."
+          },
+          {
+            "title": "Your information and contact",
+            "text": "You can edit your name and mobile number in your profile. Only an administrator can change a verified sign-in email. Before verification, use the registration screen to correct an email entered incorrectly. For questions or requests about access, correction or removal of account and booking information, contact Barber++ at the address below."
+          }
+        ],
+        "contact": "Contact Barber++"
+      },
+      "customerDeletion": {
+        "title": "Delete account",
+        "completeTitle": "Account deleted",
+        "effect": "Permanently delete your customer account and personal details. This cannot be undone.",
+        "future_one": "Your upcoming appointment will be cancelled.",
+        "future_other": "Your {{count}} upcoming appointments will be cancelled.",
+        "future_zero": "You have no upcoming appointments.",
+        "history": "Past appointment totals stay anonymous in shop reports. Your name, contact details, notes, favourites and ratings are removed.",
+        "moreAppointments": "The first 50 appointments are shown. All upcoming appointments will be cancelled.",
+        "continue": "Continue",
+        "delete": "Delete my account",
+        "confirm": "I understand that my account cannot be recovered and my upcoming appointments will be cancelled.",
+        "method": "Verify with",
+        "email_code": "Email code",
+        "password": "Current password",
+        "code": "Verification code",
+        "codeSent": "Enter the six-digit code sent to {{destination}}.",
+        "resend": "Resend code",
+        "verify": "Verify",
+        "pending": "Your account is closed. We are finishing the removal of your sign-in and uploaded files. You can close this page and check back here.",
+        "uncertain": "We could not confirm the result yet. Check the saved request before trying again.",
+        "checkStatus": "Check status",
+        "complete": "Your customer account has been deleted. Your sign-in no longer works.",
+        "home": "Back to home",
+        "switched": "You switched accounts. Refresh this page to continue with the current account.",
+        "providers": "Connected sign-in: {{providers}}.",
+        "appleHelp": "If you used Sign in with Apple, you can also stop using Apple for Barber++ in your Apple Account settings.",
+        "appleSettings": "Apple Account settings",
+        "errors": {
+          "UNAVAILABLE": "We could not finish this step. Your saved deletion request is kept. Please try again or contact support.",
+          "AUTH_REQUIRED": "Sign in to the customer account you want to delete.",
+          "TEST_ACCOUNT_ONLY": "Account deletion is being tested with designated disposable Test accounts. Your account has not been changed.",
+          "LINKED_WORK_ACCOUNT": "This account also has shop or staff responsibilities. Contact support to resolve those before deleting it.",
+          "ACCOUNT_SCOPE_CONFLICT": "This account has linked records that need a support review. Nothing has been deleted.",
+          "RECEIPT_INVALID": "We could not find this saved deletion request. Contact support before starting again.",
+          "CODE_EXPIRED": "This code or verification window has expired. Request a new code.",
+          "INVALID_CODE": "The code or current password is incorrect. Please try again.",
+          "RATE_LIMITED": "Too many attempts. Please wait before trying again.",
+          "REAUTH_REQUIRED": "Verify your identity again before deleting the account.",
+          "REVIEW_REQUIRED": "Your appointments changed. Review the updated list and confirm again.",
+          "CONFIRMATION_REQUIRED": "Confirm that you understand the effect of deleting your account.",
+          "EMAIL_UNAVAILABLE": "We could not send the verification code. Try Resend code or contact support.",
+          "DELETION_IN_PROGRESS": "A deletion request is already in progress. Check its saved status.",
+          "NOT_ENABLED": "Account deletion is not enabled in this environment."
+        }
+      },
+      "publicSupport": {
+        "title": "Contact Support",
+        "description": "Contact us about your account, appointments or shop.",
+        "emailAction": "Email support",
+        "address": "support@barberplusplus.com"
+      }
+    },
+    "ar": {
+      "customerPrivacy": {
+        "title": "سياسة الخصوصية",
+        "updated": "آخر تحديث 14 نوفمبر 2026",
+        "intro": "توضح هذه الصفحة استخدام المعلومات في موقع Barber++ وتطبيق العملاء على iPhone للحسابات والمواعيد والدعم.",
+        "back": "العودة إلى الحجز",
+        "sections": [
+          {
+            "title": "معلومات الحساب والحجز",
+            "text": "تستخدم الحسابات اسمك وبريدك الإلكتروني، وتستخدم حسابات البريد وكلمة المرور كلمة مرور أيضاً. تستخدم الحجوزات اسمك وبريدك الإلكتروني وأي رقم جوال تقدمه. يجب على الضيف تقديم بريد إلكتروني؛ ولا يجري التحقق من بريد الضيف أو رقم جواله الاختياري. إذا تطلب مسار الحجز التحقق من الجوال، تطلب منك الشاشة التحقق من الرقم قبل التأكيد. تشمل سجلات الحجز الصالون والحلاق والخدمات والموعد وبيانات التواصل وأي ملاحظات تدخلها."
+          },
+          {
+            "title": "استخدام المعلومات",
+            "text": "تُستخدم المعلومات لتسجيل الدخول وتأكيد البريد واستعادة الحساب وإدارة الملف وترتيب المواعيد وعرض سجل الحجوزات. تُرسل تأكيدات الحجز وتحديثاته إلى بريد الحساب أو البريد الذي يقدمه الضيف. يمكن للصالون الذي تختاره وفريقه المخول الاطلاع على معلومات الحجز والتواصل اللازمة لإدارة موعدك. إدخال بريد إلكتروني كضيف لا يسجلك في الحساب ولا يربط الحجز به تلقائياً."
+          },
+          {
+            "title": "تسجيل الدخول عبر Google وApple",
+            "text": "إذا اخترت Google أو Apple، يتحقق مقدم الخدمة من هويتك ويزودنا بمعلومات الحساب مثل الاسم والبريد الإلكتروني. وقد يتضمن ملف مقدم الخدمة صورة شخصية. قد تزودنا Apple بعنوان بريد وسيط عند اختيار «إخفاء بريدي الإلكتروني». لا يطلب Barber++ الوصول إلى Gmail أو Google Drive أو كلمة مرور حساب Apple. لإتمام حذف حساب Apple، قد نحفظ رمز تفويض قابل للإلغاء بصورة مشفرة على الخادم. لا نحتفظ بالرمز المؤقت المستخدم للحصول عليه."
+          },
+          {
+            "title": "مشاركة موعد",
+            "text": "يعرض رابط المشاركة نسخة من الصالون والحلاق والخدمات والوقت والسعر والحالة وقت المشاركة. لا يظهر اسمك أو بريدك أو هاتفك أو ملاحظاتك الخاصة. لا تتغير النسخة عند تعديل الموعد لاحقاً. تنتهي صلاحية الرابط بعد 24 ساعة من نهاية الموعد المحفوظ. يمكن للمستلم مشاركة الرابط أو حفظ نسخة. لا توجد شاشة لإدارة المشاركة."
+          },
+          {
+            "title": "مقدمو الخدمات",
+            "text": "تعالج خدمات الاستضافة وقاعدة البيانات والشبكة والبريد المعلومات اللازمة لتشغيل الموقع وحمايته. ترسل Resend رسائل الحساب وتحديثات الحجز، وتستضيف Zoho مراسلات الدعم. تعالج Google وApple تسجيل الدخول وفق سياسات الخصوصية الخاصة بهما عند اختيارهما. عندما يكون التحقق من الهاتف مطلوباً، تعالج Google Identity Platform رقم الهاتف وطلب التحقق."
+          },
+          {
+            "title": "الإعلانات الاختيارية",
+            "text": "إذا فعّلت الإعلانات، يمكن للمسؤولين المخولين اختيار الجمهور المؤهل باستخدام أسماء الحسابات والبريد الإلكتروني وأرقام الهواتف وسجل الحجوزات والصالون أو المنطقة وأهلية التطبيق والجهاز. قد تُستخدم هذه البيانات لإعلانات Barber++ إضافة إلى وظائف الحجز. تفضيلات الإعلانات منفصلة عن رسائل الحساب الأساسية وتحديثات الحجز. لا يستخدم Barber++ تتبع الإعلانات عبر التطبيقات."
+          },
+          {
+            "title": "تخزين الجهاز والمعلومات التقنية",
+            "text": "يحفظ الموقع الجلسات والتفضيلات ومسودات الحجز المؤقتة في المتصفح. يحفظ تطبيق iPhone بيانات الدخول بأمان على الجهاز. تبقى قوالب Face ID وTouch ID لدى iOS ولا يتلقاها Barber++. عند تفعيل الإشعارات تُستخدم معرّفات الجهاز والتفضيلات وسجلات التسليم لتحديثات الحجز والإعلانات المسموح بها. تدعم السجلات الأمان والتشخيص. قد تعالج Google Sign-In وFirebase Authentication معرّفات وموقعاً تقريبياً مستمداً من عنوان IP وبيانات الاستخدام والتشخيص وفق سياساتها. لا يطلب Barber++ صلاحية GPS للحجز. تسجيل الخروج لا يحذف الحساب."
+          },
+          {
+            "title": "حذف حساب العميل",
+            "text": "يتطلب الحذف تحققاً جديداً من الهوية وتأكيداً صريحاً. تُلغى المواعيد القادمة وتُزال إمكانية الدخول وبيانات الملف الشخصية والملاحظات والمفضلة والتقييمات وروابط المشاركة. تبقى تواريخ الحجوزات والخدمات والقيم دون هوية العميل للسجل والتقارير. لا يمكن التراجع عن الحذف. يمكن متابعة التنظيف في الخلفية من حالة الطلب المحفوظة دون الدخول مجدداً. تتطلب الحسابات المرتبطة بمسؤوليات صالون أو موظف مراجعة الدعم أولاً. عند توفر رمز تفويض صالح من Apple، يُلغى أثناء التنظيف في الخلفية. أما عمليات الدخول القديمة دون رمز محفوظ، فتظهر لك إرشادات إلغاء الوصول من إعدادات حساب Apple. تواصل مع الدعم إذا لم يتوفر الحذف لحسابك."
+          },
+          {
+            "title": "النسخ خارج الحساب",
+            "text": "لا يسترجع الحذف الرسائل المسلّمة أو الملفات المصدّرة أو النسخ المحفوظة لدى المستلمين. قد تخضع مراسلات الدعم وسجلات الأمان والنسخ الاحتياطية لإجراءات احتفاظ منفصلة؛ ولا يدّعي حذف الحساب محو النسخ الخارجية فوراً. تواصل مع الدعم بشأنها. يجب توضيح أي ضرورة للاحتفاظ ببيانات محددة للهوية بشكل منفصل."
+          },
+          {
+            "title": "معلوماتك والتواصل معنا",
+            "text": "يمكنك تعديل اسمك ورقم هاتفك في ملفك. يستطيع المسؤول فقط تغيير بريد تسجيل الدخول بعد التحقق منه. قبل التحقق، استخدم شاشة التسجيل لتصحيح بريد أدخلته بالخطأ. للاستفسارات أو طلبات الوصول إلى معلومات الحساب والحجز أو تصحيحها أو حذفها، تواصل مع Barber++ عبر العنوان أدناه."
+          }
+        ],
+        "contact": "تواصل مع Barber++"
+      },
+      "customerDeletion": {
+        "title": "حذف الحساب",
+        "completeTitle": "تم حذف الحساب",
+        "effect": "احذف حساب العميل وبياناتك الشخصية نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+        "future_zero": "ليس لديك مواعيد قادمة.",
+        "future_one": "سيتم إلغاء موعدك القادم.",
+        "future_two": "سيتم إلغاء موعديك القادمين.",
+        "future_few": "سيتم إلغاء مواعيدك القادمة وعددها {{count}}.",
+        "future_many": "سيتم إلغاء مواعيدك القادمة وعددها {{count}}.",
+        "future_other": "سيتم إلغاء مواعيدك القادمة وعددها {{count}}.",
+        "history": "تبقى قيم المواعيد السابقة في تقارير الصالون دون هويتك. يُحذف اسمك وبيانات الاتصال والملاحظات والمفضلة والتقييمات.",
+        "moreAppointments": "تظهر أول 50 موعداً. سيتم إلغاء جميع المواعيد القادمة.",
+        "continue": "متابعة",
+        "delete": "حذف حسابي",
+        "confirm": "أفهم أنه لا يمكن استعادة حسابي وأن مواعيدي القادمة ستُلغى.",
+        "method": "التحقق باستخدام",
+        "email_code": "رمز البريد الإلكتروني",
+        "password": "كلمة المرور الحالية",
+        "code": "رمز التحقق",
+        "codeSent": "أدخل الرمز المكوّن من ستة أرقام المُرسل إلى {{destination}}.",
+        "resend": "إعادة إرسال الرمز",
+        "verify": "تحقق",
+        "pending": "أُغلق حسابك. نُكمل إزالة بيانات تسجيل الدخول والملفات المرفوعة. يمكنك إغلاق الصفحة والعودة لمتابعة الحالة.",
+        "uncertain": "تعذّر تأكيد النتيجة بعد. تحقق من حالة الطلب المحفوظ قبل المحاولة مجدداً.",
+        "checkStatus": "تحقق من الحالة",
+        "complete": "تم حذف حساب العميل. لم يعد تسجيل الدخول بهذا الحساب متاحاً.",
+        "home": "العودة للرئيسية",
+        "switched": "لقد بدّلت الحساب. حدّث الصفحة للمتابعة بالحساب الحالي.",
+        "providers": "طرق الدخول المرتبطة: {{providers}}.",
+        "appleHelp": "إذا استخدمت تسجيل الدخول عبر Apple، يمكنك أيضاً إيقاف استخدام Apple مع Barber++ من إعدادات حساب Apple.",
+        "appleSettings": "إعدادات حساب Apple",
+        "errors": {
+          "UNAVAILABLE": "تعذّر إكمال هذه الخطوة. طلب الحذف محفوظ. حاول مجدداً أو تواصل مع الدعم.",
+          "AUTH_REQUIRED": "سجّل الدخول بحساب العميل الذي تريد حذفه.",
+          "TEST_ACCOUNT_ONLY": "يُختبر حذف الحساب حالياً باستخدام حسابات تجريبية مخصصة. لم يتغير حسابك.",
+          "LINKED_WORK_ACCOUNT": "لهذا الحساب مسؤوليات صالون أو موظف. تواصل مع الدعم لمعالجتها قبل الحذف.",
+          "ACCOUNT_SCOPE_CONFLICT": "لهذا الحساب سجلات مرتبطة تحتاج مراجعة الدعم. لم يُحذف شيء.",
+          "RECEIPT_INVALID": "تعذّر العثور على طلب الحذف المحفوظ. تواصل مع الدعم قبل إنشاء طلب جديد.",
+          "CODE_EXPIRED": "انتهت صلاحية الرمز أو مهلة التحقق. اطلب رمزاً جديداً.",
+          "INVALID_CODE": "الرمز أو كلمة المرور الحالية غير صحيحة. حاول مجدداً.",
+          "RATE_LIMITED": "محاولات كثيرة. انتظر قبل المحاولة مجدداً.",
+          "REAUTH_REQUIRED": "تحقق من هويتك مجدداً قبل حذف الحساب.",
+          "REVIEW_REQUIRED": "تغيّرت مواعيدك. راجع القائمة المحدثة وأكّد مجدداً.",
+          "CONFIRMATION_REQUIRED": "أكّد فهمك لما سيحدث عند حذف الحساب.",
+          "EMAIL_UNAVAILABLE": "تعذّر إرسال رمز التحقق. أعد الإرسال أو تواصل مع الدعم.",
+          "DELETION_IN_PROGRESS": "يوجد طلب حذف قيد التنفيذ. تحقق من حالته المحفوظة.",
+          "NOT_ENABLED": "حذف الحساب غير مفعّل في هذه البيئة."
+        }
+      },
+      "publicSupport": {
+        "title": "تواصل مع الدعم",
+        "description": "تواصل معنا بخصوص حسابك أو مواعيدك أو صالونك.",
+        "emailAction": "مراسلة الدعم",
+        "address": "support@barberplusplus.com"
+      }
+    }
+  }
+}

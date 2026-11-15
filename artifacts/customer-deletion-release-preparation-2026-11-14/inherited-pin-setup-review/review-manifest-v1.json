@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_LOCAL_PROPOSAL_REQUIRES_INDEPENDENT_REVIEW_AND_NEW_APPROVAL",
+  "preparedAtUTC": "2026-11-14T08:04:32.638701+00:00",
+  "runtimeSourceUnchanged": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "originalSetupManifestSHA256": "51031d3a3401d573b4e64705019dc0113132b91836a34f0927bdda82e68696ef",
+  "diagnosticReceiptSHA256": "2d29e81b2c9fff12a4c590f8c5fee0f104dd9540e3f251dd75c444e6f3b97b02",
+  "files": {
+    "ops/auth/apple_cleanup_inherited_pin.py": "aaba0de7f57dc4c05268486227e48d3de7ede2716f96ada94233c8789aeac21a",
+    "ops/auth/apple_cleanup_inherited_pin_test.py": "39be03219405af6bb88093e85bb25bd8c4600db93d7a6857dae255df70ec85e3",
+    "artifacts/customer-deletion-release-preparation-2026-11-14/inherited-pin-setup-review/commands.json": "76165b2fbde25a830cc4466ed32b835f3408253bfc912182a655e524d668d243",
+    "artifacts/customer-deletion-release-preparation-2026-11-14/inherited-pin-setup-review/scope.md": "e3807c1da20c207bd63049cd2897c2e27f6c25bb13dc43779bf21ef91fe49961",
+    "artifacts/customer-deletion-release-preparation-2026-11-14/inherited-pin-setup-review/test-results.json": "d00afb8e3a443b4768c433518f69cacd735077dcdc94173dc84b27c918076978"
+  },
+  "originalNinePublicPayloadHashesUnchanged": true,
+  "existingLongRunningInstallMapUnchanged": true,
+  "sourceExceptionOnly": "SUPABASE_URL absent explicit override but verified expected in current effective runtime/model",
+  "actualOriginalBytesPreserved": true,
+  "preNormalizationWriteOrRestart": false,
+  "executionAuthorized": false
+}

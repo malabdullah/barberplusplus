@@ -23,6 +23,7 @@ try {
     await delay(1000);
   }
   assert.ok(healthy, 'image did not become healthy');
+  docker('exec', name, 'nginx', '-t');
   assert.notEqual(docker('exec', name, 'id', '-u'), '0');
   const route = await fetch(`${base}/dashboard/bookings`);
   assert.ok(route.ok); assert.match(await route.text(), /<html/);
@@ -32,10 +33,29 @@ try {
   assert.match(csp, /connect-src [^;]*https:\/\/identitytoolkit\.googleapis\.com/);
   assert.match(csp, /frame-src [^;]*https:\/\/www\.google\.com\/recaptcha\//);
   assert.match(route.headers.get('x-robots-tag'), /index, follow/);
+  assert.equal(route.headers.get('cross-origin-opener-policy'), 'same-origin');
+  for (const [path, policy] of [
+    ['/customer/delete-account', 'unsafe-none'],
+    ['/customer/delete-account?return=1', 'unsafe-none'],
+    ['/customer/auth-callback?deletion_apple=synthetic&code=synthetic-callback-canary', 'unsafe-none'],
+    ['/customer/auth-callback-other', 'same-origin'],
+    ['/customer/account', 'same-origin'],
+  ]) {
+    const document = await fetch(base + path, {headers:{Referer:'https://app.example.test/?secret=synthetic-referrer-canary'}});
+    assert.ok(document.ok);
+    assert.match(await document.text(), /<html/);
+    assert.equal(document.headers.get('cross-origin-opener-policy'), policy, path);
+    if (path.startsWith('/customer/auth-callback?')) {
+      assert.equal(document.headers.get('cache-control'), 'no-store');
+      assert.equal(document.headers.get('referrer-policy'), 'no-referrer');
+    }
+  }
+  const logs = docker('logs', name);
+  assert.doesNotMatch(logs, /synthetic-callback-canary|synthetic-referrer-canary/);
   const response = await fetch(`${base}/runtime-config.js`);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   const context = { window: {} }; vm.runInNewContext(await response.text(), context);
   assert.equal(context.window.__BARBER_CONFIG__.release, release);
   assert.equal(context.window.__BARBER_CONFIG__.environment, 'production');
-  console.log('PRODUCTION_IMAGE_PASS: non-root, health, SPA route, runtime identity, CSP and caching');
+  console.log('PRODUCTION_IMAGE_PASS: non-root, health, SPA route, runtime identity, CSP, caching, scoped popup policy and query-free access logs');
 } finally { spawnSync('docker', ['rm', '-f', name], { stdio: 'ignore' }); }

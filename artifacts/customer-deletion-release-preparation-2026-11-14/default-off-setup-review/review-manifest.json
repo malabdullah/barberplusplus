@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "status": "DEFAULT_OFF_SETUP_PACKET_FOR_INDEPENDENT_REVIEW_NO_APPROVAL_OR_EXECUTION",
+  "coreSource": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "operatorSource": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "bootstrapRecoverySource": "146ac5051646664b35ec80fe51bdd0a032dbd767",
+  "priorManifests": [
+    "6adb4de75ee69fafc880cd706a623ae8c79a5194a185a2011fb44f3defc68e45",
+    "3dda5d3d515abd97fd6c0564f5d05822bc1094fb559308c0dfdf55de888a4ca0"
+  ],
+  "files": {
+    "commands.json": "1aa0d869070f3f77f3d887c94658962e9b365dcc7e83ed381f131e9c7f1c0785",
+    "scope.md": "24f0c6b476f458a4d7c2fe387bf2a916fa8f9c368fdece361b6a004ecb0cb5e7",
+    "owner-openability-receipt.json": "5411278cc5794c335fdfcd5484ce9c94afe3c9d68adffb28565a45118be0b989"
+  },
+  "checks": {
+    "publicPayloadHashesMatch": true,
+    "unchangedOperatorAndBootstrapHashesMatch": true,
+    "unchangedCorePathsMatch": true,
+    "commandsJSONAndExactInstallMap": "PASS",
+    "runtimeTestsRepeated": false,
+    "runtimeSourceChanged": false
+  },
+  "realKeyOrCredentialsOrArchivesReadOrUsed": false,
+  "productionConnectedOrChanged": false,
+  "normalFeatureActivated": false,
+  "newOwnerPermissionQuestionIssued": false,
+  "independentArchiveCurrentB2BindingVerified": false,
+  "laterBackupReleaseProviderReviewerUploadSubmissionHeld": true
+}

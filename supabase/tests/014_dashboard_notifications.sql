@@ -29,21 +29,26 @@ update public.bookings set time='11:00' where id='aa021100-0000-4000-8000-000000
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005' and type='booking_updated'),2::bigint,'time changes alert both recipients');
 update public.bookings set barber_id='aa021100-0000-4000-8000-000000000004' where id='aa021100-0000-4000-8000-000000000005';
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005' and type='booking_reassigned'),3::bigint,'reassignment alerts old barber, new barber and manager once');
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"00000000-0000-4000-8000-000000000002"}',true);
+-- Successful staff actions use real live sessions; all fixtures roll back.
+insert into auth.sessions(id,user_id)values
+('00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000002'),
+('00000000-0000-4000-8000-000000000004','00000000-0000-4000-8000-000000000004'),
+('00000000-0000-4000-8000-000000000005','00000000-0000-4000-8000-000000000005');
 set local role authenticated;
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005'),3::bigint,'manager sees only own three alerts, not barber rows');
 update public.notifications set is_read=true,read_at=now() where entity_id='aa021100-0000-4000-8000-000000000005';
 reset role;
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005' and recipient_role='barber' and not is_read),4::bigint,'manager mark-all leaves every barber alert unread');
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"barber"},"session_id":"00000000-0000-4000-8000-000000000004"}',true);
 set local role authenticated;
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005'),3::bigint,'previous barber sees only own alerts');
 reset role;
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"00000000-0000-4000-8000-000000000005"}',true);
 set local role authenticated;
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005'),0::bigint,'other manager sees no alerts');
 reset role;
-select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"00000000-0000-4000-8000-000000000002"}',true);
 update public.bookings set status='cancelled', staff_cancellation='{"reason":"Synthetic fixture cancellation"}' where id='aa021100-0000-4000-8000-000000000005';
 select is((select count(*) from public.notifications where entity_id='aa021100-0000-4000-8000-000000000005' and type='booking_cancelled'),1::bigint,'manager cancellation alerts current barber, no self alert');
 select set_config('request.jwt.claims','{}',true);

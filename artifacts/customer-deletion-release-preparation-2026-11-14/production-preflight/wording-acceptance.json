@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "WORDING_ACCEPTED_NOT_PUBLISHED",
+  "sourceCandidate": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "copyPath": "docs/release-review/customer-deletion-2026-11-14/proposed-public-copy.json",
+  "copySHA256": "178a534ef2caf9dadc893abcc219158eff047eb87a01d497dd8d84108881608f",
+  "verifiedHumanReply": {
+    "hostId": "local",
+    "threadId": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "messageId": "01a1d7c0-b7af-7262-8fd5-9234b859b9bc",
+    "answer": "Accept the prepared wording"
+  },
+  "authorizesPublication": false,
+  "authorizesProductionAccess": false,
+  "authorizesUploadOrSubmission": false,
+  "reviewerEmailProposal": "support@barberplusplus.com",
+  "reviewerEmailLookupOrProvisioningApproved": false
+}

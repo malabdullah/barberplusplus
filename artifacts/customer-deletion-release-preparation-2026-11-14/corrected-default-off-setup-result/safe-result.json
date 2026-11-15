@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "status": "DEFAULT_OFF_SETUP_VERIFIED_ACCESS_CLOSED",
+  "approvalHumanMessage": "01a1d91a-0431-7672-986f-bff3357c1889",
+  "approvedProposalSHA256": "b59898058f5c7b5464981be5114225bc03675291cecf9a2bd7f46c74441b05cc",
+  "executionManifestSHA256": "f7939ec19b730ecaf700b6ebd72c12194c65557925040ad43d7604d517e2cec0",
+  "transferScriptSHA256": "d848e5dfd86c22567cdbf23946ef0af3d0f67d1fa3c677ad49c0f03eed5dc53b",
+  "setupScriptSHA256": "0a18c5f1f8a3e22c2e797d96be9bdef37737d91ccd3139ab4c2f9656185f9e2c",
+  "actualSetup": {
+    "exitCode": 0,
+    "completedEpoch": 1794644721.825419,
+    "events": [
+      {
+        "phase": "PUBLIC_SOURCE_GUARDS",
+        "atUTC": "2026-11-14T08:25:12Z"
+      },
+      {
+        "phase": "LOCKED_FRESH_SOURCE_RUNTIME_MODEL",
+        "atUTC": "2026-11-14T08:25:12Z"
+      },
+      {
+        "phase": "VERIFY_EXISTING_WEB_CREDENTIAL",
+        "atUTC": "2026-11-14T08:25:12Z"
+      },
+      {
+        "phase": "STAGE_FINAL_DEFAULT_OFF_CANDIDATE",
+        "atUTC": "2026-11-14T08:25:12Z"
+      },
+      {
+        "phase": "INSTALL_NEW_FILES_VALIDATE_CANDIDATE_UNITS",
+        "atUTC": "2026-11-14T08:25:13Z"
+      },
+      {
+        "phase": "ONE_FUNCTIONS_DEFAULT_OFF_RECREATE",
+        "atUTC": "2026-11-14T08:25:13Z"
+      },
+      {
+        "phase": "INSTALLED_CHECK_AND_FRESH_NOOP",
+        "atUTC": "2026-11-14T08:25:20Z"
+      },
+      {
+        "phase": "ENABLE_TWO_PERSISTENT_TIMERS",
+        "atUTC": "2026-11-14T08:25:21Z"
+      },
+      {
+        "phase": "FINAL_PRESERVATION_AND_PRIVATE_RECOVERY_RECEIPT",
+        "atUTC": "2026-11-14T08:25:21Z"
+      },
+      {
+        "privateKeyRead": true,
+        "credentialsGenerated": true,
+        "runtimeChanged": true,
+        "credentialIssuanceCalls": 2,
+        "credentialIssuanceCompleted": 2,
+        "entropyCalls": 1,
+        "entropyCompleted": 1,
+        "configurationReplaced": true,
+        "newTimersEnabled": true,
+        "providerCalls": false,
+        "secretsExported": false,
+        "status": "DEFAULT_OFF_SETUP_VERIFIED",
+        "installedAtUTC": "2026-11-14T08:25:21+00:00",
+        "defaultOffFlagsVerified": true,
+        "exactFunctionsEnvironmentVerified": true,
+        "authDatabaseStoragePreserved": true,
+        "loginPreserved": true,
+        "existingTimersPreserved": true,
+        "sameImageHealthy": true,
+        "composeModelVerified": true,
+        "recoveryCopyMatches": true,
+        "selectedRecoveryHashesRecordedPrivately": true,
+        "sourceHashesVerified": true,
+        "installedCheck": "CHECKED",
+        "freshRun": "HEALTHY_NOT_DUE",
+        "newTimersActiveEnabled": true,
+        "backupProofCompleted": false,
+        "expiry": {
+          "ios": {
+            "clientId": "com.barberplusplus.customer",
+            "expiresAt": "2027-05-13T08:25:12+00:00",
+            "renewAfter": "2027-04-13T08:25:12+00:00",
+            "secondsToExpiry": 15552000
+          },
+          "web": {
+            "clientId": "com.barberplusplus.authentication.prod.web",
+            "expiresAt": "2027-05-13T08:25:12+00:00",
+            "renewAfter": "2027-04-13T08:25:12+00:00",
+            "secondsToExpiry": 15552000
+          }
+        }
+      }
+    ]
+  },
+  "transfer": {
+    "exitCode": 0,
+    "output": {
+      "status": "EXCLUSIVE_PUBLIC_CACHE_TRANSFERRED",
+      "files": 10,
+      "rootPrivate": true,
+      "hashesMatch": true,
+      "privateKeyRead": false,
+      "runtimeChanged": false
+    },
+    "completedEpoch": 1794644684.125282
+  },
+  "accessDeadlines": {
+    "activationEpoch": 1794644612,
+    "stopNewWorkEpoch": 1794647312,
+    "hardEndEpoch": 1794648212
+  },
+  "firewallRestoration": {
+    "status": "ORIGINAL_FIREWALL_RESTORED",
+    "verifiedAtUTC": "2026-11-14T08:27:02.010651+00:00",
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "originalActiveVisiblyVerified": true,
+    "originalFiveRulesUnchanged": true,
+    "originalRulesSHA256": "2f3bdaa87b77437472b2f8d6ba7a75c4d57d39c165942d7164dabc39a50d7d7e",
+    "temporaryProfileInactive": true,
+    "temporarySourceRuleRemoved": true,
+    "temporaryRemainingRules": 5,
+    "sshProcesses": 0,
+    "secondsSinceActivationRequest": 210,
+    "frontendAccess": false
+  },
+  "scopeLimits": {
+    "normalDeletionActivated": false,
+    "cleanupActivated": false,
+    "appleCleanupActivated": false,
+    "providerCustomerMessageActions": false,
+    "sqlOrMigrationOrFunctionSourceChanged": false,
+    "frontendAccessOrDeployment": false,
+    "devMainPush": false,
+    "backupOrOfflineArchiveRead": false,
+    "nativeUploadSubmissionPublication": false,
+    "secretExported": false
+  },
+  "nextGate": "Next genuine post-install daily backup; selected-three-file recovery verification and owner-held current recovery credential binding still require separate scope/approval."
+}

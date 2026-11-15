@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "operatorSource": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "files": {
+    "supplement-manifest.json": "6adb4de75ee69fafc880cd706a623ae8c79a5194a185a2011fb44f3defc68e45",
+    "test-results.json": "0057e6bf0b8cd530e2b599f37883f015b0962a03585a67396a86a2870d5c2c3b",
+    "setup-scope-review.md": "49b66419b2c15f6ec6eec178499d647b28b4f570dd12f542cbb0f9af61669f1b",
+    "preparation-summary.json": "0b7881a36bf2a2264b0fe14d2c8aeae8c8efb9648f149fa7b84841097cef585f"
+  }
+}

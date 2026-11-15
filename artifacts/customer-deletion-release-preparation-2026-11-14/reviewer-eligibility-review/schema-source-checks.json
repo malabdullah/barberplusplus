@@ -1,0 +1,25 @@
+{
+  "status": "LOCAL_MAIN_SOURCE_VALIDATION_NOT_SQL_EXECUTION",
+  "mainSource": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+  "sourceHashes": {
+    "supabase/schema.expected.sql": "cfe16cfee00ae57dd17e7fc4ea4405006730da89293392a5987cbda6d4808aba",
+    "supabase/migrations/20261030185118_customer_accounts_test.sql": "9b5dcab7e8d17b2811168a4b808c3298e7faa900a286a69554fda7a9560279a8",
+    "supabase/migrations/20261030200735_customer_social_accounts_test.sql": "5e50ece428b4daedc42dcc63b6073af852cc1f91dc221e4347a6515df96df689",
+    "supabase/migrations/20261102040024_canonical_customer_profiles.sql": "52de14ca7c7576b5a8f8abec06ec0f8c46ee8b751dc9feabc146d4236c79d713",
+    "supabase/migrations/20261107190624_shop_barber_invitations.sql": "4d0adc39b8857254263471a63fa87e6492adf953744b8d3201df364db98c0cb4",
+    "supabase/migrations/20261112064028_checkout_email_contact_policy.sql": "3d4c4fdfe2e893cf4dcb65e38115a9567aad53b54ba84d5846fbfb025ca14461",
+    "supabase/migrations/20261107053655_manager_journey_integrity.sql": "2f917610b62d7c209c889a2322e594cda7a2a20631a79457092cbec75abe581d",
+    "supabase/migrations/20261110064317_manager_managed_barbers.sql": "1fe9c441eef26052a94b4d80d8f05f7e03467dccd87fe176109ddceb8d6d573b"
+  },
+  "publicRequiredColumnsCheckedAgainstMainExpectedSchema": true,
+  "privateFieldsTracedToMainMigrationDeclarations": true,
+  "authTypesFullyDeclaredInPublicExpectedSchema": false,
+  "allRequiredTypesGuardedBeforeDataSelect": true,
+  "postgresImagePin": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+  "existingMainDeletionsRoutinesUsed": false,
+  "newDeletionRoutinesOrColumnsUsed": false,
+  "bookingOrSessionTablesRead": false,
+  "liveSchemaObserved": false,
+  "sqlParserOrDatabaseExecution": false,
+  "lookupSqlSHA256": "44e7f2a5d66e7e7f9b7439b74a5e94eb59b2607d0e0bad0370d4028fe2eef65e"
+}

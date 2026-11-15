@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "inspectedAtUTC": "2026-11-13T15:33:00Z",
+  "mode": "read-only selected metadata; no rows, secret values or routine bodies",
+  "runtime": {
+    "containers": [
+      {
+        "expectedImageId": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+        "health": "healthy",
+        "imageId": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+        "matchesLock": true,
+        "name": "supabase-db",
+        "running": true
+      },
+      {
+        "expectedImageId": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+        "health": "healthy",
+        "imageId": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+        "matchesLock": true,
+        "name": "supabase-auth",
+        "running": true
+      },
+      {
+        "expectedImageId": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+        "health": "healthy",
+        "imageId": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+        "matchesLock": true,
+        "name": "supabase-storage",
+        "running": true
+      },
+      {
+        "expectedImageId": "sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+        "health": "healthy",
+        "imageId": "sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+        "matchesLock": true,
+        "name": "supabase-edge-functions",
+        "running": true
+      }
+    ],
+    "exactImageMatches": true,
+    "functions": {
+      "configuration": {
+        "APP_ENV": "production",
+        "APP_URL": "https://www.barberplusplus.com",
+        "CUSTOMER_ACCOUNT_DELETION_BACKEND_URL": "",
+        "CUSTOMER_ACCOUNT_DELETION_CLEANUP_ENABLED": "",
+        "CUSTOMER_ACCOUNT_DELETION_ENABLED": "",
+        "CUSTOMER_PUBLIC_API_URL": "https://srv1073968.hstgr.cloud",
+        "SUPABASE_URL": "http://api-gw:8000"
+      },
+      "secretPresent": {
+        "RESEND_API_KEY": true,
+        "SUPABASE_ANON_KEY": true,
+        "SUPABASE_SERVICE_ROLE_KEY": true
+      }
+    },
+    "readOnly": true,
+    "schemaVersion": 1
+  },
+  "catalogue": {
+    "serverVersion": "17.6",
+    "extensions": [
+      {
+        "name": "pg_cron",
+        "version": "1.6.4"
+      },
+      {
+        "name": "pg_net",
+        "version": "0.20.3"
+      },
+      {
+        "name": "pgcrypto",
+        "version": "1.3"
+      },
+      {
+        "name": "supabase_vault",
+        "version": "0.3.1"
+      }
+    ],
+    "relations": 56,
+    "routines": 15,
+    "policies": 49,
+    "sha256": "2612b004e156b0ebdc407730bcca43bbac11966437cf37014ebccd05d262259f"
+  },
+  "selectedRoutineReconciliation": {
+    "baseCommit": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+    "matched": 15,
+    "inspected": 15,
+    "fullSchemaOrLedgerVerified": false
+  },
+  "temporaryAccess": {
+    "restoredOriginalProfile": 367995,
+    "temporaryProfile": 394280,
+    "temporarySourceRemoved": true,
+    "frontendAccessed": false,
+    "sshSessionsRemaining": 0
+  },
+  "productionWrites": false,
+  "deploymentAuthorized": false,
+  "testFunction": {
+    "version": 3,
+    "sha256": "a3ac8e3f9d262d028331c58b1712444f4f2504ef7ed10d73ff579f2dbeb43f2a",
+    "capturedMailProofVerified": true,
+    "qaAccountPreserved": true
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "status": "STOPPED_BEFORE_KEY_ACCESS_EXISTING_LOCK_GUARD",
+  "approvedMessage": {
+    "hostId": "local",
+    "threadId": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "messageId": "01a1d8e7-0baf-7513-86f6-9de8fd233032"
+  },
+  "reviewedManifestSHA256": "51031d3a3401d573b4e64705019dc0113132b91836a34f0927bdda82e68696ef",
+  "preflight": {
+    "status": "DEFAULT_OFF_PREFLIGHT_STOPPED",
+    "guard": "EXISTING_BACKEND_LOCK_PERMISSIONS",
+    "reason": "AssertionError",
+    "privateKeyRead": false,
+    "secretsGenerated": false,
+    "runtimeChanged": false
+  },
+  "lockObservation": {
+    "fixedPath": "/var/lib/barber-release-backend/backend.lock",
+    "openReadWriteNoFollowSucceeded": true,
+    "fstatSucceeded": true,
+    "compoundRootRegularPrivatePermissionsPredicatePassed": false,
+    "uid": null,
+    "gid": null,
+    "numericMode": null,
+    "regularFile": null,
+    "finalSymlinkFollowed": false,
+    "parentOwnershipOrModeCaptured": false,
+    "exactFailureCause": "NOT_EXPORTED_UNKNOWN_NO_GUESSED_MODE"
+  },
+  "publicPayload": {
+    "status": "PUBLIC_PAYLOAD_VERIFIED",
+    "fileCount": 9,
+    "path": "/etc/barber-release/apple-cleanup-setup-public-146ac50",
+    "publicFilesOnly": true,
+    "installedRuntimeHelperOrUnits": false,
+    "retainedNotDeleted": true
+  },
+  "executionLimitations": {
+    "initialPublicTransferWrapperSyntaxError": true,
+    "correctedSyntaxCheckedPublicTransferPassed": true,
+    "privateKeyRead": false,
+    "privateComposeEnvironmentRead": false,
+    "secretsGenerated": false,
+    "runtimeInspectedAfterGuard": false,
+    "runtimeChanged": false,
+    "newUnitsInstalledOrEnabled": false,
+    "lockChmodOrOwnershipChanged": false,
+    "newConfigOrRecoveryCopyCreated": false,
+    "providerOrMessageOrCustomerActions": false,
+    "sqlFunctionSourceFrontendDevMainChanged": false,
+    "missingStatReconnectedToCollect": false
+  },
+  "timestamps": {
+    "activationRequestedAtUTC": "2026-11-14T07:17:28.078908+00:00",
+    "stopReceiptSavedAtUTC": "2026-11-14T07:19:56.928076+00:00",
+    "restoredReceiptAtUTC": "2026-11-14T07:24:05.643714+00:00"
+  },
+  "firewallRestoration": {
+    "status": "ORIGINAL_DATABASE_FIREWALL_RESTORED",
+    "restoredAtUTC": "2026-11-14T07:24:05.643714+00:00",
+    "databaseResource": 1073968,
+    "originalProfile": 367995,
+    "temporaryProfile": 400860,
+    "originalActiveVisiblyVerified": true,
+    "originalFiveRulesUnchangedVisiblyVerified": true,
+    "originalRulesSHA256": "2f3bdaa87b77437472b2f8d6ba7a75c4d57d39c165942d7164dabc39a50d7d7e",
+    "temporaryProfileInactive": true,
+    "temporarySourceRuleRemoved": true,
+    "temporaryRemainingRules": 5,
+    "inspectionSSHProcesses": 0,
+    "secondsSinceActivationRequest": 398,
+    "frontendAccess": false,
+    "automaticTTLClaimed": false
+  },
+  "nextStep": "Independent review of fresh bounded metadata/conditional root-only permission-tightening exception; no guard weakening or new execution authorized."
+}

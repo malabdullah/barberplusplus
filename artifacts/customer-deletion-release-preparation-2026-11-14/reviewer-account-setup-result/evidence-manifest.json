@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "kind": "WEB_REVIEWER_ACCOUNT_ACCEPTANCE_NOT_NATIVE_CHECKOUT_DELETION_OR_RELEASE",
+  "status": "PASS_SCOPE_CLOSED",
+  "files": {
+    "receipt.json": "3473fc6b3310e13bdb7f51338dbe811d96ae2989a7257ac7db0eee24adf26196",
+    "README.md": "464b1627f14437610a1fb5e44f3af671e5c50cf9d65949723b05fc6cf28e4b78"
+  }
+}

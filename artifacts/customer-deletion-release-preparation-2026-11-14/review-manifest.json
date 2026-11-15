@@ -1,0 +1,382 @@
+{
+  "schemaVersion": 1,
+  "kind": "LOCAL_SOURCE_REVIEW_NOT_RELEASE_ATTESTATION",
+  "preparedAtUTC": "2026-11-14T01:21:18.844672+00:00",
+  "status": "PREPARED_FOR_REVIEW_NOT_PRODUCTION_READY",
+  "branch": "codex/customer-deletion-release-final",
+  "sourceCommit": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "baseMain": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+  "preservedCoreCandidate": "ee1b529b728b0f72fefb211117e1b604c0cd97db",
+  "testOverlayCommit": "e039e8434dcbea09a31ad58ac119e8d8c7cfe3b1",
+  "testFunction": {
+    "name": "customer-account-deletion",
+    "projectRef": "qvkucvcjmojjbphlzlks",
+    "version": 7,
+    "sha256": "1d7c9a6187de66c1e5e9527ae3a4fb82223a9416c72504ac18386d61fafb0dbc",
+    "normalAppleEnabled": false
+  },
+  "runtimeLockSha256": "81b0f05d3be62febd7ae1087523cc5bd0e3d68a44cd4d1e33dc91ce0ca66a2b7",
+  "mainMigrationPrefix": {
+    "count": 102,
+    "unchanged": true,
+    "aggregateSha256": "6b95ed4e7c2f02d352c401aecd5b83528a238b649487ae606a4a3d63fa456029",
+    "liveLedgerAttested": false
+  },
+  "pendingMigrations": [
+    {
+      "name": "supabase/migrations/20261113131730_customer_account_deletion.sql",
+      "sha256": "5b69234082c9a665a9f8868dec9bac181b3287f89fa57a85b7460c54edc19373"
+    },
+    {
+      "name": "supabase/migrations/20261113132148_customer_account_deletion_validation.sql",
+      "sha256": "cb9fbf39aad234a536c4aa439f8d868810334bab0e4bff47ffc73413ce04ee2d"
+    },
+    {
+      "name": "supabase/migrations/20261113134112_customer_deletion_auth_cleanup.sql",
+      "sha256": "2f36693101d090e5a50dda9aa95c650d3755990f6638c37fa9b760b7302b5efd"
+    },
+    {
+      "name": "supabase/migrations/20261113134447_customer_deletion_device_cleanup.sql",
+      "sha256": "e06ccc03614bad6f828af646742530b19755b547e63f6e7371fba3e165a2e8e8"
+    },
+    {
+      "name": "supabase/migrations/20261113140603_customer_deletion_verified_contact_cleanup.sql",
+      "sha256": "bbd52be27f3954f5e8ab8959f7e90840e922eac868d0cb812966a31b25ee265f"
+    },
+    {
+      "name": "supabase/migrations/20261113144103_customer_deletion_environment_binding.sql",
+      "sha256": "6b99aaca1698a0df16edf6ed416ac0ff0f85ae4a7e4e229f867227f45c2d1b94"
+    },
+    {
+      "name": "supabase/migrations/20261113181421_customer_apple_revocation.sql",
+      "sha256": "4ad456f06e3241c3cdc7d081182ca1ebab6e3eb2704cb07591035eaa023ad558"
+    },
+    {
+      "name": "supabase/migrations/20261113182000_customer_apple_scope_binding.sql",
+      "sha256": "19b32cac7fc62ff9699e09a3dad2b23db5502469db3ade95dc13461b8110fc89"
+    },
+    {
+      "name": "supabase/migrations/20261113183235_customer_apple_actor_guard.sql",
+      "sha256": "c5eb5a15acf991b975c7e9c60bfbf56efc7634f3fed64a96b4c94d30eee4fe41"
+    }
+  ],
+  "files": [
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/candidate-manifest.json",
+      "sha256": "1a375f4b8dc10a594efd628e241bf2126ab77dd817e760fdf3788f3a693beccf"
+    },
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/platform-rehearsal-report.md",
+      "sha256": "febf794edb48553ba326a4b4f111b28bd2dfcebf4b46b4a56027b0a746001785"
+    },
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/platform-rehearsal-results.json",
+      "sha256": "48c49a3e158bea9c991dab278ec594ef4b0eb379d64ca2f98f701966e8bbcfe7"
+    },
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/production-preparation-results.json",
+      "sha256": "8eecbd39e2df5bd56001f8f3b3340df8b97d34a3f7a2a1cc67e7961c01256da5"
+    },
+    {
+      "path": "artifacts/customer-account-deletion-2026-11-13/production-readiness-summary.json",
+      "sha256": "7a13f578ce92657b683831465b840f863f31eeb568776cb475b54226018bf5be"
+    },
+    {
+      "path": "docs/customer-account-deletion-release.md",
+      "sha256": "1f253663b0e23f10c0238e2517714d53a6d2485b0c420ef63fdaab80cc124591"
+    },
+    {
+      "path": "docs/customer-deletion-production-readiness.md",
+      "sha256": "555f4429890c3e6e6c2f02f774eb2fd8daf0fad67e5892a62d6bed425f358655"
+    },
+    {
+      "path": "docs/customer-deletion-schema-rehearsal-proposal.md",
+      "sha256": "00ce304831a352e9edfcd1943c654323e2f18a51b722cb054a1b0afd60be4e14"
+    },
+    {
+      "path": "docs/release-review/customer-deletion-2026-11-14/README.md",
+      "sha256": "f01f8ac1f94b2a83fd69b5cecca4cd7532b0aa840af5239c53995ccae6884b1a"
+    },
+    {
+      "path": "docs/release-review/customer-deletion-2026-11-14/proposed-public-copy.json",
+      "sha256": "178a534ef2caf9dadc893abcc219158eff047eb87a01d497dd8d84108881608f"
+    },
+    {
+      "path": "ops/account-deletion/README.md",
+      "sha256": "193b5da5777bebf879e867e91949ded61b2128103cf9633e2471614912bade67"
+    },
+    {
+      "path": "ops/account-deletion/apple-readiness.sql",
+      "sha256": "3ba34ff0c78b31791d3b69afb5ef9d743f2722327ae1ca6566c3c24a0e2432b2"
+    },
+    {
+      "path": "ops/account-deletion/dump-rehearsal-schema.sh",
+      "sha256": "ce82263ef5fc515ee0477b1c3d707517718c2f4a92ae03596d4b37f92c994b06"
+    },
+    {
+      "path": "ops/account-deletion/inspect-runtime.py",
+      "sha256": "a8b1939d856f5bac1fa6024b85d38081fa05ef85523eb35052b2b5e65a9bfb78"
+    },
+    {
+      "path": "ops/account-deletion/platform_scenarios.py",
+      "sha256": "3b8898668b8eb291df1a24ab08d87daf73b9a99da2f7c36a46c1ed401f6f71bf"
+    },
+    {
+      "path": "ops/account-deletion/production.env.example",
+      "sha256": "881f6222144a9cf8af578273495683051829c210bfdf94945699dc82b8dc8254"
+    },
+    {
+      "path": "ops/account-deletion/readiness.sql",
+      "sha256": "43feac301c83ef803d504ff54a47894e4f78c4062e97923b48a2d9c31bfb7a76"
+    },
+    {
+      "path": "ops/account-deletion/rehearse-platform.py",
+      "sha256": "6df7bdbbaadc44dfb5ae18705d8cf2ac9402f3019a9b5f46f8e8841ade232dd4"
+    },
+    {
+      "path": "ops/release/test-functions-image.py",
+      "sha256": "0b7b208e03672a6ff0748668ffe0cc4fa126c26798b7a8f8affa421f0c75f71f"
+    },
+    {
+      "path": "scripts/deletion-readiness.node-test.mjs",
+      "sha256": "7da3303dbfa761b870041855d86a8a6cffcd64d300ec5ef352d2e7b2aa649e3f"
+    },
+    {
+      "path": "src/App.jsx",
+      "sha256": "983b4859fc30cf8c1c0b5c786cbd712298aeb779a09124197567498070b3eb80"
+    },
+    {
+      "path": "src/i18n/locales/ar.json",
+      "sha256": "ef84fe599c6a317e3371623656840603ccbed276a02e38fc487094cf7b87cec3"
+    },
+    {
+      "path": "src/i18n/locales/en.json",
+      "sha256": "e7d833d041cc8e38d7dba809ff1472b16a73ec6410fed24d6a409cd48aaa6aa0"
+    },
+    {
+      "path": "src/pages/AccountTools.test.jsx",
+      "sha256": "51fd81ce9862c877e78a6ac88d8bb2f1c42c3f0a089ce7123ecc1f6ff41c5820"
+    },
+    {
+      "path": "src/pages/ContactSupport.jsx",
+      "sha256": "a21679d996026c6b0fc41db5c17a5e6e0648a92dc1aaecb4702eae436bbf7f7e"
+    },
+    {
+      "path": "src/pages/CustomerAccount.jsx",
+      "sha256": "020f712da0ebedfbdf3f617d33878fd7c0301fc004e5291e5159f5fdfb4699ff"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.css",
+      "sha256": "023daaa17617424a48ea5bff9358d7702163fb54841ab09a8293fad70494b515"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.jsx",
+      "sha256": "976654371c2ce0f899f2d109bf9280a403ca3e4a210026c92bac86d3a867cfd2"
+    },
+    {
+      "path": "src/pages/CustomerDeleteAccount.test.jsx",
+      "sha256": "1e3f8664db8fce6fa62a3e46a323a6eed22831b728a73a72a3d54e840c5446cb"
+    },
+    {
+      "path": "src/services/customerApple.service.js",
+      "sha256": "712c47f2cb0298ede2cfceb21946b4e75f2891924be8e9c71937ff3deed227c8"
+    },
+    {
+      "path": "src/services/customerApple.service.test.js",
+      "sha256": "e10f04c3aadfbe380cc931c84ac17f26e525260bdb81bccefe2163ee86419ce8"
+    },
+    {
+      "path": "src/services/customerAuth.service.js",
+      "sha256": "60c22902613bf3d9910fc0de36a558af38e833e032950fbd8b28baa6da276612"
+    },
+    {
+      "path": "src/services/customerDeletion.service.js",
+      "sha256": "c7bf447a4d30747ded8fe97d5c717c7bc10eae5132ee07b7b2f222b088866900"
+    },
+    {
+      "path": "src/utils/customerDeletionReceipt.js",
+      "sha256": "f46f1343f19b38b62417c799e7113662d2733e93693bc41b77ea3580a3ae4c12"
+    },
+    {
+      "path": "src/utils/customerDeletionReceipt.test.js",
+      "sha256": "2ad7285eb105310380db11b10f85139323b212ac0d76b5527e91eb1e4b48aea6"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/apple.ts",
+      "sha256": "4e1d9e83c7cdea8d073c37d59151cbcb79b16b471383c75cd9931bfa37cd82bf"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/apple_configuration_test.ts",
+      "sha256": "85d1471299e060587e61c2c0e5015a88f26b945d50c026732da3692e32c2b2f1"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/apple_test.ts",
+      "sha256": "035a60b9e302a8123823e5647a0fd4b9ea2f5939746840175919c63771f8ddc0"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/cleanup.ts",
+      "sha256": "d9484cb73db43e9dc554dc90c3110489d082549c26b016788ae6f78d98e2d15a"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/cleanup_test.ts",
+      "sha256": "c673abd3f9e22aff55071c205bf940add2840b08460f3d817e43e9de157a79f5"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/configuration.ts",
+      "sha256": "308a5042872a95006ae2d8cbd5c2bafede817248738d6549d8ac0871771030ed"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/configuration_test.ts",
+      "sha256": "8d02ac859b6b061ed0f81685d4ae3efa6aa440509c1615b64101a0883b89602e"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/handler.ts",
+      "sha256": "1796c362f15d8511f9024ea913c848444b4e22e3d435ed5dc54115298fd925fd"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/handler_test.ts",
+      "sha256": "a1b57dad097e06ae43e9e3e450cb435cdbfbd8de2e7a9c081a35f757731fc27f"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/index.ts",
+      "sha256": "60f3b0d9ed8174861a9dc31c21b012bdb52dc29ea2f4f4308fa52694d029dc03"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/mail.ts",
+      "sha256": "c0f9a05ad3baaad8f04680e041338c4c89b010c33522b87163f102ad8557e91c"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/mail_test.ts",
+      "sha256": "716a11437740b8cfe0f65ce940db3c3e54f288ed513f55a15578f71f03941e0a"
+    },
+    {
+      "path": "supabase/migrations/20261113131730_customer_account_deletion.sql",
+      "sha256": "5b69234082c9a665a9f8868dec9bac181b3287f89fa57a85b7460c54edc19373"
+    },
+    {
+      "path": "supabase/migrations/20261113132148_customer_account_deletion_validation.sql",
+      "sha256": "cb9fbf39aad234a536c4aa439f8d868810334bab0e4bff47ffc73413ce04ee2d"
+    },
+    {
+      "path": "supabase/migrations/20261113134112_customer_deletion_auth_cleanup.sql",
+      "sha256": "2f36693101d090e5a50dda9aa95c650d3755990f6638c37fa9b760b7302b5efd"
+    },
+    {
+      "path": "supabase/migrations/20261113134447_customer_deletion_device_cleanup.sql",
+      "sha256": "e06ccc03614bad6f828af646742530b19755b547e63f6e7371fba3e165a2e8e8"
+    },
+    {
+      "path": "supabase/migrations/20261113140603_customer_deletion_verified_contact_cleanup.sql",
+      "sha256": "bbd52be27f3954f5e8ab8959f7e90840e922eac868d0cb812966a31b25ee265f"
+    },
+    {
+      "path": "supabase/migrations/20261113144103_customer_deletion_environment_binding.sql",
+      "sha256": "6b99aaca1698a0df16edf6ed416ac0ff0f85ae4a7e4e229f867227f45c2d1b94"
+    },
+    {
+      "path": "supabase/migrations/20261113181421_customer_apple_revocation.sql",
+      "sha256": "4ad456f06e3241c3cdc7d081182ca1ebab6e3eb2704cb07591035eaa023ad558"
+    },
+    {
+      "path": "supabase/migrations/20261113182000_customer_apple_scope_binding.sql",
+      "sha256": "19b32cac7fc62ff9699e09a3dad2b23db5502469db3ade95dc13461b8110fc89"
+    },
+    {
+      "path": "supabase/migrations/20261113183235_customer_apple_actor_guard.sql",
+      "sha256": "c5eb5a15acf991b975c7e9c60bfbf56efc7634f3fed64a96b4c94d30eee4fe41"
+    },
+    {
+      "path": "supabase/schema.expected.sql",
+      "sha256": "555061a4d93209e543ff705550a7033c85ebfe90b41087552a8f3cf3a566107c"
+    },
+    {
+      "path": "supabase/tests/001_baseline_security.sql",
+      "sha256": "b2428f85931ebd9b28e7dc0ae31c4f775aef80b2d07052abcb59a6af03d1bde6"
+    },
+    {
+      "path": "supabase/tests/004_avatar_storage.sql",
+      "sha256": "f1e82f6d3d8ab648c7090c2ee6c9b5da9aec361ddfe19800e29e703192a61a35"
+    },
+    {
+      "path": "supabase/tests/014_dashboard_notifications.sql",
+      "sha256": "071b7a0d34ef257517dadc0ef25cb27eba279e372147406ff14ae850480fd4a9"
+    },
+    {
+      "path": "supabase/tests/016_manager_chair.sql",
+      "sha256": "2df6941a08dafbd65f8f8024604497d0b98a616e91ed8e1b63b1dbc29ecc5838"
+    },
+    {
+      "path": "supabase/tests/020_booking_change_policies.sql",
+      "sha256": "30c425895de6a9c61f3ada0830fecfdb9ff4bcc310ed9b08c722c5bd3091d221"
+    },
+    {
+      "path": "supabase/tests/026_manager_journey_integrity.sql",
+      "sha256": "42530851118a5984cc207e3fd1653562301f698033bd35f34abb2504956344c8"
+    },
+    {
+      "path": "supabase/tests/027_availability_approvals.sql",
+      "sha256": "f10e3fc90a1a3ff7bed7ac825fb7e936e08a0be8d92e8ca584af14d800f7a0dd"
+    },
+    {
+      "path": "supabase/tests/028_granular_availability.sql",
+      "sha256": "109657584cf115d5a1dee7ba1da6175612652b17e5b8a614ca28bca03c94f8b9"
+    },
+    {
+      "path": "supabase/tests/055_customer_account_deletion_candidate.sql",
+      "sha256": "b5c1cf527cae9bdc20eff9b48bc38479bb2b43a96b081c66eb6a6bc506ecaec9"
+    },
+    {
+      "path": "supabase/tests/056_customer_apple_revocation.sql",
+      "sha256": "61e526c6ec6413096c53ec12d7f4cfc3d1241002b9252c991d195f96223e5d55"
+    }
+  ],
+  "deletedFiles": [],
+  "verification": {
+    "date": "2026-11-14",
+    "checks": {
+      "functions": 247,
+      "deletionFunctionFocused": 37,
+      "ui": 361,
+      "operations": 65,
+      "testOverlayFunctions": 251,
+      "coreHostedRollbackGroups": 6,
+      "appleHostedRollbackGroups": 8,
+      "actualHostedApiGroups": 10,
+      "lint": "passed",
+      "types": "passed",
+      "build": "passed",
+      "migrationNames": "passed",
+      "hardcodedDomains": "passed",
+      "native25ActualHostedCompatibilityReported": 1,
+      "affectedUiAfterFinalCopy": 32,
+      "existingTestCredentialMetadataOffline": "passed"
+    },
+    "newExactImageRehearsal": "NOT_RUN_REQUIRES_APPROVAL",
+    "productionAccessOrKeyUse": false,
+    "productionDeployment": false,
+    "policyPublication": false,
+    "devMainPush": false,
+    "realProviderCalls": 0,
+    "newPersistentReviewerFixtures": false,
+    "unchangedMainMigrationPrefixCount": 102,
+    "pendingMigrationCount": 9,
+    "candidateSqlSuiteCount": 48
+  },
+  "exclusions": [
+    "Reports phase1",
+    "temporary Apple provider probe",
+    "Test credentials/fixtures",
+    "production signing/encryption secrets"
+  ],
+  "unperformed": [
+    "exact-final-image48-suite Auth/Storage/Edge rehearsal",
+    "Live Apple credential provisioning/client verification and renewal/recovery setup",
+    "fresh Live ledger/runtime/backups/cron readiness",
+    "public privacy/support acceptance and publication",
+    "dev/main push and production release",
+    "App Store upload/submission/public release"
+  ],
+  "frontendImageDigest": null,
+  "githubAttestation": null,
+  "productionWrites": false
+}

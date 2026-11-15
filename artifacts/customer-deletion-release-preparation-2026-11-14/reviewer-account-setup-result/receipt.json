@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_NORMAL_WEB_REVIEWER_ACCOUNT_ACCEPTANCE_SCOPE_CLOSED",
+  "recordedAtUTC": "2026-11-14T10:15:19.767419+00:00",
+  "approvedPlan": {
+    "commit": "9c3f1b2",
+    "manifestSHA256": "ca30c26387daab09f2b2a4361b9b940c834eeebbda75b31faad777242305d91c"
+  },
+  "approval": {
+    "chat": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "request": "call_73e8a8a6d38b44da984571c9cd8c1b01",
+    "messageId": "01a1d97d-4b78-7790-bca8-8a0f454838c6",
+    "answer": "Approve reviewer-account setup now",
+    "directHumanReplyVerified": true
+  },
+  "ownerReports": {
+    "initialCompletionMessageId": "01a1d987-39dd-7c30-aee1-b764b8602f87",
+    "accountCreatedAndEmailVerified": true,
+    "passwordSavedInApplePasswords": true,
+    "passwordStorageIndependentlyInspected": false,
+    "finalSigninRequest": "call_ba768fb81d8a4a94a527446adb5b6768",
+    "finalSigninMessageId": "01a1d98a-0580-7800-a798-10cb5158bc74",
+    "finalSigninAnswer": "Done\u2014reviewer account is open again",
+    "directHumanRepliesVerified": true
+  },
+  "observedUI": {
+    "browser": "Google Chrome Incognito",
+    "finalRoute": "https://www.barberplusplus.com/customer/account",
+    "approvedName": "Barber++ App Review",
+    "approvedEmail": "support@barberplusplus.com",
+    "nameAndEmailMatchedBeforeAndAfterSignout": true,
+    "phoneDisplayed": "Not provided",
+    "normalCustomerProfileBeforeAndAfter": true,
+    "finalAccountPageLoaded": true,
+    "upcomingAppointmentsEmptyVisible": true,
+    "reviewerSignoutActionsByAgent": 1,
+    "signedOutHeaderObserved": true,
+    "signinFormEmailPreparedPasswordEmpty": true,
+    "ownerPrivateSigninThenReturnedProfileObserved": true,
+    "normalSigninReturnWasBookStart": true,
+    "finalReadOnlyMyAccountNavigationActions": 1,
+    "lastProfileScreenshotCapturedAtUTC": "2026-11-14T10:14:12.070944+00:00"
+  },
+  "privacy": {
+    "agentGeneratedReadEnteredLoggedStoredOrSharedPasswords": false,
+    "OTPVerificationLinkSessionTokenStorageNetworkOrCustomerIDsInspected": false,
+    "ApplePasswordsOrMailboxContentsInspected": false,
+    "AppleCredentialFieldsPopulated": false,
+    "existingNormalChromeOrIABAdminSessionsAltered": false,
+    "incognitoLeftOpenAtReviewerAccount": true,
+    "noActiveOwnerEntryObservation": true
+  },
+  "messageAndActionScope": {
+    "initialConfirmationEmailRequestBudget": 1,
+    "providerDeliveryCountIndependentlyAudited": false,
+    "signupSubmissionsByAgent": 0,
+    "signinSubmissionsByAgent": 0,
+    "extraSignupResendResetRecoveryMailRequestsByAgent": 0,
+    "SMSOrPushOrBookingOrDeletionMessagesTriggeredByAgent": 0,
+    "bookingOrFavouriteOrProfileEditsByAgent": 0,
+    "demoReuseOrAvailabilityChecks": false,
+    "serverIPSSHSQLBackupProviderDebugActions": false,
+    "featureFlagsDeploymentDevMainPushUploadSubmission": false
+  },
+  "coverageLimits": {
+    "nativeAppSigninAcceptance": false,
+    "fourFieldCheckoutAPIContractObserved": false,
+    "nativeCheckoutNoPhoneAcceptance": false,
+    "futureAppointmentSlotVerified": false,
+    "deletionPreviewProofDeletionOrCleanupAcceptance": false,
+    "AppleCredentialsSharedOrMailboxAccessGiven": false,
+    "userEmailProofAndPrivatePWStorage": "Owner reported; normal profile access/one signout/returned profile independently observed via UI",
+    "deletionFlags": "Not read or changed in this setup; last verified all OFF"
+  },
+  "privateEvidence": {
+    "preparation-state.json": {
+      "path": ".release-private/reviewer-signup-2026-11-14/preparation-state.json",
+      "SHA256": "7c2e1c7cdef9a67810e5f7696d65b100e63e3aec8c419b30ab97cacd92640cae"
+    },
+    "private-ready-state.json": {
+      "path": ".release-private/reviewer-signup-2026-11-14/private-ready-state.json",
+      "SHA256": "ebb0a212b17fbc9dd5c76e9a732b1b032e4a1dc1480483fe3292ef93ed5a710a"
+    },
+    "verified-profile-signout-handoff.json": {
+      "path": ".release-private/reviewer-signup-2026-11-14/verified-profile-signout-handoff.json",
+      "SHA256": "40e6ec05cf8444c9257a063c244c66265cc36d63ff22a5dda8c3b6386a2e7535"
+    },
+    "private-form-ready.png": {
+      "path": ".release-private/reviewer-signup-2026-11-14/private-form-ready.png",
+      "SHA256": "c8ab5cfb3f7c1fb4a1a7d20c61ab4c049dde4fb83adcfe98a46aba43da1a9ed6"
+    },
+    "verified-account-before-signout.png": {
+      "path": ".release-private/reviewer-signup-2026-11-14/verified-account-before-signout.png",
+      "SHA256": "e0a5503080c38d4e1bed0a21c1be15f188d8780ba6f4c955d6b7d1799d198810"
+    },
+    "signin-ready-after-signout.png": {
+      "path": ".release-private/reviewer-signup-2026-11-14/signin-ready-after-signout.png",
+      "SHA256": "4b7aa2ae75dbf49b657bdb61d7adebcdad3a0ee1a4a3c1df6da25f7d5eb9435f"
+    },
+    "accepted-account-after-signin.png": {
+      "path": ".release-private/reviewer-signup-2026-11-14/accepted-account-after-signin.png",
+      "SHA256": "893fc7f8e929584d295677a3fc7d8309b0a2324e38383189fc5b6d7c4b3c304e"
+    }
+  }
+}

@@ -7,8 +7,13 @@ import { usePublicNavigationBusy } from '../components/Public/PublicNavigationCo
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { customerAuthService } from '../services/customerAuth.service';
 import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
+import CustomerAppleDeletionReturn from './CustomerAppleDeletionReturn';
 
 export default function CustomerSocialAuth() {
+  return new URLSearchParams(window.location.search).has('deletion_apple') ? <CustomerAppleDeletionReturn /> : <CustomerSocialAuthFlow />;
+}
+
+function CustomerSocialAuthFlow() {
   const { t } = useTranslation(); const tr = key => t(`customerAuth.${key}`);
   const { refresh } = useCustomerAuth(); const location = useLocation(); const navigate = useNavigate();
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false);

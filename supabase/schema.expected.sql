@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS "public"."bookings" (
     "package_offer_id" "uuid",
     "package_snapshot" "jsonb",
     "cancelled_at" timestamp with time zone,
+    "customer_deleted_at" timestamp with time zone,
     CONSTRAINT "bookings_added_by_type_check" CHECK (("added_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
     CONSTRAINT "bookings_cancel_notice_minutes_check" CHECK ((("cancel_notice_minutes" >= 0) AND ("cancel_notice_minutes" <= 525600))),
     CONSTRAINT "bookings_modified_by_type_check" CHECK (("modified_by_type" = ANY (ARRAY['manager'::"text", 'barber'::"text", 'whatsapp_agent'::"text", 'admin'::"text", 'system'::"text", 'customer'::"text"]))),
@@ -103,6 +104,13 @@ CREATE TABLE IF NOT EXISTS "public"."branches" (
     CONSTRAINT "branches_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text"])))
 );
 ALTER TABLE "public"."branches" OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."account_deletion_access_allowed"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select private.current_account_session() is not null
+$$;
+ALTER FUNCTION "public"."account_deletion_access_allowed"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -435,6 +443,29 @@ begin
   return p_policy;
 end $$;
 ALTER FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."configure_customer_deletion"("p_environment" "text", "p_enabled" boolean DEFAULT false, "p_test_users" "uuid"[] DEFAULT '{}'::"uuid"[]) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare cfg private.customer_deletion_runtime%rowtype;ids uuid[]:=coalesce(p_test_users,'{}');target text;
+begin
+ if coalesce(auth.jwt()->>'role','')<>'service_role'then raise exception 'FORBIDDEN'using errcode='42501';end if;
+ select *into cfg from private.customer_deletion_runtime where singleton for update;
+ if p_enabled is null or p_environment not in('cloud-test','production')or p_environment is distinct from cfg.deployment_environment then raise exception 'INVALID_ENVIRONMENT';end if;
+ if not p_enabled and exists(select 1 from private.customer_deletion_jobs where state='cleanup_pending')then raise exception 'DELETION_CLEANUP_PENDING';end if;
+ if cardinality(ids)>100 then raise exception 'INVALID_REQUEST';end if;
+ if p_environment='cloud-test'then
+  if exists(select 1 from unnest(ids)x where not exists(select 1 from auth.users where id=x and raw_app_meta_data->>'deletion_qa'='true'and email like'%@example.test'))then raise exception 'TEST_ACCOUNT_ONLY';end if;
+  target:='https://qvkucvcjmojjbphlzlks.supabase.co/functions/v1/customer-account-deletion';
+ else
+  if cardinality(ids)>0 then raise exception 'INVALID_REQUEST';end if;
+  target:='https://srv1073968.hstgr.cloud/functions/v1/customer-account-deletion';
+ end if;
+ update private.customer_deletion_runtime set function_url=case when p_enabled then target else null end,
+   test_mode=p_environment='cloud-test',allowed_test_users=ids where singleton;
+ return public.customer_deletion_runtime_configuration();
+end $$;
+ALTER FUNCTION "public"."configure_customer_deletion"("p_environment" "text", "p_enabled" boolean, "p_test_users" "uuid"[]) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") RETURNS boolean
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -1008,6 +1039,104 @@ begin
  return jsonb_build_object('saved',true);
 end $$;
 ALTER FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_deletion_runtime_configuration"() RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+ if coalesce(auth.jwt()->>'role','')<>'service_role'then raise exception 'FORBIDDEN'using errcode='42501';end if;
+ return(select jsonb_build_object('deploymentEnvironment',deployment_environment,'testMode',test_mode,'functionUrl',function_url)
+   from private.customer_deletion_runtime where singleton);
+end $$;
+ALTER FUNCTION "public"."customer_deletion_runtime_configuration"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_deletion_service"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    SET "statement_timeout" TO '40s'
+    AS $_$
+declare result jsonb; actor jsonb; j private.customer_deletion_jobs%rowtype; u uuid; s uuid; v_subject text; kind text; a private.customer_apple_attempts%rowtype; task private.customer_apple_tasks%rowtype;
+begin
+  if coalesce(auth.jwt()->>'role','')<>'service_role'then raise exception 'FORBIDDEN'using errcode='42501';end if;
+  if p_action in('apple-subject','apple-reserve','apple-store')then
+    u:=(p_data->>'user_id')::uuid;s:=(p_data->>'session_id')::uuid;kind:=p_data->>'platform';
+    if kind not in('ios','web')or kind is null then raise exception 'INVALID_REQUEST';end if;
+    -- Same serialization fence used when credentials are frozen for deletion.
+    perform pg_advisory_xact_lock(hashtextextended('apple-credential:'||u::text,0));
+    if not public.customer_session_is_live(u,s)or not exists(select 1 from auth.users where id=u and raw_app_meta_data->>'role'in('customer','manager','barber'))then raise exception 'AUTH_REQUIRED';end if;
+    if exists(select 1 from private.customer_deletion_runtime where singleton and test_mode)and(
+      not exists(select 1 from private.customer_deletion_runtime where singleton and u=any(allowed_test_users))
+      or not exists(select 1 from auth.users where id=u and raw_app_meta_data->>'deletion_qa'='true'and email like'%@example.test')
+    )then raise exception 'TEST_ACCOUNT_ONLY';end if;
+    -- No profile-creation dependency; linked work/admin responsibilities still deny.
+    perform private.deletion_actor(u,s);
+    select coalesce(nullif(identity_data->>'sub',''),provider_id)into v_subject from auth.identities where user_id=u and provider='apple';
+    if v_subject is null then raise exception 'APPLE_PROOF_INVALID';end if;
+    if p_action='apple-subject'then
+      return jsonb_build_object('subject',v_subject,'registered',exists(select 1 from private.customer_apple_credentials where user_id=u and platform=kind and customer_apple_credentials.subject=v_subject));
+    elsif p_action='apple-reserve'then
+      if coalesce(p_data->>'proof_hash','')!~'^[0-9a-f]{64}$'then raise exception 'INVALID_REQUEST';end if;
+      delete from private.customer_apple_attempts where created_at<clock_timestamp()-interval'1 day';
+      if(select count(*)from private.customer_apple_attempts where user_id=u and created_at>clock_timestamp()-interval'1 hour')>=5 then raise exception 'RATE_LIMITED';end if;
+      if exists(select 1 from private.customer_apple_attempts where proof_hash=p_data->>'proof_hash')then raise exception 'APPLE_PROOF_INVALID';end if;
+      insert into private.customer_apple_attempts(user_id,session_id,platform,proof_hash)values(u,s,kind,p_data->>'proof_hash')returning *into a;
+      return jsonb_build_object('attempt',a.id);
+    else
+      select *into a from private.customer_apple_attempts where id=(p_data->>'attempt')::uuid for update;
+      if not found or a.user_id<>u or a.session_id<>s or a.platform<>kind or a.consumed or a.created_at<clock_timestamp()-interval'2 minutes'then raise exception 'APPLE_PROOF_INVALID';end if;
+      if p_data->>'subject'is distinct from v_subject then raise exception 'APPLE_PROOF_INVALID';end if;
+      if length(coalesce(p_data->>'cipher',''))not between 32 and 16384 or p_data->>'key_id'is distinct from'v1'then raise exception 'INVALID_REQUEST';end if;
+      insert into private.customer_apple_credentials(user_id,platform,subject,cipher,key_id)values(u,kind,v_subject,p_data->>'cipher',p_data->>'key_id')
+        on conflict(user_id,platform)do update set subject=excluded.subject,cipher=excluded.cipher,key_id=excluded.key_id,updated_at=clock_timestamp();
+      update private.customer_apple_attempts set consumed=true where id=a.id;
+      return jsonb_build_object('registered',true);
+    end if;
+  end if;
+  if p_action='apple-complete'then
+    select *into j from private.customer_deletion_jobs where id=(p_data->>'id')::uuid for update;
+    if not found or j.state<>'cleanup_pending'or j.lease_id is distinct from(p_data->>'lease')::uuid or j.leased_until<=clock_timestamp()then return 'false'::jsonb;end if;
+    delete from private.customer_apple_tasks where id=(p_data->>'task')::uuid and job_id=j.id returning *into task;
+    return to_jsonb(found);
+  end if;
+  if p_action='confirm'then
+    -- Lock the job before the same account fences to serialize retries.
+    select *into j from private.customer_deletion_jobs where id=(p_data->>'id')::uuid for update;
+    for u in select x from unnest(j.user_ids)x order by x loop
+      perform pg_advisory_xact_lock(hashtextextended('apple-credential:'||u::text,0));
+    end loop;
+  elsif p_action='finish'then
+    select *into j from private.customer_deletion_jobs where id=(p_data->>'id')::uuid for update;
+    if j.lease_id is not distinct from(p_data->>'lease')::uuid and exists(select 1 from private.customer_apple_tasks where job_id=j.id)then raise exception 'CLEANUP_PENDING';end if;
+  end if;
+  result:=private.customer_deletion_base_v1(p_action,p_data);
+  if p_action='preview'then
+    actor:=private.deletion_actor((p_data->>'user_id')::uuid,(p_data->>'session_id')::uuid);
+    return result||jsonb_build_object('appleRevocation',case when exists(select 1 from auth.identities i where i.user_id in(select value::uuid from jsonb_array_elements_text(actor->'userIds'))and i.provider='apple')and not exists(select 1 from auth.identities i where i.user_id in(select value::uuid from jsonb_array_elements_text(actor->'userIds'))and i.provider='apple'and not exists(select 1 from private.customer_apple_credentials c where c.user_id=i.user_id and c.subject=coalesce(nullif(i.identity_data->>'sub',''),i.provider_id)))then'registered'else'manual_required'end);
+  end if;
+  if p_action='confirm'and result->>'state'='cleanup_pending'then
+    select *into j from private.customer_deletion_jobs where id=(result->>'id')::uuid for update;
+    if not j.apple_prepared then
+      insert into private.customer_apple_tasks(job_id,user_id,platform,subject,cipher,key_id)
+        select j.id,c.user_id,c.platform,c.subject,c.cipher,c.key_id from private.customer_apple_credentials c where c.user_id=any(j.user_ids);
+      update private.customer_deletion_jobs set apple_prepared=true,
+        apple_manual=exists(select 1 from auth.identities i where i.user_id=any(j.user_ids)and i.provider='apple'and not exists(select 1 from private.customer_apple_credentials c where c.user_id=i.user_id and c.subject=coalesce(nullif(i.identity_data->>'sub',''),i.provider_id))),
+        apple_token_count=(select count(*)from private.customer_apple_tasks where job_id=j.id)where id=j.id;
+      delete from private.customer_apple_credentials where user_id=any(j.user_ids);
+      delete from private.customer_apple_attempts where user_id=any(j.user_ids);
+    end if;
+  elsif p_action='claim'and result<>'null'::jsonb then
+    return result||jsonb_build_object('appleTasks',(select coalesce(jsonb_agg(to_jsonb(t)),'[]')from private.customer_apple_tasks t where job_id=(result->>'id')::uuid));
+  elsif p_action='status'then
+    select *into j from private.customer_deletion_jobs where id=(result->>'id')::uuid;
+    if j.parent_id is not null then select *into j from private.customer_deletion_jobs where id=j.parent_id;end if;
+    return result||jsonb_build_object('appleManualRevocation',case when j.apple_prepared then j.apple_manual else 'apple'=any(j.providers)end,
+      'appleRevocation',case when not'Apple'=any(j.providers)and not'apple'=any(j.providers)then'not_applicable'
+        when exists(select 1 from private.customer_apple_tasks where job_id=j.id)then'pending'
+        when not j.apple_prepared or j.apple_manual then'manual_required'
+        when j.apple_token_count>0 then'revoked'else'manual_required'end);
+  end if;
+  return result;
+end $_$;
+ALTER FUNCTION "public"."customer_deletion_service"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -1813,7 +1942,7 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('finance-request:'||request_id::text,0));
   select *into cached from private.shop_finance_requests where id=request_id;
   if found then
-   if cached.actor_id<>actor or cached.request<>jsonb_build_object('action',p_action,'data',p_data)then raise exception 'FINANCE_DUPLICATE';end if;
+   if cached.actor_id<>actor or (case when cached.request ? '_deletedCustomerHash' then cached.request->>'_deletedCustomerHash'<>encode(extensions.digest(jsonb_build_object('action',p_action,'data',p_data)::text,'sha256'),'hex') else cached.request<>jsonb_build_object('action',p_action,'data',p_data) end)then raise exception 'FINANCE_DUPLICATE';end if;
    return cached.result;
   end if;
   reason:=btrim(coalesce(p_data->>'reason',''));
@@ -2601,6 +2730,7 @@ CREATE TABLE IF NOT EXISTS "public"."customers" (
     "created_by_user_id" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "account_deleted_at" timestamp with time zone,
     CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
 );
 ALTER TABLE "public"."customers" OWNER TO "postgres";
@@ -2975,6 +3105,8 @@ CREATE OR REPLACE TRIGGER "a0_managed_barber" BEFORE INSERT OR DELETE OR UPDATE 
 CREATE OR REPLACE TRIGGER "a0_managed_booking_access" BEFORE INSERT OR DELETE OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_managed_booking_access"();
 CREATE OR REPLACE TRIGGER "a_availability_workflow" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_availability_write"();
 CREATE OR REPLACE TRIGGER "a_barber_confirmation_preference" BEFORE UPDATE OF "auto_confirm_bookings" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_barber_confirmation_preference"();
+CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
+CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
 CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
@@ -3026,6 +3158,7 @@ CREATE OR REPLACE TRIGGER "validate_booking_integrity" BEFORE INSERT OR UPDATE O
 CREATE OR REPLACE TRIGGER "validate_service" BEFORE INSERT OR DELETE OR UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 CREATE OR REPLACE TRIGGER "validate_shop" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 CREATE OR REPLACE TRIGGER "z_capture_customer_booking_email" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_customer_booking_email"();
+CREATE OR REPLACE TRIGGER "zz_erased_booking" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 ALTER TABLE ONLY "public"."admin_settings"
     ADD CONSTRAINT "admin_settings_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
 ALTER TABLE ONLY "public"."areas"
@@ -3212,6 +3345,10 @@ CREATE POLICY "Managers view managed branch logs" ON "public"."logs" FOR SELECT 
   WHERE ("branches"."manager_id" = "auth"."uid"()))));
 CREATE POLICY "Public read access" ON "public"."areas" FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON "public"."governorates" FOR SELECT USING (true);
+CREATE POLICY "Realtime requires a live account session" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."account_deletion_access_allowed"() AS "account_deletion_access_allowed"));
+CREATE POLICY "Realtime requires a live account session" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."account_deletion_access_allowed"() AS "account_deletion_access_allowed"));
+CREATE POLICY "Realtime requires a live account session" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."account_deletion_access_allowed"() AS "account_deletion_access_allowed"));
+CREATE POLICY "Realtime requires a live account session" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."account_deletion_access_allowed"() AS "account_deletion_access_allowed"));
 CREATE POLICY "Service role can manage whatsapp_logs" ON "public"."whatsapp_logs" TO "service_role" USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access" ON "public"."areas" USING (("auth"."role"() = 'service_role'::"text"));
 CREATE POLICY "Service role full access" ON "public"."governorates" USING (("auth"."role"() = 'service_role'::"text"));
@@ -3276,6 +3413,9 @@ GRANT ALL ON TABLE "public"."barbers" TO "service_role";
 GRANT ALL ON TABLE "public"."branches" TO "anon";
 GRANT ALL ON TABLE "public"."branches" TO "authenticated";
 GRANT ALL ON TABLE "public"."branches" TO "service_role";
+REVOKE ALL ON FUNCTION "public"."account_deletion_access_allowed"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_deletion_access_allowed"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."account_deletion_access_allowed"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."account_tools_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."admin_account_email"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
@@ -3317,6 +3457,8 @@ REVOKE ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" b
 GRANT ALL ON FUNCTION "public"."configure_customer_booking_email"("p_enabled" boolean, "p_api_url" "text", "p_secret" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_checkout_policy"("p_policy" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."configure_customer_deletion"("p_environment" "text", "p_enabled" boolean, "p_test_users" "uuid"[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."configure_customer_deletion"("p_environment" "text", "p_enabled" boolean, "p_test_users" "uuid"[]) TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."configure_customer_push"("p_config" "jsonb", "p_dispatch_secret" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."configure_customer_push_credential"("p_environment" "text", "p_config" "jsonb") FROM PUBLIC;
@@ -3361,6 +3503,10 @@ REVOKE ALL ON FUNCTION "public"."customer_checkout_policy"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_checkout_policy"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_claim_booking"("p_booking" "uuid", "p_account" "uuid", "p_session" "uuid") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_deletion_runtime_configuration"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_deletion_runtime_configuration"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_deletion_service"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_deletion_service"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;

@@ -1,0 +1,27 @@
+{
+  "status": "PASS_SYNTHETIC_ONLY",
+  "tests": 12,
+  "failures": 0,
+  "errors": 0,
+  "command": "python3 -m unittest discover -s ops/auth -p 'apple_cleanup_inherited_pin_test.py' -v",
+  "checks": [
+    "actual original bytes/hash preserved including whitespace and absent pin",
+    "only final staged candidate adds known pin and six default-off fields",
+    "other source/runtime bindings and exact model required before generation",
+    "unchanged original strict bootstrap guards remain",
+    "present/wrong/empty target refused",
+    "existing credentials/enabled flags refused",
+    "no entropy before signature validation",
+    "exclusive private four-file stage; stale/partial blocks retry",
+    "original source unchanged; rollback bytes actual",
+    "all6source deletion fields must be absent despite safe values and runtime-absence claims"
+  ],
+  "productionAccess": false,
+  "realDockerKeySigningProviderCalls": false,
+  "limitations": [
+    "No real cryptography/signing",
+    "No live configuration/systemd/restart verification",
+    "No backup/recovery proof"
+  ],
+  "revision": 2
+}

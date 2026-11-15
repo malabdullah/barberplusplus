@@ -1,0 +1,101 @@
+{
+  "status": "PASS",
+  "workers": [
+    {
+      "name": "account-tools",
+      "status": 204
+    },
+    {
+      "name": "admin-password-reset",
+      "status": 204
+    },
+    {
+      "name": "admin-push",
+      "status": 204
+    },
+    {
+      "name": "admin-push-dispatch",
+      "status": 403
+    },
+    {
+      "name": "auth-rate-limiter",
+      "status": 204
+    },
+    {
+      "name": "booking-share",
+      "status": 204
+    },
+    {
+      "name": "cleanup-notifications",
+      "status": 405
+    },
+    {
+      "name": "cloud-test-inbox",
+      "status": 404
+    },
+    {
+      "name": "customer-account-deletion",
+      "status": 503,
+      "closedError": "NOT_ENABLED"
+    },
+    {
+      "name": "customer-announcements",
+      "status": 204
+    },
+    {
+      "name": "customer-auth",
+      "status": 204
+    },
+    {
+      "name": "customer-booking",
+      "status": 204
+    },
+    {
+      "name": "customer-booking-email",
+      "status": 403
+    },
+    {
+      "name": "customer-push-dispatch",
+      "status": 403
+    },
+    {
+      "name": "get-kuwait-governorates",
+      "status": 204
+    },
+    {
+      "name": "invite-barber",
+      "status": 204
+    }
+  ],
+  "image": "supabase/edge-runtime@sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+  "platform": "linux/amd64",
+  "readOnlyHandlerExecution": "PASS",
+  "productionCredentials": false,
+  "publishedPorts": 0,
+  "transport": "container-loopback",
+  "actualDeployedParity": "FOUR_RUNTIME_IMAGE_IDS_MATCH",
+  "postgresAuthStorageRehearsal": "PASS_STOCK_EXACT_IMAGE_SYNTHETIC_REBUILD",
+  "main": "unchanged",
+  "dev": "unchanged",
+  "production": "unchanged",
+  "temporaryAccess": "removed; original firewall restored",
+  "hostedCandidateBusinessRollback": {
+    "passed": true,
+    "persistedFixtures": 0,
+    "productionTouched": false,
+    "tapChecks": 6
+  },
+  "candidateChecks": {
+    "functions": 232,
+    "ui": 356,
+    "operational": 65,
+    "build": "PASS",
+    "lint": "PASS"
+  },
+  "selectedSchemaRoutineHashes": "15 of 15 match main source; no full ledger/schema assertion",
+  "gatewayBindingTests": 23,
+  "testFunctionVersion": 3,
+  "schemaReconciliation": "Rebuilt public schema matches reviewed expected snapshot; only exact equivalent rate-limit policy role ordering normalized",
+  "fullLiveProductionLedgerAttested": false,
+  "platformRehearsalEvidence": "platform-rehearsal-results.json"
+}

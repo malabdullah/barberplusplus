@@ -16,9 +16,14 @@ insert into public.services(id,branch_id,name,duration,price) values
 insert into public.barbers(id,branch_id,name,status,service_ids,availability) values
  ('ee070000-0000-4000-8000-000000000301','ee070000-0000-4000-8000-000000000101','Journey Barber','active',array['ee070000-0000-4000-8000-000000000201']::uuid[],
  '{"monday":{"enabled":true,"start":"09:00","end":"18:00"},"tuesday":{"enabled":true,"start":"09:00","end":"18:00"},"wednesday":{"enabled":true,"start":"09:00","end":"18:00"},"thursday":{"enabled":true,"start":"09:00","end":"18:00"},"friday":{"enabled":true,"start":"09:00","end":"18:00"},"saturday":{"enabled":true,"start":"09:00","end":"18:00"},"sunday":{"enabled":true,"start":"09:00","end":"18:00"}}');
-select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ee070000-0000-4000-8000-000000000001"}',true);
 select set_config('journey.input',jsonb_build_object('branch_id','ee070000-0000-4000-8000-000000000101','barber_id','ee070000-0000-4000-8000-000000000301','service_ids',jsonb_build_array('ee070000-0000-4000-8000-000000000201'),
  'customer_name','Journey Customer','customer_country_code','+965','customer_phone','59979701','date',((clock_timestamp() at time zone 'Asia/Kuwait')::date+2)::text,'time','10:00')::text,true);
+-- Successful staff actions use real live sessions; all fixtures roll back.
+insert into auth.sessions(id,user_id)values
+('ee070000-0000-4000-8000-000000000001','ee070000-0000-4000-8000-000000000001'),
+('ee070000-0000-4000-8000-000000000002','ee070000-0000-4000-8000-000000000002'),
+('ee070000-0000-4000-8000-000000000003','ee070000-0000-4000-8000-000000000003');
 set local role authenticated;
 select set_config('journey.saved',public.staff_save_booking(null,current_setting('journey.input')::jsonb)::text,true);
 select is(current_setting('journey.saved')::jsonb->'customer'->>'name','Journey Customer','manager save retains customer details');
@@ -36,12 +41,12 @@ select lives_ok($$select public.staff_save_booking((current_setting('journey.sav
 select throws_ok($$select public.staff_save_booking(null,current_setting('journey.input')::jsonb||'{"time":"12:00"}')$$,'P0001','INVALID_SERVICE_ASSIGNMENT','archived service is not offered for a new appointment');
 reset role;
 select is((select count(*) from public.customers where phone='59979702'),0::bigint,'failed transaction left no orphan customer');
-select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"}}',true);
+select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"manager"},"session_id":"ee070000-0000-4000-8000-000000000002"}',true);
 set local role authenticated;
 select is((select count(*) from public.customers where id=(current_setting('journey.saved')::jsonb->>'customer_id')::uuid),0::bigint,'unrelated manager cannot read customer contact');
 select throws_ok($$select public.staff_save_booking(null,current_setting('journey.input')::jsonb)$$,'42501','NOT_AUTHORIZED','other manager cannot create appointment in this shop');
 reset role;
-select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"customer"}}',true);
+select set_config('request.jwt.claims','{"sub":"ee070000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"customer"},"session_id":"ee070000-0000-4000-8000-000000000003"}',true);
 set local role authenticated;
 select throws_like($$insert into public.branches(manager_id,name) values('ee070000-0000-4000-8000-000000000003','Forbidden')$$,'%row-level security%','customer cannot create a manager shop');
 select throws_ok($$select public.staff_customer_lookup('+965','59979701')$$,'42501','NOT_AUTHORIZED','customer cannot call staff lookup');
