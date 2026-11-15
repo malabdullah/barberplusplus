@@ -13,6 +13,7 @@ for (const [table, id, field] of [
 ]) {
   test(`${table}: optimizes a real upload and preserves transparent images`, async ({ page, request, browserName }) => {
     expect(state.projectRef).toBe('qvkucvcjmojjbphlzlks');
+    expect(fixture.projectRef).toBe(state.projectRef);
     const apikey = config.vars.SUPABASE_PUBLISHABLE_KEY;
     const login = await request.post(`${backend}/auth/v1/token?grant_type=password`, {
       headers: { apikey }, data: { email: fixture.email, password: fixture.password },
