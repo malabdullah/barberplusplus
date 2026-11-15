@@ -2,19 +2,20 @@ import { test, expect } from './fixtures.js';
 import fs from 'node:fs';
 
 const state = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/credentials.json', import.meta.url)));
+const fixture = JSON.parse(fs.readFileSync(new URL('../../../.cloud-test/image-upload-fixture.json', import.meta.url)));
 const config = JSON.parse(fs.readFileSync(new URL('../../../wrangler.cloud-test.jsonc', import.meta.url)));
 const backend = `https://${state.projectRef}.supabase.co`;
 const source = fs.readFileSync(new URL('../../../public/booking-demo/city-centre.png', import.meta.url));
 
 for (const [table, id, field] of [
-  ['branches', '10000000-0000-4000-8000-000000000011', 'image_url'],
-  ['barbers', '30000000-0000-4000-8000-000000000111', 'avatar_url'],
+  ['branches', fixture.shopId, 'image_url'],
+  ['barbers', fixture.barberId, 'avatar_url'],
 ]) {
   test(`${table}: optimizes a real upload and preserves transparent images`, async ({ page, request, browserName }) => {
     expect(state.projectRef).toBe('qvkucvcjmojjbphlzlks');
     const apikey = config.vars.SUPABASE_PUBLISHABLE_KEY;
     const login = await request.post(`${backend}/auth/v1/token?grant_type=password`, {
-      headers: { apikey }, data: { email: 'manager@barber.test', password: state.staffPassword },
+      headers: { apikey }, data: { email: fixture.email, password: fixture.password },
     });
     expect(login.ok()).toBe(true);
     const { access_token: token } = await login.json();
@@ -27,7 +28,7 @@ for (const [table, id, field] of [
     };
     const original = await read();
     // Never let the app remove an existing uploaded fixture image.
-    expect(original[field] === null || original[field] === '/booking-demo/city-centre.png').toBe(true);
+    expect(original[field]).toBe(null);
     const uploaded = new Set();
     const recordUpload = response => {
       const path = new URL(response.url()).pathname;
@@ -38,8 +39,8 @@ for (const [table, id, field] of [
     page.on('response', recordUpload);
     try {
       await page.goto('/login');
-      await page.locator('input[type="email"]').fill('manager@barber.test');
-      await page.locator('input[type="password"]').fill(state.staffPassword);
+      await page.locator('input[type="email"]').fill(fixture.email);
+      await page.locator('input[type="password"]').fill(fixture.password);
       await page.locator('button[type="submit"]').click();
       await expect(page).toHaveURL(/\/dashboard/);
 
