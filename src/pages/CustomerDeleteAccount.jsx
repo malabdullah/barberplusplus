@@ -120,7 +120,7 @@ export default function CustomerDeleteAccount() {
       <p>{tr('history')}</p>
       {legacyApple && <section className="ca-deletion-apple" aria-label={tr('appleTitle')}>
         <h2>{tr('appleTitle')}</h2><p>{tr('appleIntro')}</p>
-        {!appleSkipped && <div className="ca-deletion-apple-actions"><button className="cb-secondary" disabled={busy} onClick={connectApple}>{tr('appleConnect')}</button><button className="cb-text-button" disabled={busy} onClick={() => { setAppleSkipped(true); setError(''); }}>{tr('appleSkip')}</button></div>}
+        {!appleSkipped && <div className="ca-deletion-apple-actions"><button className="cb-secondary ca-deletion-apple-connect" disabled={busy} onClick={connectApple}>{tr('appleConnect')}</button><button className="cb-text-button" disabled={busy} onClick={() => { setAppleSkipped(true); setError(''); }}>{tr('appleSkip')}</button></div>}
       </section>}
       {state === 'preview' ? <button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !preview.methods?.length} onClick={start}><Trash2 size={18} aria-hidden="true" />{tr('continue')}</button> : state === 'awaiting_code' ? <form onSubmit={verify}>
         {preview.methods?.length > 1 && <label className="ca-field">{tr('method')}<select className="cb-input" value={method} onChange={event => { setMethod(event.target.value); setPassword(''); setCode(''); }}>{preview.methods.map(item => <option key={item} value={item}>{tr(item)}</option>)}</select></label>}

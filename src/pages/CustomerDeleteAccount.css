@@ -10,3 +10,5 @@
 .ca-deletion-apple h2 { font-family: inherit; font-size: 1.05rem; margin: 0 0 .5rem; }
 .ca-deletion-apple-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
 .ca-deletion-apple-actions button { min-height: 48px; }
+.customer-booking .ca-deletion-apple-connect { background: #000; color: #fff; border-color: #000; }
+[data-theme="dark"] .customer-booking .ca-deletion-apple-connect { background: #fff; color: #000; border-color: #fff; }
