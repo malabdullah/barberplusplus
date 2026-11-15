@@ -8,6 +8,7 @@ import AdminLayout from './components/Layout/AdminLayout';
 import Landing from './pages/Landing';
 import PublicLayout from './components/Public/PublicLayout';
 import Login from './pages/Login';
+import AcceptAdminInvitation from './pages/AcceptAdminInvitation';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -145,7 +146,7 @@ function AppRoutes() {
   // Keep that public callback mounted while staff data loads: its one-time URL
   // has already been cleared, so remounting would report a false expired link.
   // Invitation acceptance also refreshes the role/session while its callback settles.
-  if (loading && !['/customer/email-callback', '/accept-invite'].includes(location.pathname)) {
+  if (loading && !['/customer/email-callback', '/accept-invite', '/accept-admin-invite'].includes(location.pathname)) {
     return (
       <div style={{
         display: 'flex',
@@ -195,6 +196,10 @@ function AppRoutes() {
       <Route
         path="/forgot-password"
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <ForgotPassword />}
+      />
+      <Route
+        path="/accept-admin-invite"
+        element={<AcceptAdminInvitation />}
       />
       <Route
         path="/accept-invite"

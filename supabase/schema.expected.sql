@@ -1797,48 +1797,118 @@ CREATE OR REPLACE FUNCTION "public"."is_super_admin"() RETURNS boolean
     AS $$
  select public.is_admin()and exists(select 1 from auth.users where id=auth.uid()and raw_app_meta_data->>'role'='admin');$$;
 ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-declare actor uuid:=auth.uid();target auth.users%rowtype;rows jsonb;page_number integer;affected uuid;email_value text;
+CREATE OR REPLACE FUNCTION public.manage_administrators(p_action text, p_data jsonb DEFAULT '{}'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare actor uuid:=auth.uid();target auth.users%rowtype;inv private.admin_invitations%rowtype;
+ page_number integer;rows jsonb;more boolean;address text;full_name text;result jsonb;job private.admin_deletions%rowtype;
 begin
  perform public.enforce_account_session();
  if not public.is_super_admin()then raise exception 'SUPER_ADMIN_REQUIRED'using errcode='42501';end if;
  if p_action='list'then
-  page_number:=coalesce((p_data->>'page')::integer,1);if page_number<1 or page_number>10000 then raise exception 'INVALID_REQUEST';end if;
-  select coalesce(jsonb_agg(x),'[]')into rows from(select id,email,coalesce(raw_user_meta_data->>'name','')as name,
-   case when raw_app_meta_data->>'role'='admin'then 'super_admin'else 'admin'end as role,
-   coalesce(banned_until<=now(),true)as enabled,email_confirmed_at is not null as verified
-   from auth.users where deleted_at is null and raw_app_meta_data->>'role'in('admin','agent')order by created_at,id limit 25 offset(page_number-1)*25)x;
-  return jsonb_build_object('users',rows,'hasMore',exists(select 1 from auth.users where deleted_at is null and raw_app_meta_data->>'role'in('admin','agent')order by created_at,id offset page_number*25 limit 1));
+  page_number:=coalesce((p_data->>'page')::integer,1);
+  if page_number<1 or page_number>10000 then raise exception 'INVALID_REQUEST';end if;
+  with directory as(
+   select u.id,u.email,coalesce(u.raw_user_meta_data->>'name','')as name,
+    case when u.raw_app_meta_data->>'role'='admin'then 'super_admin'else 'admin'end as role,
+    coalesce(u.banned_until<=now(),true)as enabled,u.created_at,'account'::text as kind,
+    case when d.state='pending'then 'deleting'when u.banned_until>now()then 'inactive'else 'active'end as status
+   from auth.users u left join private.admin_deletions d on d.user_id=u.id
+   where u.deleted_at is null and u.raw_app_meta_data->>'role'in('admin','agent')
+   union all
+   select i.id,i.email,i.name,'admin',false,i.created_at,'invitation',
+    case when i.expires_at<=now()then 'expired'when i.state='processing'and i.lease_until>now()then 'processing'
+     when i.delivery='failed'then 'failed'else 'invited'end
+   from private.admin_invitations i where i.state in('pending','processing')
+  ),candidates as(select *from directory order by created_at desc,id limit 26 offset(page_number-1)*25),
+  page as(select *from candidates order by created_at desc,id limit 25)
+  select coalesce(jsonb_agg(to_jsonb(page)order by created_at desc,id),'[]'),(select count(*)>25 from candidates)
+   into rows,more from page;
+  return jsonb_build_object('users',rows,'hasMore',more);
  end if;
- if p_action='add'then
-  email_value:=lower(trim(p_data->>'email'));
-  if email_value is null or length(email_value)>254 or email_value!~'^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'then raise exception 'INVALID_DETAILS';end if;
-  select *into target from auth.users where lower(email)=email_value and deleted_at is null for update;
-  if target.id is null or target.email_confirmed_at is null then raise exception 'VERIFIED_ACCOUNT_REQUIRED';end if;
-  if target.raw_app_meta_data->>'role'in('admin','agent')then raise exception 'ALREADY_ADMIN';end if;
-  if target.raw_app_meta_data->>'role'is distinct from 'customer'or target.banned_until>now()
-   or exists(select 1 from public.branches where manager_id=target.id)
-   or exists(select 1 from public.barbers where user_id=target.id)
-   or exists(select 1 from private.customer_social_identities where user_id=target.id or account_user_id=target.id)then raise exception 'SEPARATE_ADMIN_ACCOUNT_REQUIRED';end if;
-  update auth.users set raw_app_meta_data=coalesce(raw_app_meta_data,'{}')||jsonb_build_object('role','agent'),updated_at=now()where id=target.id;
+ if p_action='add'then raise exception 'DIRECT_INVITATION_REQUIRED';end if;
+ if p_action='invite'then
+  address:=lower(trim(p_data->>'email'));full_name:=trim(p_data->>'name');
+  if address is null or length(address)>254 or address!~'^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'
+   or full_name is null or length(full_name)not between 2 and 120
+   or coalesce(p_data->>'tokenHash','')!~'^[0-9a-f]{64}$'then raise exception 'INVALID_DETAILS';end if;
+  perform pg_advisory_xact_lock(hashtextextended('admin-invite:'||address,0));
+  select *into target from auth.users where deleted_at is null and lower(email)=address for update;
+  if(target.id is not null and(target.raw_app_meta_data->>'role'is distinct from 'admin_invited' or target.email_confirmed_at is not null
+   or not exists(select 1 from private.admin_invitations prior where prior.id::text=target.raw_app_meta_data->>'admin_invitation_id' and prior.state='cancelled'and prior.email=address)))
+   or exists(select 1 from auth.identities where lower(identity_data->>'email')=address and user_id is distinct from target.id)then raise exception 'EMAIL_IN_USE';end if;
+  if exists(select 1 from private.admin_invitations where lower(email)=address and state in('pending','processing'))then raise exception 'INVITE_EXISTS';end if;
+  if(select count(*)from private.admin_invitations where created_by=actor and created_at>now()-interval'1 hour')>=20 then raise exception 'RATE_LIMITED';end if;
+  insert into private.admin_invitations(email,name,token_hash,created_by)values(address,full_name,p_data->>'tokenHash',actor)returning *into inv;
+  if target.id is not null then update auth.users set raw_app_meta_data=raw_app_meta_data||jsonb_build_object('admin_invitation_id',inv.id)where id=target.id;end if;
+  insert into public.audit_logs(admin_user_id,action_type,target_entity_type,target_entity_id,metadata)
+   values(actor,'user_updated','admin_invitation',inv.id,'{"event":"invited"}');
+  return jsonb_build_object('id',inv.id,'email',inv.email,'name',inv.name);
+ end if;
+ if p_action in('resend','cancel')then
+  select *into inv from private.admin_invitations where id=(p_data->>'id')::uuid for update;
+  if inv.id is null or inv.state not in('pending','processing')then raise exception 'INVITE_INVALID';end if;
+  if inv.state='processing'and inv.lease_until>now()then raise exception 'INVITE_PROCESSING';end if;
+  if p_action='cancel'then
+   update private.admin_invitations set state='cancelled',operation=null,lease_until=null where id=inv.id;
+  else
+   if coalesce(p_data->>'tokenHash','')!~'^[0-9a-f]{64}$'then raise exception 'INVALID_REQUEST';end if;
+   if inv.sends>=10 or(inv.last_sent_at>now()-interval'60 seconds'and inv.delivery<>'failed')then raise exception 'RATE_LIMITED';end if;
+   update private.admin_invitations set token_hash=p_data->>'tokenHash',state='pending',operation=null,lease_until=null,
+    last_sent_at=now(),expires_at=now()+interval'7 days',delivery='pending',sends=sends+1,created_by=actor where id=inv.id;
+  end if;
+  insert into public.audit_logs(admin_user_id,action_type,target_entity_type,target_entity_id,metadata)
+   values(actor,'user_updated','admin_invitation',inv.id,jsonb_build_object('event',p_action));
+  return jsonb_build_object('id',inv.id,'email',inv.email,'name',inv.name);
+ end if;
+ if p_action='delete-prepare'then
+  select *into job from private.admin_deletions where user_id=(p_data->>'userId')::uuid;
+  if job.user_id is not null and exists(select 1 from auth.users where id=job.user_id and deleted_at is not null)then
+   return jsonb_build_object('operation',job.operation,'userId',job.user_id,'finished',job.state='done','authDeleted',true);
+  end if;
+ end if;
+ select *into target from auth.users where id=(p_data->>'userId')::uuid for update;
+ if target.id is null or target.id=actor or target.raw_app_meta_data->>'role'is distinct from 'agent'
+  or(target.deleted_at is not null and p_action<>'delete-prepare')then raise exception 'PROTECTED_ADMIN_ACCOUNT';end if;
+ select *into job from private.admin_deletions where user_id=target.id;
+ if p_action='delete-prepare'then
+  if target.deleted_at is not null and job.user_id is null then raise exception 'PROTECTED_ADMIN_ACCOUNT';end if;
+  if job.user_id is null then
+   insert into private.admin_deletions(user_id,actor)values(target.id,actor)returning *into job;
+   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
+    values(actor,target.id,'security_event','user',target.id,'{"source":"admin_account_management","event":"deletion_requested"}');
+   update auth.users set banned_until=now()+interval'100 years',updated_at=now()where id=target.id;
+  end if;
+  insert into private.account_revoked_sessions(session_id,user_id)select id,user_id from auth.sessions where user_id=target.id on conflict(session_id)do nothing;
+  update auth.sessions set not_after=now()where user_id=target.id;
+  return jsonb_build_object('operation',job.operation,'userId',target.id,'finished',job.state='done');
+ end if;
+ if job.state='pending'then raise exception 'ADMIN_DELETION_PENDING';end if;
+ if p_action='edit'then
+  full_name:=trim(p_data->>'name');address:=lower(trim(p_data->>'email'));
+  if full_name is null or length(full_name)not between 2 and 120 or address is null
+   or length(address)>254 or address!~'^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'then raise exception 'INVALID_DETAILS';end if;
+  if lower(target.email)is distinct from lower(p_data->>'expectedEmail')then raise exception 'EMAIL_CHANGED_REFRESH';end if;
+  if address<>lower(target.email)then
+   result:=private.write_account_email(target.id,address,actor,'admin_change','Super Admin updated administrative account');
+  end if;
+  update auth.users set raw_user_meta_data=coalesce(raw_user_meta_data,'{}')||jsonb_build_object('name',full_name),updated_at=now()where id=target.id;
   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,new_values)
-   values(actor,target.id,'role_assigned','user',target.id,'{"role":"admin"}'::jsonb);
+   values(actor,target.id,'user_updated','user',target.id,jsonb_build_object('name',full_name,'email',address));
  elsif p_action in('disable','enable')then
-  select *into target from auth.users where id=(p_data->>'userId')::uuid and deleted_at is null for update;
-  if target.id is null or target.id=actor or target.raw_app_meta_data->>'role'is distinct from 'agent'then raise exception 'PROTECTED_ADMIN_ACCOUNT';end if;
   update auth.users set banned_until=case when p_action='enable'then null else now()+interval'100 years'end,updated_at=now()where id=target.id;
   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,new_values)
    values(actor,target.id,case when p_action='enable'then 'user_enabled'else 'user_disabled'end,'user',target.id,jsonb_build_object('enabled',p_action='enable'));
+  if p_action='disable'then
+   insert into private.account_revoked_sessions(session_id,user_id)select id,user_id from auth.sessions where user_id=target.id on conflict(session_id)do nothing;
+   update auth.sessions set not_after=now()where user_id=target.id;
+  end if;
  else raise exception 'INVALID_REQUEST';end if;
- if p_action in('add','disable')then
-  insert into private.account_revoked_sessions(session_id,user_id)select id,user_id from auth.sessions where user_id=target.id on conflict(session_id)do nothing;
-  update auth.sessions set not_after=now()where user_id=target.id;
- end if;
  return jsonb_build_object('success',true);
-end $$;
+end $function$;
 ALTER FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION public.account_activity(p_before bigint DEFAULT NULL::bigint)
  RETURNS jsonb
@@ -3856,3 +3926,67 @@ GRANT ALL ON FUNCTION public.account_activity(bigint) TO authenticated;
 ALTER FUNCTION public.shop_reviews(integer) OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.shop_reviews(integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.shop_reviews(integer) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_invitation_service(p_action text, p_data jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare inv private.admin_invitations%rowtype;person auth.users%rowtype;job private.admin_deletions%rowtype;op uuid;
+begin
+ if p_action='delete-finish'then
+  select *into job from private.admin_deletions where operation=(p_data->>'operation')::uuid and user_id=(p_data->>'userId')::uuid for update;
+  if job.user_id is null or not exists(select 1 from auth.users where id=job.user_id and deleted_at is not null)then raise exception 'ADMIN_DELETION_PENDING';end if;
+  if job.state<>'done'then
+   update private.admin_deletions set state='done'where user_id=job.user_id;
+   insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
+    values(job.actor,job.user_id,'user_deleted','user',job.user_id,'{"source":"admin_account_management","auditRetained":true}');
+  end if;
+  return '{"success":true}';
+ end if;
+ select *into inv from private.admin_invitations where id=(p_data->>'id')::uuid and token_hash=p_data->>'tokenHash' for update;
+ if inv.id is null then raise exception 'INVITE_INVALID';end if;
+ if p_action='delivery'then
+  if p_data->>'delivery'not in('sent','failed')then raise exception 'INVALID_REQUEST';end if;
+  update private.admin_invitations set delivery=p_data->>'delivery'where id=inv.id;return '{"success":true}';
+ end if;
+ if inv.state='accepted'then raise exception 'INVITE_USED';end if;
+ if inv.state='cancelled'then raise exception 'INVITE_CANCELLED';end if;
+ if inv.expires_at<=now()then raise exception 'INVITE_EXPIRED';end if;
+ if not private.admin_inviter_allowed(inv.created_by)then raise exception 'INVITE_INVALID';end if;
+ if p_action='release'then
+  update private.admin_invitations set state='pending',operation=null,lease_until=null
+   where id=inv.id and operation=(p_data->>'operation')::uuid and state='processing';return '{"success":true}';
+ end if;
+ select *into person from auth.users where deleted_at is null and lower(email)=inv.email;
+ if person.id is not null and(person.raw_app_meta_data->>'role'is distinct from 'admin_invited'
+  or person.raw_app_meta_data->>'admin_invitation_id'is distinct from inv.id::text)then raise exception 'EMAIL_IN_USE';end if;
+ if p_action='resolve'then return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email);end if;
+ if p_action='prepare'then
+  if inv.state='processing'and inv.lease_until>now()then raise exception 'INVITE_PROCESSING';end if;
+  op:=gen_random_uuid();
+  update private.admin_invitations set state='processing',operation=op,lease_until=now()+interval'2 minutes'where id=inv.id;
+  return jsonb_build_object('id',inv.id,'name',inv.name,'email',inv.email,'operation',op,'setupUser',person.id);
+ end if;
+ if p_action='finish'then
+  if inv.state<>'processing'or inv.operation is distinct from(p_data->>'operation')::uuid or inv.lease_until<=now()
+   or person.id is null or person.id is distinct from(p_data->>'userId')::uuid then raise exception 'INVITE_INVALID';end if;
+  if p_data->>'password' is null or length(p_data->>'password')<12 or octet_length(p_data->>'password')>72
+   or p_data->>'password'!~'[A-Z]'or p_data->>'password'!~'[a-z]'or p_data->>'password'!~'[0-9]'or p_data->>'password'!~'[!@#$%^&*(),.?":{}|<>]'then raise exception 'WEAK_PASSWORD';end if;
+  -- Choose the credential and confirm the bound email in one locked transition.
+  -- A competing public signup cannot substitute a password before confirmation.
+  update auth.users set encrypted_password=extensions.crypt(p_data->>'password',extensions.gen_salt('bf',10)),email_confirmed_at=now(),confirmation_token='',confirmation_sent_at=null,
+   raw_app_meta_data=(coalesce(raw_app_meta_data,'{}')-'admin_invitation_id')||'{"role":"agent"}',
+   raw_user_meta_data=coalesce(raw_user_meta_data,'{}')||jsonb_build_object('name',inv.name),updated_at=now()where id=person.id;
+  update private.admin_invitations set state='accepted',accepted_user_id=person.id,operation=null,lease_until=null where id=inv.id;
+  insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,metadata)
+   values(inv.created_by,person.id,'role_assigned','user',person.id,jsonb_build_object('source','admin_invitation','invitationId',inv.id,'role','admin'));
+  return jsonb_build_object('success',true,'email',inv.email);
+ end if;
+ raise exception 'INVALID_REQUEST';
+end $function$;
+
+ALTER FUNCTION public.admin_invitation_service(text,jsonb) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.admin_invitation_service(text,jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.admin_invitation_service(text,jsonb) TO service_role;

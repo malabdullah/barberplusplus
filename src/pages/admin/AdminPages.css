@@ -646,6 +646,41 @@
 .password-reset-pagination { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .account-email-form { grid-template-columns: minmax(0,1fr); width: 100%; box-sizing: border-box; }
 .account-email-form .form-input { width: 100%; min-width: 0; box-sizing: border-box; }
+
+/* Administrative account actions share the existing dashboard tokens. */
+.administrator-invite-form { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: end; gap: var(--space-md); padding: var(--space-lg); margin-block-end: var(--space-lg); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+.administrator-invite-form > div { display: grid; gap: var(--space-sm); min-width: 0; }
+.administrator-invite-form .form-input, .administrator-editor .form-input { width: 100%; min-width: 0; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+.administrator-actions { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.administrator-editor { display: grid; gap: var(--space-sm); }
+.administrator-editor .administrator-actions { justify-content: flex-end; margin-block-start: var(--space-md); }
+.administrator-notice { margin-block: var(--space-md); color: var(--status-success); }
+.administrator-more { position: relative; }
+.administrator-more summary { list-style: none; cursor: pointer; }
+.administrator-more summary::-webkit-details-marker { display: none; }
+.administrator-more > div { display: grid; position: absolute; z-index: 5; inset-inline-end: 0; min-width: 180px; padding: var(--space-xs); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+.administrator-more button { padding: var(--space-sm) var(--space-md); text-align: start; background: none; border: 0; color: var(--text-primary); border-radius: var(--radius-sm); cursor: pointer; }
+.administrator-more button:hover { background: var(--bg-tertiary); }
+.administrator-more .administrator-delete { color: var(--status-error); border-block-start: 1px solid var(--border-subtle); }
+.administrator-status { white-space: nowrap; }
+.administrator-status.invited { color: var(--accent-primary); }
+.administrator-status.failed, .administrator-status.deleting { color: var(--status-error); }
+.administrators-page .admin-table-container { overflow: visible; }
+.administrators-page .admin-table { table-layout: auto; }
+[dir="rtl"] .administrators-page .admin-table th, [dir="rtl"] .administrators-page .admin-table td { text-align: right; }
+@media (max-width: 768px) {
+ .administrator-invite-form { grid-template-columns: minmax(0,1fr); }
+ .administrators-page .admin-table-container { overflow: visible; background: none; border: 0; }
+ .administrators-page .admin-table { display: block; min-width: 0; }
+ .administrators-page .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+ .administrators-page .admin-table tbody { display: grid; gap: var(--space-md); }
+ .administrators-page .admin-table tr { display: grid; grid-template-columns: minmax(0,1fr) auto; padding: var(--space-md); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+ .administrators-page .admin-table td { display: block; padding: var(--space-xs) 0; border: 0; min-width: 0; }
+ .administrators-page .admin-table td:first-child { grid-column: 1 / -1; font-weight: 600; }
+ .administrators-page .admin-table td:nth-child(2) { grid-column: 1 / -1; overflow-wrap: anywhere; }
+ .administrators-page .admin-table td:last-child { grid-column: 1 / -1; margin-block-start: var(--space-sm); }
+ .administrators-page .admin-table td:nth-child(4) { text-align: end; }
+}
 .account-email-form p { overflow-wrap: anywhere; }
 
 .admin-transfer {
