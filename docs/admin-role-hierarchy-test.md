@@ -1,49 +1,49 @@
 # Super Admin and Admin — hosted Test acceptance
 
-Date: 15 November 2026. Application source: `4c01bb8935dfd88a632c2a40bf124cdfd429a5d8`.
+Date: 15 November 2026. Deployed application source: `2d959892c9ab331cb7b578f98087002f45d1932d`.
 Test: https://barber-test.alabdullah-cs.workers.dev. Supabase: `qvkucvcjmojjbphlzlks`.
 
-## Result
+## Result and owner test
 
-The former Admin is displayed as **Super Admin**. The former Agent is displayed as **Admin** and uses the full administration workspace. Administrative-account management is reserved to Super Admin.
+Super Admin now creates an Admin directly through an email invitation. Customer signup or promotion is no longer part of this flow.
 
-Stored Auth role codes remain compatible: `admin` means Super Admin and `agent` means Admin. No existing login identity, password or provider link was migrated. Both administrative roles require verified two-factor authentication before gaining administrative access.
+1. Sign in to Test with the existing Super Admin account and authenticator.
+2. Open **Users → Administrators**.
+3. Enter a name and a new, unused email address; select **Add Admin**.
+4. Open **Test email inbox** in the Test banner and open the captured invitation. Test does not send a real email.
+5. The recipient sets their own password, then enrolls two-factor authentication and enters the Admin workspace. No customer profile is created.
+6. As Super Admin, use **Edit** for name/email and **More** for password reset, suspension/reactivation or deletion. Pending invitations have **Resend invitation** and **Cancel**.
 
-Only the isolated feature branch was committed. Remote dev remains `caa3caa95dd538c3a4149d7b53544a7763974906`; main remains `0c0e15b60aac6159e79625aef71ef55091580450`. Production and native applications were not deployed.
+Invitations expire after seven days and work once. Resending invalidates the previous URL; cancelling invalidates the invitation. An occupied email gives a clear error rather than converting an existing account. Opening an invitation while another account is signed in does not replace that account silently.
 
-## Access
+## Permissions and safeguards
+
+Stored roles remain compatible: `admin` is Super Admin and `agent` is Admin. Both require live-session validation and verified MFA for administrative access. Existing passwords, provider links and authenticators are preserved.
 
 | Capability | Super Admin | Admin |
 | --- | --- | --- |
-| Administration dashboard, ordinary managers/barbers, branches, configuration, audit, communications | Yes | Yes |
-| Global booking rules, private shop reviews, platform activity and branch-manager transfers | Yes | Yes |
-| Create/grant Admin access or suspend/reactivate Admin access | Yes | No |
-| Change administrative-account emails or reset another Admin's password | Yes, subject to existing protections | No |
-| Suspend Super Admin or create another Super Admin through this page | No | No |
+| Ordinary administration, managers/barbers, branches, configuration, audit and communications | Yes | Yes |
+| Booking rules, private reviews, activity history and manager transfers | Yes | Yes |
+| Invite, edit, reset password, suspend/reactivate or delete Admin accounts | Yes | No |
+| Manage Super Admin accounts through this page | No | No |
 
-The Super Admin route is **Users → Administrators** (`/admin/users/administrators`). It grants Admin to an existing verified dedicated customer account, preserving the account identity and requiring a fresh sign-in and MFA. It rejects existing staff assignments, linked social-alias accounts, unverified email, duplicate grants and unsupported role actions. It creates no new password or Auth identity.
-
-The ordinary Admin has no Administrators link; direct navigation redirects to its dashboard, and direct API calls return `SUPER_ADMIN_REQUIRED`. Administrative identities are excluded from the Admin email/password tools. Ordinary manager suspension cannot be repurposed to target administrators.
+The protected route and direct API calls enforce Super Admin permission. Email changes, password resets and suspension end affected Admin sessions. Reactivation does not revive ended sessions. Deletion is confirmed by name, revokes access and preserves audit history. The private invitation service cannot be executed by browser roles. Acceptance installs the recipient's final password, verified email and Admin role atomically, including interrupted/concurrent signup safeguards.
 
 ## Verification
 
-- Full `npm run check` passed: frontend 423 tests, Functions 253 tests, operations 69 tests; lint, Functions type checks, migrations, domain checks and production build passed.
-- Hosted Test: 16 SQL regression suites passed, including the final 57 hierarchy checks. Fixtures and their mutations rolled back.
-- Additional lower-Admin variants passed manager-transfer, booking-policy, publishing and both announcement suites. One optional duplicate lower-Admin availability replay expired at the tool confirmation step and was not counted. The standard availability suite passed 56 checks.
-- 22 distinct browser acceptance scenarios passed: MFA enrollment/sign-in for both roles, granting Admin, hidden navigation, deep-link and direct API denial, administrative-email isolation, suspend/reactivate and old-session denial, desktop light/dark, mobile, Arabic, hosted password-reset/account-tools/admin-push reads and the correct Settings return path.
-- The four changed Functions and the exact frontend commit were deployed to Test. The access gate, gateway secret bindings and private inbox were preserved. No notification or external email was sent.
-- All four new migration tracking versions match the committed source filenames following the owner's explicit approval.
-- Both approved disposable QA accounts, their credentials and factor material were removed. Auth account count returned to 483. Shop, booking and canonical account-link hashes match the pre-change values. The complete Auth-row hash changed during the wider Test session; no existing account was edited by these migrations, and it was stable before and after this run's browser QA.
-- Advisors were reviewed. New callable helper/management routines are intentional authenticated APIs, protected by live role, session and MFA checks; their denial paths are covered. Existing private-table no-policy and password-protection advisories remain outside this feature.
-- The clean-seed baseline helper assertion was updated for the new live-role implementation. A new local/Docker database replay was not started; the owner's required runtime target was hosted Test.
+- **22 hosted browser scenarios passed**, covering invitation acceptance, password and MFA setup, duplicate email, wrong-account protection, single use, cancellation, resend/replacement URL in the same tab, editing, reset, suspension/reactivation, deletion, mobile, Arabic, light and dark themes.
+- **433 frontend tests across 85 files passed**. The complete implementation check also passed 261 Function tests, 69 operations tests, lint, Function type checks, migration/domain checks and build. The final URL replacement fix passed the final frontend suite, lint and cloud build. Gateway checks passed 8/8.
+- Hosted database checks passed: **52 direct-invitation**, **57 hierarchy**, and **27 account-email** assertions. These transactional fixtures rolled back.
+- The actual deleted QA Admin's open session was denied and its deletion audit event remained. It had no customer profile; pending invitations created no Auth accounts.
+- Exact deployed frontend source and Test access gate were read back successfully. The new Function and three migrations are deployed to Test. The two approved tracking corrections are complete. The session-revocation source filename matches its existing applied timestamp without rewriting that history.
+- Advisors were reviewed: private tables intentionally deny direct access; guarded management APIs intentionally allow authenticated execution. Existing broader private-table and password-protection notices remain outside this change.
 
-## Owner test
+## Cleanup and boundaries
 
-1. Sign in on Test using the existing administrative account and its authenticator. The sidebar should show **Super Admin**.
-2. Open **Users → Administrators**. Existing Agent accounts should show **Admin**.
-3. For a new grant, first create and verify a separate customer email account, then enter that email and confirm **Add Admin**.
-4. Sign in with that account at the team sign-in page. Complete MFA enrollment. It should open the administration dashboard with **Admin** in the sidebar.
-5. Check normal administration pages; confirm **Users** has no Administrators card. Opening the protected URL should return to the dashboard.
-6. As Super Admin, suspend/reactivate that test Admin. An ended session must stay denied until a fresh sign-in.
+The approved run's three invitations, four captured emails, temporary deletion jobs, sessions, MFA factors, local passwords and URL secrets were removed. The invited Admin fixture was permanently removed. The QA Super Admin was anonymized and soft deleted, retaining a non-login audit actor tombstone because the existing audit actor foreign key cascades on permanent deletion. All 13 audit events remain, including the Admin deletion event. There are zero active QA accounts or remaining QA invitations/emails.
 
-No production promotion is included in this acceptance.
+Shop, booking and canonical customer-link hashes match before and after cleanup. Existing owner accounts and the protected Super Admin were untouched.
+
+Only the isolated feature branch was committed; no branch was pushed. Remote dev remains `caa3caa95dd538c3a4149d7b53544a7763974906`; main remains `0c0e15b60aac6159e79625aef71ef55091580450`. Production, native applications and App Store submission remain unchanged.
+
+Machine-readable evidence: `artifacts/direct-admin-management-2026-11-15/acceptance.json` and `browser-scenarios.json`. Older hierarchy artifacts describe the superseded customer-promotion flow and are retained only as historical evidence.
