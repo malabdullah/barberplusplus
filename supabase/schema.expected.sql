@@ -1981,6 +1981,10 @@ begin
     raise exception 'REVIEWS_FORBIDDEN' using errcode='42501';
   end if;
   if p_page is null or p_page<1 or p_page>1000000 then raise exception 'INVALID_PAGE'; end if;
+  -- Written reviews remain a separate, unreleased capability.
+  if pg_catalog.to_regclass('private.customer_booking_reviews') is null then
+    return jsonb_build_object('total',0,'rows','[]'::jsonb);
+  end if;
 
   return (
     with accessible as (

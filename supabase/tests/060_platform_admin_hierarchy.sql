@@ -59,6 +59,7 @@ select lives_ok($$select public.count_users_by_role('manager')$$,'Admin can read
 select lives_ok($$select public.manage_booking_policy(null)$$,'Admin can read global booking rules');
 select lives_ok($$select public.manage_booking_policy(null,'{"cancel_minutes":120,"reschedule_minutes":120}')$$,'Admin can update global booking rules');
 select lives_ok($$select public.shop_reviews(1)$$,'Admin can read private shop reviews');
+select ok(case when pg_catalog.to_regclass('private.customer_booking_reviews') is null then public.shop_reviews(1)='{"total":0,"rows":[]}'::jsonb else true end,'unreleased review catalog stays optional');
 select lives_ok($$select public.account_activity(null)$$,'Admin can read platform activity');
 select lives_ok($$select public.set_manager_account_enabled('ad151500-0000-4000-8000-000000000003',false)$$,'Admin can suspend ordinary manager');
 select lives_ok($$select public.set_manager_account_enabled('ad151500-0000-4000-8000-000000000003',true)$$,'Admin can restore ordinary manager');
