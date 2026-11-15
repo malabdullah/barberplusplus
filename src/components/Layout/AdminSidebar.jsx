@@ -30,7 +30,8 @@ const navItems = [
 export default function AdminSidebar({ isOpen, onClose }) {
   const { t } = useTranslation();
   const sidebarRef = useSidebarAccessibility(isOpen, onClose, t('common.navigation'));
-  const { user } = useApp();
+  const { user, userRole } = useApp();
+  const roleLabel = t(userRole === 'super_admin' ? 'common.superAdmin' : 'common.admin');
   const location = useLocation();
 
   // Close sidebar when navigating on mobile
@@ -55,7 +56,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
         {/* Logo */}
         <Link to="/" className="sidebar-logo" aria-label={t('common.brandHome')}>
-          <BrandLogo decorative tagline={t('common.admin')} />
+          <BrandLogo decorative tagline={roleLabel} />
         </Link>
 
         {/* Decorative line */}
@@ -72,7 +73,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
           </div>
           <div className="sidebar-user-info">
             <span className="sidebar-user-name">{user?.user_metadata?.name || 'Admin'}</span>
-            <span className="sidebar-user-role admin-role">{t('common.admin')}</span>
+            <span className="sidebar-user-role admin-role">{roleLabel}</span>
           </div>
         </div>
 

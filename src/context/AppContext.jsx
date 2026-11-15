@@ -1,3 +1,4 @@
+import { isPlatformAdmin } from '../lib/platformRoles';
 import { bookedPackageTotals } from '../utils/servicePackages';
 import { setTerminologyRole } from '../utils/customerTerminology';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -46,7 +47,7 @@ export function AppProvider({ children }) {
       // Unreadable claims leave the admin route locked.
     }
     setAdminVerified(aal === 'aal2');
-    setStaffMfaRequired(session?.user?.app_metadata?.role === 'admin' || Boolean(session?.user?.factors?.some(factor => factor.status === 'verified')));
+    setStaffMfaRequired(['admin', 'agent'].includes(session?.user?.app_metadata?.role) || Boolean(session?.user?.factors?.some(factor => factor.status === 'verified')));
   }, []);
   const hasStaffAccess = isAuthenticated && (!staffMfaRequired || adminVerified);
   const [loading, setLoading] = useState(true);
@@ -1140,7 +1141,7 @@ export function AppProvider({ children }) {
         setUser(result.user);
         setUserRole(result.role);
         setIsAuthenticated(true);
-        if (result.role !== 'admin') loggingService.logAuth('login', result.user.id, result.role, true);
+        if (!isPlatformAdmin(result.role)) loggingService.logAuth('login', result.user.id, result.role, true);
         // Branch will be set by the barberProfile loading effect
         return result.role; // Return role for redirect logic
       }
@@ -1203,7 +1204,7 @@ export function AppProvider({ children }) {
   const manager = userRole === 'manager' ? user : null;
 
   // Admin check
-  const isAdmin = useMemo(() => userRole === 'admin', [userRole]);
+  const isAdmin = useMemo(() => isPlatformAdmin(userRole), [userRole]);
 
   // Agent check
   const isAgent = useMemo(() => userRole === 'agent', [userRole]);

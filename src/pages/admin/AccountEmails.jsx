@@ -1,3 +1,4 @@
+import { persistedRoleKey } from '../../lib/platformRoles';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +32,7 @@ export default function AccountEmails() {
   return <div className="admin-page"><div className="admin-page-header"><Link className="admin-back-link" to="/admin/users">{t('admin.users.title')}</Link><h1>{tr('title')}</h1><p>{tr('description')}</p></div>
     <form className="password-reset-form account-email-form" onSubmit={submit}>
       <label htmlFor="email-account">{tr('account')}</label><select id="email-account" className="form-input" value={selected} disabled={loading || busy} onChange={event=>{setSelected(event.target.value);setNewEmail('');setConfirmEmail('');setReason('');setAcknowledged(false);setSuccess('');setError('');}} required>
-        <option value="">{t(loading?'common.loading':'admin.passwordReset.select')}</option>{users.map(user=><option key={user.id} value={user.id}>{user.email || user.name || user.id} ({user.role || '—'})</option>)}
+        <option value="">{t(loading?'common.loading':'admin.passwordReset.select')}</option>{users.map(user=><option key={user.id} value={user.id}>{user.email || user.name || user.id} ({user.role ? t(persistedRoleKey(user.role)) : '—'})</option>)}
       </select>
       <div className="password-reset-pagination"><button className="btn btn-secondary" type="button" disabled={page===1 || loading || busy} onClick={()=>setPage(value=>value-1)}>{t('admin.passwordReset.previous')}</button><span>{t('admin.passwordReset.page',{page})}</span><button className="btn btn-secondary" type="button" disabled={!hasMore || loading || busy} onClick={()=>setPage(value=>value+1)}>{t('admin.passwordReset.next')}</button></div>
       {target && <p>{tr('currentEmail')}: <bdi>{target.email || '—'}</bdi></p>}

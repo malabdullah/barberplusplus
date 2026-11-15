@@ -380,7 +380,7 @@ export default function Settings() {
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>
 
-          <>{userRole === 'admin' && <button className="settings-link-btn" onClick={() => navigate('/mfa-setup')}>
+          <>{['admin', 'super_admin'].includes(userRole) && <button className="settings-link-btn" onClick={() => navigate('/mfa-setup')}>
             {t('settings.twoFactor')}
             <ChevronRight size={16} strokeWidth={1.5} />
           </button>}</>

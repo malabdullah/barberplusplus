@@ -48,7 +48,7 @@ it('rejects a different provider and expired transactions', async () => {
   await teamAuthService.startSocial('google'); const pending = JSON.parse(sessionStorage.getItem('barber-team-oauth-pending')); pending.startedAt -= 16 * 60000; sessionStorage.setItem('barber-team-oauth-pending', JSON.stringify(pending));
   await expect(teamAuthService.finishSocial(`${window.location.origin}/team/auth-callback?code=expired`)).rejects.toThrow('SOCIAL_FAILED');
 });
-it.each([['manager', '/dashboard'], ['admin', '/admin'], ['agent', '/agent'], ['barber', '/barber']])('preserves the %s password destination', (role, route) => expect(staffDestination(role)).toBe(route));
+it.each([['manager', '/dashboard'], ['admin', '/admin'], ['agent', '/admin'], ['super_admin', '/admin'], ['barber', '/barber']])('preserves the %s password destination', (role, route) => expect(staffDestination(role)).toBe(route));
 
 it('preserves manager-link intent on an expired callback so recovery returns to Settings', async () => {
   await teamAuthService.connectProvider('google');

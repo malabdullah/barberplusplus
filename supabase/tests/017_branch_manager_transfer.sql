@@ -10,10 +10,13 @@ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_me
 ('dc010000-0000-4000-8000-000000000002','handover-lead@example.test',now(),'{"role":"manager"}','{"name":"Outgoing Manager"}'),
 ('dc010000-0000-4000-8000-000000000003','handover-barber@example.test',now(),'{"role":"barber"}','{}'),
 ('dc010000-0000-4000-8000-000000000004','handover-other@example.test',now(),'{"role":"manager"}','{}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('aca6400f-cfcf-8a55-25eb-997da59adbcf','dc010000-0000-4000-8000-000000000001','totp','verified',now(),now());
 
 insert into auth.sessions(id,user_id) values
 ('dc010000-0000-4000-8000-000000000011','dc010000-0000-4000-8000-000000000001'),
 ('dc010000-0000-4000-8000-000000000013','dc010000-0000-4000-8000-000000000003');
+update auth.sessions set aal='aal2',factor_id='aca6400f-cfcf-8a55-25eb-997da59adbcf' where user_id='dc010000-0000-4000-8000-000000000001';
 
 insert into public.branches(id,manager_id,name,status) values
 ('dc010000-0000-4000-8000-000000000101','dc010000-0000-4000-8000-000000000002','Transfer Branch','active'),

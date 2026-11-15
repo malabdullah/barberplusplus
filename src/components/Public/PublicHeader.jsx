@@ -14,7 +14,7 @@ import ThemeSelector from '../UI/ThemeSelector';
 import NavigationLink from './NavigationLink';
 import { usePublicNavigation } from './PublicNavigationContext';
 
-const workspaces = { admin: '/admin', manager: '/dashboard', barber: '/barber', agent: '/agent' };
+const workspaces = { super_admin: '/admin', admin: '/admin', manager: '/dashboard', barber: '/barber', agent: '/admin' };
 
 export default function PublicHeader() {
   const { t } = useTranslation();

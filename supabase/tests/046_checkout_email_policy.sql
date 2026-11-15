@@ -8,9 +8,12 @@ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
  ('fb101000-0000-4000-8000-000000000002','managed-other@example.test',now(),'{"role":"manager"}'),
  ('fb101000-0000-4000-8000-000000000003','managed-admin@example.test',now(),'{"role":"admin"}'),
  ('fb101000-0000-4000-8000-000000000004','managed-barber@example.test',now(),'{"role":"barber"}');
+-- Administrative positive fixtures use a real verified-factor session.
+insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values('794309f7-3248-03eb-db3a-39a4b015b1b3','fb101000-0000-4000-8000-000000000003','totp','verified',now(),now());
 insert into auth.sessions(id,user_id) select ('fb101000-0000-4000-8000-00000000001'||n)::uuid,('fb101000-0000-4000-8000-00000000000'||n)::uuid from generate_series(1,4)n;
+update auth.sessions set aal='aal2',factor_id='794309f7-3248-03eb-db3a-39a4b015b1b3' where user_id='fb101000-0000-4000-8000-000000000003';
 insert into public.branches(id,manager_id,name,city,governorate_id,area_id,image_url,working_hours)
-select 'fb101000-0000-4000-8000-000000000101','fb101000-0000-4000-8000-000000000001','Managed QA Shop','Managed QA City',9001,9001,'/booking-demo/market-street.png',
+select 'fb101000-0000-4000-8000-000000000101','fb101000-0000-4000-8000-000000000001','Managed QA Shop','Managed QA City',(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1),'/booking-demo/market-street.png',
  jsonb_object_agg(day,'{"open":"09:00","close":"18:00"}'::jsonb) from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday']) day;
 insert into public.branches(id,manager_id,name) values('fb101000-0000-4000-8000-000000000102','fb101000-0000-4000-8000-000000000002','Managed Other Shop');
 insert into public.services(id,branch_id,name,duration,price) values
@@ -66,6 +69,7 @@ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
 insert into auth.sessions(id,user_id) values
  ('fb121000-0000-4000-8000-000000000011','fb121000-0000-4000-8000-000000000001'),
  ('fb121000-0000-4000-8000-000000000012','fb121000-0000-4000-8000-000000000002');
+update auth.sessions set aal='aal2',factor_id='794309f7-3248-03eb-db3a-39a4b015b1b3' where user_id='fb101000-0000-4000-8000-000000000003';
 insert into public.customers(id,name,email,phone,country_code,created_by_type) values
  ('fb121000-0000-4000-8000-000000000101','Policy Customer','policy@example.test',null,'+965','customer'),
  ('fb121000-0000-4000-8000-000000000102','Unverified Customer','unverified@example.test',null,'+965','customer');

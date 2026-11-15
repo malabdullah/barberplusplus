@@ -123,7 +123,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_account_email"("p_action" "text", "p_
 declare actor uuid:=auth.uid(); target auth.users%rowtype; result jsonb; page_number integer;
 begin
   perform public.enforce_account_session();
-  if actor is null or auth.jwt()->>'aal' is distinct from 'aal2' or not exists(select 1 from auth.users where id=actor and raw_app_meta_data->>'role'='admin' and deleted_at is null) then
+  if actor is null or auth.jwt()->>'aal' is distinct from 'aal2' or not public.is_admin() then
     raise exception 'FORBIDDEN' using errcode='42501';
   end if;
   if p_action='list' then
@@ -132,13 +132,14 @@ begin
     select coalesce(jsonb_agg(x),'[]') into result from (
       select id,email,raw_user_meta_data->>'name' as name,raw_app_meta_data->>'role' as role,
         email_confirmed_at is not null as verified
-      from auth.users where deleted_at is null order by created_at,id limit 25 offset (page_number-1)*25
+      from auth.users where deleted_at is null and(public.is_super_admin()or raw_app_meta_data->>'role'not in('admin','agent')) order by created_at,id limit 25 offset (page_number-1)*25
     ) x;
-    return jsonb_build_object('users',result,'hasMore',exists(select 1 from auth.users where deleted_at is null order by created_at,id offset page_number*25 limit 1));
+    return jsonb_build_object('users',result,'hasMore',exists(select 1 from auth.users where deleted_at is null and(public.is_super_admin()or raw_app_meta_data->>'role'not in('admin','agent')) order by created_at,id offset page_number*25 limit 1));
   end if;
   if p_action<>'change' or length(trim(coalesce(p_data->>'reason','')))<8 or length(p_data->>'reason')>500 then raise exception 'INVALID_REQUEST'; end if;
   select * into target from auth.users where id=(p_data->>'userId')::uuid and deleted_at is null for update;
   if target.id is null or lower(coalesce(target.email,''))<>lower(coalesce(p_data->>'expectedEmail','')) then raise exception 'EMAIL_CHANGED_REFRESH'; end if;
+  if target.raw_app_meta_data->>'role' in('admin','agent')and not public.is_super_admin()then raise exception 'FORBIDDEN'using errcode='42501';end if;
   result:=private.write_account_email(target.id,p_data->>'newEmail',actor,'admin_change',trim(p_data->>'reason'));
   return result||jsonb_build_object('success',true,'signedOut',target.id=actor);
 end;
@@ -202,8 +203,8 @@ begin
   perform 1 from auth.users where id in (p_actor, p_target) order by id for update;
   select pg_catalog.lower(raw_app_meta_data ->> 'role') into actor_role from auth.users where id = p_actor;
   select pg_catalog.lower(raw_app_meta_data ->> 'role') into target_role from auth.users where id = p_target;
-  if actor_role is distinct from 'admin' or target_role is null
-     or target_role not in ('manager','barber','agent','customer') then
+  if actor_role not in('admin','agent') or actor_role is null or target_role is null
+     or target_role not in('manager','barber','customer')and not(actor_role='admin'and target_role='agent') then
     raise exception 'Account role is not eligible for reset';
   end if;
   if (select pg_catalog.count(*) from public.audit_logs where admin_user_id = p_actor
@@ -541,7 +542,7 @@ CREATE OR REPLACE FUNCTION "public"."count_users_by_role"("role_filter" "text") 
 declare
   result bigint;
 begin
-  if coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+  if not public.is_admin() then
     raise insufficient_privilege using message = 'Administrator role required';
   end if;
 
@@ -1647,11 +1648,11 @@ declare
 begin
   if auth.jwt()->>'role' is distinct from 'authenticated' then return; end if;
   if public.staff_factor_satisfied() is not true then raise exception using errcode='42501', message=case
-    when exists(select 1 from auth.users where id=auth.uid() and raw_app_meta_data->>'role'='admin')
+    when exists(select 1 from auth.users where id=auth.uid() and raw_app_meta_data->>'role' in('admin','agent'))
       then 'ADMIN_MFA_REQUIRED' else 'MFA_REQUIRED' end; end if; current_session := private.current_account_session();
   if current_session is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
   if exists (
-    select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role'='admin'
+    select 1 from auth.users u where u.id=auth.uid() and u.raw_app_meta_data->>'role' in('admin','agent')
   ) and (auth.jwt()->>'aal' is distinct from 'aal2' or not exists (
     select 1 from auth.sessions s
     join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
@@ -1704,7 +1705,7 @@ CREATE OR REPLACE FUNCTION "public"."get_manager_by_id"("manager_id" "uuid") RET
     SET "search_path" TO ''
     AS $$
 begin
-  if coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+  if not public.is_admin() then
     raise insufficient_privilege using message = 'Administrator role required';
   end if;
 
@@ -1726,7 +1727,7 @@ CREATE OR REPLACE FUNCTION "public"."get_managers"() RETURNS TABLE("id" "uuid", 
     SET "search_path" TO ''
     AS $$
 begin
-  if coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+  if not public.is_admin() then
     raise insufficient_privilege using message = 'Administrator role required';
   end if;
 
@@ -1765,17 +1766,14 @@ $$;
 ALTER FUNCTION "public"."increment_customer_booking_count"("p_customer_id" "uuid", "p_booking_date" "date") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  SELECT coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin'
-$$;
+    SET "search_path" TO ''
+    AS $$select coalesce(private.live_staff_role()='admin',false);$$;
 ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."is_agent"() RETURNS boolean
-    LANGUAGE "sql" STABLE
+    LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'agent';
-$$;
+ select public.is_admin()and exists(select 1 from auth.users where id=auth.uid()and raw_app_meta_data->>'role'='agent');$$;
 ALTER FUNCTION "public"."is_agent"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."is_barber"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
@@ -1793,17 +1791,167 @@ CREATE OR REPLACE FUNCTION "public"."is_manager"() RETURNS boolean
   select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'manager';
 $$;
 ALTER FUNCTION "public"."is_manager"() OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb" DEFAULT NULL::"jsonb") RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."is_super_admin"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+ select public.is_admin()and exists(select 1 from auth.users where id=auth.uid()and raw_app_meta_data->>'role'='admin');$$;
+ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $_$
+    AS $$
+declare actor uuid:=auth.uid();target auth.users%rowtype;rows jsonb;page_number integer;affected uuid;email_value text;
+begin
+ perform public.enforce_account_session();
+ if not public.is_super_admin()then raise exception 'SUPER_ADMIN_REQUIRED'using errcode='42501';end if;
+ if p_action='list'then
+  page_number:=coalesce((p_data->>'page')::integer,1);if page_number<1 or page_number>10000 then raise exception 'INVALID_REQUEST';end if;
+  select coalesce(jsonb_agg(x),'[]')into rows from(select id,email,coalesce(raw_user_meta_data->>'name','')as name,
+   case when raw_app_meta_data->>'role'='admin'then 'super_admin'else 'admin'end as role,
+   coalesce(banned_until<=now(),true)as enabled,email_confirmed_at is not null as verified
+   from auth.users where deleted_at is null and raw_app_meta_data->>'role'in('admin','agent')order by created_at,id limit 25 offset(page_number-1)*25)x;
+  return jsonb_build_object('users',rows,'hasMore',exists(select 1 from auth.users where deleted_at is null and raw_app_meta_data->>'role'in('admin','agent')order by created_at,id offset page_number*25 limit 1));
+ end if;
+ if p_action='add'then
+  email_value:=lower(trim(p_data->>'email'));
+  if email_value is null or length(email_value)>254 or email_value!~'^[^[:space:]@<>]+@[^[:space:]@<>]+[.][^[:space:]@<>]+$'then raise exception 'INVALID_DETAILS';end if;
+  select *into target from auth.users where lower(email)=email_value and deleted_at is null for update;
+  if target.id is null or target.email_confirmed_at is null then raise exception 'VERIFIED_ACCOUNT_REQUIRED';end if;
+  if target.raw_app_meta_data->>'role'in('admin','agent')then raise exception 'ALREADY_ADMIN';end if;
+  if target.raw_app_meta_data->>'role'is distinct from 'customer'or target.banned_until>now()
+   or exists(select 1 from public.branches where manager_id=target.id)
+   or exists(select 1 from public.barbers where user_id=target.id)
+   or exists(select 1 from private.customer_social_identities where user_id=target.id or account_user_id=target.id)then raise exception 'SEPARATE_ADMIN_ACCOUNT_REQUIRED';end if;
+  update auth.users set raw_app_meta_data=coalesce(raw_app_meta_data,'{}')||jsonb_build_object('role','agent'),updated_at=now()where id=target.id;
+  insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,new_values)
+   values(actor,target.id,'role_assigned','user',target.id,'{"role":"admin"}'::jsonb);
+ elsif p_action in('disable','enable')then
+  select *into target from auth.users where id=(p_data->>'userId')::uuid and deleted_at is null for update;
+  if target.id is null or target.id=actor or target.raw_app_meta_data->>'role'is distinct from 'agent'then raise exception 'PROTECTED_ADMIN_ACCOUNT';end if;
+  update auth.users set banned_until=case when p_action='enable'then null else now()+interval'100 years'end,updated_at=now()where id=target.id;
+  insert into public.audit_logs(admin_user_id,target_user_id,action_type,target_entity_type,target_entity_id,new_values)
+   values(actor,target.id,case when p_action='enable'then 'user_enabled'else 'user_disabled'end,'user',target.id,jsonb_build_object('enabled',p_action='enable'));
+ else raise exception 'INVALID_REQUEST';end if;
+ if p_action in('add','disable')then
+  insert into private.account_revoked_sessions(session_id,user_id)select id,user_id from auth.sessions where user_id=target.id on conflict(session_id)do nothing;
+  update auth.sessions set not_after=now()where user_id=target.id;
+ end if;
+ return jsonb_build_object('success',true);
+end $$;
+ALTER FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION public.account_activity(p_before bigint DEFAULT NULL::bigint)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+  customer_account uuid;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select private.live_staff_role() into viewer_role;
+  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
+  if viewer_role='customer' then
+    select coalesce((select account_user_id from private.customer_social_identities where user_id=viewer), viewer)
+      into customer_account;
+  end if;
+
+  return (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'id',e.id,'happened_at',e.happened_at,'kind',e.kind,
+      'shop',b.name,'shop_ar',b.name_ar,
+      'reference',upper(left(replace(e.booking_id::text,'-',''),10)),
+      'actor_role',coalesce(e.actor_role,case when e.kind='booking_created' and own.booking_id is not null then 'customer' end),
+      'actor_name',case when e.actor_user_id=viewer then null
+        when viewer_role in ('admin','manager') and e.actor_role in ('admin','manager','barber','agent','whatsapp_agent')
+        then left(u.raw_user_meta_data->>'name',120) end,
+      'by_you',coalesce(e.actor_user_id=viewer,false) or (viewer_role='customer' and e.kind='booking_created' and
+        e.actor_role is null and own.account_user_id=customer_account)
+    ) order by e.id desc), '[]'::jsonb)
+    from (
+      select a.* from private.account_activity a
+      where (p_before is null or a.id<p_before) and (
+        viewer_role='admin' or
+        (viewer_role='manager' and a.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and a.barber_id in (
+          select x.id from public.barbers x where x.user_id=viewer and x.status='active'
+        )) or
+        (viewer_role='agent' and a.actor_user_id=viewer) or
+        (viewer_role='customer' and a.booking_id in (
+          select o.booking_id from private.customer_booking_owners o where o.account_user_id=customer_account
+        ))
+      )
+      order by a.id desc limit 25
+    ) e
+    left join public.branches b on b.id=e.branch_id
+    left join private.customer_booking_owners own on own.booking_id=e.booking_id
+    left join auth.users u on u.id=e.actor_user_id
+  );
+end;
+$function$;
+CREATE OR REPLACE FUNCTION public.shop_reviews(p_page integer DEFAULT 1)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  viewer uuid := auth.uid();
+  viewer_role text;
+begin
+  perform public.enforce_account_session();
+  if private.current_account_session() is null then raise sqlstate 'PT401' using message='SESSION_ENDED'; end if;
+  select private.live_staff_role() into viewer_role;
+  if viewer_role is null then select raw_app_meta_data->>'role' into viewer_role from auth.users where id=viewer; end if;
+  if viewer_role not in ('admin','manager','barber') or viewer_role is null then
+    raise exception 'REVIEWS_FORBIDDEN' using errcode='42501';
+  end if;
+  if p_page is null or p_page<1 or p_page>1000000 then raise exception 'INVALID_PAGE'; end if;
+
+  return (
+    with accessible as (
+      select v.booking_id,v.body,v.updated_at,r.shop_rating,r.barber_rating,
+        b.branch_id,b.barber_id,b.customer_id
+      from private.customer_booking_reviews v
+      join private.customer_booking_ratings r on r.booking_id=v.booking_id
+      join public.bookings b on b.id=v.booking_id
+      where b.status='completed' and (
+        viewer_role='admin' or
+        (viewer_role='manager' and b.branch_id in (select public.get_user_branch_ids())) or
+        (viewer_role='barber' and b.barber_id in (select id from public.barbers where user_id=viewer and status='active'))
+      )
+    ), page as (
+      select * from accessible order by updated_at desc,booking_id limit 25 offset (p_page-1)*25
+    )
+    select jsonb_build_object('total',(select count(*) from accessible),'rows',
+      coalesce((select jsonb_agg(jsonb_build_object(
+        'id',p.booking_id,'review',p.body,'updated_at',p.updated_at,
+        'shop_rating',p.shop_rating,'barber_rating',p.barber_rating,
+        'shop',br.name,'shop_ar',br.name_ar,'barber',ba.name,'barber_ar',ba.name_ar,
+        'reference',upper(left(replace(p.booking_id::text,'-',''),10))
+      ) order by p.updated_at desc,p.booking_id)
+      from page p join public.branches br on br.id=p.branch_id join public.barbers ba on ba.id=p.barber_id),'[]'::jsonb)
+    )
+  );
+end;
+$function$;
+CREATE OR REPLACE FUNCTION public.manage_booking_policy(p_branch uuid, p_changes jsonb DEFAULT NULL::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare
   cancel_value integer;
   reschedule_value integer;
   staff_role text;
 begin
-  select u.raw_app_meta_data->>'role' into staff_role from auth.users u
-    where u.id=auth.uid() and u.deleted_at is null and (u.banned_until is null or u.banned_until<=now());
+  perform public.enforce_account_session();
+  staff_role := private.live_staff_role();
   if staff_role is distinct from 'admin' and (staff_role is distinct from 'manager' or p_branch is null or not exists(
     select 1 from public.get_user_branch_ids() shop(id) where shop.id=p_branch
   )) then raise exception 'BOOKING_POLICY_FORBIDDEN' using errcode='42501'; end if;
@@ -1829,7 +1977,7 @@ begin
   end if;
   return private.booking_policy(p_branch);
 end
-$_$;
+$function$;
 ALTER FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2394,17 +2542,11 @@ CREATE OR REPLACE FUNCTION "public"."staff_factor_satisfied"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-  select not exists (
-    select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id
-    where u.id=auth.uid() and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent')
-      and f.status='verified'
-  ) or (
-    auth.jwt()->>'aal'='aal2' and exists (
-      select 1 from auth.sessions s join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
-      where s.id=(auth.jwt()->>'session_id')::uuid and s.user_id=auth.uid()
-        and (s.not_after is null or s.not_after>now()) and s.aal='aal2' and f.status='verified'
-    )
-  );
+ select (
+ not exists(select 1 from auth.users u where u.id=auth.uid()and u.raw_app_meta_data->>'role' in('admin','agent'))
+ and not exists(select 1 from auth.users u join auth.mfa_factors f on f.user_id=u.id where u.id=auth.uid()and u.raw_app_meta_data->>'role' in('manager','barber')and f.status='verified')
+ ) or(auth.jwt()->>'aal'='aal2'and exists(select 1 from auth.sessions s join auth.mfa_factors f on f.id=s.factor_id and f.user_id=s.user_id
+ where s.id=nullif(auth.jwt()->>'session_id','')::uuid and s.user_id=auth.uid()and s.aal='aal2'and f.status='verified'and f.factor_type='totp'and(s.not_after is null or s.not_after>now())));
 $$;
 ALTER FUNCTION "public"."staff_factor_satisfied"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
@@ -3221,10 +3363,10 @@ CREATE POLICY "Account tools live session" ON "public"."bookings" AS RESTRICTIVE
 CREATE POLICY "Account tools live session" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
 CREATE POLICY "Account tools live session" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
 CREATE POLICY "Account tools live session" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "private"."account_tools_session_live"() AS "account_tools_session_live"));
-CREATE POLICY "Admin realtime reads require MFA" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
-CREATE POLICY "Admin realtime reads require MFA" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
-CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
-CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) IS DISTINCT FROM 'admin'::"text") OR (( SELECT ("auth"."jwt"() ->> 'aal'::"text")) = 'aal2'::"text")));
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."bookings" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."notifications" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_conversations" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
+CREATE POLICY "Admin realtime reads require MFA" ON "public"."whatsapp_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (( SELECT "public"."staff_factor_satisfied"() AS "staff_factor_satisfied"));
 CREATE POLICY "Admins delete all notifications" ON "public"."notifications" FOR DELETE USING ("public"."is_admin"());
 CREATE POLICY "Admins delete areas" ON "public"."areas" FOR DELETE USING ("public"."is_admin"());
 CREATE POLICY "Admins delete barbers" ON "public"."barbers" FOR DELETE USING ("public"."is_admin"());
@@ -3235,7 +3377,7 @@ CREATE POLICY "Admins delete services" ON "public"."services" FOR DELETE USING (
 CREATE POLICY "Admins delete settings" ON "public"."admin_settings" FOR DELETE USING ("public"."is_admin"());
 CREATE POLICY "Admins delete templates" ON "public"."notification_templates" FOR DELETE USING ("public"."is_admin"());
 CREATE POLICY "Admins insert areas" ON "public"."areas" FOR INSERT WITH CHECK ("public"."is_admin"());
-CREATE POLICY "Admins insert audit logs" ON "public"."audit_logs" FOR INSERT TO "authenticated" WITH CHECK (((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'admin'::"text") AND ("admin_user_id" = ( SELECT "auth"."uid"() AS "uid"))));
+CREATE POLICY "Admins insert audit logs" ON "public"."audit_logs" FOR INSERT TO "authenticated" WITH CHECK ((( SELECT "public"."is_admin"() AS "is_admin") AND ("admin_user_id" = ( SELECT "auth"."uid"() AS "uid"))));
 CREATE POLICY "Admins insert barbers" ON "public"."barbers" FOR INSERT WITH CHECK ("public"."is_admin"());
 CREATE POLICY "Admins insert bookings" ON "public"."bookings" FOR INSERT WITH CHECK ("public"."is_admin"());
 CREATE POLICY "Admins insert branches" ON "public"."branches" FOR INSERT WITH CHECK ("public"."is_admin"());
@@ -3244,7 +3386,7 @@ CREATE POLICY "Admins insert notifications" ON "public"."notifications" FOR INSE
 CREATE POLICY "Admins insert services" ON "public"."services" FOR INSERT WITH CHECK ("public"."is_admin"());
 CREATE POLICY "Admins insert settings" ON "public"."admin_settings" FOR INSERT WITH CHECK ("public"."is_admin"());
 CREATE POLICY "Admins insert templates" ON "public"."notification_templates" FOR INSERT WITH CHECK ("public"."is_admin"());
-CREATE POLICY "Admins manage suspicious activities" ON "public"."suspicious_activities" TO "authenticated" USING (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ((("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text") = 'admin'::"text"))) WITH CHECK (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ((("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text") = 'admin'::"text")));
+CREATE POLICY "Admins manage suspicious activities" ON "public"."suspicious_activities" TO "authenticated" USING (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ( SELECT "public"."is_admin"() AS "is_admin"))) WITH CHECK (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ( SELECT "public"."is_admin"() AS "is_admin")));
 CREATE POLICY "Admins update all barbers" ON "public"."barbers" FOR UPDATE USING ("public"."is_admin"());
 CREATE POLICY "Admins update all bookings" ON "public"."bookings" FOR UPDATE USING ("public"."is_admin"());
 CREATE POLICY "Admins update all branches" ON "public"."branches" FOR UPDATE USING ("public"."is_admin"());
@@ -3257,19 +3399,19 @@ CREATE POLICY "Admins update governorates" ON "public"."governorates" FOR UPDATE
 CREATE POLICY "Admins update settings" ON "public"."admin_settings" FOR UPDATE USING ("public"."is_admin"());
 CREATE POLICY "Admins update templates" ON "public"."notification_templates" FOR UPDATE USING ("public"."is_admin"());
 CREATE POLICY "Admins view all areas" ON "public"."areas" FOR SELECT USING ("public"."is_admin"());
-CREATE POLICY "Admins view all audit logs" ON "public"."audit_logs" FOR SELECT TO "authenticated" USING ((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'admin'::"text"));
+CREATE POLICY "Admins view all audit logs" ON "public"."audit_logs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 CREATE POLICY "Admins view all barbers" ON "public"."barbers" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all bookings" ON "public"."bookings" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all branches" ON "public"."branches" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all governorates" ON "public"."governorates" FOR SELECT USING ("public"."is_admin"());
-CREATE POLICY "Admins view all logs" ON "public"."logs" FOR SELECT TO "authenticated" USING ((( SELECT (("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text")) = 'admin'::"text"));
+CREATE POLICY "Admins view all logs" ON "public"."logs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 CREATE POLICY "Admins view all notifications" ON "public"."notifications" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all preferences" ON "public"."user_notification_preferences" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all services" ON "public"."services" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view all user settings" ON "public"."user_settings" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view audit logs" ON "public"."audit_logs" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view settings" ON "public"."admin_settings" FOR SELECT USING ("public"."is_admin"());
-CREATE POLICY "Admins view suspicious activities" ON "public"."suspicious_activities" FOR SELECT TO "authenticated" USING (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ((("auth"."jwt"() -> 'app_metadata'::"text") ->> 'role'::"text") = 'admin'::"text")));
+CREATE POLICY "Admins view suspicious activities" ON "public"."suspicious_activities" FOR SELECT TO "authenticated" USING (((("auth"."jwt"() ->> 'role'::"text") = 'service_role'::"text") OR ( SELECT "public"."is_admin"() AS "is_admin")));
 CREATE POLICY "Admins view templates" ON "public"."notification_templates" FOR SELECT USING ("public"."is_admin"());
 CREATE POLICY "Admins view whatsapp_logs" ON "public"."whatsapp_logs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 CREATE POLICY "Agents and admins can insert conversations" ON "public"."whatsapp_conversations" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_agent"() OR "public"."is_admin"()));
@@ -3567,6 +3709,11 @@ GRANT ALL ON FUNCTION "public"."is_barber"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."is_manager"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_manager"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."is_super_admin"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."manage_administrators"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."manage_booking_policy"("p_branch" "uuid", "p_changes" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."manage_service_packages"("p_action" "text", "p_shop" "uuid", "p_data" "jsonb") FROM PUBLIC;
@@ -3701,3 +3848,11 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+ALTER FUNCTION public.account_activity(bigint) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.account_activity(bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.account_activity(bigint) TO authenticated;
+
+ALTER FUNCTION public.shop_reviews(integer) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.shop_reviews(integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.shop_reviews(integer) TO authenticated;

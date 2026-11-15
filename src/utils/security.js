@@ -1,3 +1,4 @@
+import { normalizeStaffRole } from '../lib/platformRoles';
 /**
  * Security utility functions for input sanitization and validation
  * These functions help prevent common security vulnerabilities like
@@ -179,7 +180,7 @@ export const validateUserRole = (role) => {
     return { valid: false, role: null, error: `Invalid role: ${role}` };
   }
 
-  return { valid: true, role: normalizedRole, error: null };
+  return { valid: true, role: normalizeStaffRole(normalizedRole), error: null };
 };
 
 /**

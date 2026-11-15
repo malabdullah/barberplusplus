@@ -134,8 +134,9 @@
     "reset": "Reset",
     "saving": "Saving...",
     "changesSaved": "Changes saved successfully",
-    "agent": "Agent",
-    "retry": "Try again"
+    "agent": "Admin",
+    "retry": "Try again",
+    "superAdmin": "Super Admin"
   },
   "agent": {
     "nav": {
@@ -3265,5 +3266,27 @@
       "correction": "Corrects entry"
     },
     "historyPreventsRemoval": "This shop has financial records and cannot be deleted. Pause the shop to preserve its history."
+  },
+  "administrators": {
+    "title": "Administrators",
+    "manage": "Manage Admin access",
+    "email": "Verified account email",
+    "role": "Role",
+    "add": "Add Admin",
+    "suspend": "Suspend",
+    "restore": "Reactivate",
+    "confirmAdd": "Grant Admin access to {{email}}? This account will use the administration workspace; existing records will be retained.",
+    "confirmStatus": "Change Admin access for {{email}}?",
+    "added": "Admin access granted. Sign in again and set up two-factor authentication.",
+    "updated": "Admin access updated.",
+    "errors": {
+      "SUPER_ADMIN_REQUIRED": "Only Super Admin can manage administrative accounts.",
+      "VERIFIED_ACCOUNT_REQUIRED": "Create and verify a separate account before granting Admin access.",
+      "ALREADY_ADMIN": "This account already has administrative access.",
+      "SEPARATE_ADMIN_ACCOUNT_REQUIRED": "Use a separate verified customer account with no staff assignments or linked social accounts.",
+      "PROTECTED_ADMIN_ACCOUNT": "This administrative account is protected.",
+      "INVALID_DETAILS": "Enter a valid email address.",
+      "UNAVAILABLE": "Could not update Admin access. Please try again."
+    }
   }
 }

@@ -6,5 +6,5 @@ export const shopWording = value => typeof value === 'string' ? value
   .replace(/فروع/g, 'صالونات').replace(/فرع/g, 'صالون') : value;
 export const shopTerminology = {
   type: 'postProcessor', name: 'shopTerminology',
-  process: value => role === 'admin' ? value : shopWording(value),
+  process: value => ['admin', 'super_admin'].includes(role) ? value : shopWording(value),
 };
