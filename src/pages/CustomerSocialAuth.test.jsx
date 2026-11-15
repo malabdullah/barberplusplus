@@ -57,3 +57,4 @@ it('explains the staff account restriction and preserves the return to booking',
   expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute('href', '/customer/sign-in?next=book');
   expect(customerAuthService.ensureEmailProfile).not.toHaveBeenCalled();
 });
+vi.mock('../services/customerAppleDeletion.service', () => ({ returnAppleDeletion: vi.fn() }));

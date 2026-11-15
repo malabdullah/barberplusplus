@@ -1,0 +1,56 @@
+{
+  "checkedAtUTC": "2026-11-14T01:30:26.687278+00:00",
+  "beforeCounts": {
+    "containers": 10,
+    "images": 62,
+    "volumes": 9,
+    "networks": 4
+  },
+  "afterCounts": {
+    "containers": 10,
+    "images": 62,
+    "volumes": 9,
+    "networks": 4
+  },
+  "allExistingIdentifiersPreserved": true,
+  "noNewResourceIdentifiersRemain": true,
+  "runtimeImages": [
+    {
+      "name": "supabase-db",
+      "pinnedReference": "supabase/postgres@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+      "parentIndexId": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+      "selectedImageId": "sha256:5a4314708484bec672de2c09653a5c01fb1c84a998564ac231b0325e2238ed5b",
+      "os": "linux",
+      "architecture": "amd64",
+      "platformRequestedInRun": "linux/amd64"
+    },
+    {
+      "name": "supabase-auth",
+      "pinnedReference": "supabase/gotrue@sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+      "parentIndexId": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+      "selectedImageId": "sha256:0a8557cbe0fd53a067726fe656f79eb1b03a1ab3cdde4b59907ce5a1e1a202ab",
+      "os": "linux",
+      "architecture": "amd64",
+      "platformRequestedInRun": "linux/amd64"
+    },
+    {
+      "name": "supabase-storage",
+      "pinnedReference": "supabase/storage-api@sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+      "parentIndexId": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf",
+      "selectedImageId": "sha256:6f706c1184d97b081446527bb62a3193d3d47ad0daafcf738fd5c3e5a62aed97",
+      "os": "linux",
+      "architecture": "amd64",
+      "platformRequestedInRun": "linux/amd64"
+    },
+    {
+      "name": "supabase-edge-functions",
+      "pinnedReference": "supabase/edge-runtime@sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+      "parentIndexId": "sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+      "selectedImageId": "sha256:8c17262ecf2fcc43fe19c48d239280592129f2164e61f0f17ba56533120f92d5",
+      "os": "linux",
+      "architecture": "amd64",
+      "platformRequestedInRun": "linux/amd64"
+    }
+  ],
+  "platformSpecificInspection": true
+}

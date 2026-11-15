@@ -1,0 +1,29 @@
+{
+  "status": "PASS_LOCAL_SYNTHETIC_ONLY_NOT_LIVE_RECOVERY_PROOF",
+  "tests": 53,
+  "failures": 0,
+  "errors": 0,
+  "lastRunReportedSeconds": 0.331,
+  "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s artifacts/customer-deletion-release-preparation-2026-11-14/post-backup-recovery-review -p 'test_*.py' -v",
+  "coverage": [
+    "unchanged original backup policy and installed public verifier with fake post-install receipt/reader",
+    "wrong/stale/future/pre-install/transition/failed restoration receipt",
+    "system/repository/credential destination/config/privatehash/samekey/OFF binding failures before remote read",
+    "exact snapshot and ordered1config+3dump cap; no latest/list/fifthcommand",
+    "partial/missing/hash/oversize failure cleanup; unknownfile/target/lease preservation",
+    "actual local owned-lease identity cleanup without production paths",
+    "typed45/60min activation window and strictfutureapproval/SSH/result protocol guards",
+    "real local Python children: output cap/stderr suppression/deadline/nonreadingstdin timeout",
+    "single exclusive attempt marker/no overwrite"
+  ],
+  "reviewCorrectionsApplied": [
+    "operator retries vs internal restic HTTP reads/retries distinguished",
+    "targetAbsentAfterClose distinct from success-only verifier proof",
+    "nonblocking SSH stdin and stdout both deadline-bound",
+    "native archival copies are not execution/test locations"
+  ],
+  "realLinuxRootTmpfsLocksPermissionsOrPinnedResticExecuted": false,
+  "PostgresDockerSSHHTTPProviderBackupCredentialBrowserCustomerActions": false,
+  "repeatedUnrelatedRehearsal": false,
+  "limitations": "Linux installed paths/permissions/tmpfs/runtime compatibility and real B2 receipt/credential/snapshot recovery remain unexecuted; fake tests are not production PASS."
+}

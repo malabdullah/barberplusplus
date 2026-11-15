@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "status": "ENGINEERING_PREPARED_NOT_INSTALLED_OR_ACTIVATED",
+  "operatorSource": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "applicationSourceUnchanged": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "checks": {
+    "syntheticCases": 31,
+    "failed": 0,
+    "nodeWrapperPassed": 1,
+    "pythonAST": "PASS",
+    "existingLoginRenewalUnchanged": true,
+    "applicationSQLFunctionsRuntimeLockUnchanged": true,
+    "hostedOperatorTarget": "NOT_APPLICABLE",
+    "actualLinuxUnitVerify": "PENDING_APPROVED_INSTALL",
+    "realSigningAndProviderProof": "NOT_PERFORMED"
+  },
+  "noProductionAccessNoSecretsNoDockerNoMessages": true,
+  "ownerDecisionNeeded": "Confirm independently recoverable custody for the existing backup-decryption identity and same-key recovery copy, or request a separate owner-held recovery arrangement. Existing B2 configuration archive/root path are proposals, not verified independent custody. No secret should be provided in chat.",
+  "remainingConcretePreparation": [
+    "Freeze reviewed initial default-off bootstrap transformer/commands",
+    "Bind exact subsequent selected-file recovery verification/cleanup and confirm custody",
+    "Review source-specific dev/main/CI promotion and conditional immutable artifact verification; artifact digests can be validated after an approved build, not fabricated in advance"
+  ],
+  "notApproved": [
+    "Real P8 verification/issuance",
+    "New production encryption key or recovery copy",
+    "Server installation/timers/restart",
+    "Production migrations/Functions/frontend/activation",
+    "Real customer/provider/message/reviewer operations",
+    "App upload/submission/publication"
+  ]
+}

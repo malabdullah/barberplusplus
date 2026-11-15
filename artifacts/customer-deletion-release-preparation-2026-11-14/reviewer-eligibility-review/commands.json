@@ -1,0 +1,73 @@
+{
+  "status": "PROPOSED_FUTURE_SINGLE_LOOKUP_NOT_EXECUTED",
+  "fixedTarget": {
+    "host": "srv1073968",
+    "ipv4": "72.61.164.64",
+    "resource": 1073968,
+    "frontendAccess": false
+  },
+  "identity": "support@barberplusplus.com",
+  "ownerControlConfirmation": {
+    "messageId": "01a1d94b-0396-7e23-856b-fcaeac8fae25",
+    "answer": "Yes\u2014I control that inbox",
+    "scope": "Owner-reported inbox control only; not delivery/eligibility/create/message/access approval"
+  },
+  "demo": {
+    "shop": "Atlas Grooming \u2014 Sharq (Demo)",
+    "barber": "Kareem Shah",
+    "service": "Beard trim",
+    "durationMinutes": 15,
+    "priceKWD": "3.000",
+    "reuseApproved": false
+  },
+  "ssh": {
+    "identityFile": "/Users/malabdullah/.ssh/codex_supabase_migration_ed25519",
+    "knownHosts": "/Users/malabdullah/.ssh/known_hosts",
+    "strictHostKeyChecking": true,
+    "batchMode": true,
+    "identitiesOnly": true,
+    "connectionAttempts": 1,
+    "ptyOrForwardingOrPersistence": false,
+    "invocations": 1,
+    "retryAllowed": false,
+    "stream": "exact inspect_reviewer.py bytes to python3 -B - after local-exclusive invocation marker"
+  },
+  "deadlineParameters": [
+    "BARBER_REVIEW_ACTIVATED_UTC=A",
+    "BARBER_REVIEW_STOP_UTC=A+2700",
+    "BARBER_REVIEW_HARD_UTC=A+3600"
+  ],
+  "accessPlan": "After separate approval: one globally routableIPv4 lookup via api.ipify.org; verify exact original firewall/rules/restorepath; temporaryIP/32TCP22DB-only copy. Stop ifIP/hostkey/rulesdrift. Restore originalrules/profile/remove temporarysource/closeSSH immediately success/failure; at most1hour, no overnight access.",
+  "sqlInvocation": [
+    "docker",
+    "exec",
+    "-i",
+    "supabase-db",
+    "psql",
+    "-X",
+    "-w",
+    "-qAt",
+    "-P",
+    "pager=off",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "postgres",
+    "-d",
+    "postgres"
+  ],
+  "runtimeInspection": "Fixedsupabase-db image/running/healthy projection only; no environments/credentials/othercontainers",
+  "operatorResult": "strict counts/bools/knownpolicy only; stop is not permission to repair/retry/provision",
+  "excluded": [
+    "mailbox or credential access",
+    "user/profile/role/invitation changes",
+    "bookings or slots/reservations",
+    "provider/email/SMS/push",
+    "phone or email proof bypass",
+    "backup/archive or key reads",
+    "SQLwrites/DDL/routines",
+    "flags/activation",
+    "source/main/devdeployment",
+    "nativechanges/upload/submission"
+  ]
+}

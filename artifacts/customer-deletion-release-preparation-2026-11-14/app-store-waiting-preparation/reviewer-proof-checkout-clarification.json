@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCAL_FROZEN_SOURCE_CLARIFICATION_NO_RUNTIME_OBSERVATION",
+  "preparedAtUTC": "2026-11-14T08:50:58.284456+00:00",
+  "supplementsOriginalManifestSHA256": "c1392d3f5ae5b589a063f6533df32d62eb791d99ee2e6cf6c96e72eb89e5aff1",
+  "productionCheckoutPolicy": "UNKNOWN_NOT_OBSERVED_IN_SAVED_PRODUCTION_EVIDENCE",
+  "productionPhoneVerificationInstructions": "HOLD_UNTIL_APPROVED_READ_ONLY_EFFECTIVE_POLICY_CHECK",
+  "nativeDeletionInstruction": "Use reviewer-controlled signup/inbox for ordinary fresh email-code proof and a full deletion exercise, preserving the reusable review account. Backend password action is not an exposed native25 password-proof UI. Optional fresh Apple connection registers a provider credential; it does not bypass ordinary deletion proof.",
+  "noFictionalProductionPhoneOrVerifiedFlagBypass": true,
+  "reviewerMailboxCredentialsMustNotBeShared": true,
+  "sources": {
+    "nativeDeletionView": {
+      "path": "/Users/malabdullah/Documents/Codex/Barber++/ios/.build/worktrees/app-store-candidate-25/BarberCustomer/AccountDeletionView.swift",
+      "sha256": "de7fa8f71bb7ac382d31d88e8b05238d264060c322b9d2150dbaa17d27a0dff5",
+      "emailCodeUI": true,
+      "currentPasswordProofUI": false,
+      "appleConnectIsSeparateCredentialRegistration": true
+    },
+    "checkoutMigration": {
+      "path": "supabase/migrations/20261112064028_checkout_email_contact_policy.sql",
+      "sha256": "3d4c4fdfe2e893cf4dcb65e38115a9567aad53b54ba84d5846fbfb025ca14461",
+      "default": "standard",
+      "defaultDoesNotProveCurrentRuntimePolicy": true
+    },
+    "checkoutHandler": {
+      "path": "supabase/functions/customer-booking/handler.ts",
+      "sha256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "effectivePolicyMustBeReadFromDeployment": true
+    }
+  },
+  "productionEvidenceChecked": [
+    "artifacts/customer-deletion-release-preparation-2026-11-14/production-preflight/live-metadata-result.json",
+    "artifacts/customer-deletion-release-preparation-2026-11-14/corrected-default-off-setup-result/safe-result.json",
+    "artifacts/customer-account-deletion-2026-11-13/production-readiness-summary.json"
+  ],
+  "serverOrHttpReadPerformed": false,
+  "nativeOrBackendCodeChanged": false,
+  "flagsOrPhoneProofChanged": false,
+  "lookupProvisioningMessageUploadSubmission": false
+}

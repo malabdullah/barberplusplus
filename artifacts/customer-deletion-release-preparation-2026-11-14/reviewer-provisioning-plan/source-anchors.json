@@ -1,0 +1,204 @@
+{
+  "candidate": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "cachedMain": "55f7bb615cdd00d632e64d7eb352210c20854c34",
+  "anchors": [
+    {
+      "path": "src/pages/CustomerAuth.jsx",
+      "startLine": 25,
+      "endLine": 67,
+      "supports": "Normal form fields, validation, signup request and verification route",
+      "candidateSHA256": "d3ac7eb002c5db791b7a9075217485a6664633d8c65b030e66b7a9065f588349",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "d3ac7eb002c5db791b7a9075217485a6664633d8c65b030e66b7a9065f588349",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/pages/CustomerEmailVerification.jsx",
+      "startLine": 38,
+      "endLine": 83,
+      "supports": "Code confirmation and resend/correction controls; no automatic resend proposed",
+      "candidateSHA256": "4eb992ff306e72a45a276bd1435e9a97a4ead3f2a42f71f2e87f865762ac682a",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "4eb992ff306e72a45a276bd1435e9a97a4ead3f2a42f71f2e87f865762ac682a",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/pages/CustomerEmailCallback.jsx",
+      "startLine": 33,
+      "endLine": 53,
+      "supports": "Confirmed-email profile ensure and account return",
+      "candidateSHA256": "5a534348ac2068116c2963b3b722527a20859852bee8075e8a2f918aaac1feb4",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "5a534348ac2068116c2963b3b722527a20859852bee8075e8a2f918aaac1feb4",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/services/customerAuth.service.js",
+      "startLine": 124,
+      "endLine": 173,
+      "supports": "Normal customer email signup/login/OTP/profile calls",
+      "candidateSHA256": "60c22902613bf3d9910fc0de36a558af38e833e032950fbd8b28baa6da276612",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "9972cb23f7f8e7503bc0c0079d1233c44a97c31470abfd647790a863282faae0",
+      "sameWholeFileInCachedMain": false,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-auth/handler.ts",
+      "startLine": 86,
+      "endLine": 121,
+      "supports": "Signup validation and generic result",
+      "candidateSHA256": "021ebfb415ad41745a8cdd544b62ae2446535011882b2adcc2e7de3a087502d6",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "021ebfb415ad41745a8cdd544b62ae2446535011882b2adcc2e7de3a087502d6",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-auth/index.ts",
+      "startLine": 39,
+      "endLine": 75,
+      "supports": "Normal signup assigns trusted customer role, sends mail, sign-in checks",
+      "candidateSHA256": "6f8523d76f0cd7f435523db8693a197e24dd60f9a3be53e91688331074716eaf",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "6f8523d76f0cd7f435523db8693a197e24dd60f9a3be53e91688331074716eaf",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-auth/email-delivery.ts",
+      "startLine": 6,
+      "endLine": 21,
+      "supports": "Auth SMTP confirmation and native callback state",
+      "candidateSHA256": "86bbee47f207ba381fe53b493f06dff37f78712e5a8cd042de512ed93174b626",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "86bbee47f207ba381fe53b493f06dff37f78712e5a8cd042de512ed93174b626",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/pages/CustomerAccount.jsx",
+      "startLine": 84,
+      "endLine": 144,
+      "supports": "Optional phone/profile display",
+      "candidateSHA256": "020f712da0ebedfbdf3f617d33878fd7c0301fc004e5291e5159f5fdfb4699ff",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "08b6665dcc0421bb478dbb33fa0c452ba5efdc179b8b7e2a7a61479030c45172",
+      "sameWholeFileInCachedMain": false,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-booking/handler.ts",
+      "startLine": 90,
+      "endLine": 131,
+      "supports": "Authoritative policy and four-field phone-config contract",
+      "candidateSHA256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-booking/handler.ts",
+      "startLine": 183,
+      "endLine": 195,
+      "supports": "Signed-in account-proof blank phone in email-only mode",
+      "candidateSHA256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "a3de95f55c6b47deb774f69e6fe26a5644b40a3c2a3b25d074b86bc369e176e7",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/handler.ts",
+      "startLine": 68,
+      "endLine": 115,
+      "supports": "Unreleased new-request gate and distinct proof/confirm actions",
+      "candidateSHA256": "1796c362f15d8511f9024ea913c848444b4e22e3d435ed5dc54115298fd925fd",
+      "existsInCachedMain": false,
+      "cachedMainSHA256": null,
+      "sameWholeFileInCachedMain": false,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-account-deletion/configuration.ts",
+      "startLine": 12,
+      "endLine": 38,
+      "supports": "Unreleased runtime/environment/switch gate",
+      "candidateSHA256": "308a5042872a95006ae2d8cbd5c2bafede817248738d6549d8ac0871771030ed",
+      "existsInCachedMain": false,
+      "cachedMainSHA256": null,
+      "sameWholeFileInCachedMain": false,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "supabase/functions/customer-booking-email/message.ts",
+      "startLine": 1,
+      "endLine": 33,
+      "supports": "Booking changes can create real customer mail",
+      "candidateSHA256": "64eaef633aac849cff18e24ffcfa0b72d68048b2e9dc0ef2ccb2da998b1dd17f",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "64eaef633aac849cff18e24ffcfa0b72d68048b2e9dc0ef2ccb2da998b1dd17f",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/utils/validation.js",
+      "startLine": 47,
+      "endLine": 76,
+      "supports": "Customer password rules",
+      "candidateSHA256": "3481da4f5634c8f9e4471a2c1edd65b0f6d164047067b8ba11812cc0b21ae114",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "3481da4f5634c8f9e4471a2c1edd65b0f6d164047067b8ba11812cc0b21ae114",
+      "sameWholeFileInCachedMain": true,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    },
+    {
+      "path": "src/App.jsx",
+      "startLine": 159,
+      "endLine": 169,
+      "supports": "Customer routes; deletion route is pending release",
+      "candidateSHA256": "983b4859fc30cf8c1c0b5c786cbd712298aeb779a09124197567498070b3eb80",
+      "existsInCachedMain": true,
+      "cachedMainSHA256": "f76cf6569251bfb27e7199c5ea5db55a71ccb1bef035fbd46f6781fb63ffd278",
+      "sameWholeFileInCachedMain": false,
+      "sourceStatus": "Source trace only; not runtime/API acceptance"
+    }
+  ],
+  "nativeReadOnlyAnchors": [
+    {
+      "checkout": "/Users/malabdullah/Documents/Codex/Barber++/ios/.build/worktrees/app-store-candidate-25",
+      "path": "BarberCustomer/NativePhoneVerification.swift",
+      "startLine": 12,
+      "endLine": 21,
+      "supports": "All four API fields required for emailOnly",
+      "SHA256": "dc01965c802e91b84612a8378f4c1928b9ef2d828821ce3f6e8b14ee56c43564",
+      "nativeFilesChanged": false
+    },
+    {
+      "checkout": "/Users/malabdullah/Documents/Codex/Barber++/ios/.build/worktrees/app-store-candidate-25",
+      "path": "BarberCustomer/CheckoutCoordinator.swift",
+      "startLine": 494,
+      "endLine": 500,
+      "supports": "Email mode requires name and email",
+      "SHA256": "721a828dbcbca2df144ee47511cbdb1106d234bfba524b968be83b850fc2d3e6",
+      "nativeFilesChanged": false
+    },
+    {
+      "checkout": "/Users/malabdullah/Documents/Codex/Barber++/ios/.build/worktrees/app-store-candidate-25",
+      "path": "BarberCustomer/AccountDeletionView.swift",
+      "startLine": 55,
+      "endLine": 95,
+      "supports": "Email-code proof UI, no current-password proof UI",
+      "SHA256": "de7fa8f71bb7ac382d31d88e8b05238d264060c322b9d2150dbaa17d27a0dff5",
+      "nativeFilesChanged": false
+    }
+  ],
+  "liveProofLimits": "Only earlier approved read-only scalar/configuration lookup; no new runtime checks",
+  "existingCanonicalProfileTrace": "20261102040024 normal email-ensure inserts name/email customer and canonical link; later wrappers may surround it; no direct SQL provisioning proposed",
+  "deletionSourceAbsentFromCachedMain": "Expected unreleased code, not a claim it is installed or active in production",
+  "localPreparationCorrection": "Initial source-index script expected every candidate file in main; candidate-only deletion files are now honestly marked absent. No runtime command was attempted."
+}

@@ -1,0 +1,73 @@
+{
+  "auth.users": {
+    "id": "uuid",
+    "email": "character varying",
+    "email_confirmed_at": "timestamp with time zone",
+    "encrypted_password": "character varying",
+    "raw_app_meta_data": "jsonb",
+    "banned_until": "timestamp with time zone",
+    "deleted_at": "timestamp with time zone"
+  },
+  "auth.identities": {
+    "user_id": "uuid",
+    "provider": "text"
+  },
+  "public.customers": {
+    "id": "uuid",
+    "email": "character varying",
+    "status": "character varying"
+  },
+  "private.customer_accounts": {
+    "user_id": "uuid",
+    "customer_id": "uuid"
+  },
+  "private.customer_social_identities": {
+    "user_id": "uuid",
+    "account_user_id": "uuid"
+  },
+  "public.branches": {
+    "id": "uuid",
+    "manager_id": "uuid",
+    "name": "text",
+    "status": "text",
+    "publication_state": "text",
+    "working_hours": "jsonb"
+  },
+  "public.barbers": {
+    "id": "uuid",
+    "user_id": "uuid",
+    "branch_id": "uuid",
+    "name": "text",
+    "status": "text",
+    "service_ids": "uuid[]",
+    "availability": "jsonb",
+    "time_offs": "jsonb",
+    "vacations": "jsonb",
+    "availability_approved_at": "timestamp with time zone",
+    "invite_status": "character varying",
+    "manager_chair": "boolean",
+    "management_mode": "text",
+    "max_booking_days": "integer"
+  },
+  "public.services": {
+    "id": "uuid",
+    "branch_id": "uuid",
+    "name": "text",
+    "status": "text",
+    "duration": "integer",
+    "price": "numeric"
+  },
+  "public.audit_logs": {
+    "admin_user_id": "uuid"
+  },
+  "private.shop_barber_invitations": {
+    "manager_id": "uuid",
+    "accepted_user_id": "uuid",
+    "email": "text",
+    "status": "text"
+  },
+  "private.customer_checkout_runtime": {
+    "singleton": "boolean",
+    "policy": "text"
+  }
+}

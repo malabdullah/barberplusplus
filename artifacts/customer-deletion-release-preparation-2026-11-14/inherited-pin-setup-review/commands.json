@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "status": "REVISED_COMMAND_PLAN_LOCAL_ONLY_REQUIRES_REVIEW_AND_FRESH_APPROVAL",
+  "applicationSource": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "renewalSource": "07432656c506cd27af4a7328bfc3d51eac9a1e3b",
+  "bootstrapRecoverySource": "146ac5051646664b35ec80fe51bdd0a032dbd767",
+  "target": {
+    "resource": 1073968,
+    "ipv4": "72.61.164.64",
+    "hostname": "srv1073968",
+    "frontendAccess": false
+  },
+  "publicPayload": {
+    "directory": "/etc/barber-release/apple-cleanup-setup-public-inherited-pin-v1",
+    "files": {
+      "apple_renewal.py": "810d3cb8fc618b70c8bb4a8e05c3306753ea4dba9d5515cf0ec20aa19b08ee23",
+      "apple_cleanup_renewal.py": "7bd0458b3989c3b394e302d78e2b2e29619abb0d86cbc37a70903b1e0c5b97e6",
+      "apple_cleanup_bootstrap.py": "9584809bac8309f2b8f1045299864fbfdb5a6921cecd6af98d254c0fd5c9c576",
+      "apple_cleanup_recovery.py": "cf25b0a2b9f817bcb60c77a6c79e4930cd3be3597c3a44654c93245903b252d4",
+      "apple-cleanup-renewal.config.example.json": "a369e434284d1d583999d1f0a8dfc7f8ef675869a425b6fe4a9828e3ee5e39b9",
+      "barber-apple-cleanup-renewal.service": "1fb39118f983bd1a8ebe36edd17882be8d134ea8ad68ac91bbf3414833ae99a2",
+      "barber-apple-cleanup-renewal.timer": "d7ed645a4757b95b06aa4db77b0692d12d4bcc191ba260048c9f7fb6c168db3d",
+      "barber-apple-cleanup-monitor.service": "cd0376e978b173c4e5ee67f2ff32284a9ce0a38836f22d3ef740db3631532cba",
+      "barber-apple-cleanup-monitor.timer": "eebad465b2fd90662b1f6c16337305762ff1d8d30e1a0b806131ad21a800ecbc",
+      "apple_cleanup_inherited_pin.py": "e9f15dd2fc26994043e70a462d9fdbaf08e96cecc762f2b7cc345c459b3fcc0d"
+    },
+    "containsSecrets": false,
+    "existingCachePreserved": "/etc/barber-release/apple-cleanup-setup-public-146ac50",
+    "helperTemporaryCacheOnlyNotLongRunningInstall": true
+  },
+  "typedFutureParameters": {
+    "operatorIPv4": "Single globally routable IPv4 returned once by approved ipify call; one /32 only, changed address stops",
+    "nowEpoch": "Actual on-server integer UTC epoch, never owner-supplied test clock",
+    "initialScopeId": "Read-only approval is closed; new default-off setup approval required"
+  },
+  "steps": [
+    {
+      "id": "access",
+      "action": "After new exact approval, ipify once; verify/copy current DB firewall rules; add only returned /32 TCP22 to dedicated DB-only temporary copy, existing inspection key/strict host key, max1h operational limit. Restore immediately afterward; no automatic TTL claim."
+    },
+    {
+      "id": "payload",
+      "commands": [
+        [
+          "install",
+          "-d",
+          "-m",
+          "0700",
+          "/etc/barber-release/apple-cleanup-setup-public-inherited-pin-v1"
+        ]
+      ],
+      "action": "Require new cache absent. Exclusively create root0700 new cache with all10 hash-bound PUBLIC files root0600 using umask0077/O_EXCL/O_NOFOLLOW/fsync. Preserve old146cache unchanged. No original login-helper replacement. Stop on pre-existing cache or hash/metadata mismatch."
+    },
+    {
+      "id": "preflight",
+      "calls": [
+        "require_root_and_exact_hostname",
+        "verify_original_login_helper_hash",
+        "verify_canonical_paths_and_private_ownership",
+        "verify_existing_backend_lock_regular_root0600_no_symlink",
+        "Host(config).inspect()",
+        "Host(config).compose(active) + [config,--hash,functions]",
+        "inherited_pin.candidate_base(config, ACTUAL_original_override_bytes, fresh_on_server_evidence)"
+      ],
+      "action": "Keep all original private-path/source/login/new-path/lock and four healthy pinned container guards. Under the existing exclusive backend lock bind evidence to exact actual original bytes SHA256; select all4known runtime pins, verify exact current Compose config hash against running label, same expected image/running/healthy, all6deletion-related runtime field names absent. Require only SUPABASE_URL missing in explicit override and other3explicit pins exact. Candidate_base validates this before P8 use; original bootstrap guards execute again on derived candidate. No use of historical diagnostic as current evidence. No active normalization/write/restart. Require all6deletion-related names ABSENT in actual original source too, even explicitfalse or expectedbackend. Source/runtime evidence must be freshly collected under this same lock and bound to this same actual original source hash; no contradictory source/runtime attestation. Every original nonbinding guard remains mandatory."
+    },
+    {
+      "id": "key-use",
+      "call": "apple_renewal.validate(existing_web_login_secret, exact_existing_web_config, nowEpoch)",
+      "action": "Read existing P8 only on-server to derive public material and verify existing JWT correspondence; confirm unexpired expected subject/team/audience. No Apple/provider call, login renewal or key change."
+    },
+    {
+      "id": "stage",
+      "call": "inherited_pin.stage(config, ACTUAL_original_override_bytes, nowEpoch, fresh_on_server_evidence, issue=apple_renewal.issue, validate=apple_renewal.validate, entropy=secrets.token_hex)",
+      "action": "Hold same lock. Stage exactly4private bootstrap files in a new exclusive dir. original.override.json and beforeSha256 preserve ACTUAL original bytes (including formatting, absence of SUPABASE_URL). Only final staged candidate contains explicit SUPABASE_URL=http://api-gw:8000 plus original reviewed6default-off field additions. Never pass serialized derived bytes as original_raw. Existing strict bootstrap.prepare is unchanged and validates derived candidate before exactly2credentials/1encryption key. All3flags false. No active replace/restart yet."
+    },
+    {
+      "id": "install",
+      "action": "Keep all original install/source/private-path/unit/canonical config guards. Compare active original bytes SHA256 to actual beforeSha256; exact staged semantic diff must be only7new fields (SUPABASE_URL plus pair/encryption/backend/3falseflags), all old fields and other services unchanged. Install original companion modules/config/4units only; inherited_pin helper remains operator cache only. Preserve existing login helper/config. Create exclusive same-key recovery copy; validate candidate Compose/units before one active replacement."
+    },
+    {
+      "id": "units-verify",
+      "commands": [
+        [
+          "systemd-analyze",
+          "verify",
+          "/etc/systemd/system/barber-apple-cleanup-renewal.service",
+          "/etc/systemd/system/barber-apple-cleanup-renewal.timer",
+          "/etc/systemd/system/barber-apple-cleanup-monitor.service",
+          "/etc/systemd/system/barber-apple-cleanup-monitor.timer"
+        ]
+      ]
+    },
+    {
+      "id": "default-off-runtime",
+      "calls": [
+        "apple_renewal.atomic(active_override, exact_staged_bytes)",
+        "Host(config).activate(active_override)",
+        "Host(config).verify(exact_staged_pair_value, reviewed_expected_runtime)"
+      ],
+      "action": "One final active replacement and one Functions-only recreate, no pre-normalization pass. Same reviewed image, original effective SUPABASE_URL unchanged. Expected other-env hash derives from original effective runtime plus exact6default-off additions; every unrelated env/value preserved. Preserve exact Auth/DB/Storage identities/start times; flagsfalse. Source/runtime key equality and original health/model guards remain. No SQL/Functions-source/frontend deployment."
+    },
+    {
+      "id": "fresh-check",
+      "commands": [
+        [
+          "python3",
+          "/usr/local/lib/barber-release/apple_cleanup_renewal.py",
+          "--check"
+        ],
+        [
+          "python3",
+          "/usr/local/lib/barber-release/apple_cleanup_renewal.py"
+        ]
+      ],
+      "action": "Release outer backend lock first (helper acquires it). Local P8 signature verification is explicitly included. Fresh normal run must be HEALTHY_NOT_DUE and cause no additional signing/restart. Capture only metadata-safe output."
+    },
+    {
+      "id": "timers",
+      "commands": [
+        [
+          "systemctl",
+          "daemon-reload"
+        ],
+        [
+          "systemctl",
+          "enable",
+          "--now",
+          "barber-apple-cleanup-renewal.timer",
+          "barber-apple-cleanup-monitor.timer"
+        ]
+      ],
+      "action": "Enable only these two persistent new timers; daily04:20Kuwait+<=5min jitter renewal and hourly:40 monitor. This is ongoing on-server key use, not a one-hour timer lifetime. Existing login/backup/release units unchanged; no outbound alert channel."
+    },
+    {
+      "id": "record",
+      "action": "Record exact installed source/hash, default-off environment booleans, image/health/untouched-service proof, unit state and actual installation time. Create root0600 private recovery-expected.json binding exactly three named installed config file hashes; never export credentials/key hashes. No fabricated backup PASS."
+    },
+    {
+      "id": "restore-access",
+      "action": "Close all SSH; restore original DB profile and five/current actual rules unchanged, remove exact temporary source rule, verify no inspection session. Keep closed while awaiting next genuine03:15Kuwait backup. No frontend firewall change."
+    }
+  ],
+  "failurePlan": {
+    "beforeActiveReplacement": "Stop; no runtime change; retain only own private staging/journal, no regeneration/retry/cleanup of unknown state. New units remain disabled.",
+    "afterRecognizedActiveReplacement": "Keep original recognized rollback: restore ACTUAL original.override.json byte-for-byte (missing explicit SUPABASE_URL), recreate only Functions and verify original effective env/health/untouched services. Never substitute normalized bytes for original hash/backup. Private staged material retained for review. No new auto retry.",
+    "unknownDriftOrFailedRollback": "Do not overwrite/erase/force-complete. Report RECOVERY_REQUIRED, keep feature off; restore access regardless, request fresh bounded recovery if needed.",
+    "cleanup": "No account/object/archive deletion or pruning. Remove only temporary firewall rule. Protect/preserve named setup artifacts for post-setup proof; no broad directory cleanup."
+  },
+  "excluded": [
+    "Production migrations or function-source/frontend deployment",
+    "Normal deletion/cleanup/Apple activation or configure_customer_deletion RPC",
+    "Apple exchange/revoke or other provider call",
+    "Email/SMS/push/test customer/reviewer account actions",
+    "Offline age/archive/B2/restic/WAL-G credential reads or decryption in this first setup",
+    "Backup download/restore/schedule/retention change",
+    "Existing Auth secret/key/session change",
+    "Dev/main push/build upload/submission/publication",
+    "Pre-normalization of active override or extra Functions restart"
+  ],
+  "laterGates": [
+    "Next genuine post-install03:15Kuwait original B2 receipt and separately approved selected-three-file verification",
+    "Owner-held archive contents/current B2 recovery credential binding",
+    "Source-specific dev/main/CI promotion and immutable artifact validation after approved build",
+    "Actual feature release/activation/production acceptance",
+    "Separate App Store upload/submission/public release"
+  ],
+  "installMap": {
+    "apple_cleanup_renewal.py": {
+      "destination": "/usr/local/lib/barber-release/apple_cleanup_renewal.py",
+      "mode": "0755"
+    },
+    "apple_cleanup_bootstrap.py": {
+      "destination": "/usr/local/lib/barber-release/apple_cleanup_bootstrap.py",
+      "mode": "0755"
+    },
+    "apple_cleanup_recovery.py": {
+      "destination": "/usr/local/lib/barber-release/apple_cleanup_recovery.py",
+      "mode": "0755"
+    },
+    "apple-cleanup-renewal.config.example.json": {
+      "destination": "/etc/barber-release/apple-cleanup-renewal/config.json",
+      "mode": "0600"
+    },
+    "barber-apple-cleanup-renewal.service": {
+      "destination": "/etc/systemd/system/barber-apple-cleanup-renewal.service",
+      "mode": "0644"
+    },
+    "barber-apple-cleanup-renewal.timer": {
+      "destination": "/etc/systemd/system/barber-apple-cleanup-renewal.timer",
+      "mode": "0644"
+    },
+    "barber-apple-cleanup-monitor.service": {
+      "destination": "/etc/systemd/system/barber-apple-cleanup-monitor.service",
+      "mode": "0644"
+    },
+    "barber-apple-cleanup-monitor.timer": {
+      "destination": "/etc/systemd/system/barber-apple-cleanup-monitor.timer",
+      "mode": "0644"
+    }
+  },
+  "supersedesSetupManifestSHA256": "51031d3a3401d573b4e64705019dc0113132b91836a34f0927bdda82e68696ef",
+  "diagnosticReceiptSHA256": "2d29e81b2c9fff12a4c590f8c5fee0f104dd9540e3f251dd75c444e6f3b97b02"
+}

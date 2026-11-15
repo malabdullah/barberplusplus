@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_IMPLEMENTATION_FOR_INDEPENDENT_REVIEW_NO_PRODUCTION_EXECUTION",
+  "approvedProposalSHA256": "b59898058f5c7b5464981be5114225bc03675291cecf9a2bd7f46c74441b05cc",
+  "humanApprovalMessage": "01a1d91a-0431-7672-986f-bff3357c1889",
+  "files": {
+    "transfer_public.py": "d848e5dfd86c22567cdbf23946ef0af3d0f67d1fa3c677ad49c0f03eed5dc53b",
+    "run_setup.py": "0a18c5f1f8a3e22c2e797d96be9bdef37737d91ccd3139ab4c2f9656185f9e2c",
+    "test_execution.py": "c9d065bad7207ac73ac79ce208b72e24b1aca0f9044f25c634224d00f985963a",
+    "scope.md": "894a833269bddd6c033b391cbea1aa23a4a063aa31d65bbfef1c276b0ae12887",
+    "test-results.json": "ed84ec7619314e066d1ec6b7ddd3e4366ee44365b0c462e9876776c03a01f399"
+  },
+  "preparedAtUTC": "2026-11-14T08:18:59.686965+00:00",
+  "accessOpened": false,
+  "runtimeSourceChanged": false
+}

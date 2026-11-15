@@ -1,0 +1,18 @@
+{
+  "status": "PASS_SYNTHETIC_ONLY",
+  "tests": 21,
+  "failures": 0,
+  "errors": 0,
+  "command": "python3 -m unittest discover -s artifacts/customer-deletion-release-preparation-2026-11-14/binding-diagnostic-review -p 'test_inspect_bindings.py' -v",
+  "realProductionAccess": false,
+  "realDockerOrCompose": false,
+  "realPrivateSourceOrKeyReads": false,
+  "existingRuntimeOrSourceChanges": false,
+  "initialFixtureCorrection": "Initial two filesystem tests stopped at canonical-parent guard because macOS temporary path used /var symlink. Test fixture paths were resolved; source guard unchanged; all21 pass on rerun.",
+  "limitations": [
+    "Docker Go template not executed against real Docker",
+    "Compose hashing mocked",
+    "No server configuration inspected",
+    "No crypto/systemd/backup/provider verification"
+  ]
+}

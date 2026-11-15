@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "kind": "EXACT_SOURCE_REHEARSAL_NOT_PRODUCTION_RELEASE",
+  "completedAtUTC": "2026-11-14T01:34:00.349282+00:00",
+  "sourceCommit": "e32cfb9105c2652fab8c2065af7280bf7dc76ec9",
+  "sourceUnchanged": true,
+  "reviewManifestSha256": "9bde582ac5558ad6a4e026b47520ec454192cb41f8fbabc8fb3f418ec6b22bd7",
+  "status": "PASS",
+  "sqlSuites": 48,
+  "sqlAssertions": 1144,
+  "edgeWorkers": 16,
+  "selectedBaselineDifferences": 0,
+  "publicSchemaMatched": true,
+  "platform": "linux/amd64",
+  "cleanupVerified": true,
+  "files": [
+    {
+      "path": "final-platform-results.json",
+      "sha256": "bc01e990de719755963548490f0ecb27d0787ee105ef6091edfaa2f774acdd32"
+    },
+    {
+      "path": "final-edge-results.json",
+      "sha256": "50c0a34c6158101bd84073e0c00d47ac06c90a85c782211e700248aa0dd9baa2"
+    },
+    {
+      "path": "final-cleanup-results.json",
+      "sha256": "916883e6bb73c3780b4f6d107b60aa18d639676e0831ad7675bd2f881d3b5842"
+    }
+  ],
+  "productionAccess": false,
+  "productionCredentialsOrRowsUsed": false,
+  "realAppleCalls": 0,
+  "realMessages": 0,
+  "publishedPorts": 0,
+  "existingTestReset": false,
+  "devMainPush": false,
+  "policyPublication": false,
+  "remainingGates": [
+    "Live Apple credential/client verification and renewal/key recovery setup",
+    "public privacy/support and native disclosure acceptance",
+    "fresh Live migration-ledger/runtime/backups/cron readiness during separately approved release",
+    "dev/main/production release approval and actual deployment verification",
+    "native upload/submission/public release approval separately"
+  ]
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Apple cleanup pair renewal with missed-run catch-up
+
+[Timer]
+OnCalendar=*-*-* 01:20:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+Unit=barber-apple-cleanup-renewal.service
+
+[Install]
+WantedBy=timers.target

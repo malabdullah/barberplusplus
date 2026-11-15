@@ -1,0 +1,17 @@
+{
+  "environment": "production",
+  "teamId": "D49RFZQ6BT",
+  "keyId": "G2ANJ69763",
+  "keyFile": "/etc/barber-release/apple-renewal/signing-key.p8",
+  "overrideFile": "/etc/barber-release/prepared-backend-runtime.override.json",
+  "composeDirectory": "/root/supabase/docker",
+  "composeFile": "/root/supabase/docker/docker-compose.yml",
+  "stateDirectory": "/etc/barber-release/apple-cleanup-renewal/state",
+  "backendLockFile": "/var/lib/barber-release-backend/backend.lock",
+  "imageIds": {
+    "supabase-edge-functions": "sha256:2781daf92394db91f7e94129cc3d04ec474ad16a8fe64b3fbeef6e7d557ab120",
+    "supabase-auth": "sha256:385184459f57569c54c25209f51f3b2be99ddd7c4ce9e3555b5d3eea8447b7cf",
+    "supabase-db": "sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+    "supabase-storage": "sha256:c8eb9858eafec891a97c27125470aaad54703c3f4eb4d55ca7f1bf6c6411febf"
+  }
+}

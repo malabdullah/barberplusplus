@@ -13,7 +13,7 @@
     "run_worker_first": true,
     "not_found_handling": "single-page-application"
   },
-  "observability": {"enabled": true, "head_sampling_rate": 0.1},
+  "observability": {"enabled": true, "head_sampling_rate": 0.1, "redact_query_string": true},
   "vars": {
     "APP_URL": "https://barber-test.alabdullah-cs.workers.dev",
     "SUPABASE_URL": "https://qvkucvcjmojjbphlzlks.supabase.co",

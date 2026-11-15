@@ -1,0 +1,8 @@
+{
+  "status": "LOCAL_SOURCE_CLARIFICATION_SUPPLEMENT",
+  "baseManifestSHA256": "c1392d3f5ae5b589a063f6533df32d62eb791d99ee2e6cf6c96e72eb89e5aff1",
+  "files": {
+    "reviewer-proof-checkout-clarification.json": "bf5f4a7c28212ac0d5761f7bbdbb23d637c8d288617f025e63b55f19b41fe379"
+  },
+  "priorFrozenFilesUnchanged": true
+}

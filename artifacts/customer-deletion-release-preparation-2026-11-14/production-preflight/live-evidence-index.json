@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "status": "READ_ONLY_RESULT_AND_NEXT_PLAN_NO_EXECUTION_APPROVAL",
+  "files": {
+    "live-metadata-result.json": "f96fabf0f0596fc41307e603334745da83e5ee224fa8ea465eb579dccc2ae104",
+    "live-preflight-receipt.json": "30871421c5df4f552f14c5dfb8882adaff2eb68ada5d564625def328674b1eb7",
+    "live-preflight-report.md": "3f1207171a1a9c154ca6276f8ff9249c7d0fff0eeca9eed7b1ea7b8233e7d596",
+    "next-production-plan.md": "edfcb0fa0e4d30d84873ddb5491bd24decee51bbc8bc8b54707dbdf9bee6c60a"
+  },
+  "frozenProposalUnchanged": true
+}

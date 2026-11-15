@@ -1,0 +1,14 @@
+.ca-deletion-bookings { list-style: none; padding: 0; margin: 1.5rem 0; max-height: 18rem; overflow: auto; }
+.ca-deletion-bookings li { display: grid; gap: .35rem; padding: 1rem 0; border-bottom: 1px solid var(--surface-divider); }
+.ca-deletion-bookings span { color: var(--text-secondary); }
+.ca-deletion-confirm { display: flex; align-items: flex-start; gap: .75rem; margin-block: 1.5rem; }
+.ca-deletion-confirm input { width: 1.1rem; height: 1.1rem; margin-top: .15rem; flex-shrink: 0; accent-color: var(--accent); }
+.customer-booking .ca-delete-action { color: #b42318; background: transparent; border-color: currentColor; }
+.customer-booking .ca-delete-action:hover:not(:disabled) { color: #b42318; }
+[data-theme="dark"] .customer-booking .ca-delete-action { color: #ff9d95; }
+.ca-deletion-apple { border-block: 1px solid var(--surface-divider); padding-block: 1rem; margin-block: 1rem; }
+.ca-deletion-apple h2 { font-family: inherit; font-size: 1.05rem; margin: 0 0 .5rem; }
+.ca-deletion-apple-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
+.ca-deletion-apple-actions button { min-height: 48px; }
+.customer-booking .ca-deletion-apple-connect { background: #000; color: #fff; border-color: #000; }
+[data-theme="dark"] .customer-booking .ca-deletion-apple-connect { background: #fff; color: #000; border-color: #fff; }

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "146ac5051646664b35ec80fe51bdd0a032dbd767",
+  "status": "SYNTHETIC_PREPARATION_ONLY_PASS_NOT_EXECUTED_ON_LIVE",
+  "testsRun": 16,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "cases": [
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_any_activation_wrong_namespace_or_binding_refuses_generation",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_cleanup_refuses_unrecognized_file_in_exclusive_target",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_exact_selected_snapshot_files_match_and_plaintext_removed",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_existing_credential_names_even_empty_refuse_before_generation",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_existing_target_is_preserved_and_no_reader_runs",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_extra_manifest_paths_or_bad_hashes_refuse_reader",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_failed_read_or_hash_mismatch_cleans_only_owned_plaintext",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_inconsistent_recovery_key_fails_and_cleans_target",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_initial_transform_is_default_off_and_preserves_all_other_values",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_modules_have_no_implicit_cli_or_real_dependency_generation",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_partial_staging_blocks_retry_without_overwriting",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_pre_setup_stale_future_wrong_provider_or_snapshot_refuse_reader",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_sign_or_validation_failure_never_generates_key_or_stages",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_stage_is_exclusive_private_and_does_not_replace_live",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_unexpected_lifetime_or_invalid_key_is_rejected",
+      "status": "PASS"
+    },
+    {
+      "case": "apple_cleanup_preparation_test.PreparationTests.test_unsafe_or_symlink_parent_blocks_staging",
+      "status": "PASS"
+    }
+  ],
+  "nodeCIWrapper": "PASS_1_WRAPPING_SAME_16_CASES",
+  "pythonAST": "PASS",
+  "realSigningEntropyCommandsReaders": "NOT_USED_INJECTED_DETERMINISTIC_SYNTHETIC_ONLY",
+  "credentialsGeneratedOrRead": false,
+  "networkOrProviderCalls": false,
+  "newDockerRuntime": false,
+  "remoteInstallOrBackupRecovery": false,
+  "hostedDeployment": "NOT_APPLICABLE_OPERATOR_PREPARATION_ONLY",
+  "actualBootstrapAndResticRunnerExecution": "NOT_PERFORMED_REQUIRES_LATER_SCOPE_APPROVAL",
+  "unknownCustody": "STILL_PENDING_EITHER_EXISTING_HUMAN_REPLY"
+}

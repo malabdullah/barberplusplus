@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "OWNER_REPORTED_ARCHIVE_OPENABILITY_ONLY",
+  "verifiedSource": {
+    "hostId": "local",
+    "threadId": "01a1963b-130e-76c3-9d8e-ba685a06f65a",
+    "userMessageId": "01a1d8d7-7a9f-7041-b58f-bdaf932e4b6e",
+    "userText": "PASS: this key opens the selected archive.",
+    "precedingOtherEntryConfirmationId": "01a1d8d6-6a5d-7a40-896c-e6c72c991ee9",
+    "precedingInstructionSelectedArchive": "automated-backup-keys.tar.age"
+  },
+  "agentReadOrReceivedPrivateIdentityOrArchiveContents": false,
+  "agentRanDecryption": false,
+  "ownerReportedOtherSavedIdentityAvailable": true,
+  "ownerReportedSelectedArchiveOpens": true,
+  "archiveContentsIdentified": false,
+  "currentB2CredentialBindingVerified": false,
+  "postSetupSelectedFileRecoveryVerified": false,
+  "productionKeySetupAccessOrDeploymentApproved": false,
+  "secondArchiveTestRequired": false
+}

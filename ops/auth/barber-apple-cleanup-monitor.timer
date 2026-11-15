@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly metadata-only Apple cleanup expiry monitoring
+
+[Timer]
+OnCalendar=*-*-* *:40:00 UTC
+Persistent=true
+Unit=barber-apple-cleanup-monitor.service
+
+[Install]
+WantedBy=timers.target
