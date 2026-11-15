@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CustomerAuthLayout from '../components/Customer/CustomerAuthLayout';
 import { administratorsService as api } from '../services/administrators.service';
@@ -13,19 +13,23 @@ function readInvitation() {
       sessionStorage.setItem('barber-admin-invite', JSON.stringify(value));
       return value;
     }
-    return JSON.parse(sessionStorage.getItem('barber-admin-invite')) || null;
+    const stored = JSON.parse(sessionStorage.getItem('barber-admin-invite'));
+    return stored && (!id || stored.id === id) ? stored : null;
   } catch { return null; }
 }
 export default function AcceptAdminInvitation() {
   const { t } = useTranslation();
   const tr = key => t('administrators.' + key);
-  const [invite] = useState(readInvitation), [details, setDetails] = useState(null), [session, setSession] = useState(null);
+  const location = useLocation();
+  const invite = useMemo(readInvitation, [location.search, location.hash]);
+  const [details, setDetails] = useState(null), [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [done, setDone] = useState(false);
   const [password, setPassword] = useState(''), [confirm, setConfirm] = useState('');
   const flight = useRef(false);
   const errorText = code => tr('errors.' + (['INVITE_INVALID', 'INVITE_USED', 'INVITE_CANCELLED', 'INVITE_EXPIRED', 'INVITE_PROCESSING', 'EMAIL_IN_USE', 'WEAK_PASSWORD'].includes(code) ? code : 'UNAVAILABLE'));
   useEffect(() => {
     let active = true;
+    setLoading(true); setError(''); setDetails(null); setDone(false); setPassword(''); setConfirm('');
     if (!invite) { setError('INVITE_INVALID'); setLoading(false); return; }
     window.history.replaceState(null, '', '/accept-admin-invite?invitation=' + encodeURIComponent(invite.id));
     Promise.all([api.resolve(invite), supabase.auth.getSession()]).then(([data, auth]) => {

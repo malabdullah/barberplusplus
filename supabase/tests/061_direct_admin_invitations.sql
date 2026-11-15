@@ -73,6 +73,12 @@ select throws_ok($$select public.manage_administrators('invite','{"name":"Forged
 select throws_ok($$select public.manage_administrators('edit','{"userId":"ad151500-0000-4000-8000-000000000006","name":"Forged","email":"forged@example.test"}')$$,'42501','SUPER_ADMIN_REQUIRED','Admin cannot edit another Admin');
 select throws_ok($$select public.manage_administrators('delete-prepare','{"userId":"ad151500-0000-4000-8000-000000000006"}')$$,'42501','SUPER_ADMIN_REQUIRED','Admin cannot delete another Admin');
 select set_config('request.jwt.claims','{"sub":"ad151500-0000-4000-8000-000000000001","session_id":"ad151500-0000-4000-8000-000000000021","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
+insert into auth.sessions(id,user_id)values('ad151500-0000-4000-8000-000000000035','ad151500-0000-4000-8000-000000000006');
+select set_config('direct.reset',public.begin_admin_password_reset('ad151500-0000-4000-8000-000000000001','ad151500-0000-4000-8000-000000000006')::text,true);
+select lives_ok($$select public.finish_admin_password_reset(current_setting('direct.reset')::uuid,'ad151500-0000-4000-8000-000000000001','ad151500-0000-4000-8000-000000000006')$$,'Super Admin completes a guarded Admin password reset');
+select ok(not exists(select 1 from auth.sessions where id='ad151500-0000-4000-8000-000000000035'),'Admin password reset ends existing sessions');
+select ok(exists(select 1 from private.account_revoked_sessions where session_id='ad151500-0000-4000-8000-000000000035'),'Admin password reset persistently detaches realtime');
+select ok(exists(select 1 from auth.sessions where id='ad151500-0000-4000-8000-000000000021'),'targeted reset preserves the Super Admin session');
 insert into auth.sessions(id,user_id)values('ad151500-0000-4000-8000-000000000036','ad151500-0000-4000-8000-000000000006');
 select set_config('direct.delete',public.manage_administrators('delete-prepare','{"userId":"ad151500-0000-4000-8000-000000000006"}')::text,true);
 select ok((select banned_until>now()from auth.users where id='ad151500-0000-4000-8000-000000000006'),'deletion blocks access before contacting Auth');
