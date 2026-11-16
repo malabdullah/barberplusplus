@@ -19,7 +19,8 @@ Deno.serve(createCustomerAuthHandler({
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
   cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
-    const result=await admin.rpc(action.startsWith('push-') ? 'customer_push_api' : action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:action,p_data:data});
+    const androidPush=action.startsWith('android-push-');
+    const result=await admin.rpc(androidPush ? 'customer_android_push_api' : action.startsWith('push-') ? 'customer_push_api' : action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:androidPush?action.slice(8):action,p_data:data});
     if(result.error)throw Error(result.error.message);
     if(action==='update-profile') {
       const changed=await admin.auth.admin.updateUserById(String(result.data.id),{user_metadata:{name:result.data.name}});
