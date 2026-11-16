@@ -33,8 +33,10 @@ redirect or cookie. They contain only signed/verified Test application identitie
 
 - iOS: `D49RFZQ6BT.com.barberplusplus.customer.test`, verified by coordinator from
   actual Test 0.2.0 (43) signing. Associated paths are restricted to `/book` entries.
-- Android: `com.barberplusplus.customer.test`; fingerprint must come from the
-  coordinator's accepted artifact. An empty association remains until supplied.
+- Android: `com.barberplusplus.customer.test`, verified actual Test APK 0.10.0 (10)
+  with the single v2 Android Debug signer reported by the coordinator. Certificate
+  SHA-256: `2B:7A:E1:06:E0:10:CF:B7:C9:4C:3B:0B:EA:36:20:5F:AB:66:35:BF:92:CF:DE:0A:AA:FB:EB:26:77:84:11:94`.
+  This is only the accepted local Test signer, with no Live/Play signing claim.
 
 No Live identity or `/booking/share` path is associated. The shared ticket stays a
 website view. The coordinator owns native assignments after current tasks finish;
