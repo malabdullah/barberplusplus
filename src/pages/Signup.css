@@ -6,6 +6,7 @@
   .signup-phone-wrapper .signup-country-select, .signup-phone-wrapper .signup-phone-input { width: 100%; flex: auto; }
 }
 .signup-error p { margin: 0; }
+.ca-auth .ca-panel .signup-email-divider { margin: 0 0 24px; }
 .signup-error a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: inherit; font-weight: 600; text-decoration: underline; }
 .signup-error { color: #b42318; }
 [data-theme='dark'] .signup-error { color: #ffaaa0; }

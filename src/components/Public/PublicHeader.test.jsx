@@ -122,7 +122,8 @@ describe('simple public navigation', () => {
     const customers = header().getByRole('group', { name: 'Customers' });
     const shops = header().getByRole('group', { name: 'Shops' });
     expect(within(customers).getAllByRole('link')).toHaveLength(2);
-    expect(within(shops).getAllByRole('link')).toHaveLength(1);
+    expect(within(shops).getAllByRole('link')).toHaveLength(2);
+    expect(within(shops).getByRole('link', { name: 'Shop features' })).toHaveAttribute('href', '/for-shops');
     expect(within(customers).queryByRole('button')).not.toBeInTheDocument();
     expect(within(shops).queryByRole('button')).not.toBeInTheDocument();
   });

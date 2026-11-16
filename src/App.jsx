@@ -6,6 +6,7 @@ import Layout from './components/Layout/Layout';
 import BarberLayout from './components/Layout/BarberLayout';
 import AdminLayout from './components/Layout/AdminLayout';
 import Landing from './pages/Landing';
+const ForShops = lazy(() => import('./pages/ForShops'));
 import PublicLayout from './components/Public/PublicLayout';
 import Login from './pages/Login';
 import AcceptAdminInvitation from './pages/AcceptAdminInvitation';
@@ -179,6 +180,7 @@ function AppRoutes() {
       <Route path="/customer/activity" element={<AccountTools view="activity" customer />} />
       <Route path="/privacy" element={<Suspense fallback={null}><CustomerPrivacy /></Suspense>} />
       {/* Landing Page - Public */}
+      <Route path="/for-shops" element={<Suspense fallback={null}><ForShops /></Suspense>} />
       <Route
         path="/"
         element={<Landing />}
