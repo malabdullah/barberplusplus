@@ -179,6 +179,8 @@
     "resetPassword": "إعادة تعيين كلمة المرور",
     "createAccount": "إنشاء حساب",
     "haveAccount": "لديك حساب بالفعل؟",
+    "managerSocialSignInHint": "لديك حساب بالفعل؟ سجّل الدخول باستخدام حساب Google أو Apple المرتبط به.",
+    "managerEmailRegistration": "أنشئ حساباً جديداً بالبريد الإلكتروني",
     "noAccount": "ليس لديك حساب؟",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",

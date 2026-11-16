@@ -9,11 +9,16 @@ import ar from '../i18n/locales/ar.json';
 import Signup from './Signup';
 const signup = vi.hoisted(() => vi.fn());
 const verification = vi.hoisted(() => ({ status: vi.fn(), resend: vi.fn() }));
+const social = vi.hoisted(() => ({ socialProviders: vi.fn(), startSocial: vi.fn() }));
+vi.mock('../services/teamAuth.service', () => ({ teamAuthService: social }));
+vi.mock('../services/customerAuth.service', () => ({ customerAuthService: {} }));
 vi.mock('../services/registration.service', () => ({ registrationService: verification }));
 vi.mock('../context/AppContext', () => ({ useApp: () => ({ signup }) }));
 let i18n;
 beforeEach(async () => {
   sessionStorage.clear();
+  social.socialProviders.mockReset().mockResolvedValue({ google: true, apple: true });
+  social.startSocial.mockReset().mockResolvedValue(undefined);
   verification.status.mockReset().mockResolvedValue({ verified: false }); verification.resend.mockReset().mockResolvedValue({ verified: false, resent: true, receipt: 'renewed', expiresAt: Date.now()+86400000, resendAt: Date.now()+60000 });
   signup.mockReset().mockResolvedValue({ success: true, confirmationRequired: true, email: 'manager-qa@example.test', receipt: 'signed-receipt', expiresAt: Date.now()+86400000, resendAt: Date.now()-1 });
   i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: { en: { translation: en }, ar: { translation: ar } }, interpolation: { escapeValue: false } });
@@ -35,6 +40,25 @@ it.each(['en', 'ar'])('shows a focused existing-account error and sign-in link i
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 afterEach(cleanup);
+it.each(['google', 'apple'])('offers existing linked %s sign-in and preserves email registration after a provider failure', async provider => {
+  let rejectProvider;
+  social.startSocial.mockImplementation(() => new Promise((_, reject) => { rejectProvider = reject; }));
+  render(<I18nextProvider i18n={i18n}><MemoryRouter><Signup /></MemoryRouter></I18nextProvider>);
+  expect(screen.getByText(en.auth.managerSocialSignInHint)).toBeInTheDocument();
+  expect(screen.getByText(en.auth.managerEmailRegistration)).toBeInTheDocument();
+  fireEvent.change(document.getElementById('name'), { target: { value: 'QA Manager' } });
+  const button = await screen.findByRole('button', { name: en.customerAuth.social[provider] });
+  await vi.waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+  expect(social.startSocial).toHaveBeenCalledWith(provider, undefined);
+  expect(document.getElementById('name')).toBeDisabled();
+  fireEvent.submit(document.querySelector('form'));
+  expect(signup).not.toHaveBeenCalled();
+  rejectProvider(new Error('provider unavailable'));
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.customerAuth.errors.SOCIAL_SIGN_IN_FAILED);
+  expect(document.getElementById('name')).toBeEnabled();
+  expect(document.getElementById('name')).toHaveValue('QA Manager');
+});
 it('names the manager account, provides a sign-in return and rejects an invalid phone before signup', async () => {
   render(<I18nextProvider i18n={i18n}><MemoryRouter><Signup /></MemoryRouter></I18nextProvider>);
   expect(screen.getByRole('heading', { name: en.auth.createManagerAccount })).toBeInTheDocument();

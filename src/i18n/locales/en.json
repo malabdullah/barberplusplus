@@ -254,6 +254,8 @@
     "resetPassword": "Reset Password",
     "createAccount": "Create Account",
     "haveAccount": "Already have an account?",
+    "managerSocialSignInHint": "Already registered? Sign in with your linked Google or Apple account.",
+    "managerEmailRegistration": "Create a new account with email",
     "noAccount": "Don't have an account?",
     "email": "Email Address",
     "password": "Password",
