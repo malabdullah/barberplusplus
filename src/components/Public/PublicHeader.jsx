@@ -75,6 +75,7 @@ export default function PublicHeader() {
     <CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} />
   </> : <NavigationLink to="/customer/sign-in" state={{ returnTo }} aria-current={location.pathname === '/customer/sign-in' ? 'page' : undefined}>{t('publicNav.customerSignIn')}</NavigationLink>;
   const shopLinks = <>
+    <NavigationLink to="/for-shops" aria-current={location.pathname === '/for-shops' ? 'page' : undefined}>{t('publicNav.shopFeatures')}</NavigationLink>
     <NavigationLink to="/login">{t('publicNav.teamSignIn')}</NavigationLink>
   </>;
   const bookLink = <NavigationLink to="/book" className="public-book-link" aria-current={location.pathname === '/book' ? 'page' : undefined}>{t('publicNav.book')}</NavigationLink>;

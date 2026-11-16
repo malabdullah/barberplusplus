@@ -11,6 +11,8 @@ import './Signup.css';
 import { registrationService } from '../services/registration.service';
 import { pendingRegistration, rememberRegistration, forgetRegistration } from '../lib/pendingRegistration';
 import RegistrationEmailCorrection from '../components/Customer/RegistrationEmailCorrection';
+import CustomerSocialButtons from '../components/Customer/CustomerSocialButtons';
+import { teamAuthService } from '../services/teamAuth.service';
 
 export default function Signup() {
   const { t } = useTranslation();
@@ -30,6 +32,7 @@ export default function Signup() {
   const [emailAlreadyLinked, setEmailAlreadyLinked] = useState(false);
   const errorRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [socialBusy, setSocialBusy] = useState(false);
   const [registration, setRegistration] = useState(pendingRegistration);
   const [verificationBusy, setVerificationBusy] = useState('');
   const [correctionBusy, setCorrectionBusy] = useState(false);
@@ -39,7 +42,7 @@ export default function Signup() {
   const [clock, setClock] = useState(Date.now);
   const verificationPending = useRef(false);
   const cooldown = Math.max(0, Math.ceil(((registration?.resendAt || 0) - clock) / 1000));
-  usePublicNavigationBusy(isLoading || Boolean(verificationBusy) || correctionBusy);
+  usePublicNavigationBusy(isLoading || socialBusy || Boolean(verificationBusy) || correctionBusy);
   useEffect(() => {
     if (!registration?.confirmationRequired || verified) return undefined;
     const timer = window.setInterval(() => setClock(Date.now()), 1000);
@@ -126,7 +129,7 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isLoading || socialBusy) return;
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -196,11 +199,13 @@ export default function Signup() {
       </>}
       <Link className={verified || !registration.confirmationRequired ? 'cb-primary' : 'signup-sign-in'} to="/login" onClick={event => { if (verificationBusy || correctionBusy) event.preventDefault(); }} aria-disabled={Boolean(verificationBusy) || correctionBusy}>{t('auth.signIn')}<ArrowRight size={18} aria-hidden="true" /></Link>
     </div> : <>
+      <CustomerSocialButtons authService={teamAuthService} disabled={isLoading} onBusyChange={setSocialBusy} hint={t('auth.managerSocialSignInHint')} hideDivider />
+      <p className="ca-social-divider signup-email-divider">{t('auth.managerEmailRegistration')}</p>
       {(error || emailAlreadyLinked) && <div ref={errorRef} className="cb-alert signup-error" role="alert" tabIndex={-1}>
         <p>{emailAlreadyLinked ? t('auth.registrationEmailLinked') : error}</p>
         {emailAlreadyLinked && <Link to="/login">{t('auth.registrationExistingSignIn')}</Link>}
       </div>}
-      <form onSubmit={handleSubmit} noValidate><fieldset className="cb-details-fields" disabled={isLoading}>
+      <form onSubmit={handleSubmit} noValidate><fieldset className="cb-details-fields" disabled={isLoading || socialBusy}>
         <div className="ca-field"><label className="cb-field-label" htmlFor="name">{t('common.fullName')}</label><input className="cb-input" id="name" name="name" value={formData.name} onChange={handleChange} autoComplete="name" minLength={2} maxLength={120} required /></div>
         <div className="ca-field"><label className="cb-field-label" htmlFor="email">{t('common.email')}</label><input className="cb-input" id="email" name="email" type="email" dir="ltr" value={formData.email} onChange={handleChange} autoComplete="email" maxLength={254} required /></div>
         <div className="ca-field"><label className="cb-field-label" htmlFor="phone">{t('auth.phoneNumber')}</label><div className="signup-phone-wrapper">
@@ -210,7 +215,7 @@ export default function Signup() {
         {passwordField('password', t('auth.password'), showPassword, setShowPassword)}
         {passwordField('confirmPassword', t('auth.confirmPassword'), showConfirmPassword, setShowConfirmPassword)}
         <p className="cb-helper ca-password-hint">{t('customerAuth.passwordRules')}</p>
-        <button type="submit" className="cb-primary ca-submit" disabled={isLoading}>{isLoading && <Loader2 size={18} className="cb-spinner" aria-hidden="true" />}{t(isLoading ? 'auth.creatingAccount' : 'auth.createAccount')}</button>
+        <button type="submit" className="cb-primary ca-submit" disabled={isLoading || socialBusy}>{isLoading && <Loader2 size={18} className="cb-spinner" aria-hidden="true" />}{t(isLoading ? 'auth.creatingAccount' : 'auth.createAccount')}</button>
       </fieldset></form>
     </>}
     {!registration && <p className="ca-switch">{t('auth.haveAccount')} <Link to="/login">{t('auth.signIn')}</Link></p>}
