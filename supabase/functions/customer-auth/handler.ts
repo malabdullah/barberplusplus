@@ -3,6 +3,7 @@ import { customerPasswordAction, type PasswordDependencies } from './password.ts
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 import { managerRegistrationAction, type RegistrationDependencies } from './registration.ts';
 import { emailManagementAction, type EmailManagementDependencies } from './email-management.ts';
+import { nativeEmailAction, type NativeEmailDependencies } from './native-email.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Dependencies = {
@@ -23,6 +24,7 @@ type Dependencies = {
   passwords?: PasswordDependencies;
   registration?: RegistrationDependencies;
   emailManagement?: EmailManagementDependencies;
+  nativeEmail?: NativeEmailDependencies;
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,6 +57,14 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       let body: Data;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return reply(400,{error:'INVALID_REQUEST'});}
       if(!body || typeof body!=='object' || Array.isArray(body)) return reply(400,{error:'INVALID_REQUEST'});
       const action=String(body.action);
+      if (['email-signup','email-resend'].includes(action) && body.client !== undefined && !['web','ios','android'].includes(String(body.client))) return reply(400,{error:'INVALID_REQUEST'});
+      if (action.startsWith('email-native-') || (body.client==='android' && ['email-signup','email-resend'].includes(action))) {
+        if (!deps.nativeEmail) return reply(404,{error:'NOT_AVAILABLE'});
+        const result=await nativeEmailAction({action,body,environment:deps.environment,appUrl:deps.appUrl,publicUrl:deps.publicUrl,
+          ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',
+          limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max})),deps:deps.nativeEmail});
+        return result ? reply(result.status,result.body) : reply(400,{error:'INVALID_REQUEST'});
+      }
       if (['correct-registration-email','admin-email-list','admin-email-change'].includes(action)) {
         if (!deps.emailManagement) return reply(404,{error:'NOT_AVAILABLE'});
         const result=await emailManagementAction({action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',secret:deps.secret,appUrl:deps.appUrl,deps:deps.emailManagement,
@@ -76,7 +86,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const result = await customerPasswordAction({
           action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',
           ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',
-          environment:deps.environment,appUrl:deps.appUrl,identity:deps.identity,
+          environment:deps.environment,appUrl:deps.appUrl,publicUrl:deps.publicUrl,identity:deps.identity,
           limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max})),deps:deps.passwords,
         });
         if (result) return reply(result.status,result.body);

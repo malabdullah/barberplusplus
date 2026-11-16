@@ -100,6 +100,48 @@ Deno.serve(createCustomerAuthHandler({
       return result.data;
     },
   },
+  nativeEmail:{
+    rpc:async(action,data)=>{
+      const result=await admin.rpc('customer_native_email_api',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+    account:async(name,email,password)=>{
+      const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
+      if(lookup.error)throw Error('UNAVAILABLE');
+      if(lookup.data){
+        const current=await admin.auth.admin.getUserById(String(lookup.data.id));
+        if(current.error)throw Error('UNAVAILABLE');
+        return current.data.user?.app_metadata.role==='customer' && !current.data.user.email_confirmed_at ? current.data.user.id : null;
+      }
+      const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
+      if(created.error){
+        if(['email_exists','user_already_exists'].includes(String(created.error.code)))return null;
+        throw Error('UNAVAILABLE');
+      }
+      return created.data.user?.id || null;
+    },
+    send:async(email,callback)=>{
+      const result=await emailClient.auth.resend({type:'signup',email,options:{emailRedirectTo:callback}});
+      if(result.error)throw Error('UNAVAILABLE');
+    },
+    verify:async(params)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
+      const result=params.tokenHash ? await client.auth.verifyOtp({type:'signup',token_hash:params.tokenHash})
+        : await client.auth.verifyOtp({type:'email',email:params.email || '',token:params.code || ''});
+      if(result.error){
+        if(result.error.name==='AuthRetryableFetchError' || !result.error.status || result.error.status>=500)throw Error('UNAVAILABLE');
+        return null;
+      }
+      return result.data.session;
+    },
+    discard:async(token)=>{await admin.auth.admin.signOut(token,'local');},
+    profile:async(userId,session,name)=>{
+      const result=await admin.rpc('customer_account_api',{p_action:'email-ensure',p_data:{user_id:userId,session_id:session,name}});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+  },
   registration:{
     signup:async(input)=>{
       const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false,flowType:'implicit'}});

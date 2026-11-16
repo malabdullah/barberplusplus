@@ -1,3 +1,4 @@
+import { androidTestAuth, nativeBinding } from './native-binding.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Session = { access_token: string; refresh_token: string; user: { id: string; app_metadata: Record<string, unknown> } };
@@ -11,7 +12,7 @@ export type PasswordDependencies = {
 };
 type Context = {
   action: string; body: Data; token: string; ip: string;
-  environment: string; appUrl: string;
+  environment: string; appUrl: string; publicUrl?: string;
   identity: (token: string) => Promise<Identity | null>;
   limit: (key: string, max: number) => Promise<boolean>;
   deps: PasswordDependencies;
@@ -28,19 +29,6 @@ function nativeScheme(environment: string, appUrl: string) {
   if (environment === 'production' && appUrl === 'https://www.barberplusplus.com') return 'barberplusplus';
   return null;
 }
-async function nativeBinding(body: Data, verification: boolean) {
-  if (body.client !== undefined && body.client !== 'ios' && body.client !== 'web') throw Error('INVALID_REQUEST');
-  if (body.client !== 'ios') return { client:'web' };
-  if (!uuid.test(String(body.nativeState))) throw Error('INVALID_REQUEST');
-  let challenge = String(body.nativeChallenge || '');
-  if (verification) {
-    if (typeof body.nativeVerifier !== 'string' || !/^[A-Za-z0-9_-]{43,128}$/.test(body.nativeVerifier)) throw Error('INVALID_CODE');
-    const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(body.nativeVerifier)));
-    challenge = btoa(String.fromCharCode(...bytes)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  }
-  if (!/^[A-Za-z0-9_-]{43}$/.test(challenge)) throw Error('NATIVE_CLIENT_UPDATE_REQUIRED');
-  return { client:'ios',native_state:body.nativeState,native_challenge:challenge };
-}
 export async function customerPasswordAction(c: Context): Promise<{ status: number; body: Data } | null> {
   if (!methods.has(c.action)) return null;
   const reply = (status: number, body: Data) => ({status,body});
@@ -49,8 +37,10 @@ export async function customerPasswordAction(c: Context): Promise<{ status: numb
   };
   if (c.action==='password-native-delivery') {
     if (!nativeScheme(c.environment,c.appUrl) || !uuid.test(String(c.body.requestId)) || !uuid.test(String(c.body.nativeState)) || typeof c.body.tokenHash!=='string') throw Error('INVALID_CODE');
+    const client = c.body.client === undefined ? 'ios' : c.body.client;
+    if (!['ios', 'android'].includes(String(client)) || (client === 'android' && !androidTestAuth(c))) throw Error('INVALID_REQUEST');
     await limited(String(c.body.requestId),10);
-    return reply(200,await c.deps.rpc('request-delivery',{request_id:c.body.requestId,native_state:c.body.nativeState,token_hash:c.body.tokenHash}));
+    return reply(200,await c.deps.rpc('request-delivery',{request_id:c.body.requestId,native_state:c.body.nativeState,token_hash:c.body.tokenHash,client}));
   }
   if (c.action === 'email-recovery' || c.action === 'password-setup-request') {
     const setup = c.action === 'password-setup-request';
@@ -58,7 +48,7 @@ export async function customerPasswordAction(c: Context): Promise<{ status: numb
     if (setup && !identity) throw Error('AUTH_REQUIRED');
     const email = typeof c.body.email === 'string' ? c.body.email.trim().toLowerCase() : '';
     if (!setup && (email.length>254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email))) throw Error('INVALID_DETAILS');
-    const native = await nativeBinding(c.body,false);
+    const native = await nativeBinding(c.body,false,c);
     if (native.client === 'ios' && !nativeScheme(c.environment,c.appUrl)) throw Error('INVALID_REQUEST');
     await limited(identity?.user_id || email);
     const requestId = crypto.randomUUID();
@@ -66,18 +56,19 @@ export async function customerPasswordAction(c: Context): Promise<{ status: numb
     const callback = new URL('/customer/email-callback',c.appUrl);
     callback.searchParams.set('next',c.body.returnTo==='/book'?'book':c.body.audience==='work'?'work':'account');
     callback.searchParams.set('request_id',requestId);
-    if (native.client==='ios') { callback.searchParams.set('client','ios');callback.searchParams.set('state',String(native.native_state)); }
+    if (native.client!=='web') { callback.searchParams.set('client',String(native.client));callback.searchParams.set('state',String(native.native_state)); }
     if (request.deliver) await c.deps.sendRecovery(String(request.email),callback.href);
     await c.deps.rpc('request-ready',{request_id:requestId});
     return reply(200,{success:true,requestId,expiresIn:3600,...(setup?{email:request.email}:{})});
   }
   if (c.action === 'password-recovery-verify') {
     if (!uuid.test(String(c.body.requestId))) throw Error('INVALID_CODE');
-    const native = await nativeBinding(c.body,true);
+    const native = await nativeBinding(c.body,true,c);
     if (native.client==='ios' && !nativeScheme(c.environment,c.appUrl)) throw Error('INVALID_CODE');
     await limited(String(c.body.requestId),10);
     const delivery = c.body.deliveryToken;
-    if (delivery!==undefined && (native.client!=='ios' || !uuid.test(String(delivery)))) throw Error('INVALID_CODE');
+    if (delivery!==undefined && (native.client==='web' || !uuid.test(String(delivery)))) throw Error('INVALID_CODE');
+    if (native.client==='android' && (c.body.tokenHash !== undefined || Boolean(delivery) === Boolean(c.body.code))) throw Error('INVALID_CODE');
     const request = await c.deps.rpc('request-load',{request_id:c.body.requestId,...native,...(delivery?{delivery_token:delivery}:{})});
     const code = c.body.code;
     const tokenHash = c.body.tokenHash;

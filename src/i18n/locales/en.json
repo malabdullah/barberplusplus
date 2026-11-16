@@ -2136,6 +2136,9 @@
     "inviteExpired": "Open the full invitation from your latest email. If it has expired, ask your shop manager to resend it.",
     "openAppTitle": "Continue in Barber++",
     "openAppIntro": "Open the app on the same iPhone that requested this email.",
+    "androidOpenTitle": "Continue in Barber++ Test",
+    "androidOpenIntro": "Open the app on the same Android device that requested this email.",
+    "androidFallback": "Open Barber++ Test and enter the code from your email.",
     "openApp": "Open Barber++ app",
     "errors": {
       "AUTH_REQUIRED": "Please sign in to manage your password.",
