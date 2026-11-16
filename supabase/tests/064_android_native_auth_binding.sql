@@ -1,4 +1,5 @@
 begin;
+create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
 -- Disposable transaction-only identities; no mail, provider authorization or application fixtures.

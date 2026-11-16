@@ -48,7 +48,7 @@ def render(source):
     statements = split_top(source, ';')
     body, count = [], 0
     for statement in statements:
-        if statement in ('begin', 'rollback', 'select no_plan()', 'select * from finish()') or statement.startswith('set local search_path='):
+        if statement in ('begin', 'rollback', 'select no_plan()', 'select * from finish()', 'create extension if not exists pgtap with schema extensions') or statement.startswith('set local search_path='):
             continue
         match = re.fullmatch(r'select (ok|is|throws_ok|lives_ok)\((.*)\)', statement, re.S)
         if not match:
