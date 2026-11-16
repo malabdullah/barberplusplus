@@ -1243,7 +1243,7 @@ ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "j
 CREATE OR REPLACE FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare r private.customer_native_email_requests;person auth.users;rid uuid:=nullif(p_data->>'request_id','')::uuid;delivery uuid;op uuid;secs integer;
 begin
  if p_action='start' then
@@ -1314,8 +1314,9 @@ begin
   return jsonb_build_object('userId',r.user_id,'email',r.email,'tokenHash',r.token_hash,'operation',op);
  end if;
  raise exception 'INVALID_REQUEST';
-end$$;
+end$_$;
 ALTER FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+COMMENT ON FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") IS 'Service-only Android native signup binding. Test activation only; device verifier and provider OTP are both required. No browser session handoff.';
 CREATE OR REPLACE FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3848,10 +3849,10 @@ REVOKE ALL ON FUNCTION "public"."customer_deletion_service"("p_action" "text", "
 GRANT ALL ON FUNCTION "public"."customer_deletion_service"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
-REVOKE ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
