@@ -1,7 +1,7 @@
 import { androidTestAuth } from '../customer-auth/native-binding.ts';
 import { FCM_PACKAGE, FCM_PROJECT, validCredential, type AndroidJob, type Credential, type Outcome } from './fcm.ts';
 type Configuration = { apiUrl: string; projectId: string; packageName: string; mode: string; credential: Credential | null };
-type Dependencies = { environment: string; appUrl: string; publicUrl: string; serviceKey: string;
+type Dependencies = { environment: string; appUrl: string; publicUrl: string; authorizeService: (token: string) => Promise<boolean>;
   configuration: () => Promise<Configuration>; claim: () => Promise<AndroidJob[]>;
   validate: (job: AndroidJob) => Promise<boolean>; finish: (job: AndroidJob, outcome: Outcome) => Promise<void>;
   token: (credential: Credential) => Promise<string>; send: (job: AndroidJob, token: string) => Promise<Outcome> };
@@ -10,11 +10,11 @@ export function createAndroidPushDispatcher(deps: Dependencies) {
   return async (request: Request) => {
     if (!androidTestAuth(deps)) return reply(503, { error: 'PUSH_NOT_CONFIGURED' });
     const bearer = request.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
-    if (request.method !== 'POST' || deps.serviceKey.length < 32 || bearer.length > 4096) return reply(403, { error: 'FORBIDDEN' });
-    const digest = async (value: string) => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
-    const a = await digest(bearer), b = await digest(deps.serviceKey);
-    let difference = 0; for (let i = 0; i < a.length; i++) difference |= a[i] ^ b[i];
-    if (difference) return reply(403, { error: 'FORBIDDEN' });
+    if (request.method !== 'POST' || !/^[A-Za-z0-9._-]{32,4096}$/.test(bearer)) return reply(403, { error: 'FORBIDDEN' });
+    // Verify the credential with its issuing Test backend and service-only ACL.
+    // A valid older service JWT need not byte-match the managed runtime key.
+    try { if (await deps.authorizeService(bearer) !== true) return reply(403, { error: 'FORBIDDEN' }); }
+    catch { return reply(403, { error: 'FORBIDDEN' }); }
     let stage = 'configuration';
     try {
       const config = await deps.configuration();

@@ -825,6 +825,12 @@ CREATE OR REPLACE FUNCTION "public"."customer_android_push_dispatch"("p_action" 
 declare runtime private.customer_android_push_runtime;j private.customer_android_push_deliveries;d private.customer_android_push_devices;
  candidate_allowed jsonb:=p_data->'allowed';entry jsonb;credential jsonb;existing uuid;ids uuid[];until_at timestamptz;result jsonb:='[]';item jsonb;job_id uuid;count_limit integer;
 begin
+ if p_action='authorize'then
+  -- PostgREST has verified the JWT and service-only EXECUTE ACL before entry.
+  -- Neither role nor project is accepted from p_data or a decoded client token.
+  if auth.role()is distinct from'service_role'or auth.jwt()->>'ref'is distinct from'qvkucvcjmojjbphlzlks'then raise exception'AUTH_REQUIRED';end if;
+  return'true'::jsonb;
+ end if;
  select*into runtime from private.customer_android_push_runtime where singleton for update;
  if p_action='configure'then
   if jsonb_typeof(candidate_allowed)is distinct from'array'or jsonb_array_length(candidate_allowed)not between 1 and 2 then raise exception'INVALID_REQUEST';end if;

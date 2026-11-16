@@ -71,6 +71,11 @@ in the app. Runtime, device and delivery tables are private with RLS; public,
 anonymous and authenticated roles cannot execute the transport/dispatcher RPCs.
 Only the trusted server can retrieve its separately encrypted Vault credential.
 
+Operator authentication is verified by the fixed Test PostgREST service-only
+RPC, which checks the verified JWT's `service_role` and exact Test project ref.
+Only a strict `true` result is accepted; missing claims, invalid credentials or
+verification errors fail closed. No operator credentials belong in the app.
+
 Capture is the default. Real delivery requires a later coordinator-assigned
 window, up to three exact pending jobs and expiry within 30 minutes. A captured
 job cannot be replayed as a real message. The database reserves at most three

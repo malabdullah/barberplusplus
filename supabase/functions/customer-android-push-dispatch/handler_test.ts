@@ -9,7 +9,7 @@ function harness() {
   const config = { apiUrl: 'https://qvkucvcjmojjbphlzlks.supabase.co', projectId: FCM_PROJECT, packageName: FCM_PACKAGE, mode: 'capture', credential: {
     type: 'service_account', project_id: FCM_PROJECT, client_email: FCM_EMAIL, private_key_id: 'a'.repeat(40), private_key: '-----BEGIN PRIVATE KEY-----synthetic', token_uri: 'https://oauth2.googleapis.com/token',
   } };
-  const deps = { environment: 'cloud-test', appUrl: 'https://barber-test.alabdullah-cs.workers.dev', publicUrl: config.apiUrl, serviceKey,
+  const deps = { environment: 'cloud-test', appUrl: 'https://barber-test.alabdullah-cs.workers.dev', publicUrl: config.apiUrl, authorizeService: (token: string) => Promise.resolve(token === serviceKey),
     configuration: () => Promise.resolve(config), claim: () => { calls.claim++; return Promise.resolve([{ ...job }]); },
     validate: () => Promise.resolve(true), finish: (_job: AndroidJob, outcome: Outcome) => { calls.outcomes.push(outcome); return Promise.resolve(); },
     token: () => { calls.token++; return Promise.resolve('synthetic'); }, send: () => { calls.send++; return Promise.resolve({ outcome: 'sent' } as Outcome); },
