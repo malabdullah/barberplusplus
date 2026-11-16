@@ -15,7 +15,10 @@ export function bookingEntryPath(kind, id) {
 }
 export function bookingEntryHref(kind, id, environment) {
   const path = bookingEntryPath(kind, id);
-  return path && environment === 'cloud-test' ? 'https://barber-open-test.alabdullah-cs.workers.dev' + path : path;
+  if (!path) return null;
+  if (environment === 'cloud-test') return 'https://barber-open-test.alabdullah-cs.workers.dev' + path;
+  if (environment === 'production') return 'https://barber-open.alabdullah-cs.workers.dev' + path;
+  return path;
 }
 export function hasBookingSelection(draft) {
   return Boolean(draft && (draft.bookingMode || draft.city || draft.branchId || draft.barberId || draft.time || draft.serviceIds?.length || draft.packageOfferId || Object.values(draft.details || {}).some(value => typeof value === 'string' && value.trim() && value !== '+965')));

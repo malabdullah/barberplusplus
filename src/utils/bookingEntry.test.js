@@ -1,8 +1,17 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { parseBookingEntry, bookingEntryPath, bookingEntryDraft, hasBookingSelection } from './bookingEntry';
+import { parseBookingEntry, bookingEntryPath, bookingEntryHref, bookingEntryDraft, hasBookingSelection } from './bookingEntry';
 const shop = '10000000-0000-4000-8000-000000000011';
 const barber = '30000000-0000-4000-8000-000000000112';
 beforeEach(() => vi.restoreAllMocks());
+it('keeps production and Test app-opening hosts distinct and local navigation relative', () => {
+ for (const kind of ['shop', 'barber']) {
+  expect(bookingEntryHref(kind, shop, 'production')).toBe(`https://barber-open.alabdullah-cs.workers.dev/book?${kind}=${shop}`);
+  expect(bookingEntryHref(kind, shop, 'cloud-test')).toBe(`https://barber-open-test.alabdullah-cs.workers.dev/book?${kind}=${shop}`);
+  expect(bookingEntryHref(kind, shop, 'development')).toBe(`/book?${kind}=${shop}`);
+ }
+ expect(bookingEntryHref('booking', shop, 'production')).toBeNull();
+ expect(bookingEntryHref('shop', 'bad', 'production')).toBeNull();
+});
 it('accepts exactly one public catalog selection and rejects ambiguous or injected parameters', () => {
  expect(parseBookingEntry(`?shop=${shop}`)).toEqual({ kind: 'shop', targetId: shop });
  expect(parseBookingEntry(`?barber=${barber}`)).toEqual({ kind: 'barber', targetId: barber });
