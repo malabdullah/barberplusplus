@@ -59,3 +59,15 @@
 [data-theme='light'] .bs-status--cancelled, [data-theme='light'] .bs-status--no_show { color: #9e2929; }
 [data-theme='dark'] .bs-status--cancelled,
 [data-theme='dark'] .bs-status--no_show { color: #e88383; }
+
+.bs-provider-link { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--accent-primary); text-underline-offset: .2em; text-decoration-thickness: 1px; }
+.bs-provider-link:hover { color: var(--accent-primary); }
+.bs-provider-link:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 5px; border-radius: 3px; }
+.bs-entry-dialog { position: fixed; inset: 0; margin: auto; height: fit-content; max-height: calc(100dvh - 40px); overflow-y: auto; max-width: 480px; width: calc(100% - 40px); padding: 28px; border: 1px solid var(--surface-divider); border-radius: var(--radius-xl); background: var(--bg-primary); color: var(--text-primary); }
+.bs-entry-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.bs-entry-dialog h2 { margin: 0 0 12px; }
+.bs-entry-dialog p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 24px; }
+.bs-entry-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.bs-entry-actions > button { flex: 0 1 auto; max-width: 100%; min-height: 44px; padding: 8px 10px; font-size: 13px; line-height: 1.4; font-weight: 500; border-radius: var(--radius-sm); justify-content: center; }
+.bs-entry-actions > .cb-secondary { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.bs-entry-actions > .cb-secondary:hover { background: var(--bg-secondary); color: var(--text-primary); }

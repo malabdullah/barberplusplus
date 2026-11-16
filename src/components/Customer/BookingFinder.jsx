@@ -127,7 +127,7 @@ export default function BookingFinder({ checkout: Checkout }) {
   const validRange = draft.date >= getKuwaitDate() && draft.date <= addBookingDays(getKuwaitDate(), 365)
     && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeStart || '') && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.rangeEnd || '') && draft.rangeStart <= draft.rangeEnd;
   return <div className="customer-booking bf-page" dir={arabic ? 'rtl' : 'ltr'}><div className="cb-layout"><main id="booking-content" className="cb-main">
-    <h1 ref={heading} tabIndex={-1}>{!mode ? tr('title') : tr(`${mode}Title`)}</h1>
+    <h1 ref={heading} tabIndex={-1}>{!mode ? tr('title') : mode === 'shop' && draft.branchId ? tr('barberTitle') : tr(`${mode}Title`)}</h1>
     {!mode ? <>{hasSelection && resetButton}<div className="bf-methods">{[['time', Calendar], ['barber', UserRound], ['shop', Store]].map(([value, Icon]) => <button key={value} type="button" className="bf-method" onClick={() => chooseMode(value)} data-booking-mode={value}><Icon size={26} aria-hidden="true" /><span><strong>{tr(`${value}Title`)}</strong><span>{tr(`${value}Description`)}</span></span><ArrowRight size={20} aria-hidden="true" /></button>)}</div></> : <>
       <div className="bf-toolbar"><button className="cb-text-button" type="button" onClick={() => { requestVersion.current++; setMode(''); setLoading(false); }}><ArrowLeft size={16} />{tr('changeMethod')}</button>
         {resetButton}

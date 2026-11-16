@@ -52,6 +52,7 @@ export const customerBookingService = {
     return mapCatalog(result);
   },
   packages: async (branchId, barberId, date) => (await request('packages', { branchId, barberId, date: date || null })).packages.map(mapPackage),
+  entry: data => request('discovery-entry', data),
   filters: () => request('discovery-filters'),
   search: data => request('discovery-search', data),
   async selection(data) {

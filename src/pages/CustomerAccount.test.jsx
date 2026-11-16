@@ -20,7 +20,7 @@ beforeEach(async () => {
   i18n = i18next.createInstance(); await i18n.init({ lng: 'en', resources: { en: { translation: en }, ar: { translation: ar } }, interpolation: { escapeValue: false } });
 });
 afterEach(cleanup);
-it('keeps sharing available for a cancelled future appointment, but hides it after expiry', async () => {
+it('keeps sharing available for cancelled and completed appointments without an age cutoff', async () => {
   const next = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
   const expired = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
   customerAuthService.bookings.mockResolvedValue([
@@ -29,8 +29,7 @@ it('keeps sharing available for a cancelled future appointment, but hides it aft
   ]);
   mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Past appointments' }));
-  expect(await screen.findByRole('button', { name: 'Share booking details' })).toBeVisible();
-  expect(screen.getAllByRole('button', { name: 'Share booking details' })).toHaveLength(1);
+  expect(await screen.findAllByRole('button', { name: 'Share booking details' })).toHaveLength(2);
 });
 function BookingDestination() { return <pre data-testid="booking-destination">{JSON.stringify(useLocation().state)}</pre>; }
 function mount() { return render(<I18nextProvider i18n={i18n}><MemoryRouter><Routes><Route path="/" element={<CustomerAccount />} /><Route path="/book" element={<BookingDestination />} /></Routes></MemoryRouter></I18nextProvider>); }

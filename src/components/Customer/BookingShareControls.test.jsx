@@ -57,15 +57,17 @@ it('guest receipt remains private and is never placed in the shared URL', async 
   expect(bookingShareService.create).toHaveBeenCalledWith('appointment', 'sealed-private-receipt');
   expect(navigator.share.mock.calls[0][0].url).not.toContain('receipt');
 });
-it('prepares lazily when More opens, and a new booking revision obtains a fresh snapshot', async () => {
+it('prepares lazily once; reopening More and live booking changes retain the same URL', async () => {
   const view = render(<I18nextProvider i18n={i18n}><details><summary>More</summary><BookingShareControls bookingId="appointment" revision="original" menuItem /></details></I18nextProvider>);
   expect(bookingShareService.create).not.toHaveBeenCalled();
   const menu = view.container.querySelector('details'); menu.open = true; fireEvent(menu, new Event('toggle'));
   const button = await ready(); fireEvent.click(button); expect(navigator.share).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(menu.open).toBe(false));
   expect(menu.querySelector('summary')).toHaveFocus();
-  view.rerender(<I18nextProvider i18n={i18n}><BookingShareControls bookingId="appointment" revision="rescheduled" /></I18nextProvider>);
-  await ready(); expect(bookingShareService.create).toHaveBeenCalledTimes(2);
+  menu.open = true; fireEvent(menu, new Event('toggle'));
+  fireEvent(window, new Event('focus'));
+  view.rerender(<I18nextProvider i18n={i18n}><details open><summary>More</summary><BookingShareControls bookingId="appointment" revision="rescheduled" menuItem /></details></I18nextProvider>);
+  await ready(); expect(bookingShareService.create).toHaveBeenCalledTimes(1);
 });
 it('an ownership/session failure never offers a cached URL', async () => {
   bookingShareService.create.mockRejectedValue(new Error('AUTH_REQUIRED'));
@@ -81,4 +83,16 @@ it('a late share failure after leaving the account cannot copy an old URL', asyn
   view.unmount(); reject(new DOMException('Blocked', 'NotAllowedError'));
   await waitFor(() => expect(navigator.share).toHaveBeenCalledTimes(1));
   expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+});
+
+it('uses the guest booking result URL without a private receipt lookup or expiry gate', async () => {
+  const shareUrl = `${window.location.origin}/booking/share#${'b'.repeat(64)}`;
+  mount({ shareUrl }); fireEvent.click(await ready());
+  expect(bookingShareService.create).not.toHaveBeenCalled();
+  expect(navigator.share).toHaveBeenCalledWith({ title: 'Shared appointment', url: shareUrl });
+});
+it('a supplied foreign URL is never shared', async () => {
+  mount({ shareUrl: 'https://foreign.example/booking/share#' + 'b'.repeat(64) }); fireEvent.click(await ready());
+  expect(bookingShareService.create).toHaveBeenCalledTimes(1);
+  expect(navigator.share).toHaveBeenCalledWith({ title: 'Shared appointment', url });
 });
