@@ -7,6 +7,7 @@ credentials, account seed or execution is performed by this renderer.
 import json
 import pathlib
 import re
+import sys
 
 
 def split_top(text, separator):
@@ -43,18 +44,20 @@ def split_top(text, separator):
     return result
 
 
-def render(source):
+def render(source, fixture_prefix='ad640000'):
+    if fixture_prefix not in ('ad640000', 'ad650000'):
+        raise ValueError('Unknown fixture prefix')
     source = re.sub(r'^--[^\n]*', '', source, flags=re.M)
     statements = split_top(source, ';')
     body, count = [], 0
     for statement in statements:
-        if statement in ('begin', 'rollback', 'select no_plan()', 'select * from finish()', 'create extension if not exists pgtap with schema extensions') or statement.startswith('set local search_path='):
+        if statement in ('begin', 'rollback', 'select no_plan()', 'create extension if not exists pgtap with schema extensions') or re.fullmatch(r'select\s+\*\s*from\s+finish\(\)', statement) or statement.startswith('set local search_path='):
             continue
         match = re.fullmatch(r'select (ok|is|throws_ok|lives_ok)\((.*)\)', statement, re.S)
         if not match:
             if statement.startswith('select '):
                 statement = 'perform ' + statement[7:]
-            if not statement.startswith(('perform ', 'insert into auth.', 'update auth.', 'update private.customer_native_email_requests ')):
+            if not statement.startswith(('perform ', 'insert into auth.', 'update auth.', 'update private.customer_native_email_requests ', 'insert into public.customers', 'insert into private.customer_accounts', 'delete from auth.sessions where id=')):
                 raise ValueError('Unsupported SQL statement')
             body.append(statement + ';')
             continue
@@ -78,10 +81,14 @@ def render(source):
                 expected_code, expected_message = args[1:3]
                 body.append(f"rejected:=false;begin {sql} exception when others then if sqlstate is distinct from {expected_code} or sqlerrm is distinct from {expected_message} then raise;end if;rejected:=true;end;if not rejected then raise exception '{message}';end if;")
     sql = "begin;do $nativechecks$declare rejected boolean;begin\n" + '\n'.join(body) + "\nend$nativechecks$;rollback;\n"
-    sql += f"select {count} as passed_checks, not exists(select 1 from auth.users where id in('ad640000-0000-4000-8000-000000000001','ad640000-0000-4000-8000-000000000002')) as fixtures_rolled_back;\n"
+    sql += f"select {count} as passed_checks, not exists(select 1 from auth.users where id in('{fixture_prefix}-0000-4000-8000-000000000001','{fixture_prefix}-0000-4000-8000-000000000002')) as fixtures_rolled_back;\n"
     return {'checks': count, 'query': sql}
 
 
 if __name__ == '__main__':
     root = pathlib.Path(__file__).resolve().parents[2]
-    print(json.dumps(render((root / 'supabase/tests/064_android_native_auth_binding.sql').read_text())))
+    if sys.argv[1:] not in ([], ['android-fcm']):
+        raise SystemExit('Only the reviewed auth or android-fcm suites are supported')
+    fcm = sys.argv[1:] == ['android-fcm']
+    name = '065_android_fcm_transport.sql' if fcm else '064_android_native_auth_binding.sql'
+    print(json.dumps(render((root / 'supabase/tests' / name).read_text(), 'ad650000' if fcm else 'ad640000')))

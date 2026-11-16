@@ -1,4 +1,5 @@
 import { nativePushRuntime } from '../_shared/native-push-runtime.ts';
+import { androidPushAction } from './android-push.ts';
 type Data = Record<string, unknown>;
 type Dependencies = {
   environment: string; appUrl: string; publicUrl: string;
@@ -11,6 +12,8 @@ const actions = new Set(['push-register','push-status','push-preferences','push-
 const decode = (s: string) => Uint8Array.from(atob(s.replaceAll('-','+').replaceAll('_','/')), c => c.charCodeAt(0));
 
 export async function customerPushAction(deps: Dependencies, request: Request, body: Data) {
+  if (body.client === 'android') return await androidPushAction(deps, request, body);
+  if (body.provider === 'fcm' || (body.client !== undefined && body.client !== 'ios')) throw Error('INVALID_REQUEST');
   const action = String(body.action);
   if (!actions.has(action) || !uuid.test(String(body.deviceId)) || typeof body.deviceSecret !== 'string'
     || !/^[0-9a-f]{64}$/.test(body.deviceSecret)) throw Error('INVALID_REQUEST');
