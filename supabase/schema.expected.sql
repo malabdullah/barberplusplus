@@ -3396,6 +3396,7 @@ CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "
 CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."notify_barber_change"();
 CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
+CREATE OR REPLACE TRIGGER "provision_booking_public_link" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."provision_booking_public_link"();
 CREATE OR REPLACE TRIGGER "require_barber_invitation" BEFORE INSERT ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."require_barber_invitation"();
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "stamp_booking_cancellation" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."stamp_booking_cancellation"();
