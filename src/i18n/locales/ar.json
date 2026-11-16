@@ -2156,6 +2156,9 @@
     "inviteExpired": "افتح الدعوة الكاملة من أحدث رسالة. إذا انتهت صلاحيتها، اطلب من مدير الصالون إعادة إرسالها.",
     "openAppTitle": "المتابعة في Barber++",
     "openAppIntro": "افتح التطبيق على جهاز iPhone نفسه الذي طلب هذه الرسالة.",
+    "androidOpenTitle": "المتابعة في Barber++ Test",
+    "androidOpenIntro": "افتح التطبيق على جهاز Android نفسه الذي طلب هذه الرسالة.",
+    "androidFallback": "افتح Barber++ Test وأدخل الرمز المرسل إلى بريدك الإلكتروني.",
     "openApp": "فتح تطبيق Barber++",
     "errors": {
       "AUTH_REQUIRED": "يرجى تسجيل الدخول لإدارة كلمة المرور.",

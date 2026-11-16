@@ -17,13 +17,15 @@ export default function CustomerEmailCallback() {
   const callback = useRef(null);
   const originalUrl = useRef(window.location.href);
   const [native, setNative] = useState(() => {
-    const requested = new URL(window.location.href).searchParams.get('client') === 'ios';
-    try { return { requested, url: nativeEmailReturn(window.location.href, appConfig) }; } catch (error) { return { requested, url: null, recovery: error.message === 'NATIVE_DELIVERY_REQUIRED' }; }
+    const client = new URL(window.location.href).searchParams.get('client');
+    const requested = ['ios', 'android'].includes(client);
+    try { return { requested, client, url: nativeEmailReturn(window.location.href, appConfig) }; } catch (error) { return { requested, client, url: null, recovery: error.message === 'NATIVE_DELIVERY_REQUIRED', fallback: error.message === 'ANDROID_NATIVE_FALLBACK' }; }
   });
   useEffect(() => {
     let active = true;
     if (native.requested) {
       window.history.replaceState(null, '', window.location.pathname);
+      if (native.fallback) { setStatus('native-fallback'); return () => { active = false; }; }
       if (native.recovery) {
         callback.current ||= customerAuthService.nativeRecoveryDelivery(originalUrl.current);
         callback.current.then(url => { if (active) { setNative(current => ({ ...current, url })); setStatus('native'); } }).catch(() => { if (active) setStatus('error'); });
@@ -46,7 +48,8 @@ export default function CustomerEmailCallback() {
     };
     run(); return () => { active = false; };
   }, []);
-  if (status === 'native') return <CustomerAuthLayout title={t('customerPassword.openAppTitle')} intro={t('customerPassword.openAppIntro')}><a className="cb-primary ca-submit" href={native.url}>{t('customerPassword.openApp')}</a></CustomerAuthLayout>;
+  if (status === 'native-fallback') return <CustomerAuthLayout title={t('customerPassword.androidOpenTitle')} intro={t('customerPassword.androidFallback')} />;
+  if (status === 'native') return <CustomerAuthLayout title={t(native.client === 'android' ? 'customerPassword.androidOpenTitle' : 'customerPassword.openAppTitle')} intro={t(native.client === 'android' ? 'customerPassword.androidOpenIntro' : 'customerPassword.openAppIntro')}><a className="cb-primary ca-submit" href={native.url}>{t('customerPassword.openApp')}</a></CustomerAuthLayout>;
   if (status === 'work-verified') return <CustomerAuthLayout accountType="team" title={t('auth.registrationVerifiedTitle')} intro={t('auth.registrationVerified')}><Link className="cb-primary ca-submit" to="/login">{t('auth.signIn')}</Link></CustomerAuthLayout>;
   return <CustomerAuthLayout title={tr(status === 'verified' ? 'email.verifiedTitle' : status === 'error' ? 'email.invalidLinkTitle' : 'email.callbackTitle')} intro={status === 'verified' ? tr('email.verifiedIntro') : undefined} returnTo={returnTo}>
     <div className="ca-result">

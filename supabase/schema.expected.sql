@@ -1240,6 +1240,82 @@ CREATE OR REPLACE FUNCTION "public"."customer_favourites_api"("p_action" "text",
     SET "search_path" TO ''
     AS $$ select private.customer_favourites_api(p_action,p_data); $$;
 ALTER FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare r private.customer_native_email_requests;person auth.users;rid uuid:=nullif(p_data->>'request_id','')::uuid;delivery uuid;op uuid;secs integer;
+begin
+ if p_action='start' then
+  if p_data->>'client' is distinct from 'android' or rid is null
+   or coalesce(p_data->>'email','')='' or coalesce(p_data->>'native_challenge','')!~'^[A-Za-z0-9_-]{43}$'
+   or nullif(p_data->>'native_state','')is null or nullif(p_data->>'pending_handle','')is null then raise exception 'INVALID_REQUEST';end if;
+  select * into person from auth.users where id=nullif(p_data->>'user_id','')::uuid;
+  if person.id is not null and(lower(person.email)is distinct from p_data->>'email' or person.raw_app_meta_data->>'role' is distinct from 'customer'
+   or person.email_confirmed_at is not null or person.deleted_at is not null or person.banned_until>now())then raise exception 'INVALID_REQUEST';end if;
+  -- Only this transient protocol's expired rows; no account, booking or other proof is removed.
+  delete from private.customer_native_email_requests where id in(select id from private.customer_native_email_requests where expires_at<now()-interval '24 hours' order by expires_at limit 500);
+  insert into private.customer_native_email_requests(id,client,user_id,email,native_state,native_challenge,pending_hash)
+   values(rid,'android',person.id,lower(p_data->>'email'),(p_data->>'native_state')::uuid,p_data->>'native_challenge',encode(extensions.digest((p_data->>'pending_handle')::uuid::text,'sha256'),'hex'));
+  return jsonb_build_object('success',true);
+ end if;
+ select * into r from private.customer_native_email_requests where id=rid for update;
+ if r.id is null or r.expires_at<=clock_timestamp() then raise exception 'INVALID_CODE';end if;
+ if p_action='delivery-failed' then
+  if r.state='pending' then update private.customer_native_email_requests set state='failed',token_hash=null,delivery_hash=null where id=r.id;end if;
+  return jsonb_build_object('success',true);
+ end if;
+ select * into person from auth.users where id=r.user_id for update;
+ if p_action='ready' then
+  if r.state<>'pending' then raise exception 'INVALID_CODE';end if;
+  if r.user_id is not null and(person.id is null or person.raw_app_meta_data->>'role' is distinct from 'customer'
+   or lower(person.email)is distinct from r.email or person.email_confirmed_at is not null or person.deleted_at is not null or person.banned_until>now())then raise exception 'INVALID_CODE';end if;
+  update private.customer_native_email_requests set state='ready',token_hash=nullif(person.confirmation_token,'')where id=r.id;
+  return jsonb_build_object('success',true);
+ end if;
+ if p_data->>'client' is distinct from r.client or nullif(p_data->>'native_state','')::uuid is distinct from r.native_state then raise exception 'INVALID_CODE';end if;
+ secs:=greatest(0,floor(extract(epoch from(r.expires_at-clock_timestamp())))::integer);
+ if p_action in('status','resend')then
+  if r.pending_hash is distinct from encode(extensions.digest((p_data->>'pending_handle')::uuid::text,'sha256'),'hex')
+   or p_data->>'native_challenge' is distinct from r.native_challenge then raise exception 'INVALID_CODE';end if;
+  if p_action='status' then return jsonb_build_object('status',r.state,'expiresIn',secs,'email',r.email);end if;
+  if r.state not in('ready','failed')or r.resends>=5 then raise exception 'INVALID_CODE';end if;
+  if r.user_id is not null and(person.raw_app_meta_data->>'role' is distinct from 'customer' or person.email_confirmed_at is not null
+   or lower(person.email)is distinct from r.email or person.deleted_at is not null or person.banned_until>now())then raise exception 'INVALID_CODE';end if;
+  update private.customer_native_email_requests set state='pending',resends=resends+1,token_hash=null,delivery_hash=null,operation=null where id=r.id;
+  return jsonb_build_object('email',r.email,'deliver',r.user_id is not null,'expiresIn',secs);
+ end if;
+ if p_action in('invalid-code','uncertain','verified')then
+  if r.state<>'verifying' or r.operation is distinct from nullif(p_data->>'operation','')::uuid then raise exception 'INVALID_CODE';end if;
+  if p_action='verified' then
+   if nullif(p_data->>'user_id','')::uuid is distinct from r.user_id or person.raw_app_meta_data->>'role' is distinct from 'customer'
+    or lower(person.email)is distinct from r.email or person.email_confirmed_at is null or person.deleted_at is not null or person.banned_until>now()
+    or not public.customer_session_is_live(r.user_id,nullif(p_data->>'session_id','')::uuid)
+    or not exists(select 1 from auth.sessions s join auth.mfa_amr_claims a on a.session_id=s.id where s.id=nullif(p_data->>'session_id','')::uuid
+     and s.user_id=r.user_id and s.created_at>=r.created_at-interval '5 seconds'and s.created_at>now()-interval '1 minute'
+     and a.authentication_method in('otp','email','signup','magiclink'))then raise exception 'INVALID_CODE';end if;
+   update private.customer_native_email_requests set state='verified',token_hash=null,delivery_hash=null,operation=null where id=r.id;
+  else
+   update private.customer_native_email_requests set state=case when p_action='uncertain'or attempts>=10 then'failed'else'ready'end,operation=null where id=r.id;
+  end if;
+  return jsonb_build_object('success',true);
+ end if;
+ if r.state<>'ready' or r.user_id is null or r.token_hash is null or r.token_hash is distinct from person.confirmation_token
+  or person.raw_app_meta_data->>'role' is distinct from 'customer' or lower(person.email)is distinct from r.email
+  or person.email_confirmed_at is not null or person.deleted_at is not null or person.banned_until>now()then raise exception 'INVALID_CODE';end if;
+ if p_action='delivery' then
+  if p_data->>'token_hash' is distinct from r.token_hash then raise exception 'INVALID_CODE';end if;
+  delivery:=gen_random_uuid();update private.customer_native_email_requests set delivery_hash=encode(extensions.digest(delivery::text,'sha256'),'hex')where id=r.id;
+  return jsonb_build_object('deliveryToken',delivery);
+ elsif p_action='reserve' then
+  if p_data->>'native_challenge' is distinct from r.native_challenge or r.attempts>=10
+   or(p_data?'delivery_token'and(r.delivery_hash is null or r.delivery_hash is distinct from encode(extensions.digest((p_data->>'delivery_token')::uuid::text,'sha256'),'hex')))then raise exception 'INVALID_CODE';end if;
+  op:=gen_random_uuid();update private.customer_native_email_requests set state='verifying',operation=op,attempts=attempts+1,delivery_hash=null where id=r.id;
+  return jsonb_build_object('userId',r.user_id,'email',r.email,'tokenHash',r.token_hash,'operation',op);
+ end if;
+ raise exception 'INVALID_REQUEST';
+end$$;
+ALTER FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date" DEFAULT NULL::"date") RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1316,8 +1392,8 @@ begin
           or (p_data->>'audience'='work' and raw_app_meta_data->>'role' in ('admin','agent')));
       if person.raw_app_meta_data->>'role' in ('admin','agent') then candidate_purpose:='legacy'; end if;
     end if;
-    if request_id is null or coalesce(candidate_email,'')='' or p_data->>'client' not in ('web','ios') then raise exception 'INVALID_REQUEST'; end if;
-    if p_data->>'client'='ios' and coalesce(p_data->>'native_challenge','') !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'INVALID_REQUEST'; end if;
+    if request_id is null or coalesce(candidate_email,'')='' or p_data->>'client' not in ('web','ios','android') then raise exception 'INVALID_REQUEST'; end if;
+    if p_data->>'client' in ('ios','android') and coalesce(p_data->>'native_challenge','') !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'INVALID_REQUEST'; end if;
     insert into private.customer_password_requests(id,user_id,email,purpose,client,native_state,native_challenge)
       values(request_id,person.id,candidate_email,candidate_purpose,p_data->>'client',nullif(p_data->>'native_state','')::uuid,p_data->>'native_challenge');
     return jsonb_build_object('requestId',request_id,'email',candidate_email,'deliver',person.id is not null);
@@ -1330,7 +1406,7 @@ begin
   elsif p_action='request-delivery' then
     select * into request from private.customer_password_requests where id=request_id for update;
     select * into person from auth.users where id=request.user_id;
-    if request.id is null or request.client<>'ios' or request.native_state is distinct from nullif(p_data->>'native_state','')::uuid
+    if request.id is null or request.client not in ('ios','android') or request.client is distinct from coalesce(p_data->>'client','ios') or request.native_state is distinct from nullif(p_data->>'native_state','')::uuid
       or request.state<>'ready' or request.expires_at<=now() or request.token_hash is null
       or request.token_hash is distinct from p_data->>'token_hash' or request.token_hash is distinct from person.recovery_token then raise exception 'INVALID_CODE'; end if;
     delivery:=gen_random_uuid();
@@ -1339,7 +1415,8 @@ begin
   elsif p_action in ('request-load','request-verified') then
     select * into request from private.customer_password_requests where id=request_id for update;
     if request.id is null or request.state<>'ready' or request.expires_at<=now() or request.user_id is null
-      or (request.client='ios' and (p_data->>'client' is distinct from 'ios'
+      or coalesce(p_data->>'client','web') is distinct from request.client
+      or (request.client in ('ios','android') and (p_data->>'client' is distinct from request.client
         or nullif(p_data->>'native_state','')::uuid is distinct from request.native_state
         or p_data->>'native_challenge' is distinct from request.native_challenge)) then raise exception 'INVALID_CODE'; end if;
     select * into person from auth.users where id=request.user_id for update;
@@ -1347,7 +1424,7 @@ begin
       or lower(person.email) is distinct from request.email then raise exception 'INVALID_CODE'; end if;
     if p_action='request-load' then
       if request.token_hash is null or request.token_hash is distinct from person.recovery_token then raise exception 'INVALID_CODE'; end if;
-      if p_data ? 'delivery_token' and (request.client<>'ios' or request.delivery_hash is null
+      if p_data ? 'delivery_token' and (request.client not in ('ios','android') or request.delivery_hash is null
         or request.delivery_hash is distinct from encode(extensions.digest(p_data->>'delivery_token','sha256'),'hex')) then raise exception 'INVALID_CODE'; end if;
       return jsonb_build_object('userId',person.id,'email',request.email,'tokenHash',request.token_hash,'purpose',request.purpose);
     end if;
@@ -3773,6 +3850,8 @@ REVOKE ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_
 GRANT ALL ON FUNCTION "public"."customer_favourites_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_native_email_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_push_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
