@@ -36,3 +36,9 @@ b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:
 # Exact introduction fingerprints only; no rule or path-wide exclusion.
 7c7420e132eec55647b4f5acd55bd75c195834e7:wrangler.cloud-test.jsonc:generic-api-key:20
 7c7420e132eec55647b4f5acd55bd75c195834e7:ops/cloud-test/worker-configuration.d.ts:generic-api-key:7
+
+# FCM format validation contains PEM boundary strings, without key material.
+# The test builds a fresh synthetic RSA key in memory; no stored private key.
+# Exact historical commit/path/rule/line matches only; keep all rules enabled.
+4635772d6c73df0858f782674ddd966fffe0f2ee:supabase/functions/customer-android-push-dispatch/fcm.ts:private-key:14
+4635772d6c73df0858f782674ddd966fffe0f2ee:supabase/functions/customer-android-push-dispatch/fcm_test.ts:private-key:32
