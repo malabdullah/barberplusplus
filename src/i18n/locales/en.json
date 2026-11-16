@@ -2073,7 +2073,8 @@
       "titleAccent": "Manage your barbershop.",
       "subtitle": "Customers book their next appointment. Shop teams manage bookings, barbers, services and multiple shops from one dashboard.",
       "shopCta": "I run a shop"
-    }
+    },
+    "shopFeatures": "Shop features"
   },
   "customerFavourites": {
     "labelNamed": "{{name}} favourite",
@@ -2803,7 +2804,8 @@
     "manageAppointments": "Manage my appointments",
     "reschedulePreview": "Rescheduling preview",
     "currentTime": "Current time",
-    "newTime": "New time"
+    "newTime": "New time",
+    "exploreShops": "Explore shop features"
   },
   "customerDeletion": {
     "title": "Delete account",
@@ -3343,5 +3345,48 @@
       "processing": "Setting up",
       "deleting": "Deletion pending"
     }
+  },
+  "shopsIntro": {
+    "pageTitle": "For shops",
+    "titleShop": "Your shop.",
+    "titleTeam": "Your team.",
+    "titleWorkspace": "One workspace.",
+    "intro": "Keep bookings, barbers and shop finances together.",
+    "preview": "Illustrative preview",
+    "calendarLabel": "Example daily booking calendar. Scroll to see every barber.",
+    "omar": "Omar",
+    "ali": "Ali",
+    "you": "You",
+    "haircut": "Haircut",
+    "beard": "Beard trim",
+    "haircutBeard": "Haircut + Beard",
+    "break": "Break",
+    "teamTitle": "A team that works your way.",
+    "inviteTitle": "Invite a barber.",
+    "inviteDescription": "Give your barber their own sign-in. They can propose hours, breaks and vacations for your approval.",
+    "managedTitle": "Managed barber.",
+    "managedDescription": "Add a barber without a login. You manage their profile, schedule and bookings.",
+    "chairStart": "Work behind the chair yourself with",
+    "chairName": "My chair",
+    "features": "Shop management features",
+    "servicesTitle": "Services & packages.",
+    "servicesDescription": "Create services, bundle them into packages and run promotions with a clear validity period.",
+    "availabilityTitle": "Availability & booking rules.",
+    "availabilityDescription": "Set shop hours and approve team hours, breaks and vacations. Choose auto-confirmation and adjust customer booking cutoffs.",
+    "multipleTitle": "One shop or several.",
+    "multipleDescription": "Manage one shop or multiple shops from a single account.",
+    "financeTitle": "Know your numbers. Plan your next month.",
+    "financeDescription": "Track payments, refunds and expenses. Compare barber performance and export Excel reports.",
+    "bookingValue": "Completed booking value",
+    "received": "Received",
+    "expenses": "Expenses",
+    "outstanding": "Outstanding",
+    "setupTitle": "Get your shop set up in 3 simple steps.",
+    "accountTitle": "Create your account.",
+    "accountDescription": "Start with your manager account.",
+    "shopTitle": "Set up your shop.",
+    "shopDescription": "Add your shop details, services and team.",
+    "publishTitle": "Publish when ready.",
+    "publishDescription": "Make your shop available for customer bookings."
   }
 }

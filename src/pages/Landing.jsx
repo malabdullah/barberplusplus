@@ -85,7 +85,7 @@ export default function Landing() {
           <h2 id="lp-shops-title">{tr('shopsTitle')}</h2>
           <p>{tr('shopsDescription')}</p>
           <div className="lp-shop-actions">
-            <Link to="/signup" className="lp-button lp-button-primary">{t('auth.createManagerAccount')}<ArrowRight size={20} aria-hidden="true" /></Link>
+            <Link to="/for-shops" className="lp-button lp-button-primary">{tr('exploreShops')}<ArrowRight size={20} aria-hidden="true" /></Link>
             <Link to="/login" className="lp-team-link">{t('publicNav.teamSignIn')}</Link>
           </div>
         </div>
