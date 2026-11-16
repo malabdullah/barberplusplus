@@ -12,6 +12,8 @@ import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
 import { bookingCityGroups } from '../utils/bookingCityGroups';
 import BookingFinder from '../components/Customer/BookingFinder';
+import BookingEntry from '../components/Customer/BookingEntry';
+import { parseBookingEntry } from '../utils/bookingEntry';
 import CityPicker from '../components/Customer/CityPicker';
 import CatalogRating from '../components/Customer/CatalogRating';
 import PackagePicker from '../components/Packages/PackagePicker';
@@ -624,5 +626,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
 }
 
 export default function CustomerBooking() {
+  const location = useLocation();
+  const target = parseBookingEntry(location.search);
+  if (target) return <BookingEntry key={location.search} target={target} />;
   return <BookingFinder checkout={CustomerBookingCheckout} />;
 }

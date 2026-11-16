@@ -194,9 +194,10 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (!account.phone || !patterns[account.countryCode]?.test(account.phone)) return reply(400, {error:'INVALID_DETAILS'});
         return reply(200, {verification: await sign({purpose:'verified',id:crypto.randomUUID(),user_id:account.id,session_id:account.session_id,phone_verified:Boolean(phoneConfig),name:account.name,phone:account.phone,country_code:account.countryCode,expires:Date.now()+10*60_000})});
       }
-      if (['discovery-filters', 'discovery-search', 'discovery-selection'].includes(String(body.action))) {
+      if (['discovery-filters', 'discovery-search', 'discovery-selection', 'discovery-entry'].includes(String(body.action))) {
         if (!deps.discovery) return reply(503, { error: 'UNAVAILABLE' });
         const action = String(body.action).slice('discovery-'.length);
+        if (action === 'entry' && (!['shop', 'barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId)))) return reply(400, { error: 'INVALID_REQUEST' });
         const mode = body.mode ?? 'shop';
         const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
         if (!['shop', 'barber', 'time'].includes(String(mode))
@@ -211,7 +212,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         const account = await readAccount();
         if (token && !account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
         return reply(200, await deps.discovery(action, {
-          mode, city: body.city, query: body.query, branch_id: body.branchId, barber_id: body.barberId,
+          mode, city: body.city, query: body.query, branch_id: action === 'entry' && body.kind === 'shop' ? body.targetId : body.branchId, barber_id: action === 'entry' && body.kind === 'barber' ? body.targetId : body.barberId,
+          ...(action === 'entry' ? { kind: body.kind } : {}),
           date: body.date, range_start: body.rangeStart, range_end: body.rangeEnd, cursor: body.cursor,
           ...(account ? { account_user_id: account.id, session_id: account.session_id } : {}),
         }));

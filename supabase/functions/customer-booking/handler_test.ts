@@ -257,3 +257,10 @@ Deno.test('package booking forwards a reviewed quote while database changes retu
     assert(response.status === 409 && (await response.json()).error === code);
   }
 });
+
+Deno.test('public booking entries validate targets and whitelist catalog fields without accepting identity from body',async()=>{
+ let data:Record<string,unknown>={};let action='';const h=make({discovery:async(a:string,d:Record<string,unknown>)=>{action=a;data=d;return {kind:'shop',city:'Sharq',branchId:selection.branchId};}});
+ for(const body of [{kind:'invalid',targetId:selection.branchId},{kind:'shop',targetId:'bad'}])assert((await h(request({action:'discovery-entry',...body}))).status===400);
+ const result=await h(request({action:'discovery-entry',kind:'shop',targetId:selection.branchId,account_user_id:'forged',email:'PRIVATE'}));
+ assert(result.status===200&&action==='entry'&&data.branch_id===selection.branchId&&data.kind==='shop'&&!('email'in data)&&!('account_user_id'in data));
+});

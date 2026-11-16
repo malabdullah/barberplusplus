@@ -59,3 +59,13 @@
 [data-theme='light'] .bs-status--cancelled, [data-theme='light'] .bs-status--no_show { color: #9e2929; }
 [data-theme='dark'] .bs-status--cancelled,
 [data-theme='dark'] .bs-status--no_show { color: #e88383; }
+
+.bs-provider-link { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--accent-primary); text-underline-offset: .2em; text-decoration-thickness: 1px; }
+.bs-provider-link:hover { color: var(--accent-primary); }
+.bs-provider-link:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 5px; border-radius: 3px; }
+.bs-entry-dialog { max-width: 480px; width: calc(100% - 40px); padding: 28px; border: 1px solid var(--surface-divider); border-radius: var(--radius-xl); background: var(--bg-primary); color: var(--text-primary); }
+.bs-entry-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+.bs-entry-dialog h2 { margin: 0 0 12px; }
+.bs-entry-dialog p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 24px; }
+.bs-entry-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.bs-entry-actions > button { flex: 1 1 170px; justify-content: center; }

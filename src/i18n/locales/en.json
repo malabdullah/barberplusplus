@@ -2530,6 +2530,17 @@
     "phoneOptional": "Phone (optional)",
     "inviteToSignIn": "Invite to sign in"
   },
+  "bookingEntry": {
+      "replaceTitle": "Start a new booking?",
+      "replaceMessage": "This will replace the booking you have in progress.",
+      "keep": "Keep current booking",
+      "replace": "Start new booking",
+      "back": "Back to booking",
+      "unavailableTitle": "Selection unavailable",
+      "unavailable": "This shop or barber is currently unavailable for online booking.",
+      "errorTitle": "Could not open booking",
+      "error": "Please try again. Your current booking selections are saved."
+  },
   "bookingShare": {
     "share": "Share booking details",
     "title": "Shared appointment",
