@@ -6,6 +6,8 @@ import { bookingShareService } from '../services/bookingShare.service';
 import { downloadBookingCalendar, safeBookingUrl } from '../utils/customerBooking';
 import BookingImage from '../components/Customer/BookingImage';
 import { shopWording } from '../utils/customerTerminology';
+import { bookingEntryHref } from '../utils/bookingEntry';
+import { appConfig } from '../lib/runtimeConfig';
 import './CustomerAuth.css';
 import './CustomerBooking.css';
 import '../components/Customer/BookingShare.css';
@@ -31,11 +33,8 @@ export default function SharedBooking() {
     return () => { current.current += 1; };
   }, [token, revision]);
   useEffect(() => {
-    const refresh = () => { if (!document.hidden) setRevision(value => value + 1); };
-    window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
-    const interval = window.setInterval(refresh, 60000);
-    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(interval); };
+    const interval = window.setInterval(() => setRevision(value => value + 1), 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
   }, []);
   useEffect(() => { document.title = `${tr('title')} | Barber++`; }, [t]); // No appointment details in browser titles/previews.
   const localName = (en, ar) => arabic && ar ? ar : en;
@@ -46,6 +45,8 @@ export default function SharedBooking() {
   const services = booking?.services?.map(service => ({ name: localName(service.name, service.nameAr), quantity: Number(service.quantity) || 1 })) || [];
   const packageName = booking?.package && localName(booking.package.name, booking.package.nameAr);
   const directions = safeBookingUrl(booking?.locationUrl);
+  const shopLink = bookingEntryHref('shop', booking?.shopId, appConfig.environment);
+  const barberLink = bookingEntryHref('barber', booking?.barberId, appConfig.environment);
   const cancelled = ['cancelled', 'no_show'].includes(booking?.status);
   const image = value => {
     try { const url = new URL(value, window.location.origin); if (url.origin === window.location.origin && url.pathname.startsWith('/booking-demo/')) return url.href; return url.protocol === 'https:' && url.pathname.includes('/storage/v1/object/public/') ? url.href : null; } catch { return null; }
@@ -63,8 +64,8 @@ export default function SharedBooking() {
             <p className="bs-time-meta">{t('bookingShare.endsAt', { time: format(new Date(start.getTime() + booking.duration * 60000), { timeStyle: 'short' }) })} · {t('bookingShare.minutes', { count: booking.duration })} · {tr('kuwaitTime')}</p>
           </section>
           <div className="bs-people">
-            <section className="bs-person"><div className="bs-photo"><BookingImage src={image(booking.shopImage)} name="" /></div><div><p className="bs-label">{tr('shop')}</p><h2>{shop}</h2><p>{[booking.city, booking.address].filter(Boolean).join(' · ')}</p></div></section>
-            <section className="bs-person"><div className="bs-photo bs-photo--barber"><BookingImage src={image(booking.barberImage)} name="" person /></div><div><p className="bs-label">{tr('barber')}</p><h2>{barber}</h2></div></section>
+            <section className="bs-person"><div className="bs-photo"><BookingImage src={image(booking.shopImage)} name="" /></div><div><p className="bs-label">{tr('shop')}</p><h2>{shopLink ? <a className="bs-provider-link" href={shopLink}>{shop}</a> : shop}</h2><p>{[booking.city, booking.address].filter(Boolean).join(' · ')}</p></div></section>
+            <section className="bs-person"><div className="bs-photo bs-photo--barber"><BookingImage src={image(booking.barberImage)} name="" person /></div><div><p className="bs-label">{tr('barber')}</p><h2>{barberLink ? <a className="bs-provider-link" href={barberLink}>{barber}</a> : barber}</h2></div></section>
           </div>
           <section className="bs-services" aria-labelledby="bs-services-title"><h2 id="bs-services-title">{packageName || tr('services')}</h2><ul>{services.map((service, index) => <li key={index}><span>{service.name}</span>{service.quantity > 1 && <span>×{service.quantity}</span>}</li>)}</ul></section>
           <div className="bs-total"><span>{tr('total')}</span><strong>{new Intl.NumberFormat(i18n.resolvedLanguage, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>

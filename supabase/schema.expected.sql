@@ -997,31 +997,33 @@ CREATE OR REPLACE FUNCTION "public"."customer_booking_share"("p_action" "text", 
     AS $_$
 declare
  b public.bookings%rowtype;
- link private.customer_booking_share_versions%rowtype;
- owner_id uuid;
- profile jsonb;
- account_id uuid;
- expiry timestamptz;
- receipt jsonb;
- captured jsonb;
+ alias private.booking_share_aliases%rowtype;
+ owner_id uuid;profile jsonb;account_id uuid;receipt jsonb;public_id text;resolved_booking uuid;captured jsonb;
 begin
- if p_action is null or p_action not in ('create','revoke','view') then raise exception 'INVALID_REQUEST';end if;
- if p_action='view' then
-  if coalesce(p_data->>'hash','') !~ '^[0-9a-f]{64}$' then raise exception 'LINK_UNAVAILABLE';end if;
-  select * into link from private.customer_booking_share_versions where token_hash=p_data->>'hash' and revoked_at is null;
-  if not found or link.expires_at<=clock_timestamp() then raise exception 'LINK_UNAVAILABLE';end if;
-  select * into b from public.bookings where id=link.booking_id;
- else
-  select * into b from public.bookings where id=(p_data->>'booking_id')::uuid for update;
-  if not found then raise exception 'LINK_UNAVAILABLE';end if;
+ if p_action is null or p_action not in('create','revoke','view','receipt')then raise exception 'INVALID_REQUEST';end if;
+ if p_action='view'then
+  if coalesce(p_data->>'hash','')!~'^[0-9a-f]{64}$'then raise exception 'LINK_UNAVAILABLE';end if;
+  select * into alias from private.booking_share_aliases where token_hash=p_data->>'hash';
+  if found then
+   -- Alias-first lookup: a recorded revocation can never fall through.
+   if alias.revoked_at is not null then raise exception 'LINK_UNAVAILABLE';end if;
+   resolved_booking:=alias.booking_id;
+  else
+   if coalesce(p_data->>'token','')!~'^[0-9a-f]{64}$'
+    or encode(extensions.digest(p_data->>'token','sha256'),'hex')is distinct from p_data->>'hash'then raise exception 'LINK_UNAVAILABLE';end if;
+   select l.booking_id into resolved_booking from private.booking_public_links l where l.public_id=p_data->>'token';
+  end if;
+  captured:=private.booking_share_live(resolved_booking);
+  if captured is null then raise exception 'LINK_UNAVAILABLE';end if;
+  return captured;
  end if;
- if b.id is null or b.customer_id is null then raise exception 'LINK_UNAVAILABLE';end if;
- select account_user_id into owner_id from private.customer_booking_owners where booking_id=b.id;
- if p_action='view' then
-  -- Keep the live ownership boundary; appointment edits never alter the snapshot.
-  if b.customer_id is distinct from link.customer_id or owner_id is distinct from link.account_user_id then raise exception 'LINK_UNAVAILABLE';end if;
-  return link.snapshot||jsonb_build_object('sharedAt',link.snapshot_at);
- end if;
+ select * into b from public.bookings where id=(p_data->>'booking_id')::uuid;
+ if not found then raise exception 'LINK_UNAVAILABLE';end if;
+ if p_action<>'receipt'then
+  -- Only the gateway can call this RPC. The internal receipt action is never an
+  -- HTTP action: customer-booking invokes it AFTER a validated booking/recovery.
+  if b.customer_id is null then raise exception 'LINK_UNAVAILABLE';end if;
+  select account_user_id into owner_id from private.customer_booking_owners where booking_id=b.id;
  -- Identities and signed-receipt fields are supplied only by the authenticated gateway.
  if nullif(p_data->>'user_id','') is not null then
   profile:=private.customer_account_api('profile',jsonb_build_object('user_id',p_data->>'user_id','session_id',p_data->>'session_id'));
@@ -1038,29 +1040,14 @@ begin
     )) then raise exception 'LINK_UNAVAILABLE';end if;
  end if;
 
- if p_action='revoke' then
-  update private.customer_booking_share_versions set revoked_at=clock_timestamp() where booking_id=b.id and revoked_at is null;
-  return jsonb_build_object('sharing',false);
+  if p_action='revoke'then raise exception 'PERMANENT_LINK';end if;
  end if;
- captured:=private.booking_share_snapshot(b.id);
- expiry:=(captured->>'expiresAt')::timestamptz;
- if captured is null or expiry is null or expiry<=clock_timestamp() then raise exception 'LINK_UNAVAILABLE';end if;
- -- Private notes/audit timestamps do not create a different public version.
- select * into link from private.customer_booking_share_versions
-  where booking_id=b.id and revoked_at is null and expires_at>clock_timestamp()
-    and customer_id=b.customer_id and account_user_id is not distinct from owner_id
-    and snapshot-'updatedAt'=captured-'updatedAt'
-  order by created_at desc,id desc limit 1;
- if not found then
-  if coalesce(p_data->>'hash','') !~ '^[0-9a-f]{64}$' then raise exception 'INVALID_REQUEST';end if;
-  insert into private.customer_booking_share_versions(booking_id,id,nonce,token_hash,customer_id,account_user_id,snapshot,expires_at,snapshot_at)
-   values(b.id,(p_data->>'id')::uuid,(p_data->>'nonce')::uuid,p_data->>'hash',b.customer_id,owner_id,captured,expiry,clock_timestamp())
-   returning * into link;
- end if;
- return jsonb_build_object('id',link.id,'nonce',link.nonce,'hash',link.token_hash,'expiresAt',link.expires_at);
-end $_$;
+ select l.public_id into public_id from private.booking_public_links l where l.booking_id=b.id;
+ if public_id is null then raise exception 'LINK_UNAVAILABLE';end if;
+ return jsonb_build_object('publicId',public_id,'permanent',true,'sharingVersion',2);
+end$_$;
 ALTER FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
-COMMENT ON FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") IS 'Service-only immutable booking snapshots; live owner or sealed guest receipt required to create/revoke; view token cannot mutate a booking.';
+COMMENT ON FUNCTION "public"."customer_booking_share"("p_action" "text", "p_data" "jsonb") IS 'Service-only permanent live booking sharing; URL lookup requires current ownership or sealed guest receipt. Internal receipt lookup is called only after validated booking/recovery. Legacy revoked aliases never resolve.';
 CREATE OR REPLACE FUNCTION "public"."customer_catalog_ratings"() RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3409,6 +3396,7 @@ CREATE OR REPLACE TRIGGER "normalize_contact_phone" BEFORE INSERT OR UPDATE OF "
 CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."notify_barber_change"();
 CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
+CREATE OR REPLACE TRIGGER "provision_booking_public_link" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."provision_booking_public_link"();
 CREATE OR REPLACE TRIGGER "require_barber_invitation" BEFORE INSERT ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."require_barber_invitation"();
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "stamp_booking_cancellation" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."stamp_booking_cancellation"();

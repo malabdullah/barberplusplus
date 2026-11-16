@@ -1,0 +1,22 @@
+import React from 'react';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import { render,screen,cleanup,fireEvent,waitFor } from '@testing-library/react';
+import { MemoryRouter,Routes,Route,useLocation } from 'react-router-dom';
+import { I18nextProvider } from 'react-i18next';import i18next from 'i18next';
+import en from '../../i18n/locales/en.json';import BookingEntry from './BookingEntry';
+import {customerBookingService}from'../../services/customerBooking.service';
+import {saveBookingDraft,readBookingDraft,rememberBookingReturn,readBookingReturnDraft}from'../../utils/customerBookingDraft';
+vi.mock('../../context/CustomerAuthContext',()=>({useCustomerAuth:()=>({loading:false})}));
+vi.mock('../../services/customerBooking.service',()=>({customerBookingService:{entry:vi.fn()}}));
+let i18n;const shop='10000000-0000-4000-8000-000000000011',barber='30000000-0000-4000-8000-000000000112';
+const target={kind:'barber',targetId:barber};const entry={kind:'barber',branchId:shop,barberId:barber,city:'Sharq'};
+const old={city:'Salmiya',branchId:shop,barberId:'',serviceIds:['old'],date:'2026-11-20',time:'12:00',step:1};
+function Destination(){const loc=useLocation();return <pre data-testid="destination">{JSON.stringify(loc.state)}</pre>;}
+const mount=(value=target)=>render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={['/entry']}><Routes><Route path="/entry" element={<BookingEntry target={value}/>}/><Route path="/book" element={<Destination/>}/></Routes></MemoryRouter></I18nextProvider>);
+beforeEach(async()=>{vi.resetAllMocks();localStorage.clear();sessionStorage.clear();i18n=i18next.createInstance();await i18n.init({lng:'en',resources:{en:{translation:en}}});customerBookingService.entry.mockResolvedValue(entry);HTMLDialogElement.prototype.showModal=function(){this.open=true;};});
+afterEach(cleanup);
+it('starts a validated new barber journey without account or receipt requirements',async()=>{mount();await screen.findByTestId('destination');expect(readBookingDraft()).toMatchObject({barberId:barber,panel:'services',serviceIds:[],time:''});});
+it('keeps the existing draft and return handoff until explicit replacement consent',async()=>{saveBookingDraft(old);rememberBookingReturn();mount();await screen.findByRole('dialog');expect(readBookingDraft()).toMatchObject(old);fireEvent.click(screen.getByRole('button',{name:'Start new booking'}));await screen.findByTestId('destination');expect(readBookingDraft()).toMatchObject({barberId:barber,serviceIds:[],time:''});expect(readBookingReturnDraft()).toBeNull();});
+it('cancel preserves the whole existing journey and resumes it',async()=>{saveBookingDraft(old);rememberBookingReturn();mount();await screen.findByRole('dialog');fireEvent.click(screen.getByRole('button',{name:'Keep current booking'}));await screen.findByTestId('destination');expect(readBookingDraft()).toMatchObject(old);expect(readBookingReturnDraft()).toMatchObject(old);});
+it('invalid or unavailable targets never erase the current draft',async()=>{saveBookingDraft(old);customerBookingService.entry.mockRejectedValue(Error('INVALID_SELECTION'));mount();expect(await screen.findByRole('alert')).toHaveTextContent('currently unavailable');expect(readBookingDraft()).toMatchObject(old);});
+it('rejects malformed entries without a catalog request',async()=>{mount({invalid:true});await screen.findByRole('alert');expect(customerBookingService.entry).not.toHaveBeenCalled();});

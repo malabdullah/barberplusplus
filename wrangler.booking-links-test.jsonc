@@ -1,0 +1,15 @@
+{
+  "name": "barber-open-test",
+  "account_id": "09c18affdb74c9a3721f79f6566df48a",
+  "main": "ops/cloud-test/booking-links/worker.js",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "redact_query_string": true,
+    "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 0.1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+  }
+}

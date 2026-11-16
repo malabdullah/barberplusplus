@@ -18,6 +18,13 @@ const phone = enabled && /^[a-z][a-z0-9-]{4,29}$/.test(projectId) && apiKey && a
   ? { projectId, apiKey, appId, ...(cloudTest ? { testPhones } : {}) } : undefined;
 if (enabled && !phone) throw Error('Checkout phone verification is enabled but not configured');
 
+// Service-only lookup; called only after a successful book or validated recovery.
+async function bookingShareUrl(id: string) {
+  const result = await admin.rpc('customer_booking_share', { p_action: 'receipt', p_data: { booking_id: id } });
+  if (result.error || !/^[0-9a-f]{64}$/.test(result.data?.publicId)) throw Error('Share link unavailable');
+  return new URL('/booking/share#' + result.data.publicId, Deno.env.get('APP_URL') || '').href;
+}
+
 type RecoveryRow = {
   id: string; date: string; time: string; duration: number; price: number; status: string;
   service_ids: string[]; service_snapshot: unknown; package_snapshot: unknown; created_at: string;
@@ -153,12 +160,12 @@ Deno.serve(createCustomerBookingHandler({
       date: b.date, time: b.time.slice(0, 5), duration: b.duration, price: b.price, status: b.status,
       branch_name: b.branches.name, branch_name_ar: b.branches.name_ar, address: b.branches.address,
       location_url: b.branches.location_url, barber_name: b.barbers.name, barber_name_ar: b.barbers.name_ar,
-      service_names: serviceNames, package: b.package_snapshot, created_at: b.created_at };
+      service_names: serviceNames, package: b.package_snapshot, created_at: b.created_at, shareUrl: await bookingShareUrl(b.id) };
   },
   },
   booking: async (action, data) => {
     const result = await admin.rpc(bookingRPC(action), { p_action: action, p_data: data });
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
-    return result.data;
+    return action === 'book' ? { ...result.data, shareUrl: await bookingShareUrl(result.data.id) } : result.data;
   },
 }));
