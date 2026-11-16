@@ -48,4 +48,50 @@ No installed-app sniffing, custom-scheme timer or forced app launch is used.
 Sources: [Apple universal-link guidance](https://developer.apple.com/documentation/technotes/tn3155-debugging-universal-links),
 [Android verified App Links](https://developer.android.com/training/app-links/verify-applinks).
 
-Main, production and App Store submission remain held for owner review.
+This feature remains Test-only. Main and website production are held for owner
+review. The existing approved iOS 1.0.0 (28) was separately released under direct
+owner instruction; neither that release nor this task authorizes a Live rollout of
+these new links or a production binary containing this feature.
+
+## Catalog entry API and native error handling
+
+Use the existing gated Test `POST /test-api/customer-booking` endpoint:
+
+```json
+{"action":"discovery-entry","kind":"shop","targetId":"<public shop UUID>"}
+```
+
+Or use `kind: "barber"` with the public barber UUID. Guest callers need the normal
+Test access capability only; signed-in callers supply their existing Bearer session.
+The handler derives account/session identity server-side and ignores client identity
+fields. Example successful response shape (HTTP 200):
+
+```json
+{"kind":"barber","branchId":"<current public shop UUID>","barberId":"<public barber UUID>","city":"<current catalog city>"}
+```
+
+Shop responses have `barberId: null`. After confirmation, the existing discovery
+search/selection APIs load the current barber list or scoped provider services.
+Always revalidate selection through the normal checkout path; no proof, booking,
+claim or account save is made by resolving an entry.
+
+- Guest and valid signed-in callers: HTTP 200 for an eligible target. Signed-in
+  self-booking targets are excluded by the server.
+- Missing/invalid kind or UUID: HTTP 400, `INVALID_REQUEST`.
+- Missing, paused, unpublished, unready or excluded barber/shop: HTTP 400,
+  `INVALID_SELECTION`. Do not erase a draft or silently substitute a provider.
+- Stale/invalid Bearer session rejected during identity lookup: HTTP 401,
+  `VERIFICATION_REQUIRED`. Recover the session using the normal account flow.
+- If a session expires between identity lookup and database validation, the
+  database denial fails closed through the generic HTTP 503, `UNAVAILABLE` path.
+- Transport/backend failure: HTTP 503, `UNAVAILABLE`; preserve the old draft and
+  offer retry. Wrong gateway/origin is HTTP 403, `FORBIDDEN`; disabled environment
+  is HTTP 404, `NOT_AVAILABLE`. These do not authorize a provider fallback.
+
+The web timer has a 3,600,000ms interval from page mount. Returning focus or changing
+visibility does not add a request or reset that timer. A suspended browser may delay
+a due interval until execution resumes; there is no separate resume/focus fetch,
+no missed-interval catch-up loop and no promise of an exact background delivery
+time. After the browser runs a due timer, its next scheduled interval continues.
+Unit tests check the exact hourly boundary; hosted tests advance a simulated hour
+and verify the request count without waiting an actual hour.

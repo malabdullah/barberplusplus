@@ -264,3 +264,14 @@ Deno.test('public booking entries validate targets and whitelist catalog fields 
  const result=await h(request({action:'discovery-entry',kind:'shop',targetId:selection.branchId,account_user_id:'forged',email:'PRIVATE'}));
  assert(result.status===200&&action==='entry'&&data.branch_id===selection.branchId&&data.kind==='shop'&&!('email'in data)&&!('account_user_id'in data));
 });
+
+Deno.test('booking entry uses live signed-in identity and keeps stale-session/error responses generic',async()=>{
+ const headers={Origin:'http://localhost:5173',Authorization:'Bearer existing-session'};
+ const body={action:'discovery-entry',kind:'barber',targetId:selection.barberId,user_id:'forged',session_id:'forged'};
+ const req=()=>new Request('http://localhost:5173',{method:'POST',headers,body:JSON.stringify(body)});
+ let forwarded:Record<string,unknown>={};
+ const valid=make({customer:async()=>({id:'canonical-account',session_id:'live-session',name:'Private',phone:'',countryCode:'+965'}),discovery:async(_a:string,d:Record<string,unknown>)=>{forwarded=d;return{kind:'barber',branchId:selection.branchId,barberId:selection.barberId,city:'Sharq'};}});
+ assert((await valid(req())).status===200&&forwarded.account_user_id==='canonical-account'&&forwarded.session_id==='live-session');
+ const stale=make({customer:async()=>null,discovery:async()=>{throw Error('Must not query');}});const rejected=await stale(req());assert(rejected.status===401&&(await rejected.json()).error==='VERIFICATION_REQUIRED');
+ const race=make({customer:async()=>({id:'canonical-account',session_id:'live-session'}),discovery:async()=>{throw Error('AUTH_REQUIRED');}});const failed=await race(req());assert(failed.status===503&&(await failed.json()).error==='UNAVAILABLE');
+});
