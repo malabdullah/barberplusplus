@@ -68,6 +68,6 @@
 .bs-entry-dialog h2 { margin: 0 0 12px; }
 .bs-entry-dialog p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 24px; }
 .bs-entry-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
-.bs-entry-actions > button { flex: 0 1 auto; max-width: 100%; min-height: 44px; padding: 8px 12px; font-size: 13px; line-height: 1.4; font-weight: 500; border-radius: var(--radius-sm); justify-content: center; }
+.bs-entry-actions > button { flex: 0 1 auto; max-width: 100%; min-height: 44px; padding: 8px 10px; font-size: 13px; line-height: 1.4; font-weight: 500; border-radius: var(--radius-sm); justify-content: center; }
 .bs-entry-actions > .cb-secondary { background: transparent; border-color: transparent; color: var(--text-secondary); }
 .bs-entry-actions > .cb-secondary:hover { background: var(--bg-secondary); color: var(--text-primary); }
