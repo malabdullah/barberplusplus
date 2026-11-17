@@ -55,6 +55,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       let body: Data;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return reply(400,{error:'INVALID_REQUEST'});}
       if(!body || typeof body!=='object' || Array.isArray(body)) return reply(400,{error:'INVALID_REQUEST'});
       const action=String(body.action);
+      if (body.nativeReturn !== undefined && (action !== 'email-signup' || body.client !== 'ios' || body.nativeReturn !== 'https')) return reply(400, { error: 'INVALID_REQUEST' });
       if (['correct-registration-email','admin-email-list','admin-email-change'].includes(action)) {
         if (!deps.emailManagement) return reply(404,{error:'NOT_AVAILABLE'});
         const result=await emailManagementAction({action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',secret:deps.secret,appUrl:deps.appUrl,deps:deps.emailManagement,
@@ -103,7 +104,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
-          await deps.emailSignup(name,email,body.password,body.client==='ios'?`native:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
+          await deps.emailSignup(name,email,body.password,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
         } else {
           if(!deps.emailLink)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
