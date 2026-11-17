@@ -12,10 +12,10 @@ test('invalid selections, paths, methods and open redirects fail closed',()=>{
  assert.equal(worker.fetch(new Request(HANDOFF_ORIGIN+'/book?shop='+id,{method:'POST'})).status,405);
  assert.equal(worker.fetch(new Request('https://foreign.example/book?shop='+id)).status,404);
 });
-test('public association documents contain only exact Test identities and only booking entry routes',async()=>{
+test('public association documents contain only exact Test identities and approved booking/signup routes',async()=>{
  const a=worker.fetch(new Request(HANDOFF_ORIGIN+'/.well-known/apple-app-site-association'));
  assert.equal(a.status,200);assert.equal(a.headers.get('content-type'),'application/json');assert.equal(a.headers.get('location'),null);assert.equal(a.headers.get('set-cookie'),null);
  const body=await a.json();assert.deepEqual(body.applinks.details[0].appIDs,['D49RFZQ6BT.com.barberplusplus.customer.test']);
- assert(body.applinks.details[0].components.every(c=>c['/']==='/book'));assert(!JSON.stringify(body).includes('/booking/share'));
+ assert.deepEqual(body.applinks.details[0].components,[{'/':'/book','?':{shop:'*'}},{'/':'/book','?':{barber:'*'}},{'/':'/auth/email','?':{client:'ios',state:'*'}}]);assert(!JSON.stringify(body).includes('/booking/share'));
  const b=worker.fetch(new Request(HANDOFF_ORIGIN+'/.well-known/assetlinks.json'));assert.equal(b.status,200);const records=await b.json();assert(records.every(x=>x.target.package_name==='com.barberplusplus.customer.test'&&x.target.sha256_cert_fingerprints.every(v=>/^([A-F0-9]{2}:){31}[A-F0-9]{2}$/.test(v))));
 });

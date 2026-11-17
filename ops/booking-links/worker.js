@@ -13,7 +13,14 @@ export default {
       headers['Cache-Control'] = 'public, max-age=300';
       return reply(200, JSON.stringify({ applinks: { details: [{ appIDs: ['D49RFZQ6BT.com.barberplusplus.customer'], components: [
         { '/': '/book', '?': { shop: '*' } }, { '/': '/book', '?': { barber: '*' } },
+        { '/': '/auth/email', '?': { client: 'ios', state: '*' } },
       ] }] } }));
+    }
+    const signup = signupFallback(url, HANDOFF_ORIGIN, BOOKING_ORIGIN);
+    if (signup !== null) {
+      if (!signup) return reply(404);
+      headers.Location = signup;
+      return reply(307);
     }
     if (url.pathname !== '/book' || url.hash) return reply(404);
     const entries = [...url.searchParams.entries()];
@@ -24,3 +31,4 @@ export default {
     return reply(307);
   },
 };
+import { signupFallback } from './auth-email.js';

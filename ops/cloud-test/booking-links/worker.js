@@ -1,4 +1,5 @@
 import associations from './associations.json' with { type: 'json' };
+import { signupFallback } from '../../booking-links/auth-email.js';
 export const HANDOFF_ORIGIN = 'https://barber-open-test.alabdullah-cs.workers.dev';
 export const TEST_ORIGIN = 'https://barber-test.alabdullah-cs.workers.dev';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -13,6 +14,7 @@ export default {
       headers['Content-Type'] = 'application/json'; headers['Cache-Control'] = 'public, max-age=300';
       return reply(200, JSON.stringify({ applinks: { details: [{ appIDs: [associations.iosAppId], components: [
         { '/': '/book', '?': { shop: '*' } }, { '/': '/book', '?': { barber: '*' } },
+        { '/': '/auth/email', '?': { client: 'ios', state: '*' } },
       ] }] } }));
     }
     if (url.pathname === '/.well-known/assetlinks.json' && !url.search) {
@@ -23,6 +25,12 @@ export default {
       return reply(200, JSON.stringify(fingerprints.length ? [{ relation: ['delegate_permission/common.handle_all_urls'], target: {
         namespace: 'android_app', package_name: associations.androidPackage, sha256_cert_fingerprints: fingerprints,
       } }] : []));
+    }
+    const signup = signupFallback(url, HANDOFF_ORIGIN, TEST_ORIGIN);
+    if (signup !== null) {
+      if (!signup) return reply(404);
+      headers.Location = signup;
+      return reply(307);
     }
     if (url.pathname !== '/book' || url.hash) return reply(404);
     const entries = [...url.searchParams.entries()];
