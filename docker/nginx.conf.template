@@ -3,6 +3,7 @@ map $uri $barber_cache_control {
   /runtime-config.js "no-store";
   /booking/share "private, no-store";
   /booking-share.html "private, no-store";
+  ~^/email/templates/ "no-store, no-transform";
   ~^/email/ "no-store";
   ~^/assets/ "public, max-age=31536000, immutable";
 }
