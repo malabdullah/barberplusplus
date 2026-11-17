@@ -4,17 +4,19 @@ const make=(overrides={})=>createCustomerAuthHandler({environment:'test',appUrl:
 const req=(body:unknown,origin='http://localhost:5173',token='')=>new Request('http://127.0.0.1:55321/functions/v1/customer-auth',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
 const details={name:'Customer Name',countryCode:'+965',phone:'5000-0099'};
 const password='Short12!';
-Deno.test('HTTPS signup routing requires an explicit valid iOS-only capability and preserves legacy requests',async()=>{
+Deno.test('HTTPS signup and resend routing require a valid iOS-only capability and preserve legacy requests',async()=>{
  const calls:unknown[][]=[];
  const app='https://www.barberplusplus.com';
- const handler=make({environment:'production',appUrl:app,publicUrl:'https://api.example.test',productionEnabled:true,rpc:async()=>true,emailSignup:async(...args:unknown[])=>{calls.push(args);}});
+ const handler=make({environment:'production',appUrl:app,publicUrl:'https://api.example.test',productionEnabled:true,rpc:async()=>true,emailSignup:async(...args:unknown[])=>{calls.push(args);},emailLink:async(...args:unknown[])=>{calls.push(args);}});
  const state='af220000-0000-4000-8000-000000000003';
  const body={action:'email-signup',client:'ios',nativeState:state,name:'Synthetic Customer',email:'synthetic@example.test',password};
- assert((await handler(req({...body,nativeReturn:'https'},app))).status===200);
- assert(calls[0][3]===`native-https:${state}`);
- assert((await handler(req(body,app))).status===200);assert(calls[1][3]===`native:${state}`);
- for(const data of [{...body,nativeReturn:null},{...body,nativeReturn:'custom'},{...body,nativeReturn:'https',client:'android'},{...body,nativeReturn:'https',client:'web'},{...body,nativeReturn:'https',action:'email-resend'},{...body,nativeReturn:'https',nativeState:'bad'}])assert((await handler(req(data,app))).status===400);
- assert(calls.length===2);
+ for(const action of ['email-signup','email-resend']) {
+  assert((await handler(req({...body,action,nativeReturn:'https'},app))).status===200);
+  assert(calls.at(-1)?.at(-1)===`native-https:${state}`);
+  assert((await handler(req({...body,action},app))).status===200);assert(calls.at(-1)?.at(-1)===`native:${state}`);
+ }
+ for(const data of [{...body,nativeReturn:null},{...body,nativeReturn:'custom'},{...body,nativeReturn:'https',client:'android'},{...body,nativeReturn:'https',client:'web'},{...body,nativeReturn:'https',action:'email-recovery'},{...body,nativeReturn:'https',nativeState:'bad'}])assert((await handler(req(data,app))).status===400);
+ assert(calls.length===4);
 });
 Deno.test('duplicate contact numbers return a stable conflict without exposing their owner',async()=>{
  const handler=make({identity:async()=>({user_id:'account',session_id:'session'}),rpc:async(action:string)=>{if(action==='update-profile')throw Error('23505 PHONE_IN_USE');if(action==='profile')return{email:'test@example.test'};return true;}});
