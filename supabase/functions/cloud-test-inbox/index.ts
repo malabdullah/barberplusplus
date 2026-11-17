@@ -8,8 +8,11 @@ Deno.serve(withCloudTestGateway(async req => {
   if (Deno.env.get('APP_ENV') !== 'cloud-test') return new Response('Not found', {status:404});
   if (req.method !== 'GET') return new Response('Method not allowed', {status:405});
   const admin = createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '', {auth:{persistSession:false}});
-  const {data,error} = await admin.rpc('cloud_test_mailbox', {p_action:'list',p_data:{}});
+  let {data,error} = await admin.rpc('cloud_test_mailbox', {p_action:'list',p_data:{}});
   if (error) return new Response('Inbox unavailable', {status:503});
+  const recipient = new URL(req.url).searchParams.get('recipient')?.trim().toLowerCase();
+  if (recipient && !/^[^\s@<>]+@example\.test$/.test(recipient)) return new Response('Invalid Test recipient', {status:400});
+  if (recipient) data = (data || []).filter((mail: Record<string, unknown>) => String(mail.recipient || '').trim().toLowerCase() === recipient);
   if (new URL(req.url).searchParams.get('format') === 'json') return Response.json(data, {headers:{'Cache-Control':'no-store'}});
   const appUrl = Deno.env.get('APP_URL') || '';
   const messages = (data || []).map((mail: Record<string, unknown>) => {
