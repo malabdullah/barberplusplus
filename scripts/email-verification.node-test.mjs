@@ -6,7 +6,8 @@ import { verificationUrl } from '../public/email/verification-url.js';
 test('manager verification keeps the work destination and team sign-in link', () => {
   const target = `${appUrl}/customer/email-callback?next=work`;
   const result = verificationUrl(link('signup', target), config);
-  assert.equal(new URL(result.url).searchParams.get('redirect_to'), target);
+  assert.equal(new URL(result.url).searchParams.get('next'), 'work');
+  assert.equal(new URL(result.url).origin, appUrl);
   assert.equal(result.customer, false);
 });
 const appUrl = 'https://app.example.test';
@@ -28,10 +29,13 @@ test('passes recovery to the own-site server proof flow without consuming its cr
   assert.ok(!url.searchParams.has('token_hash'));
 });
 test('keeps password invitations unconsumed while other supported mail flows use Auth', () => {
-  for (const type of ['signup', 'magiclink', 'email_change']) {
+  for (const type of ['magiclink', 'email_change']) {
     const url = new URL(verificationUrl(link(type, `${appUrl}/reset-password`), config).url);
     assert.equal(url.origin, config.supabaseUrl); assert.equal(url.searchParams.get('type'), type);
   }
+  const signup = new URL(verificationUrl(link('signup', `${appUrl}/customer/email-callback?next=account`), config).url);
+  assert.equal(signup.origin, appUrl); assert.equal(signup.pathname, '/customer/email-callback');
+  assert.equal(new URLSearchParams(signup.hash.slice(1)).get('type'), 'signup');
   const invite = new URL(verificationUrl(link('invite', `${appUrl}/accept-invite`), config).url);
   assert.equal(invite.origin, appUrl); assert.equal(invite.pathname, '/accept-invite');
   assert.equal(new URLSearchParams(invite.hash.slice(1)).get('type'), 'invite');
@@ -54,8 +58,9 @@ test('rejects forged destinations, unsafe protocols and unknown return parameter
 test('keeps template credentials in fragments, including dynamic and native callbacks', async () => {
   for (const flow of ['confirmation', 'recovery', 'email_change', 'magic_link', 'invite']) {
     const html = await readFile(new URL(`../public/email/templates/${flow}.html`, import.meta.url), 'utf8');
-    assert.match(html, /verify\.html#token_hash=/); assert.doesNotMatch(html, /verify\.html\?token_hash=/);
-    assert.match(html, /\.RedirectTo \| urlquery/); assert.match(html, /{{ \.Token }}/);
+    if (flow === 'confirmation') assert.match(html, /{{ \.RedirectTo }}#type=signup&amp;token_hash={{ \.TokenHash }}/);
+    else { assert.match(html, /verify\.html#token_hash=/); assert.match(html, /\.RedirectTo \| urlquery/); }
+    assert.doesNotMatch(html, /verify\.html\?token_hash=/); assert.match(html, /{{ \.Token }}/);
     assert.match(html, /support@barberplusplus\.com/);
     if(flow!=='email_change') assert.doesNotMatch(html,/else }}{{ \.ConfirmationURL }}/);
   }

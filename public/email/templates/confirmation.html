@@ -6,7 +6,7 @@
 <p style="margin:0 0 24px;font-size:26px;font-weight:bold">Barber<span style="color:#ad7d25">++</span></p>
 <h1 style="font-size:26px;line-height:1.3;margin:0 0 20px">Confirm your email</h1>
 <p>Confirm this email address to finish creating your Barber++ account.</p>
-<p style="margin:28px 0"><a href="{{ .SiteURL }}/email/verify.html#token_hash={{ .TokenHash }}&amp;type=signup&amp;redirect_to={{ .RedirectTo | urlquery }}" style="display:inline-block;padding:14px 28px;background:#d4a853;border:1px solid #a97927;border-radius:8px;color:#171714;font-weight:bold;text-decoration:none">Confirm email</a></p>
+<p style="margin:28px 0"><a href="{{ .RedirectTo }}#type=signup&amp;token_hash={{ .TokenHash }}" style="display:inline-block;padding:14px 28px;background:#d4a853;border:1px solid #a97927;border-radius:8px;color:#171714;font-weight:bold;text-decoration:none">Confirm email</a></p>
 <p>This link is for your account only and can be used once. If it expires, request a new email from Barber++.</p>
 <p>You can also enter this verification code on the screen where you requested it:</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:5px">{{ .Token }}</p>

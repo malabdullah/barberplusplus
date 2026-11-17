@@ -32,6 +32,24 @@ function showLink() {
   if (result) {
     const reset = result.type === 'recovery';
     heading.textContent = reset ? (ar ? 'إعادة تعيين كلمة المرور' : 'Reset your password') : (ar ? 'تأكيد بريدك الإلكتروني' : 'Confirm your email');
+    if (result.type === 'signup') {
+      message.textContent = ar ? 'جارٍ تأكيد بريدك الإلكتروني…' : 'Confirming your email…';
+      message.setAttribute('role', 'status');
+      // Plain HTTP link previews cannot consume a fragment credential. Defer
+      // prerendered/hidden documents; a scanner running visible JS may still
+      // follow this flow, an inherent tradeoff of automatic confirmation.
+      const proceed = () => {
+        if (document.visibilityState !== 'visible' || document.prerendering) return;
+        document.removeEventListener('visibilitychange', proceed);
+        document.removeEventListener('prerenderingchange', proceed);
+        window.location.replace(result.url);
+      };
+      document.addEventListener('visibilitychange', proceed);
+      document.addEventListener('prerenderingchange', proceed);
+      proceed();
+      document.title = `${heading.textContent} | Barber++`;
+      return;
+    }
     message.textContent = ar ? 'اضغط على متابعة لإكمال طلبك بأمان في \u2066Barber++\u2069.' : 'Continue to securely complete your request with Barber++.';
     button.textContent = ar ? 'متابعة' : 'Continue';
     button.hidden = false;

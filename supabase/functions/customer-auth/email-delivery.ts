@@ -8,11 +8,16 @@ type Mailer = {
 // The implicit email flow permits opening the link on another browser/device.
 export function createCustomerEmailDelivery(auth: Mailer, appUrl: string, environment = '') {
   return async (email: string, purpose: 'confirm' | 'recovery', returnTo: string) => {
-    const callback = new URL('/customer/email-callback', appUrl);
+    let callback = new URL('/customer/email-callback', appUrl);
     callback.searchParams.set('next', returnTo === 'book' ? 'book' : 'account');
-    if (returnTo.startsWith('native:')) {
-      const state=returnTo.slice(7);
-      if (!/^[0-9a-f-]{36}$/i.test(state) || !((environment==='cloud-test' && appUrl==='https://barber-test.alabdullah-cs.workers.dev') || (environment==='production' && appUrl==='https://www.barberplusplus.com'))) throw Error('INVALID_REQUEST');
+    const https = returnTo.startsWith('native-https:');
+    if (https || returnTo.startsWith('native:')) {
+      const state=returnTo.slice(https ? 'native-https:'.length : 'native:'.length);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state) || !((environment==='cloud-test' && appUrl==='https://barber-test.alabdullah-cs.workers.dev') || (environment==='production' && appUrl==='https://www.barberplusplus.com'))) throw Error('INVALID_REQUEST');
+      if (https) {
+        if (purpose !== 'confirm') throw Error('INVALID_REQUEST');
+        callback = new URL('/auth/email', environment === 'cloud-test' ? 'https://barber-open-test.alabdullah-cs.workers.dev' : 'https://barber-open.alabdullah-cs.workers.dev');
+      }
       callback.searchParams.set('client','ios');callback.searchParams.set('state',state);
     }
     const result = purpose === 'recovery'

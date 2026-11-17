@@ -13,6 +13,9 @@ export function verificationUrl(input, config) {
   const token = values.get('token_hash');
   if (!types.has(type) || !/^[a-f0-9]{32,128}$/i.test(token || '')) throw new Error('INVALID_LINK');
   const target = new URL(values.get('redirect_to') || app.href);
+  if (type === 'signup' && ([...values].length !== 3 || new Set(values.keys()).size !== 3
+    || [...values.keys()].some(key => !['type', 'token_hash', 'redirect_to'].includes(key))
+    || new Set(target.searchParams.keys()).size !== [...target.searchParams.keys()].length)) throw new Error('INVALID_LINK');
   if (target.origin !== app.origin || target.username || target.password || !paths.has(target.pathname) || target.hash) throw new Error('INVALID_LINK');
   for (const [key,value] of target.searchParams) {
     if (target.pathname !== '/customer/email-callback') throw new Error('INVALID_LINK');
@@ -22,11 +25,11 @@ export function verificationUrl(input, config) {
     if (key==='state' && uuid.test(value)) continue;
     throw new Error('INVALID_LINK');
   }
-  if (type==='recovery' || type==='invite' || target.searchParams.get('client')==='ios') {
+  if (type==='signup' || type==='recovery' || type==='invite' || target.searchParams.get('client')==='ios') {
     const destination = new URL(type==='invite'?'/accept-invite':'/customer/email-callback',app);
     destination.search=target.pathname==='/customer/email-callback'?target.search:'';
     destination.hash=new URLSearchParams({type,token_hash:token}).toString();
-    return {url:destination.href,type,customer:type!=='invite'};
+    return {url:destination.href,type,customer:type!=='invite' && (type !== 'signup' || target.searchParams.get('next') !== 'work')};
   }
   const verify = new URL('/auth/v1/verify', backend);
   verify.searchParams.set('type', type);

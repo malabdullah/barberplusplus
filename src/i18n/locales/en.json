@@ -1939,6 +1939,7 @@
       "verifiedTitle": "Email verified",
       "verifiedIntro": "Your account is ready. Book an appointment or manage your bookings.",
       "verifiedStatus": "Your email address has been confirmed.",
+      "currentSessionPreserved": "Email verified. Your current sign-in is unchanged.",
       "passwordUpdatedTitle": "Password updated",
       "invalidLinkTitle": "This link has expired",
       "requestNewLink": "Get a new reset link",

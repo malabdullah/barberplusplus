@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -10,7 +10,7 @@ import CustomerSocialButtons from '../components/Customer/CustomerSocialButtons'
 import { teamAuthService, staffDestination } from '../services/teamAuth.service';
 
 export default function Login() {
-  const { t } = useTranslation(); const navigate = useNavigate(); const { login } = useApp();
+  const { t } = useTranslation(); const navigate = useNavigate(); const location = useLocation(); const { login } = useApp();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false); const [error, setError] = useState(''); const [isLoading, setIsLoading] = useState(false);
   usePublicNavigationBusy(isLoading);
@@ -27,6 +27,7 @@ export default function Login() {
   };
   return <CustomerAuthLayout accountType="team" title={t('publicNav.teamSignIn')} intro={t('teamAuth.intro')}>
     <CustomerSocialButtons authService={teamAuthService} disabled={isLoading} hint={t('teamAuth.socialHint')} />
+    {location.state?.emailVerified === true && <p className="ca-result" role="status">{t('customerAuth.email.verifiedStatus')}</p>}
     {error && <p className="cb-alert" role="alert">{error}</p>}
     <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={isLoading}>
       <div className="ca-field"><label className="cb-field-label" htmlFor="email">{t('customerAuth.email.label')}</label><input className="cb-input" id="email" name="email" type="email" dir="ltr" autoComplete="email" value={formData.email} onChange={update} required /></div>

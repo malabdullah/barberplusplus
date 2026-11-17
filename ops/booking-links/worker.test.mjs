@@ -20,7 +20,7 @@ test('invalid selectors, ticket paths and Android association are never handled'
   assert.equal(worker.fetch(new Request(HANDOFF_ORIGIN + `/book?shop=${id}`, { method: 'POST' })).status, 405);
   assert.equal(worker.fetch(new Request('https://foreign.example/book?shop=' + id)).status, 404);
 });
-test('Live association is direct JSON with exact Live app and book routes only', async () => {
+test('Live association is direct JSON with exact Live app and approved book/signup routes', async () => {
   const response = worker.fetch(new Request(HANDOFF_ORIGIN + '/.well-known/apple-app-site-association'));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'application/json');
@@ -28,7 +28,7 @@ test('Live association is direct JSON with exact Live app and book routes only',
   assert.equal(response.headers.get('set-cookie'), null);
   const data = await response.json();
   assert.deepEqual(data.applinks.details[0].appIDs, ['D49RFZQ6BT.com.barberplusplus.customer']);
-  assert.deepEqual(data.applinks.details[0].components, [{ '/': '/book', '?': { shop: '*' } }, { '/': '/book', '?': { barber: '*' } }]);
+  assert.deepEqual(data.applinks.details[0].components, [{ '/': '/book', '?': { shop: '*' } }, { '/': '/book', '?': { barber: '*' } }, { '/': '/auth/email', '?': { client: 'ios', state: '*' } }]);
   assert(!JSON.stringify(data).includes('.test'));
 });
 test('Live helper preserves accepted Test helper selector and fallback semantics', () => {
