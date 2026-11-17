@@ -89,7 +89,7 @@ export default {
     // Apple popup. Normal navigation enters deletion with a document reload.
     result.headers.set('Cross-Origin-Opener-Policy', url.pathname === '/customer/auth-callback' ? 'unsafe-none'
       : url.pathname === '/customer/delete-account' ? 'unsafe-none' : 'same-origin');
-    result.headers.set('Cache-Control', 'private, no-store');
+    result.headers.set('Cache-Control', url.pathname.startsWith('/email/templates/') ? 'private, no-store, no-transform' : 'private, no-store');
     result.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: ${env.SUPABASE_URL}; connect-src 'self' ${env.SUPABASE_URL} ${env.SUPABASE_URL.replace('https:', 'wss:')}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
     return result;
   },
