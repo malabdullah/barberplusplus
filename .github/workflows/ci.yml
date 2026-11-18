@@ -36,8 +36,15 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
   browser:
+    name: ${{ matrix.slot == 1 && 'browser' || format('browser (runner {0})', matrix.slot) }}
     runs-on: ubuntu-latest
     permissions: { contents: read, actions: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        slot: ${{ fromJSON(github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository && '[1,2,3,4,5,6,7,8]' || '[1]') }}
+    env:
+      VERIFIED_RUNNER_SLOT: ${{ matrix.slot }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { fetch-depth: 2, persist-credentials: false }
@@ -77,7 +84,7 @@ jobs:
         if: steps.recorded.outputs.recorded == 'true'
         continue-on-error: true
         with:
-          name: release-inputs-browser-${{ github.run_attempt }}
+          name: release-inputs-browser-${{ github.run_attempt }}-${{ matrix.slot }}-${{ steps.recorded.outputs.fingerprint }}
           path: ${{ runner.temp }}/release-inputs.json
           retention-days: 1
           if-no-files-found: error
@@ -99,8 +106,15 @@ jobs:
       - if: always()
         run: npm run local:stop
   database:
+    name: ${{ matrix.slot == 1 && 'database' || format('database (runner {0})', matrix.slot) }}
     runs-on: ubuntu-latest
     permissions: { contents: read, actions: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        slot: ${{ fromJSON(github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository && '[1,2,3,4,5,6,7,8]' || '[1]') }}
+    env:
+      VERIFIED_RUNNER_SLOT: ${{ matrix.slot }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { fetch-depth: 2, persist-credentials: false }
@@ -165,7 +179,7 @@ jobs:
         if: steps.recorded.outputs.recorded == 'true'
         continue-on-error: true
         with:
-          name: release-inputs-database-${{ github.run_attempt }}
+          name: release-inputs-database-${{ github.run_attempt }}-${{ matrix.slot }}-${{ steps.recorded.outputs.fingerprint }}
           path: ${{ runner.temp }}/release-inputs.json
           retention-days: 1
           if-no-files-found: error

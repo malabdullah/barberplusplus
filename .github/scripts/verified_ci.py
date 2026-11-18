@@ -26,11 +26,14 @@ CI = '.github/workflows/ci.yml'
 HOST = 'https://api.github.com'
 SUITES = ('browser', 'database')
 JOBS = {'application', 'browser', 'database', 'dependency-review', 'secret-scan'}
+RUNNER_SLOTS = range(1, 9)
 MAX_AGE = 6 * 60 * 60
 MAX_PROOF = 16_384
 MAX_ARCHIVE = 65_536
 OID = re.compile(r'[a-f0-9]{40}')
 HASH = re.compile(r'[a-f0-9]{64}')
+COMMON_COMPONENTS = {'suite', 'runner', 'node', 'npm', 'python', 'docker', 'kernel', 'packages',
+                     'cpu', 'services', 'npmLock', 'platformLock', 'localLock'}
 FRONTEND = re.compile(
     r'(?:src/(?:[\w-]+/)*[\w.-]+\.(?:js|jsx|css|json|svg)'
     r'|public/(?:shops|images)/(?:[\w-]+/)*[\w.-]+\.(?:webp|png|jpe?g|avif|svg))'
@@ -118,7 +121,12 @@ def browsers():
     return sha(json.dumps(entries, separators=(',', ':')).encode())
 
 
-def fingerprint(suite):
+def cpu_rows():
+    return [row for row in pathlib.Path('/proc/cpuinfo').read_text().splitlines()
+            if re.match(r'^(processor|vendor_id|cpu family|model name|model|stepping|flags)\s*:', row)]
+
+
+def input_facts(suite):
     env = os.environ
     need(env.get('RUNNER_ENVIRONMENT') == 'github-hosted' and env.get('RUNNER_OS') == 'Linux'
          and env.get('RUNNER_ARCH') == 'X64' and env.get('ImageOS') and env.get('ImageVersion'),
@@ -140,8 +148,7 @@ def fingerprint(suite):
         'kernel': command('uname', '-srvmo').decode().strip(),
     }
     need(versions['node'] == 'v24.20.0', 'Node pin changed')
-    cpu = [row for row in pathlib.Path('/proc/cpuinfo').read_text().splitlines()
-           if re.match(r'^(processor|vendor_id|cpu family|model name|model|stepping|flags)\s*:', row)]
+    cpu = cpu_rows()
     need(bool(cpu) and any(row.startswith('flags') for row in cpu), 'missing runner CPU evidence')
     facts = {'suite': suite, 'runner': [env['ImageOS'], env['ImageVersion'], env['RUNNER_ARCH']],
              'versions': versions, 'packages': sha(command('dpkg-query', '-W', '-f=${Package}=${Version}\n')),
@@ -150,7 +157,25 @@ def fingerprint(suite):
              'localLock': sha(pathlib.Path('ops/local-test/runtime.json').read_bytes())}
     if suite == 'browser':
         facts['browsers'] = browsers()
-    return sha(json.dumps(facts, sort_keys=True, separators=(',', ':')).encode())
+    return facts
+
+
+def digest(value):
+    return sha(json.dumps(value, sort_keys=True, separators=(',', ':')).encode())
+
+
+def component_hashes(facts):
+    components = {key: digest(value) for key, value in facts.items() if key != 'versions'}
+    components.update({key: digest(value) for key, value in facts['versions'].items()})
+    return components
+
+
+def fingerprint(suite, stage):
+    components = component_hashes(input_facts(suite))
+    inputs = digest(components)
+    print(f'RUNNER_INPUT_COMPONENTS suite={suite} stage={stage} aggregate={inputs} '
+          f'components={json.dumps(components, sort_keys=True)}')
+    return {'inputs': inputs, 'components': components}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -206,10 +231,11 @@ def decode_proof(archive, digest):
         return json.loads(z.read(files[0]))
 
 
-def require_jobs(job_response, suite):
+def require_jobs(job_response, suite, slot):
     jobs = job_response['jobs']
-    need(job_response['total_count'] == len(JOBS) == len(jobs)
-         and {j['name'] for j in jobs} == JOBS and all(j['conclusion'] == 'success' for j in jobs),
+    expected = JOBS | {f'{s} (runner {i})' for s in SUITES for i in RUNNER_SLOTS if i != 1}
+    need(job_response['total_count'] == len(expected) == len(jobs)
+         and {j['name'] for j in jobs} == expected and all(j['conclusion'] == 'success' for j in jobs),
          'required pre-merge CI checks did not all pass')
     run_steps = {
         'browser': {'Run npm run test:e2e', 'Run npm run test:e2e:qa',
@@ -221,7 +247,8 @@ def require_jobs(job_response, suite):
                      'Verify persistence and explicit synthetic reset'},
     }[suite] | {'Sample inputs for reviewed pre-merge validation',
                 f'Record unchanged {suite} inputs after tests', f'Upload immutable {suite} input receipt'}
-    steps = next(j['steps'] for j in jobs if j['name'] == suite)
+    name = suite if slot == 1 else f'{suite} (runner {slot})'
+    steps = next(j['steps'] for j in jobs if j['name'] == name)
     need(all([step['conclusion'] for step in steps if step['name'] == name] == ['success']
              for name in run_steps), 'required suite steps were not recorded as successful')
 
@@ -230,15 +257,21 @@ def fresh(checked, merge, now):
     return checked <= merge <= now and now - checked <= MAX_AGE
 
 
-def require_proof(proof, suite, pr, run, final, inputs, now):
-    need(isinstance(proof, dict) and proof.get('version') == 1 and proof.get('suite') == suite
+def require_proof(proof, suite, slot, archive_inputs, pr, run, final, now):
+    need(isinstance(proof, dict) and proof.get('version') == 2 and proof.get('suite') == suite
          and proof.get('repo') == REPO and proof.get('pr') == pr['number']
          and proof.get('run') == run['id'] and proof.get('attempt') == run['run_attempt']
+         and type(proof.get('slot')) is int and proof['slot'] == slot
          and proof.get('ref') == f"refs/pull/{pr['number']}/merge"
          and proof.get('tree') == final['tree'] and proof.get('parents') == final['parents']
-         and OID.fullmatch(proof.get('commit', '')) and HASH.fullmatch(proof.get('inputs', ''))
+         and OID.fullmatch(proof.get('commit', '')) and proof.get('inputs') == archive_inputs
          and fresh(timestamp(run['updated_at']), timestamp(pr['merged_at']), now),
          'pre-merge receipt identity or age does not match')
+    components = proof.get('components')
+    expected = COMMON_COMPONENTS | ({'browsers'} if suite == 'browser' else set())
+    need(isinstance(components, dict) and components.keys() == expected
+         and all(isinstance(value, str) and HASH.fullmatch(value) for value in components.values())
+         and digest(components) == proof['inputs'], 'malformed runner input components')
 
 
 def verify(suite, evidence, final, diff, inputs, now):
@@ -263,25 +296,38 @@ def verify(suite, evidence, final, diff, inputs, now):
     run = runs[0]
     rid, attempt = run['id'], run['run_attempt']
     need(type(rid) is int and type(attempt) is int and rid > 0 and attempt > 0, 'invalid run identity')
-    require_jobs(evidence.api(f'/actions/runs/{rid}/attempts/{attempt}/jobs?per_page=20'), suite)
     artifacts = evidence.api(f'/actions/runs/{rid}/artifacts?per_page=20')
     need(artifacts['total_count'] == len(artifacts['artifacts']), 'ambiguous artifact listing')
-    selected = [a for a in artifacts['artifacts'] if a['name'] == f'release-inputs-{suite}-{attempt}']
-    need(len(selected) == 1, 'no matching pre-merge receipt')
-    artifact = selected[0]
+    receipts = {}
+    for item in artifacts['artifacts']:
+        marker = re.fullmatch(fr'release-inputs-{suite}-{attempt}-([1-8])-([a-f0-9]{{64}})', item['name'])
+        if marker:
+            slot = int(marker[1])
+            need(slot not in receipts, 'ambiguous pre-merge receipt slot')
+            receipts[slot] = (marker[2], item)
+    need(receipts, 'no matching pre-merge receipt')
+    slot = min(receipts, key=lambda i: (receipts[i][0] != inputs['inputs'], i))
+    archive_inputs, artifact = receipts[slot]
+    require_jobs(evidence.api(f'/actions/runs/{rid}/attempts/{attempt}/jobs?per_page=20'), suite, slot)
     need(timestamp(run['created_at']) <= timestamp(artifact['created_at']) <= timestamp(run['updated_at']),
          'artifact outside the selected CI execution')
     proof = evidence.artifact(artifact)
-    require_proof(proof, suite, pr, run, final, inputs, now)
+    require_proof(proof, suite, slot, archive_inputs, pr, run, final, now)
     candidate = evidence.api(f"/git/commits/{proof['commit']}")
     need(candidate['sha'] == proof['commit'] and candidate['tree']['sha'] == final['tree']
          and [p['sha'] for p in candidate['parents']] == final['parents'], 'actual tested Git objects differ')
-    print(f'SHADOW_EVIDENCE suite={suite} receipt=match runner_inputs={"match" if proof["inputs"] == inputs else "different"} run={rid}')
-    need(proof['inputs'] == inputs, 'runner input fingerprint differs from pre-merge CI')
+    different = sorted(key for key, value in proof['components'].items()
+                       if value != inputs['components'].get(key))
+    same = proof['inputs'] == inputs['inputs'] and proof['components'] == inputs['components']
+    print(f'SHADOW_EVIDENCE suite={suite} receipt=match runner_inputs={"match" if same else "different"} run={rid}')
+    print(f'RUNNER_INPUT_RECEIPT suite={suite} slot={slot} artifact={artifact["id"]}')
+    if not same:
+        print(f'RUNNER_INPUT_COMPONENTS_CHANGED suite={suite} components={json.dumps(different)}')
+    need(same, 'runner input fingerprint differs from pre-merge CI')
     return rid
 
 
-def candidate(suite, source):
+def candidate(suite, source, stage):
     env = os.environ
     info = json.loads(pathlib.Path(env['GITHUB_EVENT_PATH']).read_text())['pull_request']
     need(env['GITHUB_EVENT_NAME'] == 'pull_request' and info['base']['ref'] == TARGET
@@ -290,9 +336,12 @@ def candidate(suite, source):
          and env['GITHUB_REF'] == f"refs/pull/{info['number']}/merge",
          'not the isolated pull-request test merge')
     need(frontend_only(changes()), 'change requires full validation')
-    return {'version': 1, 'suite': suite, 'repo': REPO, 'pr': info['number'],
-            'run': int(env['GITHUB_RUN_ID']), 'attempt': int(env['GITHUB_RUN_ATTEMPT']), 'ref': env['GITHUB_REF'],
-            **source, 'inputs': fingerprint(suite)}
+    slot = int(env['VERIFIED_RUNNER_SLOT'])
+    need(slot in RUNNER_SLOTS, 'unexpected qualification slot')
+    return {'version': 2, 'suite': suite, 'repo': REPO, 'pr': info['number'],
+            'run': int(env['GITHUB_RUN_ID']), 'attempt': int(env['GITHUB_RUN_ATTEMPT']),
+            'slot': slot, 'ref': env['GITHUB_REF'],
+            **source, **fingerprint(suite, stage)}
 
 
 def output(name, value):
@@ -321,11 +370,17 @@ def main():
         scratch = pathlib.Path(env['RUNNER_TEMP'])
         before = scratch / f'release-before-{args.suite}.json'
         if args.mode == 'sample':
-            before.write_text(json.dumps(candidate(args.suite, source)))
+            before.write_text(json.dumps(candidate(args.suite, source, 'before')))
         elif args.mode == 'record':
-            proof = candidate(args.suite, source)
-            need(json.loads(before.read_bytes()) == proof, 'CI inputs changed during validation')
+            proof = candidate(args.suite, source, 'after')
+            initial = json.loads(before.read_bytes())
+            if initial != proof:
+                different = sorted(key for key, value in proof['components'].items()
+                                   if value != initial['components'].get(key))
+                print(f'RUNNER_INPUT_COMPONENTS_CHANGED suite={args.suite} components={json.dumps(different)}')
+            need(initial == proof, 'CI inputs changed during validation')
             (scratch / 'release-inputs.json').write_text(json.dumps(proof) + '\n')
+            output('fingerprint', proof['inputs'])
             output('recorded', 'true')
         else:
             need(env.get('GITHUB_EVENT_NAME') == 'push' and env.get('GITHUB_REF') == f'refs/heads/{TARGET}'
@@ -335,7 +390,8 @@ def main():
             key, description = disposition(env.get('BARBER_VALIDATION_MODE'))
             diff = changes()
             need(frontend_only(diff), 'change requires full validation')
-            rid = verify(args.suite, Evidence(env.get('GH_TOKEN')), source, diff, fingerprint(args.suite), time.time())
+            rid = verify(args.suite, Evidence(env.get('GH_TOKEN')), source, diff,
+                         fingerprint(args.suite, 'shadow'), time.time())
             output(key, 'true')
             print(f'{args.suite}: {description} (run {rid})')
     except NoProof as error:

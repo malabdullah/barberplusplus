@@ -15,7 +15,8 @@ class Fixture:
         self.head = 'b' * 40
         self.candidate = 'c' * 40
         self.final = {'commit': 'd' * 40, 'tree': 'e' * 40, 'parents': [self.base, self.head]}
-        self.inputs = 'f' * 64
+        components = {key: 'f' * 64 for key in ci.COMMON_COMPONENTS | {'browsers'}}
+        self.inputs = {'inputs': ci.digest(components), 'components': components}
         self.now = ci.timestamp('2026-11-18T10:20:00Z')
         self.diff = [('M', 'src/pages/Landing.jsx', '100644')]
         repo = {'full_name': ci.REPO}
@@ -30,16 +31,19 @@ class Fixture:
                          'Verify scoped Apple popup transport without provider calls',
                          'Sample inputs for reviewed pre-merge validation', 'Record unchanged browser inputs after tests',
                          'Upload immutable browser input receipt']
-        self.jobs = {'total_count': 5, 'jobs': [
+        job_names = ci.JOBS | {f'{s} (runner {i})' for s in ci.SUITES for i in ci.RUNNER_SLOTS if i != 1}
+        self.jobs = {'total_count': len(job_names), 'jobs': [
             {'name': n, 'conclusion': 'success',
-             'steps': [{'name': s, 'conclusion': 'success'} for s in browser_steps] if n == 'browser' else []}
-            for n in sorted(ci.JOBS)
+             'steps': [{'name': s, 'conclusion': 'success'} for s in browser_steps] if n.startswith('browser') else []}
+            for n in sorted(job_names)
         ]}
         self.artifacts = {'total_count': 1, 'artifacts': [
-            {'name': 'release-inputs-browser-1', 'created_at': '2026-11-18T10:04:00Z'}]}
-        self.proof = {'version': 1, 'suite': 'browser', 'repo': ci.REPO, 'pr': 141, 'run': 123,
-                      'attempt': 1, 'ref': 'refs/pull/141/merge', 'commit': self.candidate,
-                      'tree': self.final['tree'], 'parents': [self.base, self.head], 'inputs': self.inputs}
+            {'id': 10, 'name': f'release-inputs-browser-1-1-{self.inputs["inputs"]}',
+             'created_at': '2026-11-18T10:04:00Z'}]}
+        self.proof = {'version': 2, 'suite': 'browser', 'repo': ci.REPO, 'pr': 141, 'run': 123,
+                      'attempt': 1, 'slot': 1, 'ref': 'refs/pull/141/merge', 'commit': self.candidate,
+                      'tree': self.final['tree'], 'parents': [self.base, self.head],
+                      'inputs': self.inputs['inputs'], 'components': dict(components)}
         self.git_object = {'sha': self.candidate, 'tree': {'sha': self.final['tree']},
                            'parents': [{'sha': self.base}, {'sha': self.head}]}
         self.calls = []
@@ -99,7 +103,7 @@ class VerifyCI(unittest.TestCase):
         self.assertEqual(f.evaluate(), 123)
 
     def test_exact_inputs_are_mandatory(self):
-        for field, value in [('inputs', '0' * 64), ('parents', ['0' * 40, 'b' * 40]),
+        for field, value in [('inputs', '0' * 64), ('slot', 2), ('parents', ['0' * 40, 'b' * 40]),
                              ('tree', '0' * 40), ('attempt', 2), ('pr', 142),
                              ('ref', 'refs/heads/dev'), ('suite', 'database')]:
             with self.subTest(field=field):
@@ -107,6 +111,29 @@ class VerifyCI(unittest.TestCase):
                 f.proof[field] = value
                 with self.assertRaises(ci.NoProof):
                     f.evaluate()
+
+    def test_valid_receipt_with_different_runner_component_falls_back(self):
+        f = Fixture()
+        f.inputs['components']['kernel'] = 'a' * 64
+        f.inputs['inputs'] = ci.digest(f.inputs['components'])
+        with patch('builtins.print') as log, self.assertRaisesRegex(ci.NoProof, 'runner input fingerprint differs'):
+            f.evaluate()
+        log.assert_any_call('RUNNER_INPUT_COMPONENTS_CHANGED suite=browser components=["kernel"]')
+
+    def test_selects_exact_runner_and_checks_the_matching_job(self):
+        f = Fixture()
+        f.artifacts['artifacts'].append({
+            'id': 11, 'name': f'release-inputs-browser-1-3-{f.inputs["inputs"]}',
+            'created_at': '2026-11-18T10:04:00Z',
+        })
+        f.artifacts['artifacts'][0]['name'] = f'release-inputs-browser-1-1-{"0" * 64}'
+        f.artifacts['total_count'] = 2
+        f.proof['slot'] = 3
+        self.assertEqual(f.evaluate(), 123)
+        job = next(job for job in f.jobs['jobs'] if job['name'] == 'browser (runner 3)')
+        job['steps'][0]['conclusion'] = 'skipped'
+        with self.assertRaises(ci.NoProof):
+            f.evaluate()
 
     def test_stale_future_and_wrong_repository_fail_closed(self):
         for mutate in [
