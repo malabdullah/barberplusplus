@@ -769,3 +769,5 @@ a:active {
   --booking-divider: var(--surface-divider);
   --booking-control: #898989;
 }
+
+/* First protected release with verified CI receipts. */
