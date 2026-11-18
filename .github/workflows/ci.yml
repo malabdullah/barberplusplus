@@ -4,6 +4,10 @@ on:
   push:
     branches: [dev]
   workflow_call:
+    inputs:
+      reviewed_validation:
+        type: string
+        default: 'off'
 permissions:
   contents: read
 jobs:
@@ -33,9 +37,11 @@ jobs:
           exit-code: '1'
   browser:
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { fetch-depth: 2, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24.20.0, cache: npm }
       - run: npm run local:setup
       - name: Export only the local browser key
@@ -45,8 +51,36 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox webkit
       - name: Verify scoped Apple popup transport without provider calls
         run: node scripts/check-apple-popup-policy.mjs
+      - name: Sample inputs for reviewed pre-merge validation
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        run: python3 .github/scripts/verified_ci.py sample browser
+      - name: Check whether the reviewed browser result is reusable
+        id: reuse
+        if: (inputs.reviewed_validation == 'shadow-v1' || inputs.reviewed_validation == 'verified-v1') && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BARBER_VALIDATION_MODE: ${{ inputs.reviewed_validation }}
+        run: python3 .github/scripts/verified_ci.py reuse browser
       - run: npm run test:e2e
+        if: steps.reuse.outputs.reused != 'true'
       - run: npm run test:e2e:qa
+        if: steps.reuse.outputs.reused != 'true'
+      - name: Record unchanged browser inputs after tests
+        id: recorded
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        run: python3 .github/scripts/verified_ci.py record browser
+      - name: Upload immutable browser input receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.recorded.outputs.recorded == 'true'
+        continue-on-error: true
+        with:
+          name: release-inputs-browser-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-inputs.json
+          retention-days: 1
+          if-no-files-found: error
       - name: Report bounded synthetic setup diagnostics
         if: failure()
         run: |
@@ -66,14 +100,30 @@ jobs:
         run: npm run local:stop
   database:
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { fetch-depth: 2, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24.20.0, cache: npm }
       - run: npm run local:setup
       - run: npm run check:migrations
+      - name: Sample inputs for reviewed pre-merge validation
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        run: python3 .github/scripts/verified_ci.py sample database
+      - name: Check whether the reviewed database result is reusable
+        id: reuse
+        if: (inputs.reviewed_validation == 'shadow-v1' || inputs.reviewed_validation == 'verified-v1') && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BARBER_VALIDATION_MODE: ${{ inputs.reviewed_validation }}
+        run: python3 .github/scripts/verified_ci.py reuse database
       - run: npx supabase test db
+        if: steps.reuse.outputs.reused != 'true'
       - run: npm run check:schema
+        if: steps.reuse.outputs.reused != 'true'
       - name: Retain synthetic schema diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -85,20 +135,40 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
       - name: Replay on the exact production PostgreSQL image
+        if: steps.reuse.outputs.reused != 'true'
         run: python3 ops/release/test-postgres-image.py
       - name: Rehearse deletion with pinned Auth and Storage
+        if: steps.reuse.outputs.reused != 'true'
         run: python3 ops/account-deletion/rehearse-platform.py
       - name: Verify local backend across service boundaries
+        if: steps.reuse.outputs.reused != 'true'
         run: node scripts/probe-local-backend.mjs
       - name: Verify synthetic invitations and local email
+        if: steps.reuse.outputs.reused != 'true'
         run: node scripts/probe-local-invitations.mjs
       - name: Verify customer email, social profiles and booking ownership
+        if: steps.reuse.outputs.reused != 'true'
         run: |
           node scripts/probe-customer-email.mjs
           node scripts/probe-customer-social.mjs
           node scripts/probe-customer-smtp.mjs
       - name: Verify persistence and explicit synthetic reset
+        if: steps.reuse.outputs.reused != 'true'
         run: node scripts/verify-local-lifecycle.mjs
+      - name: Record unchanged database inputs after tests
+        id: recorded
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        run: python3 .github/scripts/verified_ci.py record database
+      - name: Upload immutable database input receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.recorded.outputs.recorded == 'true'
+        continue-on-error: true
+        with:
+          name: release-inputs-database-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-inputs.json
+          retention-days: 1
+          if-no-files-found: error
       - name: Report bounded synthetic setup diagnostics
         if: failure()
         run: |
