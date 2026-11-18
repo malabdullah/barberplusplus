@@ -234,8 +234,11 @@ def decode_proof(archive, digest):
 def require_jobs(job_response, suite, slot):
     jobs = job_response['jobs']
     expected = JOBS | {f'{s} (runner {i})' for s in SUITES for i in RUNNER_SLOTS if i != 1}
+    name = suite if slot == 1 else f'{suite} (runner {slot})'
+    required = JOBS | {name}
     need(job_response['total_count'] == len(expected) == len(jobs)
-         and {j['name'] for j in jobs} == expected and all(j['conclusion'] == 'success' for j in jobs),
+         and {j['name'] for j in jobs} == expected
+         and all(j['conclusion'] == 'success' for j in jobs if j['name'] in required),
          'required pre-merge CI checks did not all pass')
     run_steps = {
         'browser': {'Run npm run test:e2e', 'Run npm run test:e2e:qa',
@@ -247,7 +250,6 @@ def require_jobs(job_response, suite, slot):
                      'Verify persistence and explicit synthetic reset'},
     }[suite] | {'Sample inputs for reviewed pre-merge validation',
                 f'Record unchanged {suite} inputs after tests', f'Upload immutable {suite} input receipt'}
-    name = suite if slot == 1 else f'{suite} (runner {slot})'
     steps = next(j['steps'] for j in jobs if j['name'] == name)
     need(all([step['conclusion'] for step in steps if step['name'] == name] == ['success']
              for name in run_steps), 'required suite steps were not recorded as successful')

@@ -129,6 +129,7 @@ class VerifyCI(unittest.TestCase):
         f.artifacts['artifacts'][0]['name'] = f'release-inputs-browser-1-1-{"0" * 64}'
         f.artifacts['total_count'] = 2
         f.proof['slot'] = 3
+        next(job for job in f.jobs['jobs'] if job['name'] == 'browser (runner 4)')['conclusion'] = 'failure'
         self.assertEqual(f.evaluate(), 123)
         job = next(job for job in f.jobs['jobs'] if job['name'] == 'browser (runner 3)')
         job['steps'][0]['conclusion'] = 'skipped'

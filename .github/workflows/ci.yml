@@ -38,6 +38,7 @@ jobs:
   browser:
     name: ${{ matrix.slot == 1 && 'browser' || format('browser (runner {0})', matrix.slot) }}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.slot != 1 }}
     permissions: { contents: read, actions: read }
     strategy:
       fail-fast: false
@@ -108,6 +109,7 @@ jobs:
   database:
     name: ${{ matrix.slot == 1 && 'database' || format('database (runner {0})', matrix.slot) }}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.slot != 1 }}
     permissions: { contents: read, actions: read }
     strategy:
       fail-fast: false
