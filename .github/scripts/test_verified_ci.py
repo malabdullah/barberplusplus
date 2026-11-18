@@ -1,7 +1,10 @@
 import io
 import json
+import pathlib
+import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
 import verified_ci as ci
 
@@ -63,6 +66,26 @@ class Fixture:
 
 
 class VerifyCI(unittest.TestCase):
+    def test_browser_fingerprint_ignores_only_the_empty_firefox_runtime_lock(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(ci.pathlib.Path, 'home', return_value=pathlib.Path(temp)):
+            cache = pathlib.Path(temp) / '.cache/ms-playwright'
+            for name in ('chromium-1234', 'firefox-1538/firefox', 'webkit-2336'):
+                (cache / name).mkdir(parents=True)
+            binary = cache / 'firefox-1538/firefox/firefox'
+            binary.write_bytes(b'original Firefox executable')
+            original = ci.browsers()
+            lock = binary.with_name('.parentlock')
+            lock.touch()
+            self.assertEqual(ci.browsers(), original)
+            lock.write_bytes(b'unexpected contents')
+            self.assertNotEqual(ci.browsers(), original)
+            lock.unlink()
+            lock.symlink_to(binary.name)
+            self.assertNotEqual(ci.browsers(), original)
+            lock.unlink()
+            binary.write_bytes(b'changed Firefox executable')
+            self.assertNotEqual(ci.browsers(), original)
+
     def test_only_the_explicit_verified_mode_can_skip(self):
         self.assertEqual(ci.disposition('shadow-v1')[0], 'eligible')
         self.assertEqual(ci.disposition('verified-v1')[0], 'reused')

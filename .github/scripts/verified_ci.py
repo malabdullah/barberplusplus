@@ -107,8 +107,13 @@ def browsers():
             if path.is_symlink():
                 entries.append((name, 'symlink', os.readlink(path)))
             elif path.is_file():
+                file_stat = path.stat()
+                # Firefox creates this empty POSIX lock at runtime. Keep hashing
+                # all executable content and any unexpected file at this path.
+                if file_stat.st_size == 0 and re.fullmatch(r'firefox-\d+/firefox/\.parentlock', name):
+                    continue
                 with path.open('rb') as handle:
-                    entries.append((name, path.stat().st_mode & 0o777, hashlib.file_digest(handle, 'sha256').hexdigest()))
+                    entries.append((name, file_stat.st_mode & 0o777, hashlib.file_digest(handle, 'sha256').hexdigest()))
             need(len(entries) <= 10_000, 'browser manifest too large')
     return sha(json.dumps(entries, separators=(',', ':')).encode())
 
