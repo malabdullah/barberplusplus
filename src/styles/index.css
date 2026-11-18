@@ -777,3 +777,5 @@ a:active {
 /* Isolated release shadow after the Firefox runtime-lock fix. */
 
 /* Isolated release shadow for exact runner receipt selection. */
+
+/* Isolated release shadow with an enforced CPU and runner image pin. */
