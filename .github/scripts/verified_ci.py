@@ -118,7 +118,12 @@ def browsers():
     return sha(json.dumps(entries, separators=(',', ':')).encode())
 
 
-def fingerprint(suite):
+def cpu_rows():
+    return [row for row in pathlib.Path('/proc/cpuinfo').read_text().splitlines()
+            if re.match(r'^(processor|vendor_id|cpu family|model name|model|stepping|flags)\s*:', row)]
+
+
+def input_facts(suite):
     env = os.environ
     need(env.get('RUNNER_ENVIRONMENT') == 'github-hosted' and env.get('RUNNER_OS') == 'Linux'
          and env.get('RUNNER_ARCH') == 'X64' and env.get('ImageOS') and env.get('ImageVersion'),
@@ -140,8 +145,7 @@ def fingerprint(suite):
         'kernel': command('uname', '-srvmo').decode().strip(),
     }
     need(versions['node'] == 'v24.20.0', 'Node pin changed')
-    cpu = [row for row in pathlib.Path('/proc/cpuinfo').read_text().splitlines()
-           if re.match(r'^(processor|vendor_id|cpu family|model name|model|stepping|flags)\s*:', row)]
+    cpu = cpu_rows()
     need(bool(cpu) and any(row.startswith('flags') for row in cpu), 'missing runner CPU evidence')
     facts = {'suite': suite, 'runner': [env['ImageOS'], env['ImageVersion'], env['RUNNER_ARCH']],
              'versions': versions, 'packages': sha(command('dpkg-query', '-W', '-f=${Package}=${Version}\n')),
@@ -150,7 +154,30 @@ def fingerprint(suite):
              'localLock': sha(pathlib.Path('ops/local-test/runtime.json').read_bytes())}
     if suite == 'browser':
         facts['browsers'] = browsers()
-    return sha(json.dumps(facts, sort_keys=True, separators=(',', ':')).encode())
+    return facts
+
+
+def digest(value):
+    return sha(json.dumps(value, sort_keys=True, separators=(',', ':')).encode())
+
+
+def component_hashes(facts):
+    components = {key: digest(value) for key, value in facts.items() if key != 'versions'}
+    components.update({key: digest(value) for key, value in facts['versions'].items()})
+    return components
+
+
+def fingerprint(suite):
+    return digest(input_facts(suite))
+
+
+def probe_inputs(suite):
+    facts = input_facts(suite)
+    print(f'RUNNER_INPUT_COMPONENTS suite={suite} aggregate={digest(facts)} '
+          f'components={json.dumps(component_hashes(facts), sort_keys=True)}')
+    packages = command('dpkg-query', '-W', '-f=${Package}=${Version}\n').decode().splitlines()
+    payload = {'facts': facts, 'cpu_rows': cpu_rows(), 'packages': packages}
+    (pathlib.Path(os.environ['RUNNER_TEMP']) / 'runner-inputs.json').write_text(json.dumps(payload) + '\n')
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -310,13 +337,20 @@ def disposition(mode):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=('sample', 'record', 'reuse'))
+    parser.add_argument('mode', choices=('sample', 'record', 'reuse', 'probe'))
     parser.add_argument('suite', choices=SUITES)
     args = parser.parse_args()
     try:
         env = os.environ
         need(env.get('GITHUB_ACTIONS') == 'true' and env.get('GITHUB_REPOSITORY') == REPO,
              'not the Barber++ GitHub workflow')
+        if args.mode == 'probe':
+            ref = 'refs/heads/codex/verified-runner-components-20261118'
+            need(env.get('GITHUB_EVENT_NAME') == 'push' and env.get('GITHUB_REF') == ref
+                 and env.get('GITHUB_WORKFLOW_REF') == f'{REPO}/.github/workflows/runner-input-probe.yml@{ref}',
+                 'not the isolated runner probe')
+            probe_inputs(args.suite)
+            return
         source = checkout()
         scratch = pathlib.Path(env['RUNNER_TEMP'])
         before = scratch / f'release-before-{args.suite}.json'

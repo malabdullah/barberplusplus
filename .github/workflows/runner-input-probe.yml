@@ -1,0 +1,42 @@
+name: Runner input probe (isolated Test)
+on:
+  push:
+    branches: [codex/verified-runner-components-20261118]
+    paths: [.github/scripts/verified_ci.py, .github/workflows/runner-input-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.repository == 'malabdullah/barberplusplus'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [browser, database]
+        sample: [a, b, c]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0, cache: npm }
+      - run: npm run local:setup
+      - run: npm run check:migrations
+        if: matrix.suite == 'database'
+      - run: node ops/release/export-local-browser-env.mjs
+        if: matrix.suite == 'browser'
+      - run: sudo python3 .github/scripts/prepare-ubuntu-apt.py
+        if: matrix.suite == 'browser'
+      - run: npx playwright install --with-deps chromium firefox webkit
+        if: matrix.suite == 'browser'
+      - run: node scripts/check-apple-popup-policy.mjs
+        if: matrix.suite == 'browser'
+      - name: Record non-secret input components
+        run: python3 .github/scripts/verified_ci.py probe "${{ matrix.suite }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: runner-inputs-${{ matrix.suite }}-${{ matrix.sample }}
+          path: ${{ runner.temp }}/runner-inputs.json
+          retention-days: 1
+          if-no-files-found: error
+      - run: npm run local:stop
+        if: always()
