@@ -52,12 +52,12 @@ jobs:
       - name: Verify scoped Apple popup transport without provider calls
         run: node scripts/check-apple-popup-policy.mjs
       - name: Sample inputs for reviewed pre-merge validation
-        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         run: python3 .github/scripts/verified_ci.py sample browser
       - name: Check whether the reviewed browser result is reusable
         id: reuse
-        if: (inputs.reviewed_validation == 'shadow-v1' || inputs.reviewed_validation == 'verified-v1') && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: inputs.reviewed_validation == 'shadow-v1' && github.event_name == 'push' && github.ref == 'refs/heads/codex/verified-shadow-base-20261118'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,7 +69,7 @@ jobs:
         if: steps.reuse.outputs.reused != 'true'
       - name: Record unchanged browser inputs after tests
         id: recorded
-        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         run: python3 .github/scripts/verified_ci.py record browser
       - name: Upload immutable browser input receipt
@@ -109,12 +109,12 @@ jobs:
       - run: npm run local:setup
       - run: npm run check:migrations
       - name: Sample inputs for reviewed pre-merge validation
-        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         run: python3 .github/scripts/verified_ci.py sample database
       - name: Check whether the reviewed database result is reusable
         id: reuse
-        if: (inputs.reviewed_validation == 'shadow-v1' || inputs.reviewed_validation == 'verified-v1') && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: inputs.reviewed_validation == 'shadow-v1' && github.event_name == 'push' && github.ref == 'refs/heads/codex/verified-shadow-base-20261118'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -157,7 +157,7 @@ jobs:
         run: node scripts/verify-local-lifecycle.mjs
       - name: Record unchanged database inputs after tests
         id: recorded
-        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         run: python3 .github/scripts/verified_ci.py record database
       - name: Upload immutable database input receipt

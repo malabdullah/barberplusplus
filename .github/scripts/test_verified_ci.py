@@ -17,7 +17,7 @@ class Fixture:
         self.diff = [('M', 'src/pages/Landing.jsx', '100644')]
         repo = {'full_name': ci.REPO}
         self.pr = {'number': 141, 'created_at': '2026-11-18T09:00:00Z', 'merged_at': '2026-11-18T10:10:00Z',
-                   'base': {'ref': 'main', 'repo': repo}, 'head': {'sha': self.head, 'repo': repo},
+                   'base': {'ref': ci.TARGET, 'repo': repo}, 'head': {'sha': self.head, 'repo': repo},
                    'merge_commit_sha': self.final['commit']}
         self.run = {'id': 123, 'run_attempt': 1, 'event': 'pull_request',
                     'path': ci.CI, 'head_sha': self.head, 'status': 'completed',

@@ -20,6 +20,8 @@ import urllib.request
 import zipfile
 
 REPO = 'malabdullah/barberplusplus'
+TARGET = 'codex/verified-shadow-base-20261118'
+SHADOW = '.github/workflows/verified-shadow.yml'
 CI = '.github/workflows/ci.yml'
 HOST = 'https://api.github.com'
 SUITES = ('browser', 'database')
@@ -230,18 +232,18 @@ def require_proof(proof, suite, pr, run, final, inputs, now):
          and proof.get('ref') == f"refs/pull/{pr['number']}/merge"
          and proof.get('tree') == final['tree'] and proof.get('parents') == final['parents']
          and OID.fullmatch(proof.get('commit', '')) and HASH.fullmatch(proof.get('inputs', ''))
-         and proof['inputs'] == inputs and fresh(timestamp(run['updated_at']), timestamp(pr['merged_at']), now),
-         'pre-merge receipt inputs, merge identity or age do not match')
+         and fresh(timestamp(run['updated_at']), timestamp(pr['merged_at']), now),
+         'pre-merge receipt identity or age does not match')
 
 
 def verify(suite, evidence, final, diff, inputs, now):
     need(frontend_only(diff), 'change requires full validation')
     prs = evidence.api(f"/commits/{final['commit']}/pulls?per_page=10")
     eligible = [p for p in prs if p.get('merge_commit_sha') == final['commit']
-                and p.get('merged_at') and p['base']['ref'] == 'main'
+                and p.get('merged_at') and p['base']['ref'] == TARGET
                 and p['base']['repo']['full_name'] == p['head']['repo']['full_name'] == REPO
                 and p['head']['sha'] == final['parents'][1]]
-    need(len(eligible) == 1, 'ambiguous or missing reviewed main merge')
+    need(len(eligible) == 1, 'ambiguous or missing reviewed Test merge')
     pr = eligible[0]
     response = evidence.api(f"/actions/workflows/ci.yml/runs?event=pull_request&head_sha={final['parents'][1]}&per_page=30")
     need(response['total_count'] == len(response['workflow_runs']) <= 30, 'ambiguous CI run listing')
@@ -269,17 +271,19 @@ def verify(suite, evidence, final, diff, inputs, now):
     candidate = evidence.api(f"/git/commits/{proof['commit']}")
     need(candidate['sha'] == proof['commit'] and candidate['tree']['sha'] == final['tree']
          and [p['sha'] for p in candidate['parents']] == final['parents'], 'actual tested Git objects differ')
+    print(f'SHADOW_EVIDENCE suite={suite} receipt=match runner_inputs={"match" if proof["inputs"] == inputs else "different"} run={rid}')
+    need(proof['inputs'] == inputs, 'runner input fingerprint differs from pre-merge CI')
     return rid
 
 
 def candidate(suite, source):
     env = os.environ
     info = json.loads(pathlib.Path(env['GITHUB_EVENT_PATH']).read_text())['pull_request']
-    need(env['GITHUB_EVENT_NAME'] == 'pull_request' and info['base']['ref'] == 'main'
+    need(env['GITHUB_EVENT_NAME'] == 'pull_request' and info['base']['ref'] == TARGET
          and info['base']['repo']['full_name'] == info['head']['repo']['full_name'] == REPO
          and source['parents'] == [info['base']['sha'], info['head']['sha']]
          and env['GITHUB_REF'] == f"refs/pull/{info['number']}/merge",
-         'not a trusted main pull-request test merge')
+         'not the isolated pull-request test merge')
     need(frontend_only(changes()), 'change requires full validation')
     return {'version': 1, 'suite': suite, 'repo': REPO, 'pr': info['number'],
             'run': int(env['GITHUB_RUN_ID']), 'attempt': int(env['GITHUB_RUN_ATTEMPT']), 'ref': env['GITHUB_REF'],
@@ -319,9 +323,10 @@ def main():
             (scratch / 'release-inputs.json').write_text(json.dumps(proof) + '\n')
             output('recorded', 'true')
         else:
-            need(env.get('GITHUB_EVENT_NAME') == 'push' and env.get('GITHUB_REF') == 'refs/heads/main'
-                 and env.get('GITHUB_WORKFLOW_REF') == f'{REPO}/.github/workflows/release.yml@refs/heads/main',
-                 'not an actual main push')
+            need(env.get('GITHUB_EVENT_NAME') == 'push' and env.get('GITHUB_REF') == f'refs/heads/{TARGET}'
+                 and env.get('GITHUB_WORKFLOW_REF') == f'{REPO}/{SHADOW}@refs/heads/{TARGET}'
+                 and env.get('BARBER_VALIDATION_MODE') == 'shadow-v1',
+                 'not the isolated observe-only workflow')
             key, description = disposition(env.get('BARBER_VALIDATION_MODE'))
             diff = changes()
             need(frontend_only(diff), 'change requires full validation')

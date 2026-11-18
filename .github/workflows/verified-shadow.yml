@@ -1,0 +1,32 @@
+name: Verified release shadow (isolated Test)
+on:
+  push:
+    branches: [codex/verified-shadow-base-20261118]
+    paths: [src/styles/index.css]
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  validate:
+    if: github.repository == 'malabdullah/barberplusplus' && github.run_attempt == 1 && startsWith(github.event.head_commit.message, 'Merge pull request #')
+    uses: ./.github/workflows/ci.yml
+    with:
+      reviewed_validation: shadow-v1
+  test-image:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Build and smoke-test the local Test image
+        run: TEST_EXPECTED_RELEASE="$GITHUB_SHA" npm run test:production-image
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.1
+          image-ref: barber-production:local-check
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
