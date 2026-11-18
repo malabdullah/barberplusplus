@@ -769,3 +769,5 @@ a:active {
   --booking-divider: var(--surface-divider);
   --booking-control: #898989;
 }
+
+/* Isolated release shadow marker; no style rules changed. */
