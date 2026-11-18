@@ -1,0 +1,112 @@
+name: Barber paired packaging proof
+on:
+  push:
+    branches: [codex/release-paired-package-20261118]
+permissions:
+  contents: read
+  actions: read
+env:
+  PAIRED_INPUT_COMMIT: 6fccfc292b01d3f525031b6f3a3128a8fa2ce71f
+jobs:
+  packaging:
+    if: github.repository == 'malabdullah/barberplusplus'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", path: control, persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ env.PAIRED_INPUT_COMMIT }}", path: fast, persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ env.PAIRED_INPUT_COMMIT }}", path: current, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Verify the completed comparison suites and capture their real timings
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          node --input-type=module - "$RUNNER_TEMP" <<'JS'
+          import assert from 'node:assert/strict';
+          import { writeFileSync } from 'node:fs';
+          const out = process.argv[2], runId = 44252894921, host = 'https://api.github.com/repos/malabdullah/barberplusplus/actions/runs/';
+          const get = async path => {
+            const r = await fetch(host + runId + path, { redirect: 'error', headers: {
+              Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json' } });
+            assert.equal(r.status, 200); return r.json();
+          };
+          const [run, jobs, artifacts] = await Promise.all([get(''), get('/jobs'), get('/artifacts?per_page=50')]);
+          assert.equal(run.head_sha, process.env.PAIRED_INPUT_COMMIT);
+          assert.equal(run.status, 'completed');
+          assert.equal(run.path, '.github/workflows/release-paired-test.yml');
+          assert.equal(run.event, 'push');
+          const kinds = ['application', 'browser', 'database'];
+          for (const name of [...kinds.map(kind => `paired (${kind})`), 'fresh (dependency)', 'fresh (secrets)']) {
+            assert.equal(jobs.jobs.filter(j => j.name === name && j.conclusion === 'success').length, 1, name);
+          }
+          const packageJob = jobs.jobs.find(j => j.name === 'package-test');
+          const [failed] = packageJob.steps.filter(s => s.conclusion === 'failure');
+          assert.equal(failed.name, 'Compare the two Test artifacts');
+          assert.ok(packageJob.steps.filter(step => step.name.startsWith('Package ')).every(step => step.conclusion === 'success'));
+          const clock = name => {
+            const found = artifacts.artifacts.filter(entry => entry.name === name);
+            assert.equal(found.length, 1, name);
+            const time = Date.parse(found[0].created_at);
+            assert.ok(Number.isFinite(time)); return time;
+          };
+          const start = Math.max(...kinds.map(kind => clock(`qualified-${kind}`)));
+          const fresh = Math.max(clock('fresh-dependency'), clock('fresh-secrets'));
+          const fast = Math.max(fresh, ...kinds.map(kind => clock(`shadow-${kind}`)));
+          const current = Math.max(fresh, ...kinds.map(kind => clock(`repeated-${kind}`)));
+          const result = { runId, start, fastReady: fast, currentReady: current, fastSeconds: (fast - start) / 1000,
+            currentSeconds: (current - start) / 1000, savedSeconds: (current - fast) / 1000 };
+          writeFileSync(`${out}/validation.json`, JSON.stringify(result) + '\n');
+          console.log('VALIDATION_RESULT ' + JSON.stringify(result));
+          JS
+      - name: Build and smoke-test the first reproducible Test artifact
+        working-directory: fast
+        run: |
+          epoch=$(git show -s --format=%ct HEAD)
+          date +%s%3N > "$RUNNER_TEMP/fast-package-start.txt"
+          docker buildx build --build-arg "APP_RELEASE=$PAIRED_INPUT_COMMIT" --build-arg "SOURCE_DATE_EPOCH=$epoch" --output type=docker,rewrite-timestamp=true --tag barber-production:local-check .
+          TEST_IMAGE=barber-production:local-check TEST_EXPECTED_RELEASE="$PAIRED_INPUT_COMMIT" npm run test:production-image
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - name: Record first artifact
+        working-directory: fast
+        run: node ../control/ops/release-shadow/paired/package.mjs fast "$(cat "$RUNNER_TEMP/fast-package-start.txt")" "$RUNNER_TEMP/fast.json"
+      - name: Build and smoke-test the second reproducible Test artifact
+        working-directory: current
+        run: |
+          epoch=$(git show -s --format=%ct HEAD)
+          date +%s%3N > "$RUNNER_TEMP/current-package-start.txt"
+          docker buildx build --build-arg "APP_RELEASE=$PAIRED_INPUT_COMMIT" --build-arg "SOURCE_DATE_EPOCH=$epoch" --output type=docker,rewrite-timestamp=true --tag barber-production:local-check .
+          TEST_IMAGE=barber-production:local-check TEST_EXPECTED_RELEASE="$PAIRED_INPUT_COMMIT" npm run test:production-image
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - name: Record second artifact and compare
+        working-directory: current
+        run: |
+          node ../control/ops/release-shadow/paired/package.mjs current "$(cat "$RUNNER_TEMP/current-package-start.txt")" "$RUNNER_TEMP/current.json"
+          node --input-type=module - "$RUNNER_TEMP" <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const out = process.argv[2];
+          const [fast, current] = ['fast','current'].map(path => JSON.parse(readFileSync(`${out}/${path}.json`)));
+          const matches = Object.fromEntries(['commit','fixture','image','rootfs','runtime','frontend','files','backendSource'].map(k => [k, fast[k] === current[k]]));
+          console.log('ARTIFACT_COMPARISON ' + JSON.stringify(matches));
+          assert.ok(Object.values(matches).every(Boolean), 'Test artifacts differ');
+          const result = { verified: true, commit: fast.commit, matches, image: fast.image, frontendSha256: fast.frontend,
+            frontendFiles: fast.files, backendSourceSha256: fast.backendSource,
+            fastPackageSeconds: (fast.endMs - fast.startMs) / 1000, currentPackageSeconds: (current.endMs - current.startMs) / 1000 };
+          writeFileSync(`${out}/package-proof.json`, JSON.stringify(result) + '\n');
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: paired-package-proof
+          path: |
+            ${{ runner.temp }}/validation.json
+            ${{ runner.temp }}/fast.json
+            ${{ runner.temp }}/current.json
+            ${{ runner.temp }}/package-proof.json
+          retention-days: 3
+          if-no-files-found: ignore

@@ -6,12 +6,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const sha = input => createHash('sha256').update(input).digest('hex');
 const [path, started, output] = process.argv.slice(2);
-if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_WORKFLOW !== 'Barber paired Test candidate'
-    || process.env.GITHUB_REF !== 'refs/heads/codex/release-paired-test-20261118'
+const original = process.env.GITHUB_WORKFLOW === 'Barber paired Test candidate'
+  && process.env.GITHUB_REF === 'refs/heads/codex/release-paired-test-20261118';
+const packagingProof = process.env.GITHUB_WORKFLOW === 'Barber paired packaging proof'
+  && process.env.GITHUB_REF === 'refs/heads/codex/release-paired-package-20261118';
+if (process.env.GITHUB_ACTIONS !== 'true' || !(original || packagingProof)
     || !['fast', 'current'].includes(path)) throw Error('Not a Test package run');
 const fixture = readFileSync('ops/release-shadow/paired/fixture.json');
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-if (commit !== process.env.GITHUB_SHA) throw Error('Candidate changed');
+if (commit !== (packagingProof ? '6fccfc292b01d3f525031b6f3a3128a8fa2ce71f' : process.env.GITHUB_SHA)) throw Error('Candidate changed');
 const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8' }).trim();
 const image = docker('image', 'inspect', '--format', '{{.Id}}', 'barber-production:local-check');
 if (!/^sha256:[a-f0-9]{64}$/.test(image)) throw Error('Unbound Test image');
@@ -45,4 +48,6 @@ try {
 }
 writeFileSync(output, JSON.stringify({ path, commit, image, fixture: sha(fixture),
   frontend: sha(JSON.stringify(files)), files: files.length, backendSource: backendHash.digest('hex'),
+  rootfs: sha(docker('image', 'inspect', '--format', '{{json .RootFS.Layers}}', image)),
+  runtime: sha(docker('image', 'inspect', '--format', '{{json .Config}}', image)),
   startMs: Number(started), endMs: Date.now() }) + '\n');
