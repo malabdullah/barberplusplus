@@ -14,7 +14,7 @@ type Dependencies = {
   deleteUser: (id: string) => Promise<void>;
   signIn: (phone: string, password: string) => Promise<{ session: unknown; identity: Identity } | null>;
   identity: (token: string) => Promise<Identity | null>;
-  emailSignup?: (name: string, email: string, password: string, returnTo: string) => Promise<void>;
+  emailSignup?: (name: string, email: string, password: string, returnTo: string) => Promise<'exists' | void>;
   emailLink?: (email: string, purpose: 'confirm' | 'recovery', returnTo: string) => Promise<void>;
   emailSignIn?: (email: string, password: string) => Promise<{ session: unknown; identity: Identity; name: string; mfaRequired?: boolean } | null>;
   emailName?: (token: string) => Promise<string>;
@@ -102,9 +102,11 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           const name=typeof body.name==='string' ? body.name.trim() : '';
           if(name.length<2 || name.length>120)return reply(400,{error:'INVALID_DETAILS'});
           if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
+          if(body.signupResponseVersion !== undefined && body.signupResponseVersion !== 2)return reply(400,{error:'INVALID_REQUEST'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
-          await deps.emailSignup(name,email,body.password,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
+          const result=await deps.emailSignup(name,email,body.password,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
+          if(body.signupResponseVersion === 2 && result === 'exists')return reply(409,{error:'SIGNUP_EMAIL_EXISTS'});
         } else {
           if(!deps.emailLink)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});

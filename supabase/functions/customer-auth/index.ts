@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
 import { createCustomerAuthHandler } from './handler.ts';
 import { sendTestEmail } from './test-mail.ts';
 import { createCustomerEmailDelivery } from './email-delivery.ts';
+import { createCustomerEmailSignup } from './email-signup.ts';
 import { customerIdentity, sessionId } from '../_shared/customer-session.ts';
 import { passwordCapableRoles } from './password.ts';
 import { registrationUser } from './registration.ts';
@@ -36,25 +37,24 @@ Deno.serve(createCustomerAuthHandler({
     if(!['customer','manager','barber'].includes(data.user.app_metadata.role)){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)}};
   },
-  emailSignup:async(name,email,password,returnTo)=>{
-    const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
-    if(lookup.error)throw Error('UNAVAILABLE');
-    if(lookup.data) {
-      if(!lookup.data.confirmed) {
-        if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
-        const link=await admin.auth.admin.generateLink({type:'magiclink',email});
-        if(link.error)throw Error('UNAVAILABLE');
-        await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=magiclink&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
-      }
-      return;
-    }
-    const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
-    if(created.error) return; // Generic response also protects staff and duplicate identities.
-    if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
-    const link=await admin.auth.admin.generateLink({type:'signup',email,password});
-    if(link.error)throw Error('UNAVAILABLE');
-    await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=signup&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
-  },
+  emailSignup:createCustomerEmailSignup({
+    lookup:async(email)=>{
+      const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
+      if(lookup.error)throw Error('UNAVAILABLE');
+      return lookup.data;
+    },
+    create:async(name,email,password)=>{
+      const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
+      return created.error;
+    },
+    deliver:async(email,password,returnTo,created)=>{
+      if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
+      const type=created?'signup':'magiclink';
+      const link=await admin.auth.admin.generateLink(created?{type:'signup',email,password}:{type:'magiclink',email});
+      if(link.error)throw Error('UNAVAILABLE');
+      await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=${type}&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
+    },
+  }),
   emailLink:async(email,purpose,returnTo)=>{
     const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
     if(lookup.error)throw Error('UNAVAILABLE');
