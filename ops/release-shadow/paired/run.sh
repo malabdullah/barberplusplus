@@ -62,4 +62,11 @@ if [[ "$mode" == qualify && "$kind" != application ]]; then
   if docker ps -a --format '{{.Names}}' | grep -q 'barber-local-test'; then
     echo 'Synthetic runner did not clear its Test containers'; exit 1
   fi
+  # Supabase's stop does not own our separate scratch-checkout marker.
+  owner=barber-local-test-workspace-owner
+  if docker volume inspect "$owner" >/dev/null 2>&1; then
+    identity=$(docker volume inspect --format '{{index .Labels "barber.workspace"}}|{{index .Labels "barber.project"}}' "$owner")
+    test "$identity" = "$(pwd -P)|barber-local-test"
+    docker volume rm "$owner" >/dev/null
+  fi
 fi
