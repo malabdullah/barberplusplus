@@ -1,0 +1,37 @@
+name: Exact runner capacity (isolated Test)
+on:
+  push:
+    branches: [codex/verified-pinned-runner-probe-20261118]
+    paths: [.github/workflows/pinned-runner-capacity.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.repository == 'malabdullah/barberplusplus'
+    runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        slot: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { persist-credentials: false }
+      - name: Observe disposable runner identity
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import sys
+          sys.path.insert(0, '.github/scripts')
+          import verified_ci as ci
+
+          rows = ci.cpu_rows()
+          cpu = ci.digest(ci.sha('\n'.join(rows).encode()))
+          model = next(row.split(':', 1)[1].strip() for row in rows if row.startswith('model name'))
+          print('PIN_CAPACITY ' + json.dumps({
+              'image_os': os.environ['ImageOS'], 'image_version': os.environ['ImageVersion'],
+              'architecture': os.environ['RUNNER_ARCH'], 'cpu': cpu, 'model': model,
+              'kernel': os.uname().release,
+          }, sort_keys=True))
+          PY
