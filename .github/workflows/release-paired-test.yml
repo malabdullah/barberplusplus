@@ -1,0 +1,171 @@
+name: Barber paired Test candidate
+on:
+  push:
+    branches: [codex/release-paired-test-20261118]
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  paired:
+    if: github.repository == 'malabdullah/barberplusplus' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [application, browser, database]
+    env:
+      SUITE: ${{ matrix.suite }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", path: qualify, persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", path: repeat, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Pin the tools on this runner once for both checkouts
+        working-directory: qualify
+        run: |
+          if [[ "$SUITE" == application || "$SUITE" == browser ]]; then
+            sudo python3 .github/scripts/prepare-ubuntu-apt.py
+            sudo apt-get update
+            sudo apt-get install -y ripgrep
+          fi
+          if [[ "$SUITE" == browser ]]; then
+            npm ci
+            npx --no-install playwright install --with-deps chromium firefox webkit
+          fi
+      - name: Qualify candidate before starting the benchmark
+        working-directory: qualify
+        run: bash ops/release-shadow/paired/run.sh qualify "$SUITE" "$RUNNER_TEMP/paired"
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        if: matrix.suite == 'application'
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qualified-${{ matrix.suite }}
+          path: ${{ runner.temp }}/paired/qualify-*.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Verify exact evidence for the faster path
+        working-directory: repeat
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node ops/release-shadow/paired/wait.mjs start >/dev/null
+          node ops/release-shadow/paired/snapshot.mjs "$SUITE" > "$RUNNER_TEMP/paired/shadow-$SUITE-inputs.json"
+          cmp "$RUNNER_TEMP/paired/qualify-$SUITE-inputs.json" "$RUNNER_TEMP/paired/shadow-$SUITE-inputs.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: shadow-${{ matrix.suite }}
+          path: ${{ runner.temp }}/paired/shadow-*.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Re-run the same suite for the current path
+        working-directory: repeat
+        run: |
+          bash ops/release-shadow/paired/run.sh repeat "$SUITE" "$RUNNER_TEMP/paired"
+          cmp "$RUNNER_TEMP/paired/qualify-$SUITE-inputs.json" "$RUNNER_TEMP/paired/repeat-$SUITE-inputs.json"
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        if: matrix.suite == 'application'
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: repeated-${{ matrix.suite }}
+          path: ${{ runner.temp }}/paired/repeat-*.json
+          if-no-files-found: error
+          retention-days: 3
+
+  fresh:
+    if: github.repository == 'malabdullah/barberplusplus' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [dependency, secrets]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Wait for the common benchmark start
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: node ops/release-shadow/paired/wait.mjs start >/dev/null
+      - name: Check current dependencies
+        if: matrix.gate == 'dependency'
+        run: npm ci && npm audit --omit=dev --audit-level=high
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
+        if: matrix.gate == 'secrets'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+      - name: Record fresh gate
+        run: git rev-parse HEAD > "$RUNNER_TEMP/fresh-pass.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fresh-${{ matrix.gate }}
+          path: ${{ runner.temp }}/fresh-pass.txt
+          if-no-files-found: error
+          retention-days: 3
+
+  package-test:
+    if: github.repository == 'malabdullah/barberplusplus' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", path: fast, persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { ref: "${{ github.sha }}", path: current, persist-credentials: false }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Package faster path
+        working-directory: fast
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          node ops/release-shadow/paired/wait.mjs fast > "$RUNNER_TEMP/fast-start.txt"
+          unset GH_TOKEN
+          TEST_EXPECTED_RELEASE="$GITHUB_SHA" npm run test:production-image
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - name: Record faster path artifact
+        working-directory: fast
+        run: node ops/release-shadow/paired/package.mjs fast "$(cat "$RUNNER_TEMP/fast-start.txt")" "$RUNNER_TEMP/fast.json"
+      - name: Package current path
+        working-directory: current
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          node ops/release-shadow/paired/wait.mjs current > "$RUNNER_TEMP/current-start.txt"
+          unset GH_TOKEN
+          TEST_EXPECTED_RELEASE="$GITHUB_SHA" npm run test:production-image
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with: { version: v0.76.1, image-ref: 'barber-production:local-check', scanners: vuln, severity: 'HIGH,CRITICAL', exit-code: '1' }
+      - name: Compare the two Test artifacts
+        working-directory: current
+        run: |
+          node ops/release-shadow/paired/package.mjs current "$(cat "$RUNNER_TEMP/current-start.txt")" "$RUNNER_TEMP/current.json"
+          node --input-type=module - "$RUNNER_TEMP" <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import assert from 'node:assert/strict';
+          const base = process.argv[2];
+          const [fast, current] = ['fast', 'current'].map(path => JSON.parse(readFileSync(`${base}/${path}.json`)));
+          for (const name of ['commit', 'fixture', 'image', 'frontend', 'files', 'backendSource', 'startMs']) {
+            assert.equal(fast[name], current[name], name);
+          }
+          const result = { verified: true, commit: fast.commit, fastSeconds: (fast.endMs - fast.startMs) / 1000,
+            currentSeconds: (current.endMs - current.startMs) / 1000, savedSeconds: (current.endMs - fast.endMs) / 1000,
+            frontendSha256: fast.frontend, frontendFiles: fast.files, backendSourceSha256: fast.backendSource, image: fast.image };
+          console.log('PAIRED_TEST_RESULT ' + JSON.stringify(result));
+          writeFileSync(`${base}/result.json`, JSON.stringify(result) + '\n');
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: paired-test-result
+          path: |
+            ${{ runner.temp }}/result.json
+            ${{ runner.temp }}/fast.json
+            ${{ runner.temp }}/current.json
+          if-no-files-found: error
+          retention-days: 3
