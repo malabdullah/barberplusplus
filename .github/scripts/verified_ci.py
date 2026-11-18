@@ -105,10 +105,10 @@ def browser_files():
         for path in sorted(root.rglob('*')):
             name = str(path.relative_to(directory))
             if path.is_symlink():
-                entries.append((name, 'symlink', os.readlink(path)))
+                entries.append([name, 'symlink', os.readlink(path)])
             elif path.is_file():
                 with path.open('rb') as handle:
-                    entries.append((name, path.stat().st_mode & 0o777, hashlib.file_digest(handle, 'sha256').hexdigest()))
+                    entries.append([name, path.stat().st_mode & 0o777, hashlib.file_digest(handle, 'sha256').hexdigest()])
             need(len(entries) <= 10_000, 'browser manifest too large')
     return entries
 
