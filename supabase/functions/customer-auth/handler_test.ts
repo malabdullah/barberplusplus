@@ -4,6 +4,66 @@ const make=(overrides={})=>createCustomerAuthHandler({environment:'test',appUrl:
 const req=(body:unknown,origin='http://localhost:5173',token='')=>new Request('http://127.0.0.1:55321/functions/v1/customer-auth',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body)});
 const details={name:'Customer Name',countryCode:'+965',phone:'5000-0099'};
 const password='Short12!';
+Deno.test('only signup response v2 exposes a minimal duplicate conflict; legacy stays generic',async()=>{
+ let attempts=0;
+ const handler=make({rpc:async()=>true,emailSignup:async()=>{attempts++;return 'exists' as const;},emailLink:async()=>{}});
+ const body={action:'email-signup',name:'Synthetic Customer',email:'synthetic@example.test',password};
+ const conflict=await handler(req({...body,signupResponseVersion:2}));
+ assert(conflict.status===409);assert(JSON.stringify(await conflict.json())==='{"error":"SIGNUP_EMAIL_EXISTS"}');
+ const legacy=await handler(req(body));assert(legacy.status===200);assert(JSON.stringify(await legacy.json())==='{"success":true}');
+ for(const signupResponseVersion of ['2',true,null,1,3])assert((await handler(req({...body,signupResponseVersion}))).status===400);
+ for(const action of ['email-resend','email-recovery'])assert((await handler(req({...body,action,signupResponseVersion:2}))).status===200);
+ assert(attempts===2);
+});
+Deno.test('signup validation and both rate limits precede v2 account checks',async()=>{
+ let attempts=0;const limits:Record<string,unknown>[]=[];
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',email:'synthetic@example.test',password};
+ const handler=make({rpc:async(_action:string,data:Record<string,unknown>)=>{limits.push(data);return true;},emailSignup:async()=>{attempts++;return 'exists' as const;}});
+ assert((await handler(req({...body,email:'bad-email'}))).status===400);
+ assert((await handler(req({...body,name:'x'}))).status===400);
+ assert((await handler(req({...body,password:'weak'}))).status===400);
+ assert(attempts===0);
+ assert((await handler(req(body))).status===409);assert(attempts===1);
+ assert(limits.slice(-3).map(x=>x.max).join(',')==='5,100,100');
+ for(const deniedCall of [1,2,3]){
+  let count=0;
+  const limited=make({rpc:async()=>++count!==deniedCall,emailSignup:async()=>{throw Error('Unexpected account check');}});
+  assert((await limited(req(body))).status===429);
+ }
+});
+Deno.test('v2 global signup budget cannot be changed by supplied emails or IP headers',async()=>{
+ const calls:Record<string,unknown>[]=[];let attempts=0;
+ const handler=make({rpc:async(_action:string,data:Record<string,unknown>)=>{calls.push(data);return calls.length!==6;},emailSignup:async()=>{attempts++;return 'exists' as const;}});
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',password};
+ for(const [index,ip] of ['198.51.100.1','203.0.113.2'].entries()){
+  const request=req({...body,email:`synthetic-${index}@example.test`});
+  request.headers.set('x-real-ip',ip);request.headers.set('x-forwarded-for',ip);
+  const response=await handler(request);assert(response.status===(index===0?409:429));
+ }
+ assert(attempts===1);assert(calls.length===6);
+ assert(calls[2].key===calls[5].key && calls[2].max===100);
+ assert(calls[0].key!==calls[3].key && calls[1].key!==calls[4].key);
+});
+Deno.test('v2 shared limiter fails closed without applying to legacy signup, resend or recovery',async()=>{
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',email:'synthetic@example.test',password};
+ let calls=0;let signup=0;
+ const failed=make({rpc:async()=>{if(++calls===3)throw Error('Unexpected limiter failure');return true;},emailSignup:async()=>{signup++;}});
+ const response=await failed(req(body));assert(response.status===503);assert((await response.json()).error==='UNAVAILABLE');assert(signup===0);
+ for(const action of ['email-signup','email-resend','email-recovery']){
+  let limits=0;
+  const legacy=make({rpc:async()=>{limits++;return true;},emailSignup:async()=>{},emailLink:async()=>{}});
+  assert((await legacy(req({...body,action,signupResponseVersion:action==='email-signup'?undefined:2}))).status===200);
+  assert(limits===2);
+ }
+});
+Deno.test('new/unconfirmed v2 signups succeed and unrelated failures never look like duplicates',async()=>{
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',email:'synthetic@example.test',password};
+ assert((await make({rpc:async()=>true,emailSignup:async()=>{}})(req(body))).status===200);
+ for(const signupResponseVersion of [undefined,2]){
+  const failure=await make({rpc:async()=>true,emailSignup:async()=>{throw Error('UNAVAILABLE');}})(req({...body,signupResponseVersion}));
+  assert(failure.status===503);assert((await failure.json()).error==='UNAVAILABLE');
+ }
+});
 Deno.test('HTTPS signup and resend routing require a valid iOS-only capability and preserve legacy requests',async()=>{
  const calls:unknown[][]=[];
  const app='https://www.barberplusplus.com';
