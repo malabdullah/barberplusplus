@@ -10,7 +10,9 @@ concurrency:
 jobs:
   validate:
     uses: ./.github/workflows/ci.yml
-    permissions: { contents: read, pull-requests: read }
+    with:
+      reviewed_validation: ${{ vars.BARBER_RELEASE_VALIDATION || 'off' }}
+    permissions: { contents: read, pull-requests: read, actions: read }
   package:
     if: github.repository == 'malabdullah/barberplusplus'
     needs: validate

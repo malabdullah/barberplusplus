@@ -33,6 +33,22 @@ public prerelease assets. The package job alone receives temporary contents-writ
 permission; it creates a unique build-run/attempt tag at the exact commit and
 publishes an attested ZIP containing only `release.json` and `backend.tar.gz`,
 plus those two individually attested subjects. Existing assets are never overwritten.
+`BARBER_RELEASE_VALIDATION=verified-v1` enables browser and database receipt reuse
+for eligible frontend-only merges. The verifier checks the tested merge tree and
+parents, the successful GitHub workflow attempt and exact suite steps, the
+immutable receipt digest, and the complete runner fingerprint. The pinned
+runner admission check requires the exact CPU fingerprint and image revision.
+Each suite without a match runs its full checks. Application, dependency review,
+secret scanning, packaging, image smoke tests and artifact verification are
+required on every production release. Unset the variable or set it to `off` to
+return both suites to full validation for future runs.
+
+`BARBER_RELEASE_MEASURE_FIRST=true` starts a separate full validation comparison
+for the same main commit while reuse is enabled. The comparison publishes timing
+evidence only. It has no package or deployment job and the controller continues
+to follow `release.yml`. Remove the measurement variable after collecting the
+first comparison.
+
 `release.json` binds the source commit, workflow run,
 frontend digest, backend archive digest, production runtime lock and ordered
 migration hashes. The backend archive contains versioned Functions and migrations,
