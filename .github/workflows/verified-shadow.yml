@@ -9,7 +9,10 @@ permissions:
   pull-requests: read
 jobs:
   validate:
-    if: github.repository == 'malabdullah/barberplusplus' && github.run_attempt == 1 && startsWith(github.event.head_commit.message, 'Merge pull request #')
+    if: >-
+      github.repository == 'malabdullah/barberplusplus' &&
+      github.run_attempt == 1 &&
+      startsWith(github.event.head_commit.message, 'Merge pull request #')
     uses: ./.github/workflows/ci.yml
     with:
       reviewed_validation: shadow-v1
