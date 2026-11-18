@@ -92,7 +92,7 @@ def changes():
     return entries
 
 
-def browsers():
+def browser_files():
     need(not os.environ.get('PLAYWRIGHT_BROWSERS_PATH') and not os.environ.get('PLAYWRIGHT_BASE_URL'),
          'unexpected browser executable or Test server configuration')
     directory = pathlib.Path.home() / '.cache/ms-playwright'
@@ -110,10 +110,10 @@ def browsers():
                 with path.open('rb') as handle:
                     entries.append((name, path.stat().st_mode & 0o777, hashlib.file_digest(handle, 'sha256').hexdigest()))
             need(len(entries) <= 10_000, 'browser manifest too large')
-    return sha(json.dumps(entries, separators=(',', ':')).encode())
+    return entries
 
 
-def fingerprint(suite):
+def input_facts(suite):
     env = os.environ
     need(env.get('RUNNER_ENVIRONMENT') == 'github-hosted' and env.get('RUNNER_OS') == 'Linux'
          and env.get('RUNNER_ARCH') == 'X64' and env.get('ImageOS') and env.get('ImageVersion'),
@@ -144,8 +144,33 @@ def fingerprint(suite):
              'platformLock': sha(pathlib.Path('ops/release/runtime-lock.json').read_bytes()),
              'localLock': sha(pathlib.Path('ops/local-test/runtime.json').read_bytes())}
     if suite == 'browser':
-        facts['browsers'] = browsers()
+        facts['browsers'] = browser_files()
+    return facts
+
+
+def fingerprint(suite):
+    facts = input_facts(suite)
+    if 'browsers' in facts:
+        facts['browsers'] = sha(json.dumps(facts['browsers'], separators=(',', ':')).encode())
     return sha(json.dumps(facts, sort_keys=True, separators=(',', ':')).encode())
+
+
+def diagnose(stage):
+    snapshot = pathlib.Path(os.environ['RUNNER_TEMP']) / 'shadow-browser-snapshot.json'
+    facts = input_facts('browser')
+    if stage == 'diagnose-before':
+        snapshot.write_text(json.dumps(facts))
+        return
+    before = json.loads(snapshot.read_bytes())
+    changed = sorted(key for key in facts if before[key] != facts[key])
+    print('BROWSER_INPUT_COMPONENTS_CHANGED', json.dumps(changed))
+    if 'browsers' in changed:
+        old = {entry[0]: entry[1:] for entry in before['browsers']}
+        new = {entry[0]: entry[1:] for entry in facts['browsers']}
+        paths = [{'path': path, 'state': ('added' if path not in old else 'removed' if path not in new else 'modified')}
+                 for path in sorted(set(old) | set(new))
+                 if old.get(path) != new.get(path) and re.fullmatch(r'[\w./+-]{1,220}', path)]
+        print('BROWSER_INPUT_INSTALL_PATHS_CHANGED', json.dumps(paths[:30]))
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -305,13 +330,16 @@ def disposition(mode):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=('sample', 'record', 'reuse'))
+    parser.add_argument('mode', choices=('sample', 'record', 'reuse', 'diagnose-before', 'diagnose-after'))
     parser.add_argument('suite', choices=SUITES)
     args = parser.parse_args()
     try:
         env = os.environ
         need(env.get('GITHUB_ACTIONS') == 'true' and env.get('GITHUB_REPOSITORY') == REPO,
              'not the Barber++ GitHub workflow')
+        if args.mode.startswith('diagnose-'):
+            diagnose(args.mode)
+            return
         source = checkout()
         scratch = pathlib.Path(env['RUNNER_TEMP'])
         before = scratch / f'release-before-{args.suite}.json'

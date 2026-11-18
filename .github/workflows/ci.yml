@@ -51,6 +51,9 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox webkit
       - name: Verify scoped Apple popup transport without provider calls
         run: node scripts/check-apple-popup-policy.mjs
+      - name: Capture browser input components for the Test diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/verified-shadow-browser-diagnostic-20261118' && github.event.pull_request.head.repo.full_name == github.repository
+        run: python3 .github/scripts/verified_ci.py diagnose-before browser
       - name: Sample inputs for reviewed pre-merge validation
         if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
@@ -67,6 +70,9 @@ jobs:
         if: steps.reuse.outputs.reused != 'true'
       - run: npm run test:e2e:qa
         if: steps.reuse.outputs.reused != 'true'
+      - name: Report changed browser input components for the Test diagnostic
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/verified-shadow-browser-diagnostic-20261118' && github.event.pull_request.head.repo.full_name == github.repository
+        run: python3 .github/scripts/verified_ci.py diagnose-after browser
       - name: Record unchanged browser inputs after tests
         id: recorded
         if: github.event_name == 'pull_request' && github.base_ref == 'codex/verified-shadow-base-20261118' && github.event.pull_request.head.repo.full_name == github.repository
