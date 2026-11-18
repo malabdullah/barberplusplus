@@ -39,6 +39,8 @@ class Fixture:
              'steps': [{'name': s, 'conclusion': 'success'} for s in browser_steps] if n.startswith('browser') else []}
             for n in sorted(job_names)
         ]}
+        self.jobs['jobs'].append({'name': 'reviewed-inputs', 'conclusion': 'skipped', 'steps': []})
+        self.jobs['total_count'] += 1
         self.artifacts = {'total_count': 1, 'artifacts': [
             {'id': 10, 'name': f'release-inputs-browser-1-1-{self.inputs["inputs"]}',
              'created_at': '2026-11-18T10:04:00Z'}]}
@@ -180,6 +182,11 @@ class VerifyCI(unittest.TestCase):
         f = Fixture()
         next(j for j in f.jobs['jobs'] if j['name'] == 'database')['conclusion'] = 'failure'
         with self.assertRaises(ci.NoProof):
+            f.evaluate()
+        f = Fixture()
+        verify_only = next(j for j in f.jobs['jobs'] if j['name'] == 'reviewed-inputs')
+        verify_only['conclusion'] = 'success'
+        with self.assertRaisesRegex(ci.NoProof, 'pre-merge CI unexpectedly used'):
             f.evaluate()
         f = Fixture()
         next(j for j in f.jobs['jobs'] if j['name'] == 'browser')['steps'][0]['conclusion'] = 'skipped'

@@ -262,12 +262,15 @@ def decode_proof(archive, digest):
 def require_jobs(job_response, suite, slot):
     jobs = job_response['jobs']
     expected = JOBS | {f'{s} (runner {i})' for s in SUITES for i in RUNNER_SLOTS if i != 1}
+    expected.add('reviewed-inputs')
     name = suite if slot == 1 else f'{suite} (runner {slot})'
     required = JOBS | {name}
     need(job_response['total_count'] == len(expected) == len(jobs)
          and {j['name'] for j in jobs} == expected
          and all(j['conclusion'] == 'success' for j in jobs if j['name'] in required),
          'required pre-merge CI checks did not all pass')
+    needs_release_gate = next(j for j in jobs if j['name'] == 'reviewed-inputs')
+    need(needs_release_gate['conclusion'] == 'skipped', 'pre-merge CI unexpectedly used release verification')
     run_steps = {
         'browser': {'Run npm run test:e2e', 'Run npm run test:e2e:qa',
                     'Verify scoped Apple popup transport without provider calls'},
