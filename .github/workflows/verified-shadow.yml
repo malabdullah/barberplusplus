@@ -16,6 +16,19 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       reviewed_validation: shadow-v1
+  pinned-matches:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require completed exact matches for both suites
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          matches=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=30" \
+            --jq '[.artifacts[] | select(.expired == false and ((.digest // "") | test("^sha256:[a-f0-9]{64}$"))) | .name]')
+          jq -e 'any(.[]; test("^pinned-shadow-browser-[1-8]$")) and
+                 any(.[]; test("^pinned-shadow-database-[1-8]$"))' <<< "$matches"
   test-image:
     needs: validate
     runs-on: ubuntu-latest

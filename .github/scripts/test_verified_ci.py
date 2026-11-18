@@ -16,6 +16,7 @@ class Fixture:
         self.candidate = 'c' * 40
         self.final = {'commit': 'd' * 40, 'tree': 'e' * 40, 'parents': [self.base, self.head]}
         components = {key: 'f' * 64 for key in ci.COMMON_COMPONENTS | {'browsers'}}
+        components.update(runner=ci.digest(ci.PINNED_RUNNER), cpu=ci.PINNED_CPU)
         self.inputs = {'inputs': ci.digest(components), 'components': components}
         self.now = ci.timestamp('2026-11-18T10:20:00Z')
         self.diff = [('M', 'src/pages/Landing.jsx', '100644')]
@@ -29,6 +30,7 @@ class Fixture:
                     'created_at': '2026-11-18T09:01:00Z', 'updated_at': '2026-11-18T10:05:00Z'}
         browser_steps = ['Run npm run test:e2e', 'Run npm run test:e2e:qa',
                          'Verify scoped Apple popup transport without provider calls',
+                         'Check exact Test runner',
                          'Sample inputs for reviewed pre-merge validation', 'Record unchanged browser inputs after tests',
                          'Upload immutable browser input receipt']
         job_names = ci.JOBS | {f'{s} (runner {i})' for s in ci.SUITES for i in ci.RUNNER_SLOTS if i != 1}
@@ -119,6 +121,17 @@ class VerifyCI(unittest.TestCase):
         with patch('builtins.print') as log, self.assertRaisesRegex(ci.NoProof, 'runner input fingerprint differs'):
             f.evaluate()
         log.assert_any_call('RUNNER_INPUT_COMPONENTS_CHANGED suite=browser components=["kernel"]')
+
+    def test_matching_inputs_with_the_wrong_cpu_or_image_are_not_eligible(self):
+        for component in ('cpu', 'runner'):
+            with self.subTest(component=component):
+                f = Fixture()
+                f.inputs['components'][component] = 'a' * 64
+                f.inputs['inputs'] = ci.digest(f.inputs['components'])
+                f.proof.update(components=f.inputs['components'], inputs=f.inputs['inputs'])
+                f.artifacts['artifacts'][0]['name'] = f'release-inputs-browser-1-1-{f.inputs["inputs"]}'
+                with self.assertRaisesRegex(ci.NoProof, 'isolated CPU and image pin'):
+                    f.evaluate()
 
     def test_selects_exact_runner_and_checks_the_matching_job(self):
         f = Fixture()

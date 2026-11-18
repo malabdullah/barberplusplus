@@ -27,6 +27,8 @@ HOST = 'https://api.github.com'
 SUITES = ('browser', 'database')
 JOBS = {'application', 'browser', 'database', 'dependency-review', 'secret-scan'}
 RUNNER_SLOTS = range(1, 9)
+PINNED_RUNNER = ('ubuntu26', '20261111.196.1', 'X64')
+PINNED_CPU = 'e8645111c4be089fb0ad493f077eab43f68eae57d2a86f19f52b8baeef940b84'
 MAX_AGE = 6 * 60 * 60
 MAX_PROOF = 16_384
 MAX_ARCHIVE = 65_536
@@ -126,6 +128,16 @@ def cpu_rows():
             if re.match(r'^(processor|vendor_id|cpu family|model name|model|stepping|flags)\s*:', row)]
 
 
+def cpu_hash():
+    rows = cpu_rows()
+    need(any(row.startswith('flags') for row in rows), 'missing runner CPU evidence')
+    return sha('\n'.join(rows).encode())
+
+
+def runner_identity(env):
+    return (env.get('ImageOS'), env.get('ImageVersion'), env.get('RUNNER_ARCH'))
+
+
 def input_facts(suite):
     env = os.environ
     need(env.get('RUNNER_ENVIRONMENT') == 'github-hosted' and env.get('RUNNER_OS') == 'Linux'
@@ -148,11 +160,9 @@ def input_facts(suite):
         'kernel': command('uname', '-srvmo').decode().strip(),
     }
     need(versions['node'] == 'v24.20.0', 'Node pin changed')
-    cpu = cpu_rows()
-    need(bool(cpu) and any(row.startswith('flags') for row in cpu), 'missing runner CPU evidence')
-    facts = {'suite': suite, 'runner': [env['ImageOS'], env['ImageVersion'], env['RUNNER_ARCH']],
+    facts = {'suite': suite, 'runner': runner_identity(env),
              'versions': versions, 'packages': sha(command('dpkg-query', '-W', '-f=${Package}=${Version}\n')),
-             'cpu': sha('\n'.join(cpu).encode()), 'services': sorted(services), 'npmLock': sha(pathlib.Path('package-lock.json').read_bytes()),
+             'cpu': cpu_hash(), 'services': sorted(services), 'npmLock': sha(pathlib.Path('package-lock.json').read_bytes()),
              'platformLock': sha(pathlib.Path('ops/release/runtime-lock.json').read_bytes()),
              'localLock': sha(pathlib.Path('ops/local-test/runtime.json').read_bytes())}
     if suite == 'browser':
@@ -170,8 +180,25 @@ def component_hashes(facts):
     return components
 
 
+def matches_pin(components):
+    return components['runner'] == digest(PINNED_RUNNER) and components['cpu'] == PINNED_CPU
+
+
+def admit(suite):
+    env = os.environ
+    runner = runner_identity(env)
+    cpu = digest(cpu_hash())
+    matched = (env.get('RUNNER_ENVIRONMENT') == 'github-hosted' and env.get('RUNNER_OS') == 'Linux'
+               and matches_pin({'runner': digest(runner), 'cpu': cpu}))
+    print(f'RUNNER_PIN suite={suite} slot={env["VERIFIED_RUNNER_SLOT"]} '
+          f'admitted={str(matched).lower()} runner={json.dumps(runner)} cpu={cpu}')
+    if matched:
+        output('admitted', 'true')
+
+
 def fingerprint(suite, stage):
     components = component_hashes(input_facts(suite))
+    need(matches_pin(components), 'runner does not meet the isolated CPU and image pin')
     inputs = digest(components)
     print(f'RUNNER_INPUT_COMPONENTS suite={suite} stage={stage} aggregate={inputs} '
           f'components={json.dumps(components, sort_keys=True)}')
@@ -249,6 +276,7 @@ def require_jobs(job_response, suite, slot):
                      'Verify customer email, social profiles and booking ownership',
                      'Verify persistence and explicit synthetic reset'},
     }[suite] | {'Sample inputs for reviewed pre-merge validation',
+                'Check exact Test runner',
                 f'Record unchanged {suite} inputs after tests', f'Upload immutable {suite} input receipt'}
     steps = next(j['steps'] for j in jobs if j['name'] == name)
     need(all([step['conclusion'] for step in steps if step['name'] == name] == ['success']
@@ -274,6 +302,7 @@ def require_proof(proof, suite, slot, archive_inputs, pr, run, final, now):
     need(isinstance(components, dict) and components.keys() == expected
          and all(isinstance(value, str) and HASH.fullmatch(value) for value in components.values())
          and digest(components) == proof['inputs'], 'malformed runner input components')
+    need(matches_pin(components), 'receipt does not meet the isolated CPU and image pin')
 
 
 def verify(suite, evidence, final, diff, inputs, now):
@@ -361,13 +390,16 @@ def disposition(mode):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=('sample', 'record', 'reuse'))
+    parser.add_argument('mode', choices=('admit', 'sample', 'record', 'reuse'))
     parser.add_argument('suite', choices=SUITES)
     args = parser.parse_args()
     try:
         env = os.environ
         need(env.get('GITHUB_ACTIONS') == 'true' and env.get('GITHUB_REPOSITORY') == REPO,
              'not the Barber++ GitHub workflow')
+        if args.mode == 'admit':
+            admit(args.suite)
+            return
         source = checkout()
         scratch = pathlib.Path(env['RUNNER_TEMP'])
         before = scratch / f'release-before-{args.suite}.json'
@@ -392,8 +424,13 @@ def main():
             key, description = disposition(env.get('BARBER_VALIDATION_MODE'))
             diff = changes()
             need(frontend_only(diff), 'change requires full validation')
-            rid = verify(args.suite, Evidence(env.get('GH_TOKEN')), source, diff,
-                         fingerprint(args.suite, 'shadow'), time.time())
+            inputs = fingerprint(args.suite, 'shadow')
+            rid = verify(args.suite, Evidence(env.get('GH_TOKEN')), source, diff, inputs, time.time())
+            (scratch / 'pinned-shadow.json').write_text(json.dumps({
+                'suite': args.suite, 'slot': int(env['VERIFIED_RUNNER_SLOT']), 'commit': source['commit'],
+                'pre_run': rid, 'run': int(env['GITHUB_RUN_ID']), 'attempt': int(env['GITHUB_RUN_ATTEMPT']),
+                'pin': PINNED_RUNNER, **inputs,
+            }) + '\n')
             output(key, 'true')
             print(f'{args.suite}: {description} (run {rid})')
     except NoProof as error:
