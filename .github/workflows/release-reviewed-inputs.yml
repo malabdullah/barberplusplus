@@ -1,0 +1,98 @@
+name: Check reviewed release inputs
+on:
+  workflow_call:
+    outputs:
+      browser:
+        value: ${{ jobs.result.outputs.browser }}
+      database:
+        value: ${{ jobs.result.outputs.database }}
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      eligible: ${{ steps.scope.outputs.eligible }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { fetch-depth: 2, persist-credentials: false }
+      - name: Check for an eligible frontend-only merge
+        id: scope
+        env:
+          BARBER_VALIDATION_MODE: verified-v1
+        run: python3 .github/scripts/verified_ci.py scope
+  receipts:
+    needs: scope
+    if: needs.scope.outputs.eligible == 'true'
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [browser, database]
+        slot: [1, 2, 3, 4, 5, 6, 7, 8]
+    env:
+      VERIFIED_RUNNER_SLOT: ${{ matrix.slot }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { fetch-depth: 2, persist-credentials: false }
+      - name: Check exact runner profile
+        id: pin
+        run: python3 .github/scripts/verified_ci.py admit "${{ matrix.suite }}"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.pin.outputs.admitted == 'true'
+        with: { node-version: 24.20.0, cache: npm }
+      - run: npm run local:setup
+        if: steps.pin.outputs.admitted == 'true'
+      - run: npm run check:migrations
+        if: steps.pin.outputs.admitted == 'true' && matrix.suite == 'database'
+      - run: node ops/release/export-local-browser-env.mjs
+        if: steps.pin.outputs.admitted == 'true' && matrix.suite == 'browser'
+      - run: sudo python3 .github/scripts/prepare-ubuntu-apt.py
+        if: steps.pin.outputs.admitted == 'true' && matrix.suite == 'browser'
+      - run: npx playwright install --with-deps chromium firefox webkit
+        if: steps.pin.outputs.admitted == 'true' && matrix.suite == 'browser'
+      - run: node scripts/check-apple-popup-policy.mjs
+        if: steps.pin.outputs.admitted == 'true' && matrix.suite == 'browser'
+      - name: Verify the exact receipt for this runner
+        id: reuse
+        if: steps.pin.outputs.admitted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BARBER_VALIDATION_MODE: verified-v1
+        run: python3 .github/scripts/verified_ci.py reuse "${{ matrix.suite }}"
+      - if: always() && steps.pin.outputs.admitted == 'true'
+        run: npm run local:stop
+      - name: Publish verified runner evidence
+        if: steps.reuse.outputs.reused == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-live-${{ github.run_attempt }}-${{ matrix.suite }}-${{ matrix.slot }}
+          path: ${{ runner.temp }}/pinned-shadow.json
+          retention-days: 1
+          if-no-files-found: error
+  result:
+    needs: [scope, receipts]
+    if: ${{ !cancelled() && needs.scope.outputs.eligible == 'true' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      browser: ${{ steps.results.outputs.browser }}
+      database: ${{ steps.results.outputs.database }}
+    steps:
+      - name: Select suites with verified evidence
+        id: results
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          matches=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=30" \
+            --jq '[.artifacts[] | select(.expired == false and ((.digest // "") | test("^sha256:[a-f0-9]{64}$"))) | .name]')
+          for suite in browser database; do
+            if jq -e --arg pattern "^verified-live-${GITHUB_RUN_ATTEMPT}-${suite}-[1-8]$" 'any(.[]; test($pattern))' <<< "$matches"; then
+              echo "$suite=true" >> "$GITHUB_OUTPUT"
+            fi
+          done
