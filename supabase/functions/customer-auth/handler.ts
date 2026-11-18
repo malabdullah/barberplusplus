@@ -105,6 +105,8 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(body.signupResponseVersion !== undefined && body.signupResponseVersion !== 2)return reply(400,{error:'INVALID_REQUEST'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
+          // Bound explicit existence responses even without trustworthy caller-IP provenance.
+          if(body.signupResponseVersion === 2 && !await deps.rpc('limit',{key:await hash('email-signup:v2:global'),max:100}))return reply(429,{error:'RATE_LIMITED'});
           const result=await deps.emailSignup(name,email,body.password,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
           if(body.signupResponseVersion === 2 && result === 'exists')return reply(409,{error:'SIGNUP_EMAIL_EXISTS'});
         } else {

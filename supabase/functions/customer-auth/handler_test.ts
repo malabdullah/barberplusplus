@@ -24,11 +24,36 @@ Deno.test('signup validation and both rate limits precede v2 account checks',asy
  assert((await handler(req({...body,password:'weak'}))).status===400);
  assert(attempts===0);
  assert((await handler(req(body))).status===409);assert(attempts===1);
- assert(limits.slice(-2).map(x=>x.max).join(',')==='5,100');
- for(const deniedCall of [1,2]){
+ assert(limits.slice(-3).map(x=>x.max).join(',')==='5,100,100');
+ for(const deniedCall of [1,2,3]){
   let count=0;
   const limited=make({rpc:async()=>++count!==deniedCall,emailSignup:async()=>{throw Error('Unexpected account check');}});
   assert((await limited(req(body))).status===429);
+ }
+});
+Deno.test('v2 global signup budget cannot be changed by supplied emails or IP headers',async()=>{
+ const calls:Record<string,unknown>[]=[];let attempts=0;
+ const handler=make({rpc:async(_action:string,data:Record<string,unknown>)=>{calls.push(data);return calls.length!==6;},emailSignup:async()=>{attempts++;return 'exists' as const;}});
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',password};
+ for(const [index,ip] of ['198.51.100.1','203.0.113.2'].entries()){
+  const request=req({...body,email:`synthetic-${index}@example.test`});
+  request.headers.set('x-real-ip',ip);request.headers.set('x-forwarded-for',ip);
+  const response=await handler(request);assert(response.status===(index===0?409:429));
+ }
+ assert(attempts===1);assert(calls.length===6);
+ assert(calls[2].key===calls[5].key && calls[2].max===100);
+ assert(calls[0].key!==calls[3].key && calls[1].key!==calls[4].key);
+});
+Deno.test('v2 shared limiter fails closed without applying to legacy signup, resend or recovery',async()=>{
+ const body={action:'email-signup',signupResponseVersion:2,name:'Synthetic Customer',email:'synthetic@example.test',password};
+ let calls=0;let signup=0;
+ const failed=make({rpc:async()=>{if(++calls===3)throw Error('Unexpected limiter failure');return true;},emailSignup:async()=>{signup++;}});
+ const response=await failed(req(body));assert(response.status===503);assert((await response.json()).error==='UNAVAILABLE');assert(signup===0);
+ for(const action of ['email-signup','email-resend','email-recovery']){
+  let limits=0;
+  const legacy=make({rpc:async()=>{limits++;return true;},emailSignup:async()=>{},emailLink:async()=>{}});
+  assert((await legacy(req({...body,action,signupResponseVersion:action==='email-signup'?undefined:2}))).status===200);
+  assert(limits===2);
  }
 });
 Deno.test('new/unconfirmed v2 signups succeed and unrelated failures never look like duplicates',async()=>{
