@@ -107,7 +107,7 @@ Server-side internal helpers accept timestamps solely for deterministic tests.
 - Nine new tables have RLS, revoked direct privileges and required indexes.
   Security advisors added only the expected private/no-policy informational
   notices, no new warning. The project's unrelated warnings are unchanged.
-- Lint, 301 Deno checks, 498 frontend tests, 80 operations checks and frontend
+- Lint, 301 Deno checks, 499 frontend tests, 80 operations checks and frontend
   build passed. Operations mock sockets required an authorized sandbox rerun;
   no local website or database was started.
 - Expected public schema includes the invoker wrapper and shop trigger. Full
@@ -148,3 +148,23 @@ Both temporary credential handoffs were deleted. No password/token was printed,
 no account reset or new login account was created, and the protected Super Admin
 was not used. Main, production, native apps and App Store submission were not
 changed for this feature.
+
+
+Final Test application: `9d3c2402f2d75d27bba9e26329b8c88e457a3293`.
+Worker deployment: `d01efbcc9f5a460ebce28eea7d521eaa`, 19 November 2026.
+Evidence is in the ignored `.cloud-test/billing-preview/` directory:
+`foundation-manager-desktop-final.png`, `foundation-manager-mobile-final.png`,
+`foundation-renewal-mobile.png`. Manager viewport checks: 1440×1024 and 390×844,
+no horizontal overflow; final dialog Close label localized; no console errors
+since final reload. One capture taken during a viewport transition was discarded
+and replaced after the layout settled. Calculator frequency does not alter the
+saved renewal preference. Invalid codes show a clear error and a subsequent valid
+estimate recovers without writing. The Manager cannot open the Admin route.
+Arabic/dark rendering also passed a component check without changing saved
+account preferences.
+
+Existing hosted regressions passed: My Chair (14), publishing (22), manager
+handover (18) and finance checks (46). All were rollback-only. Final database
+receipt: 80 business records / 94 linked Test shops; zero new grants, discounts,
+invoices, audit entries or request-cache records from QA. No fixture account or
+booking was retained from the SQL suites. Signed-in browser work was read-only.

@@ -2,16 +2,19 @@ import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }));
-vi.mock('../context/AppContext', () => ({ useApp: () => ({ user: { id: 'manager' }, theme: 'light', language: 'en' }) }));
+vi.mock('../context/AppContext', () => ({ useApp: () => settings }));
 import '../i18n';
+import i18next from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import ar from '../i18n/locales/ar.json';
 import SubscriptionBilling from './SubscriptionBilling';
 
 const business = { id: 'one', name: 'A real Test business', managerId: 'manager', managerName: 'Manager', count: 3, frequency: 'monthly', nextFrequency: null, renewalRequested: true, revision: 4, priceFils: 30000, canManage: true, access: { status: 'not_started', until: null }, shops: [], managers: [], invoices: [], history: [], grants: [] };
 beforeEach(() => {
-  rpc.mockReset();
+  rpc.mockReset(); settings.language = 'en'; settings.theme = 'light';
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business], hasMore: false } : action === 'detail' ? business : action === 'quote' ? { count: 3, subtotalFils: 30000, totalFils: 24000, discountFils: 6000, normalRenewalFils: 30000, discountPayments: 1 } : { saved: true }));
 });
@@ -72,4 +75,16 @@ it('reads discount history without offering a save/payment action', async () => 
   await screen.findByText('Approved test promotion');
   expect(rpc).toHaveBeenCalledWith('code-history', { codeId: 'promo' });
   expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+});
+
+
+it('renders the Arabic dark screen without missing translation keys', async () => {
+  const instance = i18next.createInstance();
+  await instance.init({ lng: 'ar', resources: { ar: { translation: ar } }, interpolation: { escapeValue: false } });
+  settings.language = 'ar'; settings.theme = 'dark';
+  const { container } = render(<I18nextProvider i18n={instance}><MemoryRouter><SubscriptionBilling/></MemoryRouter></I18nextProvider>);
+  await screen.findByText(business.name);
+  expect(container.querySelector('.billing-foundation')).toHaveAttribute('dir', 'rtl');
+  expect(container.querySelector('.billing-foundation')).toHaveAttribute('data-theme', 'dark');
+  expect(container.textContent).not.toMatch(/subscriptionFoundation\.|subscriptionDesign\.|billingPreview\./);
 });

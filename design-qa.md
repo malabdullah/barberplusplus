@@ -235,3 +235,15 @@ P3 follow-up: RTL forward-action icon direction can be refined; labels and
 navigation work. No P3 polish blocks this preview review.
 
 final result: passed
+
+
+## Subsequent persistent foundation (functional phase)
+
+The earlier design-preview acceptance above does not certify real billing or
+production readiness. The connected Test implementation and verification are
+recorded in `docs/subscription-foundation.md`. Manager browser screenshots are
+`foundation-manager-desktop-final.png` and `foundation-manager-mobile-final.png`.
+The compact preview badge and localized dialog Close label were corrected after
+hosted inspection. Admin browser inspection remains MFA-pending; only its SQL
+and component checks are passed. Payment gateway and booking enforcement stay
+off. Main and production have not been changed by this feature.
