@@ -1,7 +1,7 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }));
@@ -19,7 +19,7 @@ afterEach(cleanup);
 const open = () => render(<MemoryRouter><SubscriptionBilling /></MemoryRouter>);
 it('uses backend totals and re-reads after a saved preference', async () => {
   open();
-  await screen.findByRole('heading', { name: business.name });
+  await screen.findByText(business.name);
   fireEvent.click(screen.getByRole('button', { name: 'Calculate estimate' }));
   await screen.findByText('KD 24.000');
   fireEvent.click(screen.getByRole('button', { name: 'Manage subscription' }));
@@ -44,4 +44,31 @@ it('does not show a subscription when no business is assigned', async () => {
   open();
   await screen.findByText('No matching results.');
   expect(screen.queryByRole('button', { name: 'Manage subscription' })).toBeNull();
+});
+
+
+it('submits edited Admin dates and selected shops without reverting them', async () => {
+  const actual = { ...business, shops: [{ id: 'shop', name: 'QA Shop' }] };
+  rpc.mockImplementation(action => Promise.resolve(action === 'detail' ? actual : { saved: true }));
+  render(<MemoryRouter initialEntries={['/admin/subscriptions/one']}><Routes><Route path="/admin/subscriptions/:businessId" element={<SubscriptionBilling admin/>}/></Routes></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Manage access' }));
+  fireEvent.change(screen.getByLabelText('Access type'), { target: { value: 'manual' } });
+  fireEvent.input(screen.getByLabelText('Starts on'), { target: { value: '2027-01-01' } });
+  fireEvent.input(screen.getByLabelText('Ends before'), { target: { value: '2027-01-31' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'QA Shop' }));
+  fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'Approved QA exception' } });
+  expect(screen.getByLabelText('Ends before')).toHaveValue('2027-01-31');
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith('grant', expect.objectContaining({ businessId: 'one', kind: 'manual', startsOn: '2027-01-01', endsOn: '2027-01-31', branchIds: ['shop'], reason: 'Approved QA exception' })));
+});
+
+it('reads discount history without offering a save/payment action', async () => {
+  const code = { id: 'promo', code: 'TEST20', enabled: true, kind: 'percent', value: 20, eligibility: 'monthly', payments: 1, expires_at: '2027-01-01T00:00:00Z', used: 0, redemption_limit: null };
+  rpc.mockImplementation(action => Promise.resolve(action === 'codes' ? { rows: [code] } : { rows: [{ id: 1, action: 'create-code', reason: 'Approved test promotion', created_at: '2026-11-19T06:00:00Z' }] }));
+  render(<MemoryRouter><SubscriptionBilling admin codesOnly/></MemoryRouter>);
+  await screen.findAllByText('TEST20');
+  fireEvent.click(screen.getAllByRole('button', { name: 'History' })[0]);
+  await screen.findByText('Approved test promotion');
+  expect(rpc).toHaveBeenCalledWith('code-history', { codeId: 'promo' });
+  expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
 });

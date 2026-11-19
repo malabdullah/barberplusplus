@@ -20,7 +20,7 @@ payment is possible. An estimate never consumes a discount.
 An Admin can search/filter/page businesses, add dated full or selected-branch
 manual access, revoke an exception with a reason, transfer billing to another
 currently assigned manager, and create/pause/enable discount codes. Changes and
-reasons persist. To test safely, use a synthetic Test business and a distinct
+reasons persist. Discount history is readable without a mutation action. To test safely, use a synthetic Test business and a distinct
 code. Revoking a grant retains its history and does not remove independent paid
 access. A business with only one assigned manager cannot transfer billing yet.
 
@@ -91,7 +91,7 @@ The dispatcher checks the live Auth role, session, explicit revocation, current
 shop ownership and Admin MFA. Client user metadata/price/count/actor IDs never
 grant authority. Barbers, customers, anonymous and stale/revoked sessions fail.
 
-Read actions: `businesses`, `detail`, `quote`, Admin-only `codes`. Lists are
+Read actions: `businesses`, `detail`, `quote`, Admin-only `codes` and `code-history`. Lists are
 bounded and paginated. Manager mutation: `preferences`. Admin mutations: `grant`,
 `revoke-grant`, `transfer`, `create-code`, `toggle-code`. Unknown actions fail.
 There is no settlement, fake-payment, refund or caller-supplied clock endpoint.
@@ -99,15 +99,15 @@ Server-side internal helpers accept timestamps solely for deterministic tests.
 
 ## Verification
 
-- 63 hosted SQL scenarios passed, all fixture writes rolled back. They include
+- 65 hosted SQL scenarios passed, all fixture writes rolled back. They include
   actual authenticated-role RPC execution and privileged-role denial paths.
-- All eight feature migrations replayed on hosted Test inside a single rollback
-  transaction, then the same 63 scenarios passed. Existing app/Auth/Storage
+- All nine feature migrations replayed on hosted Test inside a single rollback
+  transaction, then the same 65 scenarios passed. Existing app/Auth/Storage
   records were unchanged by that rehearsal.
 - Nine new tables have RLS, revoked direct privileges and required indexes.
   Security advisors added only the expected private/no-policy informational
   notices, no new warning. The project's unrelated warnings are unchanged.
-- Lint, 301 Deno checks, 496 frontend tests, 80 operations checks and frontend
+- Lint, 301 Deno checks, 498 frontend tests, 80 operations checks and frontend
   build passed. Operations mock sockets required an authorized sandbox rerun;
   no local website or database was started.
 - Expected public schema includes the invoker wrapper and shop trigger. Full
@@ -129,4 +129,22 @@ enforcement remain later phases. They must use these private records and an
 atomic settlement transaction, not accept a browser's claimed payment. Do not
 describe this foundation as all subscription phases implemented.
 
-Main, production, native apps and App Store submission remain unchanged.
+## Hosted browser verification and remaining review
+
+The existing synthetic Manager's saved password was rejected once; it was not
+retried or reset. The documented separate synthetic Manager signed in normally
+and loaded its own real Billing record. The yearly minimum returned KD250.000
+from the server. Calculator reads do not change renewal preferences or create
+invoices. Original account settings and records were preserved.
+
+The non-protected synthetic Admin signed in and reached mandatory MFA. No
+verification or enrollment action was taken. The Admin browser visual pass is
+therefore pending normal MFA; it is not described as passed. Admin authorization,
+MFA, grants, transfer and discount behavior passed in rollback SQL; Admin date
+form/history behavior passed component tests. The owner can review the connected
+Admin screens after completing their normal Test sign-in and MFA.
+
+Both temporary credential handoffs were deleted. No password/token was printed,
+no account reset or new login account was created, and the protected Super Admin
+was not used. Main, production, native apps and App Store submission were not
+changed for this feature.

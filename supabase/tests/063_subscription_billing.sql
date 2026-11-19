@@ -44,6 +44,7 @@ begin
  perform pg_temp.ba(pg_temp.be('detail',jsonb_build_object('businessId',other_business),'BILLING_FORBIDDEN'),'cross-business read denied');
  perform pg_temp.ba(pg_temp.be('grant',jsonb_build_object('businessId',business),'BILLING_FORBIDDEN'),'manager cannot grant access');
  perform pg_temp.ba(pg_temp.be('codes','{}','BILLING_FORBIDDEN'),'manager cannot list private codes');
+ perform pg_temp.ba(pg_temp.be('code-history',jsonb_build_object('codeId',gen_random_uuid()),'BILLING_FORBIDDEN'),'manager cannot read code history');
  result:=public.subscription_billing('quote',jsonb_build_object('businessId',business,'count',100,'priceFils',1,'frequency','monthly'));
  perform pg_temp.ba(result->>'count'='3'and result->>'subtotalFils'='30000','client count/price ignored');
  perform pg_temp.ba(result->>'settled'='false'and result->>'gatewayConnected'='false','no settlement/gateway');
@@ -96,6 +97,8 @@ begin
  perform set_config('request.jwt.claims',gc,true);
  perform public.subscription_billing('toggle-code',jsonb_build_object('requestId',gen_random_uuid(),'codeId',cid,'enabled',false,'reason','QA Admin pause'));
  perform pg_temp.ba((select not enabled from private.billing_discount_codes where id=cid),'renamed Admin can pause');
+ result:=public.subscription_billing('code-history',jsonb_build_object('codeId',cid));
+ perform pg_temp.ba(jsonb_array_length(result->'rows')=2,'Admin sees created/paused code audit');
  perform set_config('request.jwt.claims',mc,true);
  perform pg_temp.ba(pg_temp.be('quote',jsonb_build_object('businessId',business,'frequency','monthly','code',input->>'code'),'BILLING_CODE_UNAVAILABLE'),'paused code rejected');
  perform set_config('request.jwt.claims',ac,true);

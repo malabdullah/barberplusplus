@@ -3695,6 +3695,7 @@
       "BILLING_CODE_INELIGIBLE": "This code does not apply to the selected billing frequency.",
       "BILLING_CODE_USED": "This code has already been used or its redemption limit was reached."
     },
-    "noHistory": "No changes yet."
+    "noHistory": "No changes yet.",
+    "endsBefore": "Ends before"
   }
 }

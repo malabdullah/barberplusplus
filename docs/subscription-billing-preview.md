@@ -76,3 +76,13 @@ require a reason. Separate paid access survives removing a complimentary grant.
 Actual gateway integration, transaction handling, subscriptions/discount records,
 server authorization, expiry jobs, notices and enforcement remain unimplemented.
 No real grant, permission transfer, message, payment or refund occurs.
+
+
+## Persistent foundation phase
+
+The design-only limitations above remain true for `/design/*`. The subsequent
+persistent Test foundation is available at `/dashboard/billing` and
+`/admin/subscriptions`; see [foundation scope and verification](subscription-foundation.md).
+It calculates real Test team counts and stores preferences/Admin changes. Gateway
+collection, settlement and booking enforcement remain off. Do not confuse the
+synthetic design screens with these authenticated, persistent screens.
