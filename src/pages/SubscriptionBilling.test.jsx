@@ -23,6 +23,7 @@ it('uses backend totals and re-reads after a saved preference', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Calculate estimate' }));
   await screen.findByText('KD 24.000');
   fireEvent.click(screen.getByRole('button', { name: 'Manage subscription' }));
+  expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(rpc).toHaveBeenCalledWith('preferences', expect.objectContaining({ businessId: 'one', renewalRequested: false, revision: 4, requestId: expect.any(String) })));

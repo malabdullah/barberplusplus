@@ -21,7 +21,7 @@ function BillingDialog({ title, close, children, busy }) {
     return () => { document.body.style.overflow = overflow; previous?.focus(); };
   }, []);
   return <dialog className="billing-dialog subscription-dialog-wide" ref={ref} aria-labelledby={titleId} onCancel={event => { if (busy) event.preventDefault(); else close(); }}>
-    <header className="billing-dialog-heading"><h2 id={titleId}>{title}</h2><button className="billing-icon" type="button" disabled={busy} onClick={close} aria-label={t('common.close')}><X size={20}/></button></header>
+    <header className="billing-dialog-heading"><h2 id={titleId}>{title}</h2><button className="billing-icon" type="button" disabled={busy} onClick={close} aria-label={t('billingPreview.close')}><X size={20}/></button></header>
     {children}
   </dialog>;
 }
