@@ -124,6 +124,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
   const reasonInput = <label className="subscription-field">{sp('reason')}<textarea maxLength={500} rows={3} required value={reason} onChange={event => setReason(event.target.value)} disabled={busy}/></label>;
   const errorMessage = error && <p role="alert" className="subscription-error">{error}</p>;
   const base = '/admin/subscriptions';
+  const enforced = detail?.access?.enforced || rows.some(item => item.access?.enforced);
   const title = codesOnly ? sp('discountCodes') : admin ? detail?.name || sp('subscriptions') : bp('title');
   useEffect(() => { const previous = document.title; document.title = `${title} | Barber++`; return () => { document.title = previous; }; }, [title]);
   async function showCodeHistory(item) {
@@ -137,8 +138,8 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
   return <div className="billing-preview billing-foundation" data-theme={theme} dir={language === 'ar' ? 'rtl' : 'ltr'} lang={language}>
     <div className="subscription-main">
       {admin && (businessId || codesOnly) && <Link className="subscription-back" to={base}><ArrowLeft size={16}/>{sp('subscriptions')}</Link>}
-      <div className="billing-page-heading"><div><h1>{title}</h1>{detail && !admin && <p className="subscription-subtle">{detail.name}</p>}</div><span className="billing-preview-label">{fb('foundationLabel')}</span></div>
-      <p className="subscription-subtle">{fb('gatewayPostponed')}</p>
+      <div className="billing-page-heading"><div><h1>{title}</h1>{detail && !admin && <p className="subscription-subtle">{detail.name}</p>}</div><span className="billing-preview-label">{enforced ? t('subscriptionEnforcement.enforced') : fb('foundationLabel')}</span></div>
+      <p className="subscription-subtle">{enforced ? t('subscriptionEnforcement.gatewayPostponed') : fb('gatewayPostponed')}</p>
       {notice && <p role="status" className="subscription-notice">{notice}</p>}
       {!dialog && errorMessage}
       {loading ? <p role="status">{t('common.loading')}</p> : detail ? <>
@@ -154,6 +155,12 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
           <div><dt>{bp('billingFrequency')}</dt><dd>{bp(detail.frequency)}{detail.nextFrequency && <> · {fb('nextFrequency', { frequency: bp(detail.nextFrequency) })}</>}</dd></div>
           <div><dt>{fb('renewalPreference')}</dt><dd>{fb(detail.renewalRequested ? 'renewalRequested' : 'renewalStopped')}</dd></div>
         </dl></section>
+        {detail.access.enforced && detail.capacity && <section className="subscription-admin-section"><h2>{t('subscriptionEnforcement.capacity')}</h2><dl className="billing-review-rows">
+          <div><dt>{sp('activeCount')}</dt><dd>{detail.count}</dd></div>
+          {['active', 'grace'].includes(detail.access.status) && <div><dt>{t('subscriptionEnforcement.paidCapacity')}</dt><dd>{detail.paidCapacity}</dd></div>}
+          <div><dt>{t('subscriptionEnforcement.nextBarber')}</dt><dd>{detail.access.status === 'manual' ? t('subscriptionEnforcement.manualCapacity') : detail.capacity.allowed ? t('subscriptionEnforcement.available') : t(`subscriptionEnforcement.errors.${detail.capacity.reason}`)}</dd></div>
+          {detail.capacity.additionalFils > 0 && <div><dt>{t('subscriptionEnforcement.additional')}</dt><dd>{money(detail.capacity.additionalFils)}</dd></div>}
+        </dl></section>}
         {!admin && <section className="subscription-admin-section"><h2>{sp('calculator')}</h2><form className="subscription-form" onSubmit={estimate}>
           <label className="subscription-field">{bp('billingFrequency')}<select value={estimateFrequency} onChange={event => { setEstimateFrequency(event.target.value); setQuote(null); }}><option value="monthly">{bp('monthly')}</option><option value="yearly">{bp('yearly')}</option></select></label>
           <label className="subscription-field">{sp('discountCode')}<input value={codeText} maxLength={24} onChange={event => { setCodeText(event.target.value); setQuote(null); }} autoCapitalize="characters"/></label>

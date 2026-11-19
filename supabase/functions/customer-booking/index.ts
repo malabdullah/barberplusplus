@@ -98,18 +98,22 @@ Deno.serve(createCustomerBookingHandler({
   },
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
-    const [branches, barbers, services, ratingResult] = await Promise.all([
+    const [branches, barbers, services, ratingResult, accessResult, barberAccessResult] = await Promise.all([
       admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').eq('publication_state', 'published').order('name'),
       admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days,availability').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
       admin.rpc('customer_catalog_ratings'),
+      admin.rpc('customer_bookable_shops'),
+      admin.rpc('customer_bookable_barbers'),
     ]);
-    if (branches.error || barbers.error || services.error) throw Error('Catalog unavailable');
+    if (branches.error || barbers.error || services.error || accessResult.error || !Array.isArray(accessResult.data) || barberAccessResult.error || !Array.isArray(barberAccessResult.data)) throw Error('Catalog unavailable');
+    const eligibleShops = new Set<string>(accessResult.data);
+    const eligibleBarbers = new Set<string>(barberAccessResult.data);
     const serviceIds = new Set(services.data.map(service => service.id));
     const readyBarbers = barbers.data.filter(barber => {
       const shop = branches.data.find(shop => shop.id === barber.branch_id);
       const offered = services.data.filter(service => service.branch_id === barber.branch_id && barber.service_ids?.includes(service.id) && serviceIds.has(service.id));
-      if (!shop || !offered.length) return false;
+      if (!shop || !eligibleShops.has(shop.id) || !eligibleBarbers.has(barber.id) || !offered.length) return false;
       const schedule = (barber.availability || {}) as Record<string, { enabled?: boolean; available?: boolean; start?: string; end?: string }>;
       const shopHours = (shop.working_hours || {}) as Record<string, { open?: string; close?: string }>;
       const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));

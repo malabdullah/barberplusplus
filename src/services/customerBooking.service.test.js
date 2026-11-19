@@ -55,3 +55,8 @@ it('uses the saved Arabic area name when an explicit city matches it, without tr
   expect(branches[0]).toMatchObject({ city: 'Sharq', cityAr: 'شرق' });
   expect(branches[1]).toMatchObject({ city: 'Mirqab', cityAr: '' });
 });
+
+it('keeps the native-compatible shop-access error while showing specific website wording', async () => {
+  functionFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'BOOKING_UNAVAILABLE', reason: 'SHOP_ACCESS_REQUIRED' }) });
+  await expect(customerBookingService.getCatalog()).rejects.toThrow('BILLING_BOOKING_UNAVAILABLE');
+});

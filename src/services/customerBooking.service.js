@@ -14,7 +14,7 @@ const request = async (action, body = {}) => {
     signal: AbortSignal.timeout(20000),
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'UNAVAILABLE');
+  if (!response.ok) throw new Error(result.error === 'BOOKING_UNAVAILABLE' && result.reason === 'SHOP_ACCESS_REQUIRED' ? 'BILLING_BOOKING_UNAVAILABLE' : result.error || 'UNAVAILABLE');
   return result;
 };
 
