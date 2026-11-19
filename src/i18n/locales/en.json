@@ -3713,6 +3713,7 @@
       "BILLING_RENEW_REQUIRED": "Renew the subscription before adding active barbers. Existing paid places can still be reused during the grace period.",
       "BILLING_BOOKING_UNAVAILABLE": "This shop is not accepting new bookings. Choose another shop; your existing appointments are unchanged."
     },
-    "gatewayPostponed": "Payments are not connected. Access follows trial, subscription or Admin grant dates."
+    "gatewayPostponed": "Payments are not connected. Access follows trial, subscription or Admin grant dates.",
+    "manualCapacity": "Available only in shops with a current manual-access grant"
   }
 }

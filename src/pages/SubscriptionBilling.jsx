@@ -158,7 +158,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
         {detail.access.enforced && detail.capacity && <section className="subscription-admin-section"><h2>{t('subscriptionEnforcement.capacity')}</h2><dl className="billing-review-rows">
           <div><dt>{sp('activeCount')}</dt><dd>{detail.count}</dd></div>
           {['active', 'grace'].includes(detail.access.status) && <div><dt>{t('subscriptionEnforcement.paidCapacity')}</dt><dd>{detail.paidCapacity}</dd></div>}
-          <div><dt>{t('subscriptionEnforcement.nextBarber')}</dt><dd>{detail.capacity.allowed ? t('subscriptionEnforcement.available') : t(`subscriptionEnforcement.errors.${detail.capacity.reason}`)}</dd></div>
+          <div><dt>{t('subscriptionEnforcement.nextBarber')}</dt><dd>{detail.access.status === 'manual' ? t('subscriptionEnforcement.manualCapacity') : detail.capacity.allowed ? t('subscriptionEnforcement.available') : t(`subscriptionEnforcement.errors.${detail.capacity.reason}`)}</dd></div>
           {detail.capacity.additionalFils > 0 && <div><dt>{t('subscriptionEnforcement.additional')}</dt><dd>{money(detail.capacity.additionalFils)}</dd></div>}
         </dl></section>}
         {!admin && <section className="subscription-admin-section"><h2>{sp('calculator')}</h2><form className="subscription-form" onSubmit={estimate}>
