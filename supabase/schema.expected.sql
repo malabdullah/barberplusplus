@@ -756,6 +756,16 @@ CREATE OR REPLACE FUNCTION "public"."customer_announcement_api"("p_action" "text
     SET "search_path" TO ''
     AS $$select private.customer_announcement_api(p_action,p_data);$$;
 ALTER FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_bookable_barbers"() RETURNS "uuid"[]
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$select coalesce(array_agg(id),'{}')from public.barbers b where private.billing_barber_counted(b)and private.billing_shop_access(b.branch_id,false);$$;
+ALTER FUNCTION "public"."customer_bookable_barbers"() OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_bookable_shops"() RETURNS "uuid"[]
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$select coalesce(array_agg(id),'{}')from public.branches where private.billing_shop_access(id,false);$$;
+ALTER FUNCTION "public"."customer_bookable_shops"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -826,7 +836,8 @@ begin
   if v_booking.id is null then
     select * into v_barber from public.barbers where id = (p_data ->> 'barber_id')::uuid
       and status = 'active' for share;
-    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' and publication_state = 'published' for share;
+    select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' and (publication_state = 'published' or p_action='appointment-slots') for share;
+    if p_action<>'appointment-slots' and v_branch.id is not null and(not private.billing_shop_access(v_branch.id,false)or not private.billing_barber_counted(v_barber)) then raise exception 'BILLING_BOOKING_UNAVAILABLE';end if;
     if v_barber.id is null or v_branch.id is null
        or v_branch.id is distinct from (p_data ->> 'branch_id')::uuid then
       raise exception 'INVALID_SELECTION';
@@ -1244,7 +1255,7 @@ CREATE OR REPLACE FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", 
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
- select case when exists(select 1 from public.branches where id=p_shop and status='active' and publication_state='published') then private.package_catalog(p_shop,p_barber,p_date) else '[]'::jsonb end;
+ select case when exists(select 1 from public.branches where id=p_shop and status='active' and publication_state='published' and private.billing_shop_access(id,false)) then private.package_catalog(p_shop,p_barber,p_date) else '[]'::jsonb end;
 $$;
 ALTER FUNCTION "public"."customer_package_catalog"("p_shop" "uuid", "p_barber" "uuid", "p_date" "date") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_password_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
@@ -3288,6 +3299,7 @@ ALTER TABLE ONLY "public"."whatsapp_logs"
     ADD CONSTRAINT "whatsapp_logs_pkey" PRIMARY KEY ("id");
 ALTER TABLE ONLY "public"."whatsapp_messages"
     ADD CONSTRAINT "whatsapp_messages_pkey" PRIMARY KEY ("id");
+CREATE INDEX "barbers_billing_active_capacity" ON "public"."barbers" USING "btree" ("branch_id", COALESCE("user_id", "id")) WHERE (("status" = 'active'::"text") AND (("management_mode" = 'managed'::"text") OR "manager_chair" OR (("user_id" IS NOT NULL) AND ((COALESCE("invite_status", 'accepted'::character varying))::"text" = 'accepted'::"text"))));
 CREATE INDEX "barbers_discovery_name" ON "public"."barbers" USING "gin" ("lower"((("name" || ' '::"text") || COALESCE("name_ar", ''::"text"))) "extensions"."gin_trgm_ops") WHERE ("status" = 'active'::"text");
 CREATE INDEX "barbers_discovery_order" ON "public"."barbers" USING "btree" ("lower"("name"), "id") WHERE ("status" = 'active'::"text");
 CREATE UNIQUE INDEX "barbers_one_manager_chair" ON "public"."barbers" USING "btree" ("user_id") WHERE "manager_chair";
@@ -3370,6 +3382,7 @@ CREATE OR REPLACE TRIGGER "a_barber_confirmation_preference" BEFORE UPDATE OF "a
 CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
+CREATE OR REPLACE TRIGGER "ab_billing_booking" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."billing_guard_booking"();
 CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "billing_shop_foundation" AFTER INSERT OR UPDATE OF "publication_state" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."billing_register_shop"();
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
@@ -3422,6 +3435,8 @@ CREATE OR REPLACE TRIGGER "validate_booking_integrity" BEFORE INSERT OR UPDATE O
 CREATE OR REPLACE TRIGGER "validate_service" BEFORE INSERT OR DELETE OR UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 CREATE OR REPLACE TRIGGER "validate_shop" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 CREATE OR REPLACE TRIGGER "z_capture_customer_booking_email" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_customer_booking_email"();
+CREATE OR REPLACE TRIGGER "zz_billing_capacity" AFTER INSERT OR DELETE OR UPDATE OF "status", "branch_id", "user_id", "management_mode", "manager_chair", "invite_status" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."billing_guard_capacity"();
+CREATE OR REPLACE TRIGGER "zz_billing_publication" AFTER INSERT OR UPDATE OF "publication_state", "status" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."billing_guard_publication"();
 CREATE OR REPLACE TRIGGER "zz_erased_booking" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 ALTER TABLE ONLY "public"."admin_settings"
     ADD CONSTRAINT "admin_settings_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
@@ -3749,6 +3764,10 @@ REVOKE ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_dat
 GRANT ALL ON FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_bookable_barbers"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_bookable_barbers"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."customer_bookable_shops"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."customer_bookable_shops"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."customer_booking_discovery"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
