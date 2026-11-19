@@ -45,6 +45,7 @@ function PreviewDialog({ title, onClose, children }) {
       document.body.style.overflow = previousOverflow;
     };
   }, []);
+  useEffect(() => { ref.current?.querySelector('button')?.focus(); }, [title]);
   return <dialog className="billing-dialog" ref={ref} aria-labelledby={titleId} onCancel={onClose}>
     <header className="billing-dialog-heading">
       <h2 id={titleId}>{title}</h2>
@@ -90,9 +91,9 @@ export default function BillingPreview() {
   };
 
   return <div className="billing-preview" data-theme={theme} dir={language === 'ar' ? 'rtl' : 'ltr'} lang={language}>
-    {menuOpen && <button className="billing-menu-backdrop" type="button" aria-label={t('common.close')} onClick={() => setMenuOpen(false)} />}
+    {menuOpen && <button className="billing-menu-backdrop" type="button" aria-label={tr('close')} onClick={() => setMenuOpen(false)} />}
     <aside ref={sidebarRef} className={`billing-sidebar${menuOpen ? ' is-open' : ''}`} aria-label={t('common.navigation')}>
-      <button className="billing-icon billing-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label={t('common.close')}><X size={20} /></button>
+      <button className="billing-icon billing-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label={tr('close')}><X size={20} /></button>
       <Link className="billing-brand" to="/" aria-label={t('common.brandHome')}><BrandLogo tone={theme} decorative tagline={t('common.manager')} /></Link>
       <div className="billing-sidebar-divider" />
       <div className="billing-profile"><span className="billing-avatar" aria-hidden="true">N</span><div><strong>{tr('managerName')}</strong><small>{t('common.manager')}</small></div></div>
@@ -113,7 +114,7 @@ export default function BillingPreview() {
           <span className="billing-shop"><Building2 size={18} aria-hidden="true" /><span>{tr('shopName')}</span></span>
           <button className="billing-topbar-icon" type="button" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} aria-label={tr('switchLanguage')}><Globe size={21} strokeWidth={1.5} /></button>
           <button className="billing-topbar-icon" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={tr(theme === 'light' ? 'darkMode' : 'lightMode')}>{theme === 'light' ? <Moon size={21} strokeWidth={1.5} /> : <Sun size={21} strokeWidth={1.5} />}</button>
-          <Link className="billing-topbar-icon billing-notifications" to="/dashboard/notifications" aria-label={t('nav.notifications')}><Bell size={20} strokeWidth={1.5} /></Link>
+          <Link className="billing-topbar-icon billing-notifications" to="/dashboard/notifications" aria-label={tr('notifications')}><Bell size={20} strokeWidth={1.5} /></Link>
         </div>
       </header>
 
@@ -126,7 +127,7 @@ export default function BillingPreview() {
         </section>
 
         {(scheduled || !renewalEnabled) && <div className="billing-scheduled"><span>{tr(!renewalEnabled ? 'renewalCancelled' : 'scheduledSummary', { date: date(renewalDate), amount: money(600) })}</span><button className="billing-text-button" type="button" onClick={() => { setScheduled(null); setRenewalEnabled(true); setNotice(tr('restored')); }}>{tr('undo')}</button></div>}
-        <p className="billing-live-notice" role="status">{notice}</p>
+        <p className="billing-live-notice billing-sr-only" role="status">{notice}</p>
 
         <section className="billing-details" aria-label={tr('subscriptionDetails')}>
           <button type="button" className="billing-detail-row billing-usage-toggle" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls="billing-usage">
@@ -146,7 +147,7 @@ export default function BillingPreview() {
     </div>
 
     {dialog && <PreviewDialog title={tr(dialog === 'manage' ? 'manage' : dialog === 'review' ? 'reviewChange' : dialog === 'cancel' ? 'cancelTitle' : dialog === 'invoice' ? 'sampleInvoice' : 'previewLabel')} onClose={close}>{
-      { closeLabel: t('common.close'), content: <>
+      { closeLabel: tr('close'), content: <>
         {dialog === 'preview' && <><p>{tr('previewDescription')}</p><button type="button" className="billing-secondary" onClick={reset}><RotateCcw size={17} />{tr('reset')}</button></>}
         {dialog === 'manage' && <>
           <p className="billing-dialog-caption">{tr('previewLabel')}</p>

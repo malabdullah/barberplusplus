@@ -3465,6 +3465,8 @@
     "nextPayment": "Next payment",
     "noPayment": "Preview only. No payment or subscription changes will be made.",
     "confirmPreview": "Confirm preview",
-    "back": "Back"
+    "back": "Back",
+    "close": "Close",
+    "notifications": "Notifications"
   }
 }
