@@ -88,3 +88,17 @@ it('renders the Arabic dark screen without missing translation keys', async () =
   expect(container.querySelector('.billing-foundation')).toHaveAttribute('data-theme', 'dark');
   expect(container.textContent).not.toMatch(/subscriptionFoundation\.|subscriptionDesign\.|billingPreview\./);
 });
+
+
+it('opens discount codes from a populated subscription list without reusing its rows', async () => {
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business] } : { rows: [] }));
+  render(<MemoryRouter initialEntries={['/admin/subscriptions']}><Routes>
+    <Route path="/admin/subscriptions" element={<SubscriptionBilling admin/>}/>
+    <Route path="/admin/subscriptions/discounts" element={<SubscriptionBilling key="admin-discount-codes" admin codesOnly/>}/>
+  </Routes></MemoryRouter>);
+  await screen.findAllByText(business.name);
+  fireEvent.click(screen.getByRole('link', { name: 'Discount codes' }));
+  await screen.findByRole('heading', { name: 'Discount codes' });
+  await screen.findByText('No matching results.');
+  expect(rpc).toHaveBeenCalledWith('codes', expect.any(Object));
+});

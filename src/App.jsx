@@ -295,7 +295,7 @@ function AppRoutes() {
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
         {isTest && <Route path="subscriptions" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}
-        {isTest && <Route path="subscriptions/discounts" element={<Suspense fallback={null}><SubscriptionBilling admin codesOnly /></Suspense>} />}
+        {isTest && <Route path="subscriptions/discounts" element={<Suspense fallback={null}><SubscriptionBilling key="admin-discount-codes" admin codesOnly /></Suspense>} />}
         {isTest && <Route path="subscriptions/:businessId" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}
         <Route path="analytics" element={<PlatformAnalytics />} />
         <Route path="configuration" element={<SystemConfiguration />} />
