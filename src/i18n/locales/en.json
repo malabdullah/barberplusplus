@@ -3467,7 +3467,8 @@
     "confirmPreview": "Confirm preview",
     "back": "Back",
     "close": "Close",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "manageSubscription": "Manage subscription"
   },
   "subscriptionDesign": {
     "calculator": "Pricing calculator",
@@ -3636,6 +3637,64 @@
     },
     "yearlyBaseSaving": "Yearly billing saves {{amount}}",
     "noOtherManagers": "Assign another manager to this business before transferring billing.",
-    "monthlyEquivalent": "Equivalent to approximately {{amount}}/month, paid yearly."
+    "monthlyEquivalent": "Equivalent to approximately {{amount}}/month, paid yearly.",
+    "chooseManager": "Choose a manager",
+    "discountValue": "Value",
+    "noAlternativeManager": "Assign another manager to this business before transferring billing."
+  },
+  "subscriptionFoundation": {
+    "foundationLabel": "Test foundation · Access rules not enforced",
+    "gatewayPostponed": "Payment collection is not connected. Saved changes do not charge anyone or restrict bookings.",
+    "managedBy": "Managed by {{name}}",
+    "nextFrequency": "Next renewal: {{frequency}}",
+    "renewalPreference": "Renewal preference",
+    "renewalRequested": "Renewal requested",
+    "renewalStopped": "Renewal stopped",
+    "requestRenewal": "Request renewal at the end of the current term",
+    "nextTermOnly": "This preference applies at the next renewal. Current access stays in place. No automatic payment will be taken.",
+    "calculate": "Calculate estimate",
+    "subtotal": "Before discount",
+    "noInvoices": "No paid invoices yet.",
+    "page": "Page {{page}}",
+    "saved": "Changes saved.",
+    "chooseBusiness": "Business",
+    "states": {
+      "not_started": "Not started",
+      "active": "Active",
+      "trial": "Trial",
+      "transition": "Transition access",
+      "grace": "Grace period",
+      "expired": "Expired",
+      "complimentary": "Complimentary",
+      "manual": "Manual only",
+      "enabled": "Enabled",
+      "paused": "Paused"
+    },
+    "actions": {
+      "preferences": "Renewal preference changed",
+      "grant": "Access granted",
+      "revoke-grant": "Access removed",
+      "transfer": "Billing manager changed",
+      "create-code": "Discount created",
+      "toggle-code": "Discount updated"
+    },
+    "errors": {
+      "BILLING_FAILED": "Could not load or save billing. Try again.",
+      "BILLING_FORBIDDEN": "You do not have access to this billing action. Sign in with the assigned manager or Admin account.",
+      "BILLING_INVALID": "Check the fields and try again.",
+      "BILLING_INVALID_DATES": "Choose a valid period starting today or later. The end must be after the start.",
+      "BILLING_BRANCH_REQUIRED": "Select at least one branch belonging to this business.",
+      "BILLING_REASON_REQUIRED": "Enter a reason.",
+      "BILLING_MANAGER_REQUIRED": "Choose another manager already assigned to this business.",
+      "BILLING_STALE": "Billing changed since this page was loaded. Refresh the page before saving again.",
+      "BILLING_RETRY_CHANGED": "This request has changed. Refresh the page and try again.",
+      "BILLING_REQUEST_REQUIRED": "Refresh the page and try again.",
+      "BILLING_DUPLICATE": "This discount code already exists. Use a different code.",
+      "BILLING_NOT_FOUND": "This item is no longer available. Refresh the page.",
+      "BILLING_CODE_UNAVAILABLE": "This code is invalid, paused or expired.",
+      "BILLING_CODE_INELIGIBLE": "This code does not apply to the selected billing frequency.",
+      "BILLING_CODE_USED": "This code has already been used or its redemption limit was reached."
+    },
+    "noHistory": "No changes yet."
   }
 }

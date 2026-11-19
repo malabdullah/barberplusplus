@@ -3508,7 +3508,8 @@
     "confirmPreview": "تأكيد المعاينة",
     "back": "رجوع",
     "close": "إغلاق",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "manageSubscription": "إدارة الاشتراك"
   },
   "subscriptionDesign": {
     "calculator": "حاسبة الاشتراك",
@@ -3681,6 +3682,64 @@
     },
     "yearlyBaseSaving": "الفوترة السنوية توفّر {{amount}}",
     "noOtherManagers": "أضف مديرًا آخر إلى هذه المنشأة قبل نقل مسؤولية الفوترة.",
-    "monthlyEquivalent": "ما يعادل نحو {{amount}} شهريًا، يُدفع سنويًا."
+    "monthlyEquivalent": "ما يعادل نحو {{amount}} شهريًا، يُدفع سنويًا.",
+    "chooseManager": "اختر مديراً",
+    "discountValue": "القيمة",
+    "noAlternativeManager": "عيّن مديراً آخر لهذه المنشأة قبل نقل مسؤولية الفوترة."
+  },
+  "subscriptionFoundation": {
+    "foundationLabel": "أساس الاشتراكات التجريبي · قيود الوصول غير مفعلة",
+    "gatewayPostponed": "تحصيل المدفوعات غير متصل. التغييرات المحفوظة لا تخصم مبالغ ولا تقيد الحجوزات.",
+    "managedBy": "يديره {{name}}",
+    "nextFrequency": "التجديد التالي: {{frequency}}",
+    "renewalPreference": "تفضيل التجديد",
+    "renewalRequested": "التجديد مطلوب",
+    "renewalStopped": "التجديد متوقف",
+    "requestRenewal": "طلب التجديد عند نهاية الفترة الحالية",
+    "nextTermOnly": "يسري هذا التفضيل عند التجديد التالي. يبقى الوصول الحالي متاحاً ولن يتم خصم أي مبلغ تلقائياً.",
+    "calculate": "حساب التقدير",
+    "subtotal": "قبل الخصم",
+    "noInvoices": "لا توجد فواتير مدفوعة بعد.",
+    "page": "الصفحة {{page}}",
+    "saved": "تم حفظ التغييرات.",
+    "chooseBusiness": "المنشأة",
+    "states": {
+      "not_started": "لم يبدأ",
+      "active": "نشط",
+      "trial": "تجريبي",
+      "transition": "فترة انتقالية",
+      "grace": "فترة سماح",
+      "expired": "منتهي",
+      "complimentary": "مجاني",
+      "manual": "حجوزات يدوية فقط",
+      "enabled": "مفعل",
+      "paused": "متوقف"
+    },
+    "actions": {
+      "preferences": "تغيير تفضيل التجديد",
+      "grant": "منح الوصول",
+      "revoke-grant": "إزالة الوصول",
+      "transfer": "تغيير مسؤول الفوترة",
+      "create-code": "إنشاء خصم",
+      "toggle-code": "تحديث الخصم"
+    },
+    "errors": {
+      "BILLING_FAILED": "تعذر تحميل أو حفظ الفوترة. حاول مرة أخرى.",
+      "BILLING_FORBIDDEN": "ليس لديك صلاحية لهذا الإجراء. سجل الدخول بحساب المدير المعيّن أو المشرف.",
+      "BILLING_INVALID": "راجع الحقول وحاول مرة أخرى.",
+      "BILLING_INVALID_DATES": "اختر فترة صالحة تبدأ اليوم أو لاحقاً. يجب أن تكون النهاية بعد البداية.",
+      "BILLING_BRANCH_REQUIRED": "اختر فرعاً واحداً على الأقل تابعاً لهذه المنشأة.",
+      "BILLING_REASON_REQUIRED": "أدخل السبب.",
+      "BILLING_MANAGER_REQUIRED": "اختر مديراً آخر معيّناً لهذه المنشأة.",
+      "BILLING_STALE": "تغيرت بيانات الفوترة. حدث الصفحة قبل الحفظ مجدداً.",
+      "BILLING_RETRY_CHANGED": "تغير الطلب. حدث الصفحة وحاول مرة أخرى.",
+      "BILLING_REQUEST_REQUIRED": "حدث الصفحة وحاول مرة أخرى.",
+      "BILLING_DUPLICATE": "كود الخصم موجود مسبقاً. اختر كوداً آخر.",
+      "BILLING_NOT_FOUND": "لم يعد هذا العنصر متاحاً. حدث الصفحة.",
+      "BILLING_CODE_UNAVAILABLE": "الكود غير صالح أو متوقف أو منتهي.",
+      "BILLING_CODE_INELIGIBLE": "الكود غير متاح لدورة الفوترة المحددة.",
+      "BILLING_CODE_USED": "تم استخدام الكود أو بلوغ حد الاستخدام."
+    },
+    "noHistory": "لا توجد تغييرات بعد."
   }
 }

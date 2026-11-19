@@ -8,11 +8,13 @@ import {
   BarChart3,
   Send,
   Settings2,
+  CreditCard,
   Shield,
   Settings,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { isTest } from '../../lib/runtimeConfig';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
@@ -24,6 +26,7 @@ const navItems = [
   { path: '/admin/analytics', icon: BarChart3, labelKey: 'admin.nav.analytics' },
   { path: '/admin/configuration', icon: Settings2, labelKey: 'admin.nav.configuration' },
   { path: '/admin/audit', icon: Shield, labelKey: 'admin.nav.audit' },
+  ...(isTest ? [{ path: '/admin/subscriptions', icon: CreditCard, labelKey: 'subscriptionDesign.subscriptions' }] : []),
   { path: '/admin/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

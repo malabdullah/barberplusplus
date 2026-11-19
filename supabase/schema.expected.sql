@@ -3970,3 +3970,15 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+-- Subscription foundation public boundary; internal objects are in private and
+-- subscription_billing and are recreated by the versioned migrations.
+CREATE OR REPLACE FUNCTION public.subscription_billing(p_action text,p_data jsonb DEFAULT '{}'::jsonb) RETURNS jsonb
+ LANGUAGE sql SET search_path TO ''
+ AS $$select subscription_billing.billing_api(p_action,p_data);$$;
+ALTER FUNCTION public.subscription_billing(text,jsonb) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.subscription_billing(text,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.subscription_billing(text,jsonb) FROM anon;
+REVOKE ALL ON FUNCTION public.subscription_billing(text,jsonb) FROM service_role;
+GRANT EXECUTE ON FUNCTION public.subscription_billing(text,jsonb) TO authenticated;
+CREATE TRIGGER billing_shop_foundation AFTER INSERT OR UPDATE OF publication_state ON public.branches FOR EACH ROW EXECUTE FUNCTION private.billing_register_shop();

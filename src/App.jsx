@@ -86,6 +86,7 @@ const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Finances = lazy(() => import('./pages/Finances'));
 const SubscriptionDesign = lazy(() => import('./pages/SubscriptionDesign'));
+const SubscriptionBilling = lazy(() => import('./pages/SubscriptionBilling'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
   const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
@@ -240,6 +241,7 @@ function AppRoutes() {
         <Route path="services" element={<Services />} />
         <Route path="reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
         <Route path="finances" element={<Suspense fallback={null}><Finances /></Suspense>} />
+        {isTest && <Route path="billing" element={<Suspense fallback={null}><SubscriptionBilling /></Suspense>} />}
         <Route path="barbers" element={<Barbers />} />
         <Route path="barbers/new" element={<AddBarber />} />
         <Route path="barbers/:barberId/edit" element={<EditBarber />} />
@@ -292,6 +294,9 @@ function AppRoutes() {
         <Route path="users/emails" element={<AccountEmails />} />
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
+        {isTest && <Route path="subscriptions" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}
+        {isTest && <Route path="subscriptions/discounts" element={<Suspense fallback={null}><SubscriptionBilling admin codesOnly /></Suspense>} />}
+        {isTest && <Route path="subscriptions/:businessId" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}
         <Route path="analytics" element={<PlatformAnalytics />} />
         <Route path="configuration" element={<SystemConfiguration />} />
         <Route path="configuration/locations" element={<LocationsConfig />} />
