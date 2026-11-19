@@ -102,3 +102,14 @@ it('opens discount codes from a populated subscription list without reusing its 
   await screen.findByText('No matching results.');
   expect(rpc).toHaveBeenCalledWith('codes', expect.any(Object));
 });
+
+it('shows actual paid capacity and the unpaid prorated estimate without a payment action', async () => {
+  const actual = { ...business, access: { status: 'active', enforced: true }, paidCapacity: 3,
+    capacity: { allowed: false, reason: 'BILLING_CAPACITY_REQUIRED', additionalFils: 5000 } };
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
+  open();
+  await screen.findByText('Paid barber places');
+  expect(screen.getByText('KD 5.000')).toBeVisible();
+  expect(screen.getByText(/This barber needs an additional paid place/)).toBeVisible();
+  expect(screen.queryByRole('button', { name: /pay|settle/i })).toBeNull();
+});

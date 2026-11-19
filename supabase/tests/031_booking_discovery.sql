@@ -9,7 +9,7 @@ insert into auth.sessions(id,user_id) values
 ('fa160000-0000-4000-8000-000000000011','fa160000-0000-4000-8000-000000000001'),
 ('fa160000-0000-4000-8000-000000000012','fa160000-0000-4000-8000-000000000002');
 insert into public.branches(id,name,manager_id,city,governorate_id,area_id,image_url) values
-('fa160000-0000-4000-8000-000000000101','Discovery QA Shop','fa160000-0000-4000-8000-000000000001','Discovery QA City',9001,9001,'/booking-demo/market-street.png');
+('fa160000-0000-4000-8000-000000000101','Discovery QA Shop','fa160000-0000-4000-8000-000000000001','Discovery QA City',(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1),'/booking-demo/market-street.png');
 insert into public.services(id,branch_id,name,duration,price) values
 ('fa160000-0000-4000-8000-000000000201','fa160000-0000-4000-8000-000000000101','Discovery QA Cut',30,3),
 ('fa160000-0000-4000-8000-000000000202','fa160000-0000-4000-8000-000000000101','Discovery QA Long',60,5);
@@ -43,8 +43,8 @@ select is((public.customer_booking('slots',current_setting('discovery.book')::js
 -- A saved barber remains first even when the ordinary name order spans pages.
 insert into private.customer_accounts(user_id,customer_id)
 select 'fa160000-0000-4000-8000-000000000002',customer_id from public.bookings where id=(current_setting('discovery.book')::jsonb->>'id')::uuid;
-insert into public.barbers(branch_id,name,service_ids,availability)
-select 'fa160000-0000-4000-8000-000000000101','Discovery QA Page '||lpad(n::text,2,'0'),array['fa160000-0000-4000-8000-000000000201']::uuid[],'{"monday":{"enabled":true,"start":"09:00","end":"18:00"}}' from generate_series(1,25) n;
+insert into public.barbers(branch_id,name,management_mode,invite_status,service_ids,availability)
+select 'fa160000-0000-4000-8000-000000000101','Discovery QA Page '||lpad(n::text,2,'0'),'managed','managed',array['fa160000-0000-4000-8000-000000000201']::uuid[],'{"monday":{"enabled":true,"start":"09:00","end":"18:00"}}' from generate_series(1,25) n;
 select set_config('discovery.saved',(select id::text from public.barbers where name='Discovery QA Page 25'),true);
 insert into private.customer_favourites(customer_id,barber_id,saved_barber_branch_id)
 select customer_id,current_setting('discovery.saved')::uuid,'fa160000-0000-4000-8000-000000000101' from private.customer_accounts where user_id='fa160000-0000-4000-8000-000000000002';

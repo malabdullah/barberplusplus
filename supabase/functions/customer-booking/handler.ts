@@ -331,6 +331,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       const message = error instanceof Error ? error.message : '';
       const packageFailure = message.match(/INVALID_PACKAGE_SELECTION|PACKAGE_(?:UNAVAILABLE|DATE_UNAVAILABLE|CHANGED)/)?.[0];
       if (packageFailure) return reply(409, { error: packageFailure });
+      if (/BILLING_BOOKING_UNAVAILABLE/.test(message)) return reply(409, { error: 'BILLING_BOOKING_UNAVAILABLE' });
       if (/SELF_BOOKING_NOT_ALLOWED/.test(message)) return reply(409, { error: 'SELF_BOOKING_NOT_ALLOWED' });
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });

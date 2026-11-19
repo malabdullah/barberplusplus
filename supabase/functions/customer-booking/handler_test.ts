@@ -275,3 +275,10 @@ Deno.test('booking entry uses live signed-in identity and keeps stale-session/er
  const stale=make({customer:async()=>null,discovery:async()=>{throw Error('Must not query');}});const rejected=await stale(req());assert(rejected.status===401&&(await rejected.json()).error==='VERIFICATION_REQUIRED');
  const race=make({customer:async()=>({id:'canonical-account',session_id:'live-session'}),discovery:async()=>{throw Error('AUTH_REQUIRED');}});const failed=await race(req());assert(failed.status===503&&(await failed.json()).error==='UNAVAILABLE');
 });
+
+Deno.test('subscription expiry is a stable recoverable booking error without internal details', async () => {
+  const handler = make({ booking: async () => { throw Error('P0001 BILLING_BOOKING_UNAVAILABLE private access details'); } });
+  const response = await handler(request({ action: 'slots', ...selection }));
+  assert(response.status === 409);
+  assert(JSON.stringify(await response.json()) === JSON.stringify({ error: 'BILLING_BOOKING_UNAVAILABLE' }));
+});

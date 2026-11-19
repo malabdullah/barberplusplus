@@ -13,6 +13,9 @@ import './MyChair.css';
 const pageSize = 20;
 const views = ['upcoming', 'history', 'profile', 'hours', 'preferences'];
 const errors = {
+  BILLING_ACCESS_REQUIRED: 'subscriptionEnforcement.errors.BILLING_ACCESS_REQUIRED',
+  BILLING_CAPACITY_REQUIRED: 'subscriptionEnforcement.errors.BILLING_CAPACITY_REQUIRED',
+  BILLING_RENEW_REQUIRED: 'subscriptionEnforcement.errors.BILLING_RENEW_REQUIRED',
   CHAIR_SHOP_NOT_ALLOWED: 'chair.shopUnavailable',
   CHAIR_SERVICES_REQUIRED: 'chair.servicesRequired',
   CHAIR_HOURS_REQUIRED: 'chair.hoursRequired',

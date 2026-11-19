@@ -1,0 +1,182 @@
+-- Synthetic fixtures only, no providers; every row and setting rolls back.
+begin;
+set local search_path=public,extensions,pg_catalog;
+create temp table enforcement_checks(label text);
+create function pg_temp.ea(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'ENFORCEMENT_ASSERT: %',label;end if;insert into enforcement_checks values(label);end$$;
+create function pg_temp.ee(statement text,code text)returns boolean language plpgsql as $$begin execute statement;return false;exception when others then if sqlerrm<>code then raise exception 'Expected %, got %',code,sqlerrm;end if;return true;end$$;
+do $test$
+declare
+ m uuid:=gen_random_uuid();m2 uuid:=gen_random_uuid();u uuid:=gen_random_uuid();ad uuid:=gen_random_uuid();cu uuid:=gen_random_uuid();
+ ms uuid:=gen_random_uuid();ads uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();factor uuid:=gen_random_uuid();
+ shop uuid:=gen_random_uuid();shop2 uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();service uuid:=gen_random_uuid();
+ barber uuid:=gen_random_uuid();b2 uuid:=gen_random_uuid();b3 uuid:=gen_random_uuid();b4 uuid:=gen_random_uuid();pending uuid:=gen_random_uuid();chair uuid:=gen_random_uuid();
+ business uuid;other_business uuid;other_service uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();booking uuid:=gen_random_uuid();grant_id uuid;
+ mc text;ac text;input jsonb;result jsonb;before_trial timestamptz;t timestamptz:=clock_timestamp();day date:=(clock_timestamp()at time zone'Asia/Kuwait')::date+2;rv bigint;
+begin
+ perform pg_temp.ea(not has_table_privilege('authenticated','private.billing_enforcement','UPDATE'),'clients cannot toggle enforcement');
+ perform pg_temp.ea(not has_function_privilege('authenticated','private.billing_lock_businesses(uuid[])','EXECUTE'),'clients cannot call private locking helpers');
+ perform pg_temp.ea(not has_function_privilege('anon','public.customer_bookable_shops()','EXECUTE'),'public caller cannot use service-only catalog filter');
+ perform pg_temp.ea(not has_function_privilege('authenticated','private.billing_capacity_quote(uuid,integer)','EXECUTE'),'capacity helper remains private');
+ update private.billing_enforcement set enabled=true;
+ perform pg_temp.ea(private.billing_enforced(),'real enforcement enabled transactionally');
+ perform set_config('request.jwt.claims','{}',true);
+ insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
+ (m,m||'@example.test',now(),'{"role":"manager"}'),(m2,m2||'@example.test',now(),'{"role":"manager"}'),
+ (u,u||'@example.test',now(),'{"role":"barber"}'),(ad,ad||'@example.test',now(),'{"role":"admin"}'),(cu,cu||'@example.test',now(),'{"role":"customer"}');
+ insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values(factor,ad,'totp','verified',now(),now());
+ insert into auth.sessions(id,user_id,aal,factor_id)values(ms,m,'aal1',null),(ads,ad,'aal2',factor),(cs,cu,'aal1',null);
+ mc:=jsonb_build_object('sub',m,'session_id',ms,'role','authenticated','aal','aal1','app_metadata',jsonb_build_object('role','manager'))::text;
+ ac:=jsonb_build_object('sub',ad,'session_id',ads,'role','authenticated','aal','aal2','app_metadata',jsonb_build_object('role','admin'))::text;
+ insert into public.branches(id,name,city,manager_id,governorate_id,area_id)values
+ (shop,'Enforcement QA Shop','QA City',m,(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1)),
+ (shop2,'Enforcement QA Second','QA City',m,(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1)),
+ (outside,'Enforcement QA Other','QA City',m2,(select governorate_id from public.areas order by id limit 1),(select id from public.areas order by id limit 1));
+ select business_id into business from private.billing_shops where branch_id=shop;
+ select business_id into other_business from private.billing_shops where branch_id=outside;
+ perform pg_temp.ea(business=(select business_id from private.billing_shops where branch_id=shop2),'shops share one billing business');
+ perform pg_temp.ea(business<>other_business,'different managers remain isolated');
+ insert into public.services(id,branch_id,name,duration,price)values(service,shop,'QA Haircut',30,3);
+ insert into public.barbers(id,user_id,branch_id,name,status,invite_status,service_ids)values(barber,u,shop,'Accepted QA','active','accepted',array[service]);
+ update public.barbers set availability=(select jsonb_object_agg(d,jsonb_build_object('enabled',true,'start','09:00','end','21:00'))from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday'])d)where id=barber;
+ perform pg_temp.ea(private.billing_active_count(business)=1,'team can prepare before trial starts');
+ insert into public.barbers(id,branch_id,name,status,invite_status,service_ids)values(pending,shop,'Pending QA','active','pending',array[service]);
+ perform pg_temp.ea(private.billing_active_count(business)=1,'pending invitations do not consume capacity');
+ perform pg_temp.ea(not private.billing_barber_counted((select b from public.barbers b where id=pending)),'pending invitation cannot receive bookings');
+ perform pg_temp.ea(not private.billing_shop_access(shop,false),'draft cannot receive online bookings');
+ perform pg_temp.ea(not private.billing_shop_access(shop,true),'draft cannot receive manual bookings');
+ perform set_config('request.jwt.claims',mc,true);
+ result:=public.manage_shop_publication(shop,'publish','draft');
+ perform pg_temp.ea(result->>'publication_state'='published','ready shop publishes and starts trial');
+ select trial_started_at into before_trial from private.billing_subscriptions where business_id=business;
+ perform pg_temp.ea(before_trial is not null and private.billing_access(business)->>'status'='trial','first publication starts one fourteen-day trial');
+ perform pg_temp.ea((private.billing_access(business)->>'enforced')::boolean,'billing API reports actual enforcement');
+ perform pg_temp.ea(private.billing_shop_access(shop,false)and private.billing_shop_access(shop,true),'trial allows online and manual bookings');
+ perform set_config('request.jwt.claims','{}',true);
+ input:=jsonb_build_object('id',booking,'name','QA Guest','email',booking||'@example.test','guest_contact','email','country_code','+965','phone',null,
+ 'branch_id',shop,'barber_id',barber,'service_ids',jsonb_build_array(service),'date',day,'time','15:00');
+ result:=public.customer_booking('book',input);
+ perform pg_temp.ea(result->>'id'=booking::text,'trial permits real customer booking routine');
+ select customer_id into customer from public.bookings where id=booking;
+ perform pg_temp.ea(shop=any(public.customer_bookable_shops()),'legacy catalog includes eligible shop');
+ perform pg_temp.ea(barber=any(public.customer_bookable_barbers())and not pending=any(public.customer_bookable_barbers()),'legacy catalog includes counted barbers only');
+ result:=public.customer_booking_discovery('search',jsonb_build_object('mode','shop','query','Enforcement QA Shop'));
+ perform pg_temp.ea(jsonb_array_length(result->'items')=1,'shop-first discovery includes eligible shop');
+ -- Expiry does not modify publication, barbers, appointments or their receipts.
+ update private.billing_subscriptions set trial_started_at=t-interval'16 days',trial_ends_at=t-interval'2 days'where business_id=business;
+ perform pg_temp.ea(private.billing_access(business)->>'status'='expired','trial expires without renewal grace');
+ perform pg_temp.ea(not private.billing_shop_access(shop,false)and not private.billing_shop_access(shop,true),'expired blocks new online and manual bookings');
+ perform pg_temp.ea((select publication_state='published'from public.branches where id=shop),'expiry preserves stored publication state');
+ perform pg_temp.ea((select status='confirmed'from public.bookings where id=booking),'expiry preserves existing appointment');
+ perform pg_temp.ea(not shop=any(public.customer_bookable_shops()),'expired shop excluded from legacy catalog');
+ result:=public.customer_booking_discovery('search',jsonb_build_object('mode','shop','query','Enforcement QA Shop'));
+ perform pg_temp.ea(jsonb_array_length(result->'items')=0,'expired shop excluded from shop-first discovery');
+ result:=public.customer_booking_discovery('search',jsonb_build_object('mode','barber','branch_id',shop));
+ perform pg_temp.ea(jsonb_array_length(result->'items')=0,'expired barbers excluded from barber-first discovery');
+ result:=public.customer_booking_discovery('search',jsonb_build_object('mode','time','branch_id',shop,'date',day,'range_start','14:00','range_end','18:00'));
+ perform pg_temp.ea(jsonb_array_length(result->'items')=0,'expired shop excluded from date-first discovery');
+ perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking_discovery(''entry'',%L::jsonb)',jsonb_build_object('kind','shop','branch_id',shop)),'INVALID_SELECTION'),'shared-link booking entry rejects expired shop');
+ perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking(''slots'',%L::jsonb)',input),'BILLING_BOOKING_UNAVAILABLE'),'stale customer selection cannot fetch new slots');
+ perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking(''book'',%L::jsonb)',input||jsonb_build_object('id',gen_random_uuid(),'time','16:00')),'BILLING_BOOKING_UNAVAILABLE'),'stale customer selection cannot create reservation');
+ result:=public.customer_booking('book',input);
+ perform pg_temp.ea(result->>'id'=booking::text,'original idempotent retry still recovers receipt after expiry');
+ result:=public.customer_booking('appointment-slots',input||jsonb_build_object('booked_duration',30,'booked_price',3,'exclude_booking_id',booking));
+ perform pg_temp.ea(jsonb_typeof(result->'slots')='array','existing appointment can load rescheduling slots after expiry');
+ update public.bookings set status=null where id=booking;
+ perform pg_temp.ea(pg_temp.ee(format('update public.bookings set status=''confirmed''where id=%L',booking),'BILLING_BOOKING_UNAVAILABLE'),'null status cannot launder a fresh reservation after expiry');
+ update private.billing_enforcement set enabled=false;
+ update public.bookings set status='confirmed'where id=booking;
+ update private.billing_enforcement set enabled=true;
+ perform pg_temp.ea(pg_temp.ee(format('insert into public.bookings(branch_id,barber_id,customer_id,service_ids,date,time,duration,price,status,added_by_type)values(%L,%L,%L,%L,%L,''16:00'',30,3,''confirmed'',''manager'')',shop,barber,customer,array[service],day),'BILLING_BOOKING_UNAVAILABLE'),'service gateway cannot forge manual channel using audit label');
+ perform set_config('request.jwt.claims',mc,true);
+ perform pg_temp.ea(pg_temp.ee(format('insert into public.bookings(branch_id,barber_id,customer_id,service_ids,date,time,duration,price,status)values(%L,%L,%L,%L,%L,''16:00'',30,3,''confirmed'')',shop,barber,customer,array[service],day),'BILLING_BOOKING_UNAVAILABLE'),'authenticated staff direct insert cannot bypass expiry');
+ update public.bookings set time='15:30'where id=booking;
+ perform pg_temp.ea((select time='15:30'from public.bookings where id=booking),'existing appointment reschedules without subscription');
+ perform public.manage_shop_publication(shop,'pause','published');
+ perform pg_temp.ea(pg_temp.ee(format('select public.manage_shop_publication(%L,''publish'',''paused'')',shop),'BILLING_ACCESS_REQUIRED'),'republishing cannot reset expired trial');
+ perform pg_temp.ea((select trial_started_at=t-interval'16 days'from private.billing_subscriptions where business_id=business),'failed republish preserves original trial');
+ -- Dated grants never authorize a different shop or online channel.
+ perform set_config('request.jwt.claims','{}',true);
+ insert into private.billing_access_grants(business_id,kind,starts_at,ends_at,branch_ids,reason,actor_id)values(business,'manual',t-interval'1 hour',t+interval'1 day',array[shop],'transactional QA',ad)returning id into grant_id;
+ perform pg_temp.ea(private.billing_shop_access(shop,true)and not private.billing_shop_access(shop,false),'manual grant allows only manual reservations');
+ perform pg_temp.ea(not private.billing_shop_access(shop2,true)and not private.billing_shop_access(outside,true),'manual grant cannot leak across shops or businesses');
+ perform set_config('request.jwt.claims',mc,true);
+ insert into public.bookings(branch_id,barber_id,customer_id,service_ids,date,time,duration,price,status)values(shop,barber,customer,array[service],day,'16:30',30,3,'confirmed');
+ perform pg_temp.ea(true,'manager creates manual reservation under dated grant');
+ perform set_config('request.jwt.claims','{}',true);
+ update private.billing_access_grants set revoked_at=t where id=grant_id;
+ perform pg_temp.ea(not private.billing_shop_access(shop,true),'revocation takes effect immediately');
+ insert into private.billing_access_grants(business_id,kind,starts_at,ends_at,reason,actor_id)values(business,'full',t-interval'1 hour',t+interval'1 day','transactional QA',ad)returning id into grant_id;
+ perform pg_temp.ea(not private.billing_shop_access(shop,false)and not private.billing_shop_access(shop,true),'full grant cannot silently unpause a shop');
+ perform set_config('request.jwt.claims',mc,true);
+ perform public.manage_shop_publication(shop,'publish','paused');
+ perform pg_temp.ea(private.billing_shop_access(shop,false),'full grant permits explicit republish');
+ perform set_config('request.jwt.claims','{}',true);
+ update private.billing_access_grants set revoked_at=t where id=grant_id;
+ -- Current paid period; fixtures never leave this rolled-back transaction.
+ update private.billing_subscriptions set period_started_at=t-interval'15 days',period_ends_at=t+interval'15 days',paid_capacity=3 where business_id=business;
+ perform pg_temp.ea(private.billing_access(business)->>'status'='active','current paid period grants access');
+ insert into public.barbers(id,branch_id,name,status,management_mode,service_ids)values(b2,shop,'Managed QA','active','managed',array[service]);
+ perform pg_temp.ea(private.billing_active_count(business)=2,'managed barber counts toward paid capacity');
+ perform set_config('request.jwt.claims',mc,true);
+ insert into public.barbers(id,user_id,branch_id,name,status,manager_chair,service_ids)values(chair,m,shop,'Chair QA','inactive',true,array[service]);
+ update public.barbers set status='active',availability='{"monday":{"enabled":true,"start":"09:00","end":"21:00"}}'where id=chair;
+ perform pg_temp.ea(private.billing_active_count(business)=3,'active My Chair consumes one paid place');
+ perform set_config('request.jwt.claims','{}',true);
+ insert into public.barbers(id,branch_id,name,status,management_mode,service_ids)values(b3,shop,'Inactive QA','inactive','managed',array[service]);
+ select revision into rv from private.billing_subscriptions where business_id=business;
+ perform pg_temp.ea(pg_temp.ee(format('update public.barbers set status=''active''where id=%L',b3),'BILLING_CAPACITY_REQUIRED'),'unpaid fourth barber cannot activate');
+ perform pg_temp.ea((select status='inactive'from public.barbers where id=b3),'failed activation leaves barber inactive');
+ perform pg_temp.ea((select revision=rv from private.billing_subscriptions where business_id=business),'failed activation rolls back revision as well');
+ result:=private.billing_capacity_quote(business,4);
+ perform pg_temp.ea(result->>'additionalFils'='5000'and result->>'nextRenewalFils'='40000','half-cycle capacity quote is KD5 now and KD40 next renewal');
+ perform pg_temp.ea(result->>'settled'='false'and result->>'gatewayConnected'='false','capacity quote cannot settle a charge');
+ update public.barbers set status='inactive'where id=b2;
+ perform pg_temp.ea((select paid_capacity=3 from private.billing_subscriptions where business_id=business),'deactivation keeps already-paid capacity');
+ update public.barbers set status='active'where id=b3;
+ perform pg_temp.ea(private.billing_active_count(business)=3,'inactive replacement can reuse paid place');
+ perform pg_temp.ea(pg_temp.ee(format('update public.barbers set status=''active''where id=%L',b2),'BILLING_CAPACITY_REQUIRED'),'repeated reactivation cannot exceed capacity');
+ update public.barbers set status='inactive'where id=b3;
+ update public.barbers set status='inactive'where id=chair;
+ update private.billing_subscriptions set paid_capacity=1 where business_id=business;
+ result:=private.billing_capacity_quote(business,2);
+ perform pg_temp.ea((result->>'allowed')::boolean and result->>'additionalFils'='0','minimum-price increase from one to two is free');
+ update public.barbers set status='active'where id=b3;
+ perform pg_temp.ea(pg_temp.ee(format('insert into public.barbers(branch_id,name,status,management_mode,service_ids)values(%L,''Extra QA'',''active'',''managed'',%L)',shop,array[service]),'BILLING_CAPACITY_REQUIRED'),'minimum-price increase cannot skip next paid threshold');
+ update private.billing_subscriptions set paid_capacity=3 where business_id=business;
+ perform pg_temp.ea(pg_temp.ee(format('update public.barbers set status=''active''where id in(%L,%L)',b2,chair),'BILLING_CAPACITY_REQUIRED'),'bulk activation cannot exceed paid capacity');
+ perform pg_temp.ea((select count(*)=2 from public.barbers where id in(b2,chair)and status='inactive'),'over-capacity bulk statement rolls back every activation');
+ perform set_config('request.jwt.claims',mc,true);
+ result:=public.subscription_billing('capacity-quote',jsonb_build_object('businessId',business,'count',4));
+ perform pg_temp.ea(result->>'requestedCount'='4','authorized manager can read live capacity quote');
+ perform pg_temp.ea(pg_temp.ee(format('select public.subscription_billing(''capacity-quote'',%L::jsonb)',jsonb_build_object('businessId',other_business,'count',4)),'BILLING_FORBIDDEN'),'capacity quote is isolated by current management');
+ perform set_config('request.jwt.claims','{}',true);
+ -- Grace uses last paid capacity; no free trial grace or early renewal reset.
+ update private.billing_subscriptions set paid_capacity=3,period_started_at=t-interval'31 days',period_ends_at=t-interval'1 day',renewal_failed_at=t-interval'1 day',renewal_requested=true where business_id=business;
+ perform pg_temp.ea(private.billing_access(business)->>'status'='grace','failed paid renewal enters grace');
+ perform pg_temp.ea(private.billing_access(business,t+interval'47 hours')->>'status'='grace','grace remains valid just before seventy-two hours');
+ perform pg_temp.ea(private.billing_access(business,t+interval'48 hours')->>'status'='expired','grace ends at exact seventy-two-hour cutoff');
+ perform pg_temp.ea(private.billing_capacity_quote(business,4)->>'reason'='BILLING_RENEW_REQUIRED','grace cannot expand paid capacity');
+ update private.billing_subscriptions set renewal_requested=false where business_id=business;
+ perform pg_temp.ea(private.billing_access(business)->>'status'='expired','intentional nonrenewal has no grace');
+ -- Annual and rounded-to-zero quotations cannot authorize unpaid capacity.
+ update private.billing_subscriptions set frequency='yearly',period_started_at=t-interval'183 days',period_ends_at=t+interval'183 days',renewal_failed_at=null,renewal_requested=true where business_id=business;
+ result:=private.billing_capacity_quote(business,4);
+ perform pg_temp.ea(result->>'additionalFils'='50000'and result->>'nextRenewalFils'='400000','annual half-cycle increase uses ten-month yearly price');
+ update private.billing_subscriptions set frequency='monthly',period_started_at=t-interval'29 days',period_ends_at=t+interval'1 minute'where business_id=business;
+ result:=private.billing_capacity_quote(business,4);
+ perform pg_temp.ea(result->>'additionalFils'='0'and result->>'allowed'='false','rounding to zero never silently grants unpaid higher capacity');
+ -- A move into another business cannot consume the first business entitlement.
+ insert into public.services(id,branch_id,name,duration,price)values(other_service,outside,'Other QA Service',30,3);
+ insert into public.barbers(branch_id,name,status,management_mode,service_ids)
+ select outside,'Other QA '||n,'active','managed',array[other_service]from generate_series(1,3)n;
+ update private.billing_subscriptions set period_started_at=t-interval'15 days',period_ends_at=t+interval'15 days',paid_capacity=3 where business_id=other_business;
+ perform pg_temp.ea(pg_temp.ee(format('update public.barbers set branch_id=%L,service_ids=%L where id=%L',outside,array[other_service],barber),'BILLING_CAPACITY_REQUIRED'),'moving a barber cannot bypass destination business capacity');
+ perform pg_temp.ea((select branch_id=shop from public.barbers where id=barber),'rejected business move preserves original shop and bookings');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',cu,'session_id',cs,'role','authenticated','aal','aal1','app_metadata',jsonb_build_object('role','admin'))::text,true);
+ perform pg_temp.ea(pg_temp.ee(format('select public.subscription_billing(''capacity-quote'',%L::jsonb)',jsonb_build_object('businessId',business,'count',4)),'BILLING_FORBIDDEN'),'customer cannot forge administrative capacity access');
+ perform set_config('request.jwt.claims','{}',true);
+ perform pg_temp.ea((select count(*)from private.billing_invoices where business_id=business)=0,'no fake paid invoices created');
+ perform pg_temp.ea((select count(*)from public.bookings where branch_id=shop)=2,'bookings preserved through all subscription transitions');
+end$test$;
+select count(*)as passed,jsonb_agg(label order by label)as scenarios from enforcement_checks;
+rollback;
