@@ -103,7 +103,7 @@ export default function BillingPreview() {
       </nav>
     </aside>
 
-    <div className="billing-workspace">
+    <div className="billing-workspace" inert={menuOpen ? '' : undefined}>
       <header className="billing-topbar">
         <div className="billing-topbar-start">
           <button className="billing-topbar-icon billing-menu-toggle" type="button" onClick={() => setMenuOpen(true)} aria-label={t('common.navigation')} aria-expanded={menuOpen}><Menu size={20} /></button>

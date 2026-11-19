@@ -150,7 +150,7 @@
   .billing-preview-label { max-width: 105px; text-align: end; font-size: 11px; }
   .billing-summary { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-bottom: 28px; }
   .billing-summary > button { width: 100%; }
-  .billing-price strong { font-size: 56px; }
+  .billing-price strong { font-size: clamp(40px, 13.2vw, 56px); }
   .billing-price > div > span, .billing-price p { font-size: 18px; }
   .billing-renewal { border: 0; padding: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
   .billing-renewal strong { font-size: 28px; }
