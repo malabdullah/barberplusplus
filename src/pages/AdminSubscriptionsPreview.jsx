@@ -25,6 +25,7 @@ export default function AdminSubscriptionsPreview({ codesOnly = false }) {
   const business = businesses.find(item=>item.id===businessId);
   const selectedCode = codes.find(item=>item.code===codeTarget);
   useEffect(()=>{setDialog(null);setError('');setNotice('');},[businessId,codesOnly]);
+  useEffect(()=>{setQuery('');setFilter('all');setPage(1);},[codesOnly]);
   const activeDialog = ['grant','transfer','remove-grant'].includes(dialog) ? (business ? dialog : null)
     : ['code-toggle','code-history'].includes(dialog) ? (selectedCode ? dialog : null) : dialog;
   const title = codesOnly ? sp('discountCodes') : business ? sp(`businessNames.${business.name}`) : sp('subscriptions');
@@ -39,7 +40,7 @@ export default function AdminSubscriptionsPreview({ codesOnly = false }) {
   const pages = Math.max(1,Math.ceil(filtered.length/size));
   const safePage = Math.min(page,pages);
   const rows = filtered.slice((safePage-1)*size,safePage*size);
-  const announce = key => {setNotice(sp(key));close();};
+  const announce = key => {setNotice(key);close();};
   const commitGrant = event => {
     event.preventDefault();
     const invalid = validatePreviewGrant(grant,business);
@@ -82,7 +83,7 @@ export default function AdminSubscriptionsPreview({ codesOnly = false }) {
   return <PreviewShell active={codesOnly?'codes':'subscriptions'} admin><main className="billing-main subscription-main">
     {businessId&&<Link className="subscription-back" to="/design/subscriptions"><ArrowLeft size={16}/>{sp('subscriptions')}</Link>}
     <PreviewHeading title={title}/>
-    <p className="subscription-notice" role="status">{notice}</p>
+    <p className="subscription-notice" role="status">{notice?sp(notice):''}</p>
     {businessId&&!business ? <div className="subscription-empty"><p>{sp('businessMissing')}</p><Link className="billing-secondary" to="/design/subscriptions">{sp('backToList')}</Link></div> : business ? <>
       <section className="subscription-admin-summary" aria-label={bp('currentSubscription')}>
         <div className="billing-price"><div><strong><bdi>{money(previewQuote(business.count,business.frequency).subtotal)}</bdi></strong><span>{bp(business.frequency==='monthly'?'perMonth':'perYear')}</span></div><p>{bp('activeBarbers',{count:business.count})}</p></div>

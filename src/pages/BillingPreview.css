@@ -20,6 +20,7 @@
   --billing-ink: #f6f6f6;
   --billing-link: #d4a853;
 }
+.billing-preview[lang='ar'] { --font-body: 'Noto Sans Arabic', sans-serif; --font-display: 'Noto Sans Arabic', sans-serif; }
 .billing-preview button, .billing-preview a { -webkit-tap-highlight-color: transparent; }
 .billing-preview :is(button, a, input):focus-visible { outline: 2px solid var(--billing-link); outline-offset: 4px; }
 .billing-preview h1, .billing-preview h2, .billing-preview h3 { color: var(--billing-ink); }

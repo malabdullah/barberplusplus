@@ -60,7 +60,7 @@ export default function PreviewShell({ children, active = 'billing', admin = fal
         <Link className="billing-topbar-icon billing-home" to="/" aria-label={t('publicNav.home')}><Home size={20} strokeWidth={1.5} /></Link>
         <Link className="billing-customer-mode" to={admin ? '/admin' : '/book'}><UserRound size={19} strokeWidth={1.5} />{admin ? sp('workspace') : bp('customerMode')}</Link>
       </div><div className="billing-topbar-end">
-        <span className="billing-shop"><Building2 size={18} aria-hidden="true" /><span>{admin ? sp('platform') : bp('shopName')}</span></span>
+        <span className="billing-shop"><Building2 size={18} aria-hidden="true" /><span>{admin ? <bdi dir="ltr">Barber++</bdi> : bp('shopName')}</span></span>
         <button className="billing-topbar-icon" type="button" onClick={()=>setLanguage(language==='en'?'ar':'en')} aria-label={bp('switchLanguage')}><Globe size={21} strokeWidth={1.5} /></button>
         <button className="billing-topbar-icon" type="button" onClick={()=>setTheme(theme==='light'?'dark':'light')} aria-label={bp(theme==='light'?'darkMode':'lightMode')}>{theme==='light'?<Moon size={21} strokeWidth={1.5}/>:<Sun size={21} strokeWidth={1.5}/>}</button>
         <Link className="billing-topbar-icon billing-notifications" to={admin ? '/admin/notifications' : '/dashboard/notifications'} aria-label={bp('notifications')}><Bell size={20} strokeWidth={1.5}/></Link>
