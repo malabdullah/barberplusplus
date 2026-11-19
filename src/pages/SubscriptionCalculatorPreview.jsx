@@ -40,6 +40,7 @@ export default function SubscriptionCalculatorPreview() {
       <section className="subscription-estimate" aria-label={sp('estimate')}>
         <h2>{sp('estimate')}</h2>
         <div className={`billing-price${quote.total>=100000000?' subscription-large-amount':''}`}><div><strong><bdi>{quote.error ? sp('unavailableAmount') : money(quote.total)}</bdi></strong><span>{bp(frequency==='monthly'?'perMonth':'perYear')}</span></div></div>
+        {frequency==='yearly'&&!quote.error&&<p className="subscription-subtle">{sp('monthlyEquivalent',{amount:money(Math.round(quote.total/12))})}</p>}
         <dl className="billing-review-rows">
           <div><dt>{bp('activeBarbers',{count:Number(count)||0})}</dt><dd>{quote.error?sp('unavailableAmount'):money(quote.subtotal)}</dd></div>
           {applied && !quote.error && <div><dt>{sp('discountWithCode',{code:applied})}</dt><dd><bdi>−{money(quote.discount)}</bdi></dd></div>}

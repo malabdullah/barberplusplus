@@ -3679,6 +3679,8 @@
       "fahad": "فهد",
       "salem": "سالم"
     },
-    "yearlyBaseSaving": "الفوترة السنوية توفّر {{amount}}"
+    "yearlyBaseSaving": "الفوترة السنوية توفّر {{amount}}",
+    "noOtherManagers": "أضف مديرًا آخر إلى هذه المنشأة قبل نقل مسؤولية الفوترة.",
+    "monthlyEquivalent": "ما يعادل نحو {{amount}} شهريًا، يُدفع سنويًا."
   }
 }

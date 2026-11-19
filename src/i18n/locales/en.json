@@ -3634,6 +3634,8 @@
       "fahad": "Fahad",
       "salem": "Salem"
     },
-    "yearlyBaseSaving": "Yearly billing saves {{amount}}"
+    "yearlyBaseSaving": "Yearly billing saves {{amount}}",
+    "noOtherManagers": "Assign another manager to this business before transferring billing.",
+    "monthlyEquivalent": "Equivalent to approximately {{amount}}/month, paid yearly."
   }
 }
