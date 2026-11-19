@@ -8,7 +8,7 @@ declare shop public.branches%rowtype;barber public.barbers%rowtype;result jsonb;
 begin
  assert not has_function_privilege('anon','public.customer_booking_discovery(text,jsonb)','EXECUTE'),'anonymous cannot bypass gateway';
  assert not has_function_privilege('authenticated','public.customer_booking_discovery(text,jsonb)','EXECUTE'),'customer cannot impersonate identity via RPC';
- select b.* into barber from public.barbers b join public.branches s on s.id=b.branch_id where b.status='active'and s.status='active'and s.publication_state='published'and private.booking_provider_ready(b,s)order by b.id limit 1;
+ select b.* into barber from public.barbers b join public.branches s on s.id=b.branch_id where b.status='active'and s.status='active'and s.publication_state='published'and private.booking_provider_ready(b,s)and private.billing_shop_access(s.id,false)and nullif(trim(coalesce(s.city,(select name_en from public.areas where id=s.area_id))),'')is not null order by b.id limit 1;
  if barber.id is null then raise exception 'Published synthetic catalog required';end if;
  select *into shop from public.branches where id=barber.branch_id;
  result:=private.customer_booking_discovery('entry',jsonb_build_object('kind','shop','branch_id',shop.id));

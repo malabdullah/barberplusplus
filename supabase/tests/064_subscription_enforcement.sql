@@ -6,7 +6,7 @@ create function pg_temp.ea(ok boolean,label text)returns void language plpgsql a
 create function pg_temp.ee(statement text,code text)returns boolean language plpgsql as $$begin execute statement;return false;exception when others then if sqlerrm<>code then raise exception 'Expected %, got %',code,sqlerrm;end if;return true;end$$;
 do $test$
 declare
- m uuid:=gen_random_uuid();m2 uuid:=gen_random_uuid();u uuid:=gen_random_uuid();ad uuid:=gen_random_uuid();cu uuid:=gen_random_uuid();
+ m uuid:=gen_random_uuid();m2 uuid:=gen_random_uuid();u uuid:=gen_random_uuid();u2 uuid:=gen_random_uuid();duplicate uuid:=gen_random_uuid();ad uuid:=gen_random_uuid();cu uuid:=gen_random_uuid();
  ms uuid:=gen_random_uuid();ads uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();factor uuid:=gen_random_uuid();
  shop uuid:=gen_random_uuid();shop2 uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();service uuid:=gen_random_uuid();
  barber uuid:=gen_random_uuid();b2 uuid:=gen_random_uuid();b3 uuid:=gen_random_uuid();b4 uuid:=gen_random_uuid();pending uuid:=gen_random_uuid();chair uuid:=gen_random_uuid();
@@ -22,7 +22,7 @@ begin
  perform set_config('request.jwt.claims','{}',true);
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values
  (m,m||'@example.test',now(),'{"role":"manager"}'),(m2,m2||'@example.test',now(),'{"role":"manager"}'),
- (u,u||'@example.test',now(),'{"role":"barber"}'),(ad,ad||'@example.test',now(),'{"role":"admin"}'),(cu,cu||'@example.test',now(),'{"role":"customer"}');
+ (u,u||'@example.test',now(),'{"role":"barber"}'),(u2,u2||'@example.test',now(),'{"role":"barber"}'),(ad,ad||'@example.test',now(),'{"role":"admin"}'),(cu,cu||'@example.test',now(),'{"role":"customer"}');
  insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at)values(factor,ad,'totp','verified',now(),now());
  insert into auth.sessions(id,user_id,aal,factor_id)values(ms,m,'aal1',null),(ads,ad,'aal2',factor),(cs,cu,'aal1',null);
  mc:=jsonb_build_object('sub',m,'session_id',ms,'role','authenticated','aal','aal1','app_metadata',jsonb_build_object('role','manager'))::text;
@@ -39,6 +39,8 @@ begin
  insert into public.barbers(id,user_id,branch_id,name,status,invite_status,service_ids)values(barber,u,shop,'Accepted QA','active','accepted',array[service]);
  update public.barbers set availability=(select jsonb_object_agg(d,jsonb_build_object('enabled',true,'start','09:00','end','21:00'))from unnest(array['monday','tuesday','wednesday','thursday','friday','saturday','sunday'])d)where id=barber;
  perform pg_temp.ea(private.billing_active_count(business)=1,'team can prepare before trial starts');
+ insert into public.barbers(id,user_id,branch_id,name,status,invite_status,service_ids)values(duplicate,u,shop,'Shared legacy identity QA','active','accepted',array[service]);
+ perform pg_temp.ea(private.billing_active_count(business)=1,'shared legacy identity counts once');
  insert into public.barbers(id,branch_id,name,status,invite_status,service_ids)values(pending,shop,'Pending QA','active','pending',array[service]);
  perform pg_temp.ea(private.billing_active_count(business)=1,'pending invitations do not consume capacity');
  perform pg_temp.ea(not private.billing_barber_counted((select b from public.barbers b where id=pending)),'pending invitation cannot receive bookings');
@@ -121,6 +123,7 @@ begin
  insert into public.barbers(id,user_id,branch_id,name,status,manager_chair,service_ids)values(chair,m,shop,'Chair QA','inactive',true,array[service]);
  update public.barbers set status='active',availability='{"monday":{"enabled":true,"start":"09:00","end":"21:00"}}'where id=chair;
  perform pg_temp.ea(private.billing_active_count(business)=3,'active My Chair consumes one paid place');
+ perform pg_temp.ea(pg_temp.ee(format('update public.barbers set user_id=%L where id=%L',u2,duplicate),'BILLING_CAPACITY_REQUIRED'),'changing a shared identity cannot create an unpaid fourth person');
  perform set_config('request.jwt.claims','{}',true);
  insert into public.barbers(id,branch_id,name,status,management_mode,service_ids)values(b3,shop,'Inactive QA','inactive','managed',array[service]);
  select revision into rv from private.billing_subscriptions where business_id=business;
