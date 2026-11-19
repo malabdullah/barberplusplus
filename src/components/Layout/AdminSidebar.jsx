@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { isTest } from '../../lib/runtimeConfig';
+import { subscriptionFeaturesEnabled } from '../../lib/runtimeConfig';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
@@ -27,7 +27,7 @@ const navItems = [
   { path: '/admin/analytics', icon: BarChart3, labelKey: 'admin.nav.analytics' },
   { path: '/admin/configuration', icon: Settings2, labelKey: 'admin.nav.configuration' },
   { path: '/admin/audit', icon: Shield, labelKey: 'admin.nav.audit' },
-  ...(isTest ? [
+  ...(subscriptionFeaturesEnabled ? [
     { path: '/admin/subscriptions', icon: CreditCard, labelKey: 'subscriptionDesign.subscriptions' },
     { path: '/admin/subscriptions/discounts', icon: Tag, labelKey: 'subscriptionDesign.discountCodes' },
   ] : []),
