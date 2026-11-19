@@ -1,16 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import {
-  ArrowLeft, BarChart3, Bell, Building2, Calendar, Check, ChevronDown,
-  CreditCard, Download, Globe, Home, LayoutDashboard, Menu, Moon,
-  RotateCcw, Scissors, Settings, Sun, UserRound, Users, Wallet, X,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Check, ChevronDown, Download, RotateCcw } from 'lucide-react';
 import BrandLogo from '../components/UI/BrandLogo';
-import useSidebarAccessibility from '../hooks/useSidebarAccessibility';
-import './BillingPreview.css';
+import PreviewShell, { PreviewDialog } from '../components/Subscriptions/PreviewShell';
+import { useSubscriptionPreview } from '../context/SubscriptionPreviewContext';
 
-// Design-only fixtures. This page has no billing API, storage writes or real invoices.
+// Design-only fixtures: no billing API, persistent writes or real invoices.
 const barbers = [
   { name: 'Omar', initials: 'OM', type: 'invited' },
   { name: 'Youssef', initials: 'YO', type: 'managed' },
@@ -21,45 +15,12 @@ const barbers = [
 ];
 const invoices = ['2026-11-01', '2026-10-01', '2026-09-01'];
 const renewalDate = '2026-12-01';
-const navigation = [
-  ['nav.dashboard', '/dashboard', LayoutDashboard],
-  ['nav.branches', '/dashboard/branches', Building2],
-  ['nav.services', '/dashboard/services', Scissors],
-  ['nav.barbers', '/dashboard/barbers', Users],
-  ['nav.bookings', '/dashboard/bookings', Calendar],
-  ['reports.title', '/dashboard/reports', BarChart3],
-  ['finance.title', '/dashboard/finances', Wallet],
-  ['nav.settings', '/dashboard/settings', Settings],
-];
-
-function PreviewDialog({ title, onClose, children }) {
-  const ref = useRef(null);
-  const titleId = React.useId();
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog.showModal();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      dialog.close();
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-  useEffect(() => { ref.current?.querySelector('button')?.focus(); }, [title]);
-  return <dialog className="billing-dialog" ref={ref} aria-labelledby={titleId} onCancel={onClose}>
-    <header className="billing-dialog-heading">
-      <h2 id={titleId}>{title}</h2>
-      <button className="billing-icon" type="button" onClick={onClose} aria-label={children.closeLabel}><X size={20} aria-hidden="true" /></button>
-    </header>
-    {children.content}
-  </dialog>;
-}
 
 export default function BillingPreview() {
-  const { i18n } = useTranslation();
-  const [language, setLanguage] = useState(i18n.resolvedLanguage?.startsWith('ar') ? 'ar' : 'en');
-  const [theme, setTheme] = useState('light');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const {language,theme,bp:tr,sp,businesses} = useSubscriptionPreview();
+  const business = businesses.find(item=>item.id==='atlas');
+  const canManage = business.manager === 'nasser';
+  const billingManagerName = sp(`people.${business.manager}`);
   const [expanded, setExpanded] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [frequency, setFrequency] = useState('monthly');
@@ -67,9 +28,6 @@ export default function BillingPreview() {
   const [renewalEnabled, setRenewalEnabled] = useState(true);
   const [notice, setNotice] = useState('');
   const [invoice, setInvoice] = useState(null);
-  const t = useMemo(() => i18n.getFixedT(language), [i18n, language]);
-  const tr = (key, options) => t(`billingPreview.${key}`, options);
-  const sidebarRef = useSidebarAccessibility(menuOpen, () => setMenuOpen(false), t('common.navigation'));
   const date = (value, monthOnly = false) => new Intl.DateTimeFormat(language === 'ar' ? 'ar-KW' : 'en-GB', {
     ...(monthOnly ? {} : { day: 'numeric' }), month: 'short', year: 'numeric', timeZone: 'Asia/Kuwait',
   }).format(new Date(`${value}T12:00:00+03:00`));
@@ -80,6 +38,7 @@ export default function BillingPreview() {
     setFrequency('monthly'); setNotice(''); setDialog(null); setInvoice(null);
   };
   const openManage = () => {
+    if (!canManage) return;
     setFrequency(scheduled || 'monthly');
     setDialog('manage');
     setNotice('');
@@ -90,40 +49,13 @@ export default function BillingPreview() {
     close();
   };
 
-  return <div className="billing-preview" data-theme={theme} dir={language === 'ar' ? 'rtl' : 'ltr'} lang={language}>
-    {menuOpen && <button className="billing-menu-backdrop" type="button" aria-label={tr('close')} onClick={() => setMenuOpen(false)} />}
-    <aside ref={sidebarRef} className={`billing-sidebar${menuOpen ? ' is-open' : ''}`} aria-label={t('common.navigation')}>
-      <button className="billing-icon billing-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label={tr('close')}><X size={20} /></button>
-      <Link className="billing-brand" to="/" aria-label={t('common.brandHome')}><BrandLogo tone={theme} decorative tagline={t('common.manager')} /></Link>
-      <div className="billing-sidebar-divider" />
-      <div className="billing-profile"><span className="billing-avatar" aria-hidden="true">N</span><div><strong>{tr('managerName')}</strong><small>{t('common.manager')}</small></div></div>
-      <nav>
-        {navigation.map(([key, path, Icon]) => <Link key={path} to={path} className="billing-nav-link" onClick={() => setMenuOpen(false)}><Icon size={20} strokeWidth={1.5} aria-hidden="true" /><span>{t(key)}</span></Link>)}
-        <a href="#billing-main" className="billing-nav-link is-active" aria-current="page" onClick={() => setMenuOpen(false)}><CreditCard size={20} strokeWidth={1.5} aria-hidden="true" />{tr('title')}</a>
-      </nav>
-    </aside>
-
-    <div className="billing-workspace" inert={menuOpen ? '' : undefined}>
-      <header className="billing-topbar">
-        <div className="billing-topbar-start">
-          <button className="billing-topbar-icon billing-menu-toggle" type="button" onClick={() => setMenuOpen(true)} aria-label={t('common.navigation')} aria-expanded={menuOpen}><Menu size={20} /></button>
-          <Link className="billing-topbar-icon billing-home" to="/" aria-label={t('publicNav.home')}><Home size={20} strokeWidth={1.5} /></Link>
-          <Link className="billing-customer-mode" to="/book"><UserRound size={19} strokeWidth={1.5} />{tr('customerMode')}</Link>
-        </div>
-        <div className="billing-topbar-end">
-          <span className="billing-shop"><Building2 size={18} aria-hidden="true" /><span>{tr('shopName')}</span></span>
-          <button className="billing-topbar-icon" type="button" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} aria-label={tr('switchLanguage')}><Globe size={21} strokeWidth={1.5} /></button>
-          <button className="billing-topbar-icon" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={tr(theme === 'light' ? 'darkMode' : 'lightMode')}>{theme === 'light' ? <Moon size={21} strokeWidth={1.5} /> : <Sun size={21} strokeWidth={1.5} />}</button>
-          <Link className="billing-topbar-icon billing-notifications" to="/dashboard/notifications" aria-label={tr('notifications')}><Bell size={20} strokeWidth={1.5} /></Link>
-        </div>
-      </header>
-
+  return <PreviewShell>
       <main className="billing-main" id="billing-main">
         <div className="billing-page-heading"><div><h1>{tr('title')}</h1><span className="billing-active"><Check size={14} aria-hidden="true" />{tr('active')}</span></div><button type="button" className="billing-preview-label" onClick={() => setDialog('preview')}>{tr('previewLabel')}</button></div>
         <section className="billing-summary" aria-label={tr('currentSubscription')}>
           <div className="billing-price"><div><strong dir="ltr">{money(60)}</strong><span>{tr('perMonth')}</span></div><p>{tr('activeBarbers', { count: 6 })}</p></div>
           <div className="billing-renewal"><span>{tr(renewalEnabled ? 'nextRenewal' : 'accessUntil')}</span><strong>{date(renewalDate)}</strong></div>
-          <button className="billing-primary" type="button" onClick={openManage}>{tr('manage')}</button>
+          <button className="billing-primary" type="button" disabled={!canManage} onClick={openManage}>{canManage?tr('manage'):sp('managedBy',{name:billingManagerName})}</button>
         </section>
 
         {(scheduled || !renewalEnabled) && <div className="billing-scheduled"><span>{tr(!renewalEnabled ? 'renewalCancelled' : 'scheduledSummary', { date: date(renewalDate), amount: money(600) })}</span><button className="billing-text-button" type="button" onClick={() => { setScheduled(null); setRenewalEnabled(true); setNotice(tr('restored')); }}>{tr('undo')}</button></div>}
@@ -134,20 +66,17 @@ export default function BillingPreview() {
             <strong>{tr('usage')}</strong><span>{tr('usageSummary', { count: 6 })}</span><ChevronDown size={20} aria-hidden="true" className={expanded ? 'is-expanded' : ''} />
           </button>
           {expanded && <div id="billing-usage" className="billing-usage"><table><caption className="billing-sr-only">{tr('usage')}</caption><thead><tr><th scope="col">{tr('barber')}</th><th scope="col">{tr('type')}</th><th scope="col">{tr('status')}</th></tr></thead><tbody>{barbers.map(barber => <tr key={barber.name}><td><span className="billing-initials" aria-hidden="true">{barber.initials}</span>{tr(`names.${barber.name}`)}</td><td>{tr(barber.type)}</td><td><span className="billing-paid">{tr('active')}</span></td></tr>)}</tbody></table></div>}
-          <div className="billing-detail-row"><strong>{tr('billingManager')}</strong><span>{tr('managerName')}</span></div>
+          <div className="billing-detail-row"><strong>{tr('billingManager')}</strong><span>{billingManagerName}</span></div>
         </section>
 
-        <section className="billing-invoices" aria-labelledby="billing-invoices-title">
+        {canManage && <section className="billing-invoices" aria-labelledby="billing-invoices-title">
           <h2 id="billing-invoices-title">{tr('invoices')}</h2>
           <table><caption className="billing-sr-only">{tr('sampleInvoices')}</caption><thead><tr><th scope="col">{tr('date')}</th><th scope="col" className="billing-period">{tr('period')}</th><th scope="col">{tr('amount')}</th><th scope="col">{tr('status')}</th><th scope="col"><span className="billing-sr-only">{tr('invoice')}</span></th></tr></thead><tbody>
             {invoices.map(value => <tr key={value}><td>{date(value)}</td><td className="billing-period">{date(value, true)}</td><td><bdi>{money(60)}</bdi></td><td><span className="billing-paid">{tr('paid')}</span></td><td><button className="billing-icon" type="button" onClick={() => { setInvoice(value); setDialog('invoice'); }} aria-label={tr('openInvoice', { date: date(value) })}><Download size={21} strokeWidth={1.5} aria-hidden="true" /></button></td></tr>)}
           </tbody></table>
-        </section>
+        </section>}
       </main>
-    </div>
-
-    {dialog && <PreviewDialog title={tr(dialog === 'manage' ? 'manage' : dialog === 'review' ? 'reviewChange' : dialog === 'cancel' ? 'cancelTitle' : dialog === 'invoice' ? 'sampleInvoice' : 'previewLabel')} onClose={close}>{
-      { closeLabel: tr('close'), content: <>
+    {dialog && <PreviewDialog title={tr(dialog === 'manage' ? 'manage' : dialog === 'review' ? 'reviewChange' : dialog === 'cancel' ? 'cancelTitle' : dialog === 'invoice' ? 'sampleInvoice' : 'previewLabel')} onClose={close}><>
         {dialog === 'preview' && <><p>{tr('previewDescription')}</p><button type="button" className="billing-secondary" onClick={reset}><RotateCcw size={17} />{tr('reset')}</button></>}
         {dialog === 'manage' && <>
           <p className="billing-dialog-caption">{tr('previewLabel')}</p>
@@ -183,7 +112,6 @@ export default function BillingPreview() {
             setTimeout(() => URL.revokeObjectURL(url), 1000);
           }}><Download size={17} />{tr('downloadSample')}</button>
         </>}
-      </> }
-    }</PreviewDialog>}
-  </div>;
+      </></PreviewDialog>}
+  </PreviewShell>;
 }

@@ -1,0 +1,116 @@
+.subscription-main { overflow-wrap: anywhere; }
+.subscription-preview-switch { border-top: 1px solid var(--billing-border); margin-top: 20px; padding-top: 16px; display: grid; gap: 6px; font-size: 13px; }
+.subscription-preview-switch > span { color: var(--billing-muted); font-size: 12px; }
+.subscription-preview-switch a { color: var(--billing-link); padding-block: 8px; }
+.subscription-main h2 { font-family: Georgia, serif; font-size: 30px; font-weight: 400; }
+.subscription-main h3 { font-size: 24px; }
+.subscription-calculator { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr); gap: 64px; }
+.subscription-calculator-controls h2, .subscription-estimate h2 { margin-bottom: 30px; }
+.subscription-estimate { border-inline-start: 1px solid var(--billing-border); padding-inline-start: 48px; }
+.subscription-label, .subscription-field { display: grid; gap: 8px; color: var(--billing-ink); font-size: 14px; }
+.subscription-stepper { display: flex; gap: 12px; align-items: center; width: fit-content; margin-block: 12px; }
+.subscription-stepper .billing-icon { border: 1px solid var(--billing-border); width: 44px; height: 48px; }
+.subscription-stepper input { width: 120px; text-align: center; font-size: 32px; font-weight: 500; appearance: textfield; -moz-appearance: textfield; }
+.subscription-stepper input::-webkit-inner-spin-button { appearance: none; }
+.subscription-main :is(input,select,textarea) { color: var(--billing-ink); background: var(--billing-surface); border: 1px solid var(--billing-muted); border-radius: 8px; padding: 12px; min-height: 46px; min-width: 0; max-width: 100%; font-family: inherit; }
+.subscription-main select option { color: var(--billing-ink); background: var(--billing-surface); }
+.subscription-main input[type='radio'], .subscription-main input[type='checkbox'] { min-height: 0; padding: 0; width: 17px; height: 17px; flex: none; accent-color: var(--billing-link); }
+.subscription-subtle { color: var(--billing-muted); font-size: 14px; margin-block: 12px; }
+.subscription-code-form { margin-top: 32px; }
+.subscription-code-form > div { display: flex; gap: 10px; margin-top: 8px; }
+.subscription-code-form input { width: 100%; }
+.subscription-code-form button { flex: none; }
+.subscription-applied { display: inline-flex; align-items: center; gap: 12px; color: var(--billing-link); padding-inline: 12px; margin-top: 14px; border: 1px solid var(--billing-border); border-radius: 6px; font-size: 14px; }
+.subscription-estimate .billing-price strong { font-size: clamp(36px,4vw,58px); }
+.subscription-estimate .subscription-large-amount strong { font-size: clamp(24px,2.4vw,38px); }
+.subscription-estimate .billing-price span { font-size: 18px; }
+.subscription-estimate .billing-review-rows { margin-block: 24px; }
+.subscription-total dd { font-weight: 600; font-size: 20px; }
+.subscription-error { color: #b42318; margin-block: 14px; font-size: 14px; }
+.billing-preview[data-theme='dark'] .subscription-error, .billing-preview[data-theme='dark'] .subscription-danger { color: #f28d85; }
+.subscription-notice { color: var(--billing-link); margin-bottom: 18px; font-size: 14px; }
+.subscription-notice:empty { display: none; }
+.subscription-list-tools { display: flex; gap: 16px; align-items: center; margin-bottom: 28px; flex-wrap: wrap; }
+.subscription-search { display: flex; align-items: center; position: relative; flex: 1; min-width: 200px; }
+.subscription-search > svg { position: absolute; inset-inline-start: 14px; color: var(--billing-muted); }
+.subscription-search input { width: 100%; padding-inline-start: 42px; }
+.subscription-filter select { min-width: 160px; }
+.subscription-list { max-width: 100%; overflow-x: auto; }
+.subscription-mobile-list { display: none; }
+.subscription-list table { min-width: 800px; font-size: 14px; }
+.subscription-list :is(td,th) { padding: 16px 12px; vertical-align: middle; }
+.subscription-list :is(td,th):first-child { padding-inline-start: 0; }
+.subscription-list :is(td,th):last-child { padding-inline-end: 0; }
+.subscription-list td small { display: block; color: var(--billing-muted); font-size: 12px; }
+.subscription-business-link { font-weight: 500; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--billing-border); }
+.subscription-business-link:hover { color: var(--billing-link); }
+.subscription-status { display: inline-block; padding: 4px 10px; border-radius: 5px; font-size: 12px; color: var(--billing-ink); background: var(--billing-subtle); white-space: nowrap; }
+.status-active, .status-enabled { background: #e2eedf; color: #246822; }
+.status-grace, .status-trial { background: #f5ead2; color: #805b18; }
+.status-expired, .status-paused { background: #fae9e7; color: #a32721; }
+.billing-preview[data-theme='dark'] :is(.status-active,.status-enabled) { background: #21301f; color: #a3d99a; }
+.billing-preview[data-theme='dark'] :is(.status-trial,.status-grace) { background: #352b18; color: #e4bd74; }
+.billing-preview[data-theme='dark'] :is(.status-expired,.status-paused) { background: #352221; color: #f1a19a; }
+.subscription-pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 20px; color: var(--billing-muted); font-size: 13px; }
+.subscription-pagination > div { display: flex; align-items: center; gap: 12px; }
+.subscription-pagination button:disabled, .subscription-stepper button:disabled { opacity: .35; cursor: not-allowed; }
+.subscription-empty { padding-block: 28px; font-size: 15px; color: var(--billing-muted); }
+.subscription-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; color: var(--billing-link); font-size: 14px; }
+.subscription-admin-summary { display: grid; grid-template-columns: minmax(0,1fr) minmax(150px,.7fr) auto; gap: 24px; align-items: center; border-bottom: 1px solid var(--billing-border); padding-bottom: 32px; }
+.subscription-admin-summary .billing-price strong { font-size: clamp(36px,3.8vw,54px); }
+.subscription-admin-section { margin-top: 36px; }
+.subscription-admin-section h2 { margin-bottom: 18px; }
+.subscription-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.subscription-section-heading h2 { margin: 0; }
+.subscription-admin-section .billing-review-rows { margin-top: 12px; }
+.subscription-admin-section .billing-review-rows > div { font-size: 16px; }
+.subscription-danger { color: #b42318; }
+.subscription-scheduled { display: block; margin-top: 6px; color: var(--billing-link); font-size: 13px; }
+.subscription-history { list-style: none; padding: 0; }
+.subscription-history li { padding-block: 18px; border-bottom: 1px solid var(--billing-border); font-size: 14px; }
+.subscription-history li > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.subscription-history p { margin-block: 8px; overflow-wrap: anywhere; }
+.subscription-history time, .subscription-history li > span { color: var(--billing-muted); font-size: 12px; }
+.subscription-form { display: grid; gap: 20px; }
+.subscription-form .subscription-field :is(input,select,textarea) { width: 100%; color: var(--billing-ink); background: var(--billing-surface); border: 1px solid var(--billing-muted); border-radius: 8px; padding: 12px; min-height: 46px; min-width: 0; font-family: inherit; font-size: 16px; }
+.subscription-form-pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.subscription-shop-choices { border: 0; padding: 0; }
+.subscription-shop-choices legend { font-size: 14px; margin-bottom: 12px; }
+.subscription-shop-choices label { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 15px; }
+.subscription-shop-choices input { width: 18px; height: 18px; accent-color: var(--billing-link); }
+.subscription-dialog-wide { width: min(640px,calc(100vw - 32px)); }
+.subscription-main [dir='rtl'] svg, .billing-preview[dir='rtl'] .subscription-back svg { transform: scaleX(-1); }
+@media (max-width: 1200px) {
+  .subscription-calculator { gap: 36px; }
+  .subscription-estimate { padding-inline-start: 28px; }
+  .subscription-admin-summary { grid-template-columns: minmax(0,1fr) minmax(140px,.7fr); }
+  .subscription-admin-summary > button { grid-column: 1 / -1; justify-self: start; }
+}
+@media (max-width: 760px) {
+  .subscription-calculator { grid-template-columns: minmax(0,1fr); gap: 36px; }
+  .subscription-estimate { border-inline-start: 0; border-top: 1px solid var(--billing-border); padding-inline-start: 0; padding-top: 28px; }
+  .subscription-calculator-controls h2, .subscription-estimate h2 { margin-bottom: 20px; }
+  .subscription-admin-summary { grid-template-columns: minmax(0,1fr); }
+  .subscription-admin-summary > button { width: 100%; }
+  .subscription-list-tools > .subscription-search { flex-basis: 100%; }
+  .subscription-list-tools > :is(.subscription-filter,.billing-secondary,.billing-primary) { flex: 1; }
+  .subscription-filter select { width: 100%; min-width: 0; }
+  .subscription-form-pair { grid-template-columns: minmax(0,1fr); }
+  .subscription-main h2 { font-size: 28px; }
+  .subscription-list table { min-width: 760px; }
+  .subscription-list { display: none; }
+  .subscription-mobile-list { display: block; margin: 0; padding: 0; list-style: none; }
+  .subscription-mobile-list li { padding-block: 24px; border-bottom: 1px solid var(--billing-border); }
+  .subscription-mobile-list li > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .subscription-mobile-list dl { margin-block: 16px; }
+  .subscription-mobile-list dl > div { display: flex; justify-content: space-between; gap: 12px; padding-block: 5px; font-size: 14px; }
+  .subscription-mobile-list dt { color: var(--billing-muted); }
+  .subscription-mobile-list dd { text-align: end; }
+  .subscription-mobile-list .billing-text-button { display: inline-flex; align-items: center; gap: 8px; }
+  .subscription-pagination { gap: 8px; font-size: 12px; }
+  .subscription-pagination > div { gap: 3px; }
+  .subscription-admin-section .billing-review-rows > div { font-size: 14px; }
+  .subscription-section-heading { flex-wrap: wrap; }
+  .subscription-estimate .billing-price strong { font-size: clamp(32px,11vw,52px); }
+  .subscription-estimate .subscription-large-amount strong { font-size: clamp(22px,7vw,32px); }
+}

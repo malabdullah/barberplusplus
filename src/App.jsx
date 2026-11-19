@@ -85,7 +85,7 @@ const CustomerDeleteAccount = lazy(() => import('./pages/CustomerDeleteAccount')
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Finances = lazy(() => import('./pages/Finances'));
-const BillingPreview = lazy(() => import('./pages/BillingPreview'));
+const SubscriptionDesign = lazy(() => import('./pages/SubscriptionDesign'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
   const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
@@ -165,7 +165,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {isTest && <Route path="/design/billing" element={<Suspense fallback={null}><BillingPreview /></Suspense>} />}
+      {isTest && <Route path="/design/*" element={<Suspense fallback={null}><SubscriptionDesign /></Suspense>} />}
       <Route element={<PublicLayout />}>
       {customerFeaturesEnabled && <Route path="/booking/share" element={<Suspense fallback={null}><SharedBooking /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}

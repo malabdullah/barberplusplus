@@ -46,3 +46,33 @@ as completion of those designs or of the backend subscription phases.
 5. Obtain separate approval before any production enforcement or release.
 
 The payment gateway remains postponed. Main and production remain unchanged.
+
+## Calculator and Admin expansion — 19 November 2026
+
+Additional Test-only design routes:
+
+- `/design/calculator`: active-barber estimate, monthly/yearly prices, minimum,
+  yearly savings, discount eligibility/duration, renewal amount and review.
+- `/design/subscriptions`: searchable/filterable/paginated synthetic businesses.
+- `/design/subscriptions/:businessId`: dated complimentary/manual-only access,
+  selected branches, billing-manager transfer and in-memory audit history.
+- `/design/discounts`: create/pause/enable preview codes and inspect their history.
+
+A shared in-memory context carries language/theme and preview code/business
+changes between these pages. It never writes preferences or financial/account
+records. Reload restores fixtures. The manager fixture is Nasser; transferring
+Atlas billing responsibility makes his sample Billing view read-only and hides
+its invoice controls. This illustrates future permissions; it is not backend
+role enforcement. All preview pages remain behind the Test environment gate.
+
+Calculator prices use integer fils, then apply the approved monthly minimum
+before discounts. The numeric input is bounded at 10,000 barbers solely for the
+preview; this is not a proposed production subscription-capacity restriction.
+Codes are never consumed by estimates. Monthly three-payment offers stay monthly;
+annual offers are explicitly annual and first-payment only. Codes are applied
+one at a time. Manual-access grants require a selected branch and dated grants
+require a reason. Separate paid access survives removing a complimentary grant.
+
+Actual gateway integration, transaction handling, subscriptions/discount records,
+server authorization, expiry jobs, notices and enforcement remain unimplemented.
+No real grant, permission transfer, message, payment or refund occurs.
