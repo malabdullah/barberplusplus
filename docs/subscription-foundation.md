@@ -168,3 +168,18 @@ handover (18) and finance checks (46). All were rollback-only. Final database
 receipt: 80 business records / 94 linked Test shops; zero new grants, discounts,
 invoices, audit entries or request-cache records from QA. No fixture account or
 booking was retained from the SQL suites. Signed-in browser work was read-only.
+
+
+### Navigation follow-up — 19 November 2026
+
+Manager navigation now uses **Billing & Subscription** (الفوترة والاشتراك).
+Admin navigation has separate **Subscriptions** and **Discount codes** entries;
+only the applicable entry is selected. Switching from a populated business list
+to discount codes now remounts the distinct screen, preventing stale business
+rows being interpreted as discount rows and producing a blank page. The route
+switch regression test passes. Hosted Admin list → codes navigation and selected
+menu state passed read-only after the owner completed normal MFA. The earlier
+Admin browser MFA limitation is therefore superseded for these navigation/list
+checks; no grant, account or code was changed during this follow-up. Source
+`5385751`, Worker deployment `14cae4667c6944a194c736d6ead70653`. Main and production
+were not changed.
