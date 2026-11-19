@@ -37,7 +37,7 @@ export default function PreviewShell({ children, active = 'billing', admin = fal
   const [menuOpen,setMenuOpen] = useState(false);
   const sidebarRef = useSidebarAccessibility(menuOpen,()=>setMenuOpen(false),t('common.navigation'));
   const previewLinks = [
-    ['billing','/design/billing',bp('title'),CreditCard],
+    ['billing','/design/billing',t('subscriptionFoundation.menuTitle'),CreditCard],
     ['calculator','/design/calculator',sp('calculator'),Calculator],
     ['subscriptions','/design/subscriptions',sp('subscriptions'),ShieldCheck],
     ['codes','/design/discounts',sp('discountCodes'),Tag],

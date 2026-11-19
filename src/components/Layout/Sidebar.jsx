@@ -33,7 +33,7 @@ const navItems = [
   { path: '/dashboard/finances', icon: Wallet, labelKey: 'finance.title' },
   { path: '/dashboard/my-chair', icon: Scissors, labelKey: 'chair.title', chairOnly: true },
   { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },
-  ...(isTest ? [{ path: '/dashboard/billing', icon: CreditCard, labelKey: 'billingPreview.title' }] : []),
+  ...(isTest ? [{ path: '/dashboard/billing', icon: CreditCard, labelKey: 'subscriptionFoundation.menuTitle' }] : []),
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

@@ -9,6 +9,7 @@ import {
   Send,
   Settings2,
   CreditCard,
+  Tag,
   Shield,
   Settings,
   X,
@@ -26,7 +27,10 @@ const navItems = [
   { path: '/admin/analytics', icon: BarChart3, labelKey: 'admin.nav.analytics' },
   { path: '/admin/configuration', icon: Settings2, labelKey: 'admin.nav.configuration' },
   { path: '/admin/audit', icon: Shield, labelKey: 'admin.nav.audit' },
-  ...(isTest ? [{ path: '/admin/subscriptions', icon: CreditCard, labelKey: 'subscriptionDesign.subscriptions' }] : []),
+  ...(isTest ? [
+    { path: '/admin/subscriptions', icon: CreditCard, labelKey: 'subscriptionDesign.subscriptions' },
+    { path: '/admin/subscriptions/discounts', icon: Tag, labelKey: 'subscriptionDesign.discountCodes' },
+  ] : []),
   { path: '/admin/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
@@ -84,15 +88,16 @@ export default function AdminSidebar({ isOpen, onClose }) {
         <nav className="sidebar-nav">
           {navItems.map((item, index) => {
             const Icon = item.icon;
-            const isActive = item.exact
+            const discountPage = item.path === '/admin/subscriptions' && location.pathname.startsWith('/admin/subscriptions/discounts');
+            const isActive = !discountPage && (item.exact
               ? location.pathname === item.path
-              : location.pathname.startsWith(item.path);
+              : location.pathname.startsWith(item.path));
 
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                end={item.exact}
+                end={item.exact || discountPage}
                 onClick={handleNavClick}
                 className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
                 style={{ animationDelay: `${index * 50}ms` }}
