@@ -3895,6 +3895,8 @@ GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jso
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";
@@ -3913,8 +3915,6 @@ GRANT ALL ON FUNCTION "public"."update_whatsapp_conversation_timestamp"() TO "se
 GRANT ALL ON TABLE "public"."customers" TO "anon";
 GRANT ALL ON TABLE "public"."customers" TO "authenticated";
 GRANT ALL ON TABLE "public"."customers" TO "service_role";
-REVOKE ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON TABLE "public"."admin_settings" TO "anon";
 GRANT ALL ON TABLE "public"."admin_settings" TO "authenticated";
 GRANT ALL ON TABLE "public"."admin_settings" TO "service_role";

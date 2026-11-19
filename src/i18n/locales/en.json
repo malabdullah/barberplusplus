@@ -3643,7 +3643,7 @@
     "noAlternativeManager": "Assign another manager to this business before transferring billing."
   },
   "subscriptionFoundation": {
-    "foundationLabel": "Test foundation",
+    "foundationLabel": "Subscription setup",
     "gatewayPostponed": "Payment collection is not connected. Saved changes do not charge anyone or restrict bookings.",
     "managedBy": "Managed by {{name}}",
     "nextFrequency": "Next renewal: {{frequency}}",

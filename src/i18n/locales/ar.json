@@ -3688,7 +3688,7 @@
     "noAlternativeManager": "عيّن مديراً آخر لهذه المنشأة قبل نقل مسؤولية الفوترة."
   },
   "subscriptionFoundation": {
-    "foundationLabel": "أساس الاشتراكات التجريبي",
+    "foundationLabel": "إعداد الاشتراك",
     "gatewayPostponed": "تحصيل المدفوعات غير متصل. التغييرات المحفوظة لا تخصم مبالغ ولا تقيد الحجوزات.",
     "managedBy": "يديره {{name}}",
     "nextFrequency": "التجديد التالي: {{frequency}}",
