@@ -2873,6 +2873,11 @@ CREATE OR REPLACE FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uui
       where u.id=p_user and u.raw_app_meta_data->>'role' in ('admin','manager','barber','agent') and f.status='verified'));
 $$;
 ALTER FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select subscription_billing.billing_api(p_action,p_data);$$;
+ALTER FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."update_customer_booking_stats"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -3366,6 +3371,7 @@ CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE INSERT OR UPDATE ON "publi
 CREATE OR REPLACE TRIGGER "a_deleted_customer" BEFORE UPDATE ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_deleted_customer"();
 CREATE OR REPLACE TRIGGER "a_shop_booking_access" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_shop_booking_access"();
 CREATE OR REPLACE TRIGGER "barbers_updated_at" BEFORE UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
+CREATE OR REPLACE TRIGGER "billing_shop_foundation" AFTER INSERT OR UPDATE OF "publication_state" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."billing_register_shop"();
 CREATE OR REPLACE TRIGGER "booking_customer_stats_trigger" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_customer_booking_stats"();
 CREATE OR REPLACE TRIGGER "bookings_updated_at" BEFORE UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "branches_updated_at" BEFORE UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
@@ -3889,6 +3895,8 @@ GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jso
 GRANT ALL ON FUNCTION "public"."staff_save_booking"("p_id" "uuid", "p_data" "jsonb") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_token_factor_satisfied"("p_user" "uuid", "p_session" "uuid", "p_aal" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."subscription_billing"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_customer_booking_stats"() TO "service_role";

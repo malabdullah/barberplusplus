@@ -19,3 +19,5 @@ export const isTest = ['test', 'development', 'cloud-test'].includes(appConfig.e
 
 // Customer routes have their own isolated Auth client in Test and production.
 export const customerFeaturesEnabled = isTest || appConfig.environment === 'production';
+
+export const subscriptionFeaturesEnabled = isTest || appConfig.environment === 'production';

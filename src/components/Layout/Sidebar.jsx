@@ -12,11 +12,13 @@ import {
   Settings,
   BarChart3,
   Wallet,
+  CreditCard,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
+import { subscriptionFeaturesEnabled } from '../../lib/runtimeConfig';
 import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
 
 const navItems = [
@@ -31,6 +33,7 @@ const navItems = [
   { path: '/dashboard/finances', icon: Wallet, labelKey: 'finance.title' },
   { path: '/dashboard/my-chair', icon: Scissors, labelKey: 'chair.title', chairOnly: true },
   { path: '/dashboard/settings', icon: Settings, labelKey: 'nav.settings' },
+  ...(subscriptionFeaturesEnabled ? [{ path: '/dashboard/billing', icon: CreditCard, labelKey: 'subscriptionFoundation.menuTitle' }] : []),
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
