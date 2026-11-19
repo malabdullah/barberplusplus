@@ -14,7 +14,9 @@ FROM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5db
 # The resulting image is scanned and deployed by immutable digest, never rebuilt
 # between acceptance and production. Exact APK contents are recorded in the image.
 USER root
-RUN apk upgrade --no-cache && apk info -vv > /opt/apk-manifest.txt
+RUN apk upgrade --no-cache \
+    && apk add --no-cache --upgrade 'nginx>=1.30.7' \
+    && apk info -vv > /opt/apk-manifest.txt
 USER 101
 
 ARG APP_RELEASE=unknown

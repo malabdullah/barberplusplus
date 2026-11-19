@@ -1,0 +1,20 @@
+.billing-foundation { min-height: 70vh; padding: 24px; border-radius: 12px; }
+.billing-foundation .billing-page-heading h1 { font-family: Georgia, serif; font-size: clamp(32px,4vw,46px); font-weight: 400; }
+.billing-foundation[lang='ar'] :is(h1,h2,h3) { font-family: 'Noto Sans Arabic',sans-serif; }
+.subscription-foundation-list, .subscription-foundation-grants { list-style: none; margin: 0; padding: 0; }
+.subscription-foundation-list { display: none; }
+.subscription-foundation-list li, .subscription-foundation-grants li { padding-block: 24px; border-bottom: 1px solid var(--billing-border); }
+.subscription-foundation-list li > div, .subscription-foundation-grants li > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.subscription-foundation-list dl { margin-block: 16px; }
+.subscription-foundation-list dl > div { display: flex; justify-content: space-between; gap: 16px; padding-block: 5px; font-size: 14px; }
+.subscription-foundation-list dt { color: var(--billing-muted); }
+.subscription-foundation-list dd { text-align: end; }
+.subscription-foundation-list .billing-text-button { display: inline-flex; align-items: center; gap: 8px; }
+.billing-foundation .subscription-form { max-width: 620px; }
+.billing-foundation .subscription-check { display: flex; align-items: center; gap: 10px; padding-block: 8px; }
+.billing-foundation .billing-dialog-actions { gap: 12px; display: flex; justify-content: flex-end; }
+.billing-foundation .billing-price strong { font-size: clamp(30px,5vw,58px); }
+.billing-foundation .subscription-history { margin: 0; }
+.billing-foundation .billing-preview-label { white-space: normal; }
+.billing-foundation .status-transition, .billing-foundation .status-not_started { color: var(--billing-ink); background: var(--billing-subtle); }
+@media(max-width:760px) { .billing-foundation { padding: 18px; } .subscription-foundation-list { display: block; } .billing-foundation .billing-page-heading { align-items: start; flex-direction: column; gap: 12px; } .billing-foundation .billing-review-rows > div { grid-template-columns: minmax(0,1fr); gap: 8px; } }
