@@ -6,6 +6,10 @@
 
 // Common Supabase/PostgreSQL error patterns
 const ERROR_PATTERNS = {
+  'BILLING_ACCESS_REQUIRED': 'subscriptionEnforcement.errors.BILLING_ACCESS_REQUIRED',
+  'BILLING_CAPACITY_REQUIRED': 'subscriptionEnforcement.errors.BILLING_CAPACITY_REQUIRED',
+  'BILLING_RENEW_REQUIRED': 'subscriptionEnforcement.errors.BILLING_RENEW_REQUIRED',
+  'BILLING_BOOKING_UNAVAILABLE': 'subscriptionEnforcement.errors.BILLING_BOOKING_UNAVAILABLE',
   'SHOP_NOT_READY': 'shopPublication.notReadyError',
   'SHOP_PUBLICATION_FORBIDDEN': 'shopPublication.forbidden',
   'SHOP_PERMISSION_ADMIN_ONLY': 'shopPublication.adminOnly',
@@ -131,6 +135,9 @@ export const getErrorMessage = (error, fallback = 'An error occurred. Please try
   const errorMessage = typeof error === 'string' ? error : error?.message || '';
   if (errorMessage.includes('PHONE_IN_USE')) return translate ? translate('errors.phoneInUse') : 'This phone number is already in use. Use a different number.';
   if (errorMessage.includes('PHONE_REGISTRATION_CONFLICT')) return translate ? translate('errors.phoneRegistrationConflict') : 'Could not create the account. Check your details and use an unregistered phone number.';
+
+  const billingCode = errorMessage.match(/\bBILLING_(ACCESS_REQUIRED|CAPACITY_REQUIRED|RENEW_REQUIRED|BOOKING_UNAVAILABLE)\b/)?.[0];
+  if (billingCode && translate) return translate(`subscriptionEnforcement.errors.${billingCode}`);
 
   // Direct message mappings for non-i18n contexts
   const directMappings = {

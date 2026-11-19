@@ -17,7 +17,7 @@ suites = sorted(set(' '.join(re.findall(r'^Suites:\s*(.+)$', original, re.M)).sp
 assert suites and all(re.fullmatch(re.escape(codename) + r'(?:-updates|-backports|-security)?', s) for s in suites)
 # Both endpoints serve Canonical-signed Ubuntu packages. Probe every configured
 # pocket, then retain the runner's suites, components and Signed-By keyring.
-mirrors = ['https://archive.ubuntu.com/ubuntu', 'https://mirrors.kernel.org/ubuntu']
+mirrors = ['https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu', 'https://mirrors.kernel.org/ubuntu']
 chosen = None
 for mirror in mirrors:
     try:
@@ -39,5 +39,5 @@ updated, count = re.subn(r'^URIs:\s*.+$', 'URIs: ' + chosen, original, flags=re.
 assert count and re.findall(r'^Signed-By:.*$', updated, re.M) == re.findall(r'^Signed-By:.*$', original, re.M)
 sources.write_text(updated)
 pathlib.Path('/etc/apt/apt.conf.d/99-barber-ci-downloads').write_text(
-    'Acquire::Retries "2";\nAcquire::ForceIPv4 "true";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n')
+    'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n')
 print('Using verified Ubuntu archive:', chosen, flush=True)

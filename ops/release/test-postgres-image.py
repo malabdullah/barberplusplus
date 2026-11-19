@@ -4,7 +4,7 @@
 Bootstrap uses schema-only platform metadata from the synthetic local CLI stack;
 it does not claim identical production platform configuration or copy any rows.
 """
-import hashlib, json, os, pathlib, re, subprocess, uuid
+import concurrent.futures, datetime, hashlib, json, os, pathlib, re, subprocess, threading, uuid
 
 def platform_objects_for_replay(toc):
     # Application migrations recreate these only after their dependencies exist.
@@ -127,6 +127,40 @@ select 'COMPATIBILITY_VAULT_READY';
             actual = re.findall(r'^ok\b',output,re.M)
             if re.search(r'^not ok\b',output,re.M) or len(plans)!=1 or len(actual)!=int(plans[0]): raise RuntimeError('Production image pgTAP failure: '+p.name)
             total += len(actual)
+        # Two separate psql connections on this owned, network-isolated exact
+        # production image prove overlap. Hosted SQL tools serialize commands.
+        ids = {key: str(uuid.uuid4()) for key in ['manager','shop','service','one','two','three','four']}
+        sql(f"""
+insert into auth.users(id,email,raw_app_meta_data)values('{ids['manager']}','{ids['manager']}@example.test','{{"role":"manager"}}');
+insert into public.branches(id,manager_id,name)values('{ids['shop']}','{ids['manager']}','Isolated capacity QA');
+insert into public.services(id,branch_id,name,duration,price)values('{ids['service']}','{ids['shop']}','QA Cut',30,3);
+""" + 'insert into public.barbers(id,branch_id,name,status,management_mode,service_ids)values' + ','.join(
+            f"('{ids[key]}','{ids['shop']}','QA {key}','{'active' if key in ['one','two'] else 'inactive'}','managed',array['{ids['service']}']::uuid[])"
+            for key in ['one','two','three','four']) + f""";
+update private.billing_subscriptions set paid_capacity=3,period_started_at=clock_timestamp()-interval'15 days',period_ends_at=clock_timestamp()+interval'15 days'where business_id=(select business_id from private.billing_shops where branch_id='{ids['shop']}');
+update private.billing_enforcement set enabled=true;
+""")
+        barrier = threading.Barrier(2)
+        def activate(key):
+            barrier.wait(timeout=10)
+            output = sql(f"""begin;
+create temp table capacity_outcome(started timestamptz,finished timestamptz,result text)on commit drop;
+do $probe$declare t timestamptz:=clock_timestamp();begin begin
+ update public.barbers set status='active'where id='{ids[key]}';perform pg_sleep(3);
+ insert into capacity_outcome values(t,clock_timestamp(),'activated');
+exception when others then insert into capacity_outcome values(t,clock_timestamp(),sqlerrm);end;end$probe$;
+select row_to_json(r)from capacity_outcome r;commit;""")
+            return json.loads(output.strip())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(activate,['three','four']))
+        parse = datetime.datetime.fromisoformat
+        if sorted(r['result'] for r in results) != ['BILLING_CAPACITY_REQUIRED','activated']:
+            raise RuntimeError('Concurrent capacity outcome was not exactly one activation/one denial')
+        if max(parse(r['started']) for r in results) >= min(parse(r['finished']) for r in results):
+            raise RuntimeError('Capacity connections did not actually overlap')
+        if sql(f"select private.billing_active_count(business_id)from private.billing_shops where branch_id='{ids['shop']}';").strip() != '3':
+            raise RuntimeError('Concurrent capacity exceeded three paid places')
+        print(json.dumps({'subscriptionConcurrency':'PASS','overlappingConnections':2,'activated':1,'capacityDenied':1,'activeCount':3,'paidCapacity':3,'productionAccess':False}))
         print(json.dumps({'status':'PASS','image':image,'platform':'linux/amd64','network':'none','publishedPorts':0,'source':'schema-only synthetic CLI platform bootstrap; app migrations and synthetic seed replayed','productionRowsCopied':0,'authorizationTests':total}))
     except Exception as error:
         # SQL-stage failures need the same bounded, redacted startup evidence

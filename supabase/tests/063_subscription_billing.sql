@@ -1,5 +1,8 @@
 -- Hosted Test compatible. Every fixture and mutation rolls back; no providers.
 begin;
+-- This suite verifies the pre-enforcement foundation; the real gates have their
+-- own enabled suite. The private flag change is invisible outside this rollback.
+do $$begin if to_regclass('private.billing_enforcement')is not null then update private.billing_enforcement set enabled=false;end if;end$$;
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select plan(1);
