@@ -66,7 +66,7 @@ import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import AccountSessionNotice from './components/UI/AccountSessionNotice';
 import EnvironmentBanner from './components/EnvironmentBanner';
-import { customerFeaturesEnabled } from './lib/runtimeConfig';
+import { customerFeaturesEnabled, isTest } from './lib/runtimeConfig';
 import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import CustomerDocumentBoundary from './components/Customer/CustomerDocumentBoundary';
@@ -85,6 +85,7 @@ const CustomerDeleteAccount = lazy(() => import('./pages/CustomerDeleteAccount')
 const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Finances = lazy(() => import('./pages/Finances'));
+const BillingPreview = lazy(() => import('./pages/BillingPreview'));
 
 function ProtectedRoute({ children, allowedRole, requireAdminMfa = true }) {
   const { isAuthenticated, userRole, loading, adminVerified, staffMfaRequired } = useApp();
@@ -164,6 +165,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {isTest && <Route path="/design/billing" element={<Suspense fallback={null}><BillingPreview /></Suspense>} />}
       <Route element={<PublicLayout />}>
       {customerFeaturesEnabled && <Route path="/booking/share" element={<Suspense fallback={null}><SharedBooking /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/book" element={<Suspense fallback={null}><CustomerBooking /></Suspense>} />}
