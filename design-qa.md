@@ -118,4 +118,120 @@ and backend lifecycle tests are next phases, not covered by this acceptance.
 
 No actionable P0/P1/P2 visual issues remain within this design-preview scope.
 
+Previous Billing acceptance: passed
+
+
+# Calculator and Admin expansion — 19 November 2026
+
+Scope: interactive Test-only design previews using synthetic, in-memory data.
+Application source: `ffeff960b25352b18c3f737d9e64ab54ea169f27`.
+Cloudflare deployment: `a172c19512844c338690fb8fa63a5d83`.
+Routes: `/design/calculator`, `/design/subscriptions`,
+`/design/subscriptions/atlas`, `/design/discounts` on hosted Test.
+
+## Visual evidence
+
+The style truth for this expansion is the owner-approved rendered Billing screen,
+`.cloud-test/billing-preview/approved-billing-reference.png` (1440 × 1024).
+The original generated option remains `reference.png` (1487 × 1058).
+This is an adaptation of the approved design system to new tasks, not a
+pixel-identical reproduction of the Billing information architecture.
+
+Implementation captures: `calculator-desktop.png`,
+`calculator-yearly-desktop.png`, `admin-subscriptions-desktop.png`,
+`admin-detail-desktop.png`, `admin-codes-desktop.png` in the same directory.
+Primary comparisons use 1440 × 1024 CSS px, density 1, English/light, no dialog.
+Combined source/implementation inputs `calculator-comparison.png` and
+`admin-comparison.png` are 2880 × 1024 and were opened and inspected together.
+The source is left, implementation right, with no browser chrome or density
+scaling. `admin-style-focus.png` contains focused heading/top-area crops.
+
+Additional inspected evidence: `admin-mobile-ar-dark.png` (390 CSS px, full page),
+`codes-mobile-ar-dark.png`, `calculator-mobile-ar-light.png`,
+`calculator-320-large.png`, and `admin-access-dark-final.png`.
+
+## Findings and comparison history
+
+- P2, date controls: changing another field reverted edited dates. Replaced stale
+  updates with functional state setters and native input handling; two regression
+  tests pass. Hosted equal-date validation retains the edited values; the final
+  discount flow retains the chosen 31 January 2027 deadline.
+- P2, Arabic typography: Latin fallback did not match the app's Arabic system.
+  Applied existing Noto Sans Arabic throughout preview headings/body. Final RTL
+  mobile capture shows readable Arabic and correctly separated Latin branding.
+- P2, dark native date controls: calendar indicators were black on dark input.
+  Scoped native `color-scheme` to the preview theme. Post-fix
+  `admin-access-dark-final.png` shows white calendar icons and computed dark
+  color scheme.
+- P2, incomplete transfer state: a business with one manager offered no clear
+  reason for disabled transfer. Added the requirement to assign another manager;
+  Coast's transfer dialog shows the explanation and disabled Save action.
+- Filter/notice follow-up: search/filter changes reset pagination and all notices
+  use the selected language. Annual estimates now include the approximate monthly
+  equivalent while retaining the upfront yearly total.
+
+No actionable P0/P1/P2 visual findings remain. The final full-view comparisons
+retain the approved cream/charcoal/gold palette, flat sections, serif hierarchy,
+Outfit body text, existing rail/topbar, fine dividers and compact action styling.
+
+## Required fidelity surfaces
+
+- Typography: approved serif display hierarchy, Outfit body; Noto Sans Arabic
+  for RTL. Long prices use responsive sizing, with no clipping at 320 CSS px.
+- Layout: existing rail and topbar proportions; calculator inputs and estimate
+  in two flat desktop columns; Admin data in a compact table, stacked labeled
+  rows on mobile. These structural differences serve the new screens.
+- Colors: existing cream, charcoal, gold and semantic badges; dark #141414;
+  native date indicators and dialog controls remain visible.
+- Assets: existing BrandLogo SVG and lucide icons, no handcrafted replacement
+  logo, generated placeholder imagery or additional raster assets.
+- Copy: concise action names, clear preview/sample disclosure, localized labels,
+  explicit no-payment estimate, reason fields and relevant validation feedback.
+
+## Hosted flow results
+
+| Scenario | Observed result |
+| --- | --- |
+| Two active barbers | KD25.000 minimum monthly price |
+| Six barbers, monthly/yearly | KD60.000 / KD600.000; annual equivalent KD50/month |
+| Monthly WELCOME20 | KD48 due, KD60 next renewal |
+| Yearly YEAR20 | KD480 due, KD600 next renewal |
+| Ineligible/exhausted code, invalid count | Clear error; estimate review disabled |
+| Three-payment monthly code | KD48 first and next, KD60 after offer |
+| Code deadline/limit, pause | Chosen deadline/limit retained, pause visible in history |
+| List search/filter/pagination | Correct rows; empty state and clear filters work |
+| Manual access without branch | Rejected with visible error |
+| Manual access + removal | Manual-only shown; underlying expired state restored |
+| Complimentary access + removal on paid Atlas | Active, KD60 and 1 December preserved |
+| Billing-manager transfer | Omar selected; renewal preserved; Nasser sample read-only |
+| No second manager | Explanation shown, Save disabled |
+| Invalid date interval | Edited dates retained, submission rejected |
+| Theme/language | English/Arabic and light/dark checked |
+| Mobile/keyboard | 390 and 320 CSS px, no horizontal overflow; menu/Escape checked |
+| Console | No errors in final preview tab |
+
+## Regression checks and boundaries
+
+Full repository check passed on `078df06`: 301 Deno, 490 Vitest across 91 files,
+80 operations checks, lint, build and migration/domain checks. Subsequent
+UI refinements passed lint, all 19 focused tests and the final Cloud Test build.
+Eight gateway tests passed. Existing engine warnings remain: Node 24.9.0 is below
+the repository's declared 24.20.0 minimum. This is not a production release gate
+clearance or exact production-runtime compatibility claim.
+
+The provider holds only sample React state; refresh resets changes. No database,
+Auth, payment, invoice, permission, subscription enforcement, email or worker
+change. All new routes remain Test-only. Main and production remain unchanged.
+The earlier Billing report's statement that calculator/Admin are next is
+superseded by this expansion; backend lifecycle implementation is still future.
+
+## Implementation checklist
+
+- Calculator, Admin list/detail and discount-code screens completed on Test.
+- Focused unit tests, build and hosted interaction/visual checks passed.
+- Owner review pending before any next implementation or release phase.
+
+P3 follow-up: RTL forward-action icon direction can be refined; labels and
+navigation work. No P3 polish blocks this preview review.
+
 final result: passed
