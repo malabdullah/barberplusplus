@@ -3633,6 +3633,7 @@
       "khaled": "Khaled",
       "fahad": "Fahad",
       "salem": "Salem"
-    }
+    },
+    "yearlyBaseSaving": "Yearly billing saves {{amount}}"
   }
 }

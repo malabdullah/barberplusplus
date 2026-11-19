@@ -47,7 +47,7 @@ export default function SubscriptionCalculatorPreview() {
           <div><dt>{sp('followingRenewal')}</dt><dd><bdi>{quote.error?sp('unavailableAmount'):money(code?.duration==='threeMonthly'?quote.total:quote.subtotal)}</bdi></dd></div>
           {applied&&!quote.error&&code.duration==='threeMonthly'&&<div><dt>{sp('standardRenewal')}</dt><dd><bdi>{money(quote.subtotal)}</bdi></dd></div>}
         </dl>
-        {frequency==='yearly'&&!quote.error&&<p className="billing-savings">{bp('yearlySavings',{amount:money(quote.yearlySaving)})}</p>}
+        {frequency==='yearly'&&!quote.error&&<p className="billing-savings">{sp('yearlyBaseSaving',{amount:money(quote.yearlySaving)})}</p>}
         {applied&&!quote.error&&<p className="subscription-subtle">{sp('codeDuration',{duration:sp(code.duration==='threeMonthly'?'threeMonthly':'firstPayment')})}</p>}
         <button type="button" className="billing-primary billing-dialog-primary" disabled={!!error} onClick={()=>setReview(true)}>{sp('reviewEstimate')}</button>
       </section>

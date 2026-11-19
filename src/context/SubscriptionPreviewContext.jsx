@@ -24,7 +24,7 @@ export function SubscriptionPreviewProvider({ children }) {
   const [codes, setCodes] = useState(initialCodes);
   const t = useMemo(() => i18n.getFixedT(language), [i18n, language]);
   const bp = (key, options) => t(`billingPreview.${key}`, options);
-  const sp = (key, options) => t(`subscriptionDesign.${key}`, options);
+  const sp = (key, options) => t(`subscriptionDesign.${key}`, {...options,postProcess:[]});
   const money = fils => `${bp('currency')} ${(fils / 1000).toFixed(3)}`;
   const date = value => new Intl.DateTimeFormat(language === 'ar' ? 'ar-KW' : 'en-GB', {
     day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Kuwait',

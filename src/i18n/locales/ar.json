@@ -3678,6 +3678,7 @@
       "khaled": "خالد",
       "fahad": "فهد",
       "salem": "سالم"
-    }
+    },
+    "yearlyBaseSaving": "الفوترة السنوية توفّر {{amount}}"
   }
 }
