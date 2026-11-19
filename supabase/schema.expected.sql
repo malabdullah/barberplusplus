@@ -759,7 +759,7 @@ ALTER FUNCTION "public"."customer_announcement_api"("p_action" "text", "p_data" 
 CREATE OR REPLACE FUNCTION "public"."customer_bookable_barbers"() RETURNS "uuid"[]
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$select coalesce(array_agg(id),'{}')from public.barbers b where private.billing_barber_counted(b)and private.billing_shop_access(b.branch_id,false);$$;
+    AS $$select coalesce(array_agg(id),'{}')from public.barbers b where private.billing_provider_available(b)and private.billing_shop_access(b.branch_id,false);$$;
 ALTER FUNCTION "public"."customer_bookable_barbers"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_bookable_shops"() RETURNS "uuid"[]
     LANGUAGE "sql" STABLE SECURITY DEFINER
@@ -837,7 +837,7 @@ begin
     select * into v_barber from public.barbers where id = (p_data ->> 'barber_id')::uuid
       and status = 'active' for share;
     select * into v_branch from public.branches where id = v_barber.branch_id and status = 'active' and (publication_state = 'published' or p_action='appointment-slots') for share;
-    if p_action<>'appointment-slots' and v_branch.id is not null and(not private.billing_shop_access(v_branch.id,false)or not private.billing_barber_counted(v_barber)) then raise exception 'BILLING_BOOKING_UNAVAILABLE';end if;
+    if p_action<>'appointment-slots' and v_branch.id is not null and(not private.billing_shop_access(v_branch.id,false)or not private.billing_provider_available(v_barber)) then raise exception 'BILLING_BOOKING_UNAVAILABLE';end if;
     if v_barber.id is null or v_branch.id is null
        or v_branch.id is distinct from (p_data ->> 'branch_id')::uuid then
       raise exception 'INVALID_SELECTION';

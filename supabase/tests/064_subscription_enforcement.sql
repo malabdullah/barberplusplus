@@ -1,6 +1,8 @@
 -- Synthetic fixtures only, no providers; every row and setting rolls back.
 begin;
+create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions,pg_catalog;
+select plan(1);
 create temp table enforcement_checks(label text);
 create function pg_temp.ea(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'ENFORCEMENT_ASSERT: %',label;end if;insert into enforcement_checks values(label);end$$;
 create function pg_temp.ee(statement text,code text)returns boolean language plpgsql as $$begin execute statement;return false;exception when others then if sqlerrm<>code then raise exception 'Expected %, got %',code,sqlerrm;end if;return true;end$$;
@@ -10,7 +12,7 @@ declare
  ms uuid:=gen_random_uuid();ads uuid:=gen_random_uuid();cs uuid:=gen_random_uuid();factor uuid:=gen_random_uuid();
  shop uuid:=gen_random_uuid();shop2 uuid:=gen_random_uuid();outside uuid:=gen_random_uuid();service uuid:=gen_random_uuid();
  barber uuid:=gen_random_uuid();b2 uuid:=gen_random_uuid();b3 uuid:=gen_random_uuid();b4 uuid:=gen_random_uuid();pending uuid:=gen_random_uuid();chair uuid:=gen_random_uuid();
- business uuid;other_business uuid;other_service uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();booking uuid:=gen_random_uuid();grant_id uuid;
+ business uuid;other_business uuid;other_service uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();booking uuid:=gen_random_uuid();attempt uuid:=gen_random_uuid();grant_id uuid;
  mc text;ac text;input jsonb;result jsonb;before_trial timestamptz;t timestamptz:=clock_timestamp();day date:=(clock_timestamp()at time zone'Asia/Kuwait')::date+2;rv bigint;
 begin
  perform pg_temp.ea(not has_table_privilege('authenticated','private.billing_enforcement','UPDATE'),'clients cannot toggle enforcement');
@@ -79,6 +81,14 @@ begin
  perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking_discovery(''entry'',%L::jsonb)',jsonb_build_object('kind','shop','branch_id',shop)),'INVALID_SELECTION'),'shared-link booking entry rejects expired shop');
  perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking(''slots'',%L::jsonb)',input),'BILLING_BOOKING_UNAVAILABLE'),'stale customer selection cannot fetch new slots');
  perform pg_temp.ea(pg_temp.ee(format('select public.customer_booking(''book'',%L::jsonb)',input||jsonb_build_object('id',gen_random_uuid(),'time','16:00')),'BILLING_BOOKING_UNAVAILABLE'),'stale customer selection cannot create reservation');
+ perform pg_temp.ea(pg_temp.ee(format('select public.native_customer_booking(''book'',%L::jsonb)',input||jsonb_build_object('id',attempt,'time','16:00')),'BILLING_BOOKING_UNAVAILABLE'),'rejected native booking creates no partial appointment');
+ result:=public.native_close_booking_attempt(attempt);
+ perform pg_temp.ea(result->>'found'='false'and result->>'closed'='true','old native clients can definitively close an expired-shop rejection');
+ perform pg_temp.ea(pg_temp.ee(format('select public.native_customer_booking(''book'',%L::jsonb)',input||jsonb_build_object('id',attempt,'time','16:00')),'ATTEMPT_CLOSED'),'late retry cannot reopen a rejected closed attempt');
+ result:=public.native_close_booking_attempt(booking);
+ perform pg_temp.ea(result->>'found'='true'and result->>'closed'='false','committed native receipt takes priority over closure after expiry');
+ result:=public.native_customer_booking('book',input);
+ perform pg_temp.ea(result->>'id'=booking::text,'native original receipt remains recoverable after subscription expiry');
  result:=public.customer_booking('book',input);
  perform pg_temp.ea(result->>'id'=booking::text,'original idempotent retry still recovers receipt after expiry');
  result:=public.customer_booking('appointment-slots',input||jsonb_build_object('booked_duration',30,'booked_price',3,'exclude_booking_id',booking));
@@ -181,5 +191,7 @@ begin
  perform pg_temp.ea((select count(*)from private.billing_invoices where business_id=business)=0,'no fake paid invoices created');
  perform pg_temp.ea((select count(*)from public.bookings where branch_id=shop)=2,'bookings preserved through all subscription transitions');
 end$test$;
+select pass('Subscription enforcement: '||(select count(*)from enforcement_checks)||' checked scenarios');
+select *from finish();
 select count(*)as passed,jsonb_agg(label order by label)as scenarios from enforcement_checks;
 rollback;

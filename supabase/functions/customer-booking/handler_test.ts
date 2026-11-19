@@ -280,5 +280,5 @@ Deno.test('subscription expiry is a stable recoverable booking error without int
   const handler = make({ booking: async () => { throw Error('P0001 BILLING_BOOKING_UNAVAILABLE private access details'); } });
   const response = await handler(request({ action: 'slots', ...selection }));
   assert(response.status === 409);
-  assert(JSON.stringify(await response.json()) === JSON.stringify({ error: 'BILLING_BOOKING_UNAVAILABLE' }));
+  assert(JSON.stringify(await response.json()) === JSON.stringify({ error: 'BOOKING_UNAVAILABLE', reason: 'SHOP_ACCESS_REQUIRED' }));
 });
