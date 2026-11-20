@@ -1,0 +1,340 @@
+{
+  "status": "Test-verified source candidate; no Website Live deployment/activation or branch push",
+  "base": "c6efbb63a2ef6643b1ff0485d22b6c6ff01ad364",
+  "preserve": [
+    "All existing iOS/Web OAuth audiences, callbacks and redirect entries",
+    "Existing Apple/APNs credentials, registrations, configuration and schedules",
+    "Current Test native provider/proof/FCM quota fixtures",
+    "Settlements remain Test-only and excluded from this candidate"
+  ],
+  "identity": {
+    "packageName": "com.barberplusplus.customer",
+    "backend": "https://srv1073968.hstgr.cloud",
+    "app": "https://www.barberplusplus.com",
+    "authHelper": "https://barber-auth.alabdullah-cs.workers.dev",
+    "bookingHelper": "https://barber-open.alabdullah-cs.workers.dev"
+  },
+  "authHelperAvailability": {
+    "verifiedBy": "read-only authorized account Worker inventory",
+    "workerNamePresent": false,
+    "hostDeployed": false,
+    "signingAssociations": "All three verified public Play distribution certificates in candidate source; no upload certificate"
+  },
+  "google": {
+    "authProject": "barber-plus-plus-auth-prod",
+    "projectNumber": "329116823579",
+    "existingWebAudience": "329116823579-l6docsu447em92i55sf3lmu55v9v07re.apps.googleusercontent.com",
+    "signingFingerprints": [
+      {
+        "signer": "legacy",
+        "clientId": "329116823579-0jm7490metd07kekn2v8a64j8h9dmshj.apps.googleusercontent.com",
+        "sha1": "12:03:F2:3E:ED:F6:A7:60:06:24:2C:57:B0:D1:0E:A7:51:92:7B:C8"
+      },
+      {
+        "signer": "hybrid classical",
+        "clientId": "329116823579-1mn24av23p3ppeh8913ims0doeka58hq.apps.googleusercontent.com",
+        "sha1": "35:9D:02:33:ED:00:2D:7B:79:63:52:8B:67:B3:C7:6C:CA:83:6A:8D"
+      },
+      {
+        "signer": "hybrid PQC",
+        "clientId": "329116823579-cc59hdtrleckbm2iujkre3ukg0em4acu.apps.googleusercontent.com",
+        "sha1": "FE:C5:0D:8F:74:17:8B:27:E1:13:3F:FD:D7:73:46:FB:DE:D6:E2:B5"
+      }
+    ],
+    "portalStatus": "Three Android clients created by coordinator under explicit owner approval; existing iOS/Web clients preserved.",
+    "verifiedState": "Verified by coordinator: exactly three Android OAuth identities created for actual Play distribution signers in auth-prod; existing iOS/Web clients preserved. Existing Web audience remains the Android server audience; no audience inferred from phone-prod."
+  },
+  "apple": {
+    "serviceId": "com.barberplusplus.authentication.prod.web",
+    "primaryId": "com.barberplusplus.authentication.prod",
+    "team": "D49RFZQ6BT",
+    "proposed": "Reuse the existing web OAuth provider and exact backend callback; do not create a new Apple identity or revoke/replace existing authorization.",
+    "backendCallback": "https://srv1073968.hstgr.cloud/auth/v1/callback",
+    "backendCallbackStatus": "source-expected; coordinator must verify existing provider entry before any change"
+  },
+  "supabaseRedirects": {
+    "operation": "append only the exact patterns needed; retain existing entries and Site URL",
+    "siteUrlUnchanged": "https://www.barberplusplus.com",
+    "additions": [
+      "https://barber-auth.alabdullah-cs.workers.dev/auth/oauth\\?state=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]",
+      "https://www.barberplusplus.com/customer/email-callback\\?client=android&request_id=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]&state=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]&next=account",
+      "https://www.barberplusplus.com/customer/email-callback\\?next=account&request_id=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]&client=android&state=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]",
+      "https://www.barberplusplus.com/customer/email-callback\\?next=book&request_id=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]&client=android&state=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]",
+      "https://www.barberplusplus.com/customer/email-callback\\?next=work&request_id=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]&client=android&state=[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]"
+    ],
+    "patternDialect": "GoTrue gobwas/glob; escaped literal question mark and explicit UUID-shaped lowercase hex character classes; no host/path-wide wildcard",
+    "verificationGate": "PASS: 35 positive/negative checks with github.com/gobwas/glob v0.2.3 and separators dot/slash from pinned Auth v2.189.0. No provider calls. Live configuration remains unchanged."
+  },
+  "firebase": {
+    "project": "barber-plus-plus-phone-prod",
+    "projectNumber": "791534621841",
+    "androidApp": "com.barberplusplus.customer",
+    "sender": {
+      "reuseCondition": "Resolved: coordinator verified no approved send-only identity existed, then created the dedicated owner-approved account and sole-permission role.",
+      "permission": "cloudmessaging.messages.create",
+      "oauthScope": "https://www.googleapis.com/auth/firebase.messaging",
+      "privateKey": "Created by coordinator under separate owner approval and held only in manager-owned Keychain. Server-only Vault installation still requires reviewed release approval; no values in Test/source/chat/client.",
+      "vaultSecretName": "customer_android_live_fcm",
+      "roleId": "barberAndroidFcmSender",
+      "roleName": "projects/barber-plus-plus-phone-prod/roles/barberAndroidFcmSender",
+      "roleTitle": "Barber++ Android FCM Sender",
+      "setupOwner": "Coordinator; Website did not create IAM identity/key or receive credential material",
+      "verifiedSetup": {
+        "role": "projects/barber-plus-plus-phone-prod/roles/barberAndroidFcmSender",
+        "solePermission": "cloudmessaging.messages.create",
+        "account": "barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com",
+        "bindingVerifiedByCoordinator": true,
+        "keyCustody": "One Active key held solely by coordinator in Keychain; not read, installed or exported by Website",
+        "backendInstallationOrActivation": false
+      },
+      "verifiedEmail": "barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com"
+    },
+    "androidAppId": "1:791534621841:android:9e9b35bf2a6b0ed2315b30",
+    "httpV1AlreadyEnabled": true,
+    "verifiedState": [
+      "Coordinator registered Android app with exact package/AppID; no Firebase SHA1/OAuth provisioning",
+      "Coordinator verified public SDK config with oauth_client=[]; separate auth-prod Web audience retained",
+      "FCM HTTP v1 already enabled; no API enable or billing change"
+    ]
+  },
+  "associations": {
+    "authHelper": "/.well-known/assetlinks.json",
+    "bookingHelper": "/.well-known/assetlinks.json",
+    "androidPackage": "com.barberplusplus.customer",
+    "fingerprints": [
+      "89:A5:19:86:1C:C2:52:49:15:A2:C0:26:F3:38:8F:A3:8F:E8:C3:9E:BC:93:17:1A:30:D2:B5:30:B8:75:03:66",
+      "B6:AC:75:D5:39:25:9C:2F:AB:4A:43:4A:65:1E:82:72:9F:D3:DC:B8:83:20:A9:34:D5:CA:9D:74:7B:80:AC:01",
+      "2C:EB:0B:48:55:4F:1D:AB:23:6B:96:08:EF:61:F7:57:78:7B:F4:BA:67:2D:22:62:7D:3F:16:2C:07:E5:1D:1F"
+    ],
+    "preserveAASA": "Existing iOS AASA and /book shop/barber routes stay unchanged"
+  },
+  "runtime": {
+    "customerAuthAdditionalFlag": {
+      "ANDROID_CUSTOMER_ENABLED": "false by default; true only after matching migrations, frontend/helper and provider verification"
+    },
+    "androidDispatcherAdditionalFlag": {
+      "ANDROID_PUSH_ENABLED": "false by default; independently approved after private credential/runtime verification"
+    },
+    "transport": "Separate general signed-in Android registry/queue; do not modify Test two-device allowlist/counters or APNs tables",
+    "payload": "environment=production, version=1, destination=booking with canonical eventId/bookingId; no Test book destination or personal/contact/capability fields",
+    "schedule": "Reuse existing approved 24h/2h/review/update semantics; no new timing/SLA",
+    "guests": "Not supported by current verified Android client; not silently enabled",
+    "dispatchSecret": {
+      "vaultName": "customer_android_live_dispatch_secret",
+      "shape": "64 lowercase hexadecimal characters from 32 random bytes; fixed-name server-only secret",
+      "scope": "Only the new Android wake endpoint; never reuses APNs credentials/secrets, never shipped in client/source/logs",
+      "storage": "Vault only; scheduler reads it internally; service-only authorizer compares hashes"
+    }
+  },
+  "publicPages": {
+    "privacy": "https://www.barberplusplus.com/privacy",
+    "support": "https://www.barberplusplus.com/support",
+    "accountDeletion": "https://www.barberplusplus.com/customer/delete-account",
+    "status": "Existing current-main routes confirmed in source; hosted public behavior and Android privacy wording review remain verification gates"
+  },
+  "database": {
+    "migrations": [
+      {
+        "file": "supabase/migrations/20261120154354_android_live_native_bindings.sql",
+        "sha256": "6d831624e3b5a6214b8337d43f47dd85b8a9500efc663233b5aa783266d2884a",
+        "installedTestVersion": "20261120154354",
+        "historyMd5": "504dee98be6537c006ba11f9862ee827"
+      },
+      {
+        "file": "supabase/migrations/20261120154434_android_live_fcm_transport.sql",
+        "sha256": "916dea02bb3c995aa3a4ce17043dc399c94ed2d2f4ff6e704677c4c3af072400",
+        "installedTestVersion": "20261120154434",
+        "historyMd5": "dcb74ce58d80c1e7daf26768f0300825"
+      },
+      {
+        "file": "supabase/migrations/20261120154802_android_live_fcm_token_validation.sql",
+        "sha256": "448993dee01d00d9d1beb660052835925b294eda9ebf745f8dc67a6231a86119",
+        "installedTestVersion": "20261120154802",
+        "historyMd5": "f23105bf094a1fdc760fcf51b3b0a7db"
+      },
+      {
+        "file": "supabase/migrations/20261120155248_android_live_fcm_dispatch_alias.sql",
+        "sha256": "c206b58513dca56ef1964624af59c1762a95323e614f32e5b9e4c6285a60ee25",
+        "installedTestVersion": "20261120155248",
+        "historyMd5": "d3849a346b858f456cf5bbfc99ccd74b"
+      },
+      {
+        "file": "supabase/migrations/20261120155341_android_live_fcm_immediate_claim.sql",
+        "sha256": "7f9d783199e77cb1fce018c2f8d75b78d32a183f088ccb36f0389cb5607df802",
+        "installedTestVersion": "20261120155341",
+        "historyMd5": "05733715ee5ea98551f49921c5b14c25"
+      },
+      {
+        "file": "supabase/migrations/20261120155602_android_live_fcm_scheduler.sql",
+        "sha256": "891afb54230a6b08ceaac7a74f7851f0a88daf5705235df93e857dc77f334798",
+        "installedTestVersion": "20261120155602",
+        "historyMd5": "e3fa7b9da66b9c24f06b784eab9e2eb6"
+      },
+      {
+        "file": "supabase/migrations/20261120162705_android_live_native_binding_replay_guard.sql",
+        "sha256": "64f9e001a5c330b68bd6dce300760281bf6df6e2fdb6313844e6779159c0b38c",
+        "installedTestVersion": "20261120162705",
+        "historyMd5": "c91637f087752750660aa68b4cb33daa"
+      }
+    ],
+    "newTables": [
+      "private.customer_native_email_requests (already exists on Test; new on released main)",
+      "private.android_live_push_runtime",
+      "private.android_live_push_devices",
+      "private.android_live_push_closed",
+      "private.android_live_push_deliveries"
+    ],
+    "existingTableChanges": [
+      "private.customer_password_requests: client and native-state CHECKs now explicitly support android; preserve web/ios and existing rows"
+    ],
+    "publicRoutines": [
+      "public.customer_native_email_api(text,jsonb): service-only definer, device-bound reviewed signup protocol",
+      "public.customer_password_api(text,jsonb): guarded additive Android binding replacements only",
+      "public.customer_android_live_push_api(text,jsonb): service-only invoker wrapper",
+      "public.customer_android_live_push_dispatch(text,jsonb): service-only invoker wrapper",
+      "public.configure_android_live_push(jsonb): service-only invoker wrapper",
+      "public.authorize_android_live_push_dispatch(text): service-only invoker wrapper"
+    ],
+    "privateRoutines": [
+      {
+        "name": "android_live_push_allowed",
+        "definer": false,
+        "signature": "p_job uuid"
+      },
+      {
+        "name": "android_live_push_api",
+        "definer": true,
+        "signature": "p_action text, p_data jsonb"
+      },
+      {
+        "name": "android_live_push_bound",
+        "definer": false,
+        "signature": "r private.android_live_push_runtime"
+      },
+      {
+        "name": "android_live_push_configure",
+        "definer": true,
+        "signature": "p_data jsonb"
+      },
+      {
+        "name": "android_live_push_dispatch",
+        "definer": true,
+        "signature": "p_action text, p_data jsonb"
+      },
+      {
+        "name": "android_live_push_dispatch_secret",
+        "definer": true,
+        "signature": "p_secret text"
+      },
+      {
+        "name": "android_live_push_event_wake",
+        "definer": true,
+        "signature": ""
+      },
+      {
+        "name": "android_live_push_owner",
+        "definer": false,
+        "signature": "person uuid, session uuid"
+      },
+      {
+        "name": "android_live_push_retire",
+        "definer": true,
+        "signature": ""
+      },
+      {
+        "name": "kick_android_live_push",
+        "definer": true,
+        "signature": ""
+      }
+    ],
+    "triggers": [
+      {
+        "table": "private.android_live_push_devices",
+        "name": "android_live_push_retire",
+        "event": "BEFORE DELETE row; minimal replay fence, no owner/token in fence"
+      },
+      {
+        "table": "auth.sessions",
+        "name": "android_live_push_session_retire",
+        "event": "BEFORE DELETE row; retire only matching new Android registrations/deliveries"
+      },
+      {
+        "table": "private.customer_push_events",
+        "name": "android_live_push_event_wake",
+        "event": "AFTER INSERT statement; fixed Android endpoint; fails closed on Test/OFF/missing secret"
+      }
+    ],
+    "rlsGrants": [
+      "All five new tables have RLS enabled with no client policy; explicit table privileges revoked from PUBLIC, anon, authenticated and service_role",
+      "New public protocol routines: EXECUTE revoked from PUBLIC/anon/authenticated; service_role only",
+      "Private bounded API/dispatch/configure/secret routines: EXECUTE service_role only; other private helpers revoked from all client/service roles",
+      "All privileged routines pin empty search_path; existing service_role private schema USAGE is reused",
+      "No new database role, public view, client table policy, APNs grant or Test experiment grant"
+    ],
+    "sharedObjectsUsed": [
+      "Existing customer_accounts/booking owners, central notification preferences, booking events/revisions/schedules; no historical replay",
+      "Same existing iOS schedule kinds/due/expiry/revision/dedupe semantics; separate Android deliveries and no APNs claim/lease/finish modifications"
+    ],
+    "cron": {
+      "name": "customer-android-live-push-dispatch",
+      "schedule": "* * * * *",
+      "command": "select private.kick_android_live_push()",
+      "installedActive": false,
+      "activation": "Separate reviewed step after matching Live Function, secrets, runtime flags and provider checks; no change to existing jobs"
+    },
+    "retention": [
+      "New transport clears stale token/permission after 90 inactive days and finished Android deliveries after 7 days during bounded claims",
+      "Closed installation fence retains only hashes/version for replay protection; no owner/session/raw FCM token",
+      "Account deletion cascades new bindings/deliveries; session revocation retires only its bindings. No personal account deletion tested here"
+    ]
+  },
+  "functions": {
+    "customer-auth": {
+      "testVersion": 41,
+      "bundleSha256": "19db9c08943ef94f7cdfe71f385d523ad61c340853d2a613f0207a8afaa28705",
+      "sourceReadbackExact": true,
+      "changes": "Explicit Android environment flag; native email/recovery binding; production routes to new bounded Android registry; iOS/Web preserved",
+      "duplicateSignup": "HTTP409 SIGNUP_EMAIL_EXISTS after shared global + email/IP limits; no phantom pending proof or mail; eligible unconfirmed-customer resume retained; iOS/Web unchanged"
+    },
+    "customer-android-push-dispatch": {
+      "testVersion": 4,
+      "bundleSha256": "5f85536af5917bd98fcb4307e691fda2ba50243cd3c8f3a1e51d64e6d569360d",
+      "sourceReadbackExact": true,
+      "changes": "Separate pinned runtime/project/package/sender; current owner/token/version rechecked before send; same localized booking alerts; explicit transient backoff and terminal uncertainty; Test contract retained",
+      "tokenAcquisitionFailure": "Before deps.send only: existing bounded Live retry schedule; possible send exceptions remain terminal uncertain. No Test experiment retry policy change."
+    }
+  },
+  "testFrontendCarrier": {
+    "branch": "codex/android-privacy-test-carrier-20261120",
+    "commit": "cacdab3",
+    "base": "b35d938",
+    "workerVersion": "3492709d-8942-4ff5-a6e0-d99dc6527e38",
+    "mainAsset": "/assets/main-DMhFNGHE.js",
+    "sha256": "38eb5a003ec0358c366e70a04430dd245762678d52dc6d0d4372b8e277f41e4f",
+    "onlySourceChange": "customerPrivacy EN/AR objects, byte-equivalent JSON to this Live candidate; settlement source/routes, access gate/inbox and other features preserved"
+  },
+  "testAuthHelper": {
+    "worker": "barber-auth-test",
+    "version": "fdee9cc0-2233-4f46-b286-c23ab65b1a77",
+    "signer": "Existing one Test signer/package unchanged",
+    "checks": "Fixed credential-free 307 fallback; malformed/excess parameters denied; no provider calls"
+  },
+  "releaseGates": [
+    "Review immutable candidate and run CI before dev/main merge",
+    "Exact production-image/schema replay has NOT been run in this scope; no Docker/local Test runtime was authorized",
+    "Deploy new Live auth helper and additive booking assetlinks with all three actual Play certificates, preserving exact iOS AASA/routes",
+    "Append only five corrected Auth redirect patterns; preserve existing Site URL, iOS/Web redirect entries and Google/Apple audiences; no unnecessary Firebase API/billing change",
+    "Server-only installation/verification of dedicated FCM JSON and new random dispatch secret; no credential ever in Test/source/client",
+    "Apply seven additive migrations and matching Functions/frontend with ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED initially false; DB flags OFF and cron inactive",
+    "Separately approve staged Live registration/notification activation and focused real Play-delivered sign-in/link/push checks; no delivery occurred in this Test pass",
+    "Current Android contract is signed-in booking notifications only: guest push and arbitrary Admin announcement destinations unsupported",
+    "Restricted helper has no reviewed-release verb: existing automatic_sql rejects this DDL. Coordinator must identify the existing operator adoption/reconciliation path or separately review a fixed candidate-specific entrypoint; do not bypass the allowlist."
+  ],
+  "rollback": [
+    "Disable ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED; set registration/delivery flags false and deactivate only new Android cron",
+    "Restore previous website/Function release using normal receipt; retain additive tables/proofs/closed fences/terminal jobs (do not drop or rewind delivery state)",
+    "Restore only changed Worker versions and remove only newly appended Auth redirect entries if rollback requires it; preserve all existing iOS/Web entries and AASA",
+    "New FCM IAM/key and Vault cleanup belongs to coordinator under separate approved security scope; do not revoke or modify APNs/Apple keys",
+    "No destructive down migration, account merge, seed backfill, historical event replay or automatic retry of an uncertain provider outcome"
+  ]
+}

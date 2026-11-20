@@ -18,9 +18,12 @@ const deliverEmail=createCustomerEmailDelivery(emailClient.auth,appUrl,environme
 Deno.serve(createCustomerAuthHandler({
   environment,appUrl,publicUrl:Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
+  androidEnabled:Deno.env.get('ANDROID_CUSTOMER_ENABLED')==='true',
   cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
-    const result=await admin.rpc(action.startsWith('push-') ? 'customer_push_api' : action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:action,p_data:data});
+    const androidPush=action.startsWith('android-push-');
+    const androidApi=Deno.env.get('APP_ENV')==='production'?'customer_android_live_push_api':'customer_android_push_api';
+    const result=await admin.rpc(androidPush ? androidApi : action.startsWith('push-') ? 'customer_push_api' : action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:androidPush?action.slice(8):action,p_data:data});
     if(result.error)throw Error(result.error.message);
     if(action==='update-profile') {
       const changed=await admin.auth.admin.updateUserById(String(result.data.id),{user_metadata:{name:result.data.name}});
@@ -96,6 +99,51 @@ Deno.serve(createCustomerAuthHandler({
     admin:async(token,action,data)=>{
       const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
       const result=await client.rpc('admin_account_email',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+  },
+  nativeEmail:{
+    rpc:async(action,data)=>{
+      const result=await admin.rpc('customer_native_email_api',{p_action:action,p_data:data});
+      if(result.error)throw Error(result.error.message);
+      return result.data;
+    },
+    account:async(name,email,password)=>{
+      const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
+      if(lookup.error)throw Error('UNAVAILABLE');
+      if(lookup.data){
+        const current=await admin.auth.admin.getUserById(String(lookup.data.id));
+        if(current.error)throw Error('UNAVAILABLE');
+        const user=current.data.user;
+        if(!user)throw Error('UNAVAILABLE');
+        return user.app_metadata.role==='customer' && !user.email_confirmed_at && !user.deleted_at ? user.id : null;
+      }
+      const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
+      if(created.error){
+        if(['email_exists','user_already_exists'].includes(String(created.error.code)))return null;
+        throw Error('UNAVAILABLE');
+      }
+      if(!created.data.user?.id)throw Error('UNAVAILABLE');
+      return created.data.user.id;
+    },
+    send:async(email,callback)=>{
+      const result=await emailClient.auth.resend({type:'signup',email,options:{emailRedirectTo:callback}});
+      if(result.error)throw Error('UNAVAILABLE');
+    },
+    verify:async(params)=>{
+      const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
+      const result=params.tokenHash ? await client.auth.verifyOtp({type:'signup',token_hash:params.tokenHash})
+        : await client.auth.verifyOtp({type:'email',email:params.email || '',token:params.code || ''});
+      if(result.error){
+        if(result.error.name==='AuthRetryableFetchError' || !result.error.status || result.error.status>=500)throw Error('UNAVAILABLE');
+        return null;
+      }
+      return result.data.session;
+    },
+    discard:async(token)=>{await admin.auth.admin.signOut(token,'local');},
+    profile:async(userId,session,name)=>{
+      const result=await admin.rpc('customer_account_api',{p_action:'email-ensure',p_data:{user_id:userId,session_id:session,name}});
       if(result.error)throw Error(result.error.message);
       return result.data;
     },

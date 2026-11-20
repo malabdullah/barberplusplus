@@ -115,3 +115,31 @@ Deno.test('an invalid invitation does not authorize a password write and clears 
  const f=fixture({action:'password-invite-verify',body:{tokenHash:'a'.repeat(64)}});f.c.deps.verifyRecovery=async()=>null;
  await rejects(f.run,'INVALID_CODE');assert(f.calls.some(x=>x.action==='abort'&&x.data.operation===proof)&&f.writes.length===0);
 });
+
+Deno.test('Android recovery is explicit and restricted to the exact hosted Test runtime',async()=>{
+ const body={email:'fixture@example.test',client:'android',nativeState:request,nativeChallenge:'a'.repeat(43)};
+ const f=fixture({action:'email-recovery',body,publicUrl:'https://qvkucvcjmojjbphlzlks.supabase.co'});
+ const result=await f.run();assert(result?.status===200);
+ assert(f.calls.find(c=>c.action==='request-start')?.data.client==='android');
+ const callback=new URL(f.mail[0]);assert(callback.searchParams.get('client')==='android'&&callback.searchParams.get('state')===request);
+ for(const runtime of [{environment:'production',appUrl:'https://www.barberplusplus.com'}, {publicUrl:'https://different.supabase.co'}]){
+  const denied=fixture({action:'email-recovery',body,publicUrl:'https://qvkucvcjmojjbphlzlks.supabase.co',...runtime});
+  await rejects(denied.run,'INVALID_REQUEST');assert(denied.calls.length===0&&denied.mail.length===0);
+ }
+});
+Deno.test('Android code verification hashes its own verifier and never accepts a raw provider token',async()=>{
+ const body={client:'android',requestId:request,nativeState:request,nativeVerifier:'v'.repeat(43),code:'123456'};
+ const f=fixture({action:'password-recovery-verify',body,publicUrl:'https://qvkucvcjmojjbphlzlks.supabase.co'});
+ await f.run();const load=f.calls.find(c=>c.action==='request-load');assert(load?.data.client==='android'&&String(load.data.native_challenge).length===43);
+ for(const extra of [{tokenHash:'a'.repeat(64)},{deliveryToken:proof}]){
+  const denied=fixture({action:'password-recovery-verify',body:{...body,...extra},publicUrl:'https://qvkucvcjmojjbphlzlks.supabase.co'});
+  await rejects(denied.run,'INVALID_CODE');assert(!denied.calls.some(c=>c.action==='request-load'));
+ }
+});
+Deno.test('Android delivery cannot masquerade as iOS or reach the production deployment',async()=>{
+ const body={client:'android',requestId:request,nativeState:request,tokenHash:'a'.repeat(64)};
+ const f=fixture({action:'password-native-delivery',body,publicUrl:'https://qvkucvcjmojjbphlzlks.supabase.co'});await f.run();
+ assert(f.calls.find(c=>c.action==='request-delivery')?.data.client==='android');
+ const denied=fixture({action:'password-native-delivery',body,environment:'production',appUrl:'https://www.barberplusplus.com'});
+ await rejects(denied.run,'INVALID_REQUEST');assert(denied.calls.length===0);
+});

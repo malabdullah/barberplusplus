@@ -3,6 +3,8 @@ import { customerPasswordAction, type PasswordDependencies } from './password.ts
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 import { managerRegistrationAction, type RegistrationDependencies } from './registration.ts';
 import { emailManagementAction, type EmailManagementDependencies } from './email-management.ts';
+import { nativeEmailAction, type NativeEmailDependencies } from './native-email.ts';
+import { androidAuthEnabled } from './native-binding.ts';
 type Data = Record<string, unknown>;
 type Identity = { user_id: string; session_id: string };
 type Dependencies = {
@@ -23,6 +25,8 @@ type Dependencies = {
   passwords?: PasswordDependencies;
   registration?: RegistrationDependencies;
   emailManagement?: EmailManagementDependencies;
+  nativeEmail?: NativeEmailDependencies;
+  androidEnabled?: boolean;
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -56,6 +60,14 @@ export function createCustomerAuthHandler(deps: Dependencies) {
       if(!body || typeof body!=='object' || Array.isArray(body)) return reply(400,{error:'INVALID_REQUEST'});
       const action=String(body.action);
       if (body.nativeReturn !== undefined && (!['email-signup', 'email-resend'].includes(action) || body.client !== 'ios' || body.nativeReturn !== 'https')) return reply(400, { error: 'INVALID_REQUEST' });
+      if (['email-signup','email-resend'].includes(action) && body.client !== undefined && !['web','ios','android'].includes(String(body.client))) return reply(400,{error:'INVALID_REQUEST'});
+      if (action.startsWith('email-native-') || (body.client==='android' && ['email-signup','email-resend'].includes(action))) {
+        if (!deps.nativeEmail) return reply(404,{error:'NOT_AVAILABLE'});
+        const result=await nativeEmailAction({action,body,environment:deps.environment,appUrl:deps.appUrl,publicUrl:deps.publicUrl,androidEnabled:deps.androidEnabled,
+          ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',
+          limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max})),deps:deps.nativeEmail});
+        return result ? reply(result.status,result.body) : reply(400,{error:'INVALID_REQUEST'});
+      }
       if (['correct-registration-email','admin-email-list','admin-email-change'].includes(action)) {
         if (!deps.emailManagement) return reply(404,{error:'NOT_AVAILABLE'});
         const result=await emailManagementAction({action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',secret:deps.secret,appUrl:deps.appUrl,deps:deps.emailManagement,
@@ -77,7 +89,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const result = await customerPasswordAction({
           action,body,token:req.headers.get('authorization')?.replace(/^Bearer /i,'') || '',
           ip:req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local',
-          environment:deps.environment,appUrl:deps.appUrl,identity:deps.identity,
+          environment:deps.environment,appUrl:deps.appUrl,publicUrl:deps.publicUrl,androidEnabled:deps.androidEnabled,identity:deps.identity,
           limit:async(value,max)=>Boolean(await deps.rpc('limit',{key:await hash(value),max})),deps:deps.passwords,
         });
         if (result) return reply(result.status,result.body);
@@ -95,7 +107,14 @@ export function createCustomerAuthHandler(deps: Dependencies) {
           if(!result)return reply(401,{error:'INVALID_LOGIN'});
           if(result.mfaRequired)return reply(200,{session:result.session,mfaRequired:true});
           const profile=await deps.rpc('email-ensure',{...result.identity,name:result.name});
-          if(!profile || (profile as Data).needsName)return reply(400,{error:'ACCOUNT_UNAVAILABLE'});
+          if(!profile || (profile as Data).needsName) {
+            // A verified Android Test identity stays provisional until the user
+            // explicitly completes the canonical customer profile.
+            if (profile && (profile as Data).needsName === true && body.client === 'android' && androidAuthEnabled(deps)) {
+              return reply(200,{session:result.session,profile:{needsName:true}});
+            }
+            return reply(400,{error:'ACCOUNT_UNAVAILABLE'});
+          }
           return reply(200,{session:result.session,profile});
         }
         if(action==='email-signup') {

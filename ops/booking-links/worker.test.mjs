@@ -12,8 +12,8 @@ test('Live browser fallback uses only fixed production origin and public selecti
     assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
   }
 });
-test('invalid selectors, ticket paths and Android association are never handled', () => {
-  for (const path of ['/', '/book', '/book?shop=bad', `/book?shop=${id}&barber=${id}`, `/book?shop=${id}&shop=${id}`, `/book?shop=${id}&next=https://foreign.example`, `/book?shop=${id}#private`, '/booking/share', '/.well-known/assetlinks.json']) {
+test('invalid selectors and ticket paths are never handled', () => {
+  for (const path of ['/', '/book', '/book?shop=bad', `/book?shop=${id}&barber=${id}`, `/book?shop=${id}&shop=${id}`, `/book?shop=${id}&next=https://foreign.example`, `/book?shop=${id}#private`, '/booking/share']) {
     assert.equal(worker.fetch(new Request(HANDOFF_ORIGIN + path)).status, 404);
   }
   assert.equal(worker.fetch(new Request(HANDOFF_ORIGIN + '/book?barber=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaA')).status, 404);
@@ -38,4 +38,10 @@ test('Live helper preserves accepted Test helper selector and fallback semantics
     assert.equal(live.status, test.status);
     if (live.status === 307) assert.equal(live.headers.get('location').replace(BOOKING_ORIGIN, TEST_ORIGIN), test.headers.get('location'));
   }
+});
+
+test('Live Android booking association has all three Play certificates without changing iOS AASA', async () => {
+  const [association] = await worker.fetch(new Request(HANDOFF_ORIGIN + '/.well-known/assetlinks.json')).json();
+  assert.equal(association.target.package_name, 'com.barberplusplus.customer');
+  assert.equal(association.target.sha256_cert_fingerprints.length, 3);
 });

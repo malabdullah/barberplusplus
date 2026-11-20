@@ -2001,8 +2001,8 @@
   },
   "customerPrivacy": {
     "title": "Privacy policy",
-    "updated": "Updated 14 November 2026",
-    "intro": "This page explains how the Barber++ website and customer iPhone app use information for accounts, appointments and support.",
+    "updated": "Updated 20 November 2026",
+    "intro": "This page explains how the Barber++ website and customer iPhone and Android apps use information for accounts, appointments and support.",
     "back": "Back to booking",
     "sections": [
       {
@@ -2027,11 +2027,11 @@
       },
       {
         "title": "Optional announcements",
-        "text": "If you enable announcements, authorized administrators can select eligible audiences using account names, email addresses, phone numbers, booking history, shop or area, and app/device eligibility. These details may therefore support Barber++ announcements as well as core booking functions. Announcement preferences are separate from essential account emails and booking updates. Barber++ does not use cross-app advertising tracking."
+        "text": "If you enable announcements, authorized administrators can select eligible audiences using account names, email addresses, phone numbers, booking history, shop or area, and app/device eligibility. These details may therefore support Barber++ announcements as well as core booking functions. Announcement preferences are separate from essential account emails and booking updates. Barber++ does not use cross-app advertising tracking. Android currently supports signed-in booking notifications, not guest push or administrator announcements."
       },
       {
         "title": "Device storage and technical information",
-        "text": "The website stores sessions, preferences and temporary booking drafts in the browser. The iPhone app stores credentials securely on the device. Face ID and Touch ID templates stay with iOS; Barber++ does not receive them. If notifications are enabled, device push identifiers, preferences and delivery records support booking updates and permitted announcements. Service logs support security and diagnostics. Google Sign-In and Firebase Authentication may process identifiers, IP-derived approximate location, usage and diagnostic data under their policies. Barber++ does not request GPS access for booking. Signing out does not delete your account."
+        "text": "The website stores sessions, preferences and temporary booking drafts in the browser. The iPhone and Android apps protect sign-in credentials using device security. Face and fingerprint templates stay with the operating system; Barber++ does not receive them. Android uses Credential Manager and Supabase for sign-in, not Firebase Authentication. Choosing Android notification setup can register Firebase Cloud Messaging and installation/device identifiers, account/session binding, language and preferences even if notification permission is denied; delivery is suppressed while permission is off. iPhone push identifiers support booking updates and permitted announcements. Hosting, SDK, image/CDN and network services may process IP addresses, device/app metadata and diagnostic information under their policies. Public images and ordinary preferences have separate local storage. Barber++ does not request GPS access for booking. Signing out does not delete your account."
       },
       {
         "title": "Deleting your customer account",
@@ -2157,7 +2157,12 @@
       "PASSWORD_UPDATE_UNCERTAIN": "We could not confirm the result. Sign in again with your new password. If it does not work, use Forgot password. Do not keep retrying this update.",
       "RATE_LIMITED": "Too many attempts. Please wait before trying again.",
       "INVALID_INVITE": "This invitation is invalid, expired or has already been used."
-    }
+    },
+    "androidOpenTitle": "Continue in Barber++ Test",
+    "androidOpenIntro": "Open the app on the same Android device that requested this email.",
+    "androidFallback": "Open Barber++ Test and enter the code from your email.",
+    "androidLiveOpenTitle": "Continue in Barber++",
+    "androidLiveFallback": "Open Barber++ and enter the code from your email."
   },
   "accountEmail": {
     "adminOnly": "Only an administrator can change your email. Contact support for help.",
