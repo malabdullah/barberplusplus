@@ -376,10 +376,11 @@ export function AppProvider({ children }) {
           ? await agentService.getAllBranches()
           : await branchesService.getAll();
 
+        const managedIds = userRole === 'manager' ? branchesData.map(branch => branch.id) : null;
         const [barbersData, servicesData, bookingsData] = await Promise.all([
-          barbersService.getAll(),
-          servicesService.getAll(),
-          bookingsService.getAll(),
+          barbersService.getAll(managedIds),
+          servicesService.getAll(managedIds),
+          bookingsService.getAll(managedIds ? { branchIds: managedIds } : {}),
         ]);
         setBranches(branchesData);
         setBarbers(barbersData);
@@ -647,11 +648,12 @@ export function AppProvider({ children }) {
   // Reload all data
   const reloadData = useCallback(async () => {
     try {
-      const [branchesData, barbersData, servicesData, bookingsData] = await Promise.all([
-        branchesService.getAll(),
-        barbersService.getAll(),
-        servicesService.getAll(),
-        bookingsService.getAll(),
+      const branchesData = await branchesService.getAll();
+      const managedIds = userRole === 'manager' ? branchesData.map(branch => branch.id) : null;
+      const [barbersData, servicesData, bookingsData] = await Promise.all([
+        barbersService.getAll(managedIds),
+        servicesService.getAll(managedIds),
+        bookingsService.getAll(managedIds ? { branchIds: managedIds } : {}),
       ]);
       setBranches(branchesData);
       setBarbers(barbersData);

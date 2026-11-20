@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
@@ -20,6 +20,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 const open = () => render(<MemoryRouter><SubscriptionBilling /></MemoryRouter>);
+it('shows a twelve-payment monthly discount with its correct duration and amount', async () => {
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business] } : action === 'detail' ? business : { count: 3, subtotalFils: 30000, totalFils: 15000, discountFils: 15000, normalRenewalFils: 30000, discountPayments: 12 }));
+  open(); await screen.findByText(business.name);
+  fireEvent.click(screen.getByRole('button', { name: 'Calculate estimate' }));
+  await screen.findByText('First 12 monthly payments');
+  expect(screen.getAllByText('KD 15.000')).toHaveLength(2);
+});
 it('uses backend totals and re-reads after a saved preference', async () => {
   open();
   await screen.findByText(business.name);
@@ -103,13 +110,69 @@ it('opens discount codes from a populated subscription list without reusing its 
   expect(rpc).toHaveBeenCalledWith('codes', expect.any(Object));
 });
 
-it('shows actual paid capacity and the unpaid prorated estimate without a payment action', async () => {
+
+it.each([false, true])('separates the Kuwait billing and complimentary expiry dates for admin=%s', async admin => {
+  const actual = { ...business, periodEndsAt: '2026-12-19T22:05:45Z',
+    access: { status: 'active', until: '2026-12-19T22:05:45Z' },
+    complimentaryAccess: [{ startsAt: '2026-11-19T21:00:00Z', expiresAt: '2099-11-18T21:00:00Z' }],
+    grants: admin ? [{ id: 'full-grant', kind: 'full', starts_at: '2026-11-19T21:00:00Z', ends_at: '2099-11-18T21:00:00Z', branch_ids: [] }] : [],
+  };
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
+  render(<MemoryRouter initialEntries={['/admin/subscriptions/one']}><Routes><Route path="/admin/subscriptions/:businessId" element={<SubscriptionBilling admin={admin}/>}/></Routes></MemoryRouter>);
+  const summary = within(await screen.findByRole('region', { name: 'Current subscription' }));
+  expect(summary.getByText('Billing period ends').nextElementSibling).toHaveTextContent('20 Dec 2026');
+  expect(summary.getByText('Complimentary access expires').nextElementSibling).toHaveTextContent('19 Nov 2099');
+  expect(summary.queryByText('Renewal / expiry')).toBeNull();
+  expect(rpc.mock.calls.every(([action]) => ['businesses', 'detail'].includes(action))).toBe(true);
+});
+
+it('renders the new date labels in Arabic dark mode', async () => {
+  const instance = i18next.createInstance();
+  await instance.init({ lng: 'ar', resources: { ar: { translation: ar } }, interpolation: { escapeValue: false } });
+  settings.language = 'ar'; settings.theme = 'dark';
+  const actual = { ...business, periodEndsAt: '2026-12-19T22:05:45Z', grants: [{ kind: 'full', starts_at: '2026-11-19T21:00:00Z', ends_at: '2099-11-18T21:00:00Z' }],
+    access: { status: 'active', enforced: true }, paidCapacity: 3,
+    capacity: { allowed: false, reason: 'BILLING_CAPACITY_REQUIRED', additionalFils: 4995 } };
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
+  render(<I18nextProvider i18n={instance}><MemoryRouter><SubscriptionBilling/></MemoryRouter></I18nextProvider>);
+  const label = await screen.findByText(ar.subscriptionDesign.complimentaryAccessExpires);
+  expect(label.nextElementSibling.querySelector('time')).toHaveAttribute('dateTime', '2099-11-18T21:00:00Z');
+  expect(screen.getByText(ar.subscriptionDesign.billingPeriodEnds)).toBeVisible();
+  expect(screen.getByText(ar.subscriptionEnforcement.addBarberToday).nextElementSibling).toHaveTextContent('4.995');
+});
+
+it('shows one concise manager row with the server-provided cost for one active barber today', async () => {
   const actual = { ...business, access: { status: 'active', enforced: true }, paidCapacity: 3,
     capacity: { allowed: false, reason: 'BILLING_CAPACITY_REQUIRED', additionalFils: 5000 } };
   rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
   open();
-  await screen.findByText('Paid barber places');
+  await screen.findByText('Add one active barber today');
   expect(screen.getByText('KD 5.000')).toBeVisible();
-  expect(screen.getByText(/This barber needs an additional paid place/)).toBeVisible();
+  expect(screen.queryByText('Paid barber places')).toBeNull();
+  expect(screen.queryByText('Additional amount this period')).toBeNull();
+  expect(screen.queryByText(/This barber needs an additional paid place/)).toBeNull();
   expect(screen.queryByRole('button', { name: /pay|settle/i })).toBeNull();
+});
+
+it.each([
+  [{ allowed: true, additionalFils: 0 }, 'KD 0.000'],
+  [{ allowed: false, reason: 'BILLING_RENEW_REQUIRED', additionalFils: 0 }, 'Renew subscription first'],
+  [{ allowed: false, reason: 'BILLING_ACCESS_REQUIRED', additionalFils: 0 }, 'Subscription required'],
+  [{ allowed: false, reason: 'BILLING_CAPACITY_REQUIRED' }, 'Not available'],
+])('does not present a blocked or missing quote as a free barber place (%j)', async (capacity, expected) => {
+  const actual = { ...business, access: { status: 'active', enforced: true }, paidCapacity: 3, capacity };
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
+  open();
+  const label = await screen.findByText('Add one active barber today');
+  expect(label.nextElementSibling).toHaveTextContent(expected);
+});
+
+it('preserves the Admin capacity details', async () => {
+  const actual = { ...business, access: { status: 'active', enforced: true }, paidCapacity: 3,
+    capacity: { allowed: false, reason: 'BILLING_CAPACITY_REQUIRED', additionalFils: 5000 } };
+  rpc.mockImplementation(() => Promise.resolve(actual));
+  render(<MemoryRouter initialEntries={['/admin/subscriptions/one']}><Routes><Route path="/admin/subscriptions/:businessId" element={<SubscriptionBilling admin/>}/></Routes></MemoryRouter>);
+  await screen.findByText('Paid barber places');
+  expect(screen.getByText('Additional amount this period')).toBeVisible();
+  expect(screen.queryByText('Add one active barber today')).toBeNull();
 });

@@ -79,7 +79,10 @@ export const barbersService = {
    */
   getAll: async (branchId = null) => {
     let query = supabase.from('barbers').select('*');
-    if (branchId) query = query.eq('branch_id', branchId);
+    if (Array.isArray(branchId)) {
+      if (!branchId.length) return [];
+      query = query.in('branch_id', branchId);
+    } else if (branchId) query = query.eq('branch_id', branchId);
     const { data, error } = await query.order('name');
     if (error) throw error;
     return (data || []).map(toFrontend);

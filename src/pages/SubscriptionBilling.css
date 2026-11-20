@@ -16,5 +16,11 @@
 .billing-foundation .billing-price strong { font-size: clamp(30px,5vw,58px); }
 .billing-foundation .subscription-history { margin: 0; }
 .billing-foundation .billing-preview-label { white-space: normal; }
+.subscription-summary-dates { display: grid; gap: 12px; margin: 16px 0 0; }
+.subscription-summary-dates > div { display: grid; gap: 4px; }
+.subscription-summary-dates dt { color: var(--billing-muted); font-size: 13px; }
+.subscription-summary-dates dd { margin: 0; font-size: 15px; color: var(--billing-ink); }
+.subscription-summary-dates small { display: block; margin-top: 4px; color: var(--billing-muted); font-size: 12px; }
+.subscription-heading-actions { display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
 .billing-foundation .status-transition, .billing-foundation .status-not_started { color: var(--billing-ink); background: var(--billing-subtle); }
 @media(max-width:760px) { .billing-foundation { padding: 18px; } .subscription-foundation-list { display: block; } .billing-foundation .billing-page-heading { align-items: start; flex-direction: column; gap: 12px; } .billing-foundation .billing-review-rows > div { grid-template-columns: minmax(0,1fr); gap: 8px; } }
