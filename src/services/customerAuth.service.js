@@ -128,7 +128,9 @@ export const customerAuthService = {
   passwordStatus: () => request('password-status', {}, true),
   async nativeRecoveryDelivery(input) {
     const url = new URL(input); const hash = new URLSearchParams(url.hash.slice(1));
-    const result = await request('password-native-delivery', { requestId: url.searchParams.get('request_id'), nativeState: url.searchParams.get('state'), tokenHash: hash.get('token_hash') || url.searchParams.get('token_hash') });
+    const android = url.searchParams.get('client') === 'android';
+    const signup = android && (hash.get('type') || url.searchParams.get('type')) === 'signup';
+    const result = await request(signup ? 'email-native-delivery' : 'password-native-delivery', { requestId: url.searchParams.get('request_id'), nativeState: url.searchParams.get('state'), tokenHash: hash.get('token_hash') || url.searchParams.get('token_hash'), ...(android ? { client: 'android' } : {}) });
     return nativeEmailReturn(input, appConfig, result.deliveryToken);
   },
   setupPassword: ({ audience, returnTo } = {}) => request('password-setup-request', { ...(audience === 'work' ? { audience } : {}), ...(returnTo === '/book' ? { returnTo } : {}) }, true),

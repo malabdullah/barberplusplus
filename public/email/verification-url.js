@@ -21,11 +21,11 @@ export function verificationUrl(input, config) {
     if (target.pathname !== '/customer/email-callback') throw new Error('INVALID_LINK');
     if (key==='next' && ['book','account','work'].includes(value)) continue;
     if (key==='request_id' && uuid.test(value)) continue;
-    if (key==='client' && value==='ios') continue;
+    if (key==='client' && ['ios','android'].includes(value)) continue;
     if (key==='state' && uuid.test(value)) continue;
     throw new Error('INVALID_LINK');
   }
-  if (type==='signup' || type==='recovery' || type==='invite' || target.searchParams.get('client')==='ios') {
+  if (type==='signup' || type==='recovery' || type==='invite' || ['ios','android'].includes(target.searchParams.get('client'))) {
     const destination = new URL(type==='invite'?'/accept-invite':'/customer/email-callback',app);
     destination.search=target.pathname==='/customer/email-callback'?target.search:'';
     destination.hash=new URLSearchParams({type,token_hash:token}).toString();

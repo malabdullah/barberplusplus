@@ -1,0 +1,106 @@
+{
+  "apnsHash": "e86f9d42fff4b96de0227e153f8182bd",
+  "flagsOff": true,
+  "migrations": [
+    {
+      "name": "android_live_native_bindings",
+      "version": "20261120154354",
+      "historyMd5": "504dee98be6537c006ba11f9862ee827"
+    },
+    {
+      "name": "android_live_fcm_transport",
+      "version": "20261120154434",
+      "historyMd5": "dcb74ce58d80c1e7daf26768f0300825"
+    },
+    {
+      "name": "android_live_fcm_token_validation",
+      "version": "20261120154802",
+      "historyMd5": "f23105bf094a1fdc760fcf51b3b0a7db"
+    },
+    {
+      "name": "android_live_fcm_dispatch_alias",
+      "version": "20261120155248",
+      "historyMd5": "d3849a346b858f456cf5bbfc99ccd74b"
+    },
+    {
+      "name": "android_live_fcm_immediate_claim",
+      "version": "20261120155341",
+      "historyMd5": "05733715ee5ea98551f49921c5b14c25"
+    },
+    {
+      "name": "android_live_fcm_scheduler",
+      "version": "20261120155602",
+      "historyMd5": "e3fa7b9da66b9c24f06b784eab9e2eb6"
+    }
+  ],
+  "cronInactive": true,
+  "newQueueEmpty": true,
+  "privateRoutines": [
+    {
+      "name": "android_live_push_allowed",
+      "definer": false,
+      "signature": "p_job uuid"
+    },
+    {
+      "name": "android_live_push_api",
+      "definer": true,
+      "signature": "p_action text, p_data jsonb"
+    },
+    {
+      "name": "android_live_push_bound",
+      "definer": false,
+      "signature": "r private.android_live_push_runtime"
+    },
+    {
+      "name": "android_live_push_configure",
+      "definer": true,
+      "signature": "p_data jsonb"
+    },
+    {
+      "name": "android_live_push_dispatch",
+      "definer": true,
+      "signature": "p_action text, p_data jsonb"
+    },
+    {
+      "name": "android_live_push_dispatch_secret",
+      "definer": true,
+      "signature": "p_secret text"
+    },
+    {
+      "name": "android_live_push_event_wake",
+      "definer": true,
+      "signature": ""
+    },
+    {
+      "name": "android_live_push_owner",
+      "definer": false,
+      "signature": "person uuid, session uuid"
+    },
+    {
+      "name": "android_live_push_retire",
+      "definer": true,
+      "signature": ""
+    },
+    {
+      "name": "kick_android_live_push",
+      "definer": true,
+      "signature": ""
+    }
+  ],
+  "newRegistryEmpty": true,
+  "fixtureAccountsAbsent": true,
+  "functions": [
+    {
+      "slug": "customer-auth",
+      "version": 40,
+      "sha256": "327e97598eac1f7ecb0f6850d15db194a7871c316e1f7213d3e119b706df4850",
+      "allFilesExact": true
+    },
+    {
+      "slug": "customer-android-push-dispatch",
+      "version": 3,
+      "sha256": "1b78edbd129bf83157189beba57f2f230122e94ff0f541bd299e093d2b0bcdbc",
+      "allFilesExact": true
+    }
+  ]
+}
