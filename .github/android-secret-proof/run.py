@@ -4,8 +4,10 @@ from credential_protocol_probe import run_probe
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
+STAGE = 'HOSTED_GUARDS'
 
 def main():
+    global STAGE
     if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('GITHUB_EVENT_NAME') != 'push' or os.environ.get('GITHUB_REF') != 'refs/heads/codex/android-secret-transport-proof-20261120':
         raise ValueError('FIXED_HOSTED_PROOF_REQUIRED')
     if os.environ.get('DOCKER_HOST') or os.environ.get('DOCKER_CONTEXT'):
@@ -15,6 +17,7 @@ def main():
         if r.returncode:
             raise RuntimeError('SYNTHETIC_COMMAND_FAILED')
         return r.stdout
+    STAGE = 'FROZEN_SOURCE'
     pinned = '81b0f05d3be62febd7ae1087523cc5bd0e3d68a44cd4d1e33dc91ce0ca66a2b7'
     runtime = (ROOT / 'ops/release/runtime-lock.json').read_bytes()
     if hashlib.sha256(runtime).hexdigest() != pinned:
@@ -23,6 +26,7 @@ def main():
     source = '7e0ef06761cb22e8df1c5cb35c02501ad0c181fc'
     if command(['git', 'rev-parse', 'HEAD:ops/release/runtime-lock.json']) != command(['git', 'rev-parse', source + ':ops/release/runtime-lock.json']):
         raise ValueError('SOURCE_RUNTIME_MISMATCH')
+    STAGE = 'RUNNER_SOCKET'
     context = json.loads(command(['docker', 'context', 'inspect']))[0]
     if not context['Endpoints']['docker']['Host'].startswith('unix:///'):
         raise ValueError('OWNED_LOCAL_RUNNER_SOCKET_REQUIRED')
@@ -41,6 +45,7 @@ def main():
         '-c vault.getkey_script=/var/lib/postgresql/barber-fixture-getkey'
     )
     try:
+        STAGE = 'PINNED_CONTAINER_START'
         command(['docker', 'run', '-d', '--name', name, '--platform', 'linux/amd64', '--label', 'barber.operation=android-secret-protocol', '--network', 'none', '--memory', '768m', '--cpus', '1', '--user', 'postgres', '--tmpfs', '/tmp:rw,size=512m', '--entrypoint', '/bin/bash', image, '-lc', startup])
         started = True
         for _ in range(60):
@@ -52,7 +57,9 @@ def main():
             raise RuntimeError('SYNTHETIC_POSTGRES_START_FAILED')
         def sql(text):
             return command(['docker', 'exec', '-i', name, 'psql', '-h', '/tmp', '-U', 'postgres', '-d', 'postgres', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], text.encode()).decode()
+        STAGE = 'SYNTHETIC_VAULT_BOOTSTRAP'
         sql('create role anon;create role authenticated;create role service_role;create role supabase_admin superuser;create schema extensions;create extension pgcrypto with schema extensions;create extension pgsodium;create extension supabase_vault;')
+        STAGE = 'BOUND_PARAMETER_PROBE'
         result = run_probe(ROOT, sql, None, name)
         result.update({'frozenApplicationSource': source, 'proofHead': os.environ['GITHUB_SHA'], 'pinnedImage': image, 'network': 'none', 'publishedPorts': 0, 'fullAppOrGatewaySuitesRepeated': False, 'sourceHashes': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in HERE.glob('*.py')}})
         path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'android-secret-transport-proof.json'
@@ -66,5 +73,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        print(json.dumps({'status': 'SYNTHETIC_PROTOCOL_PROOF_FAILED', 'reason': str(error) if isinstance(error, ValueError) else type(error).__name__, 'rawErrorsPrinted': False, 'productionAccess': False}))
+        print(json.dumps({'status': 'SYNTHETIC_PROTOCOL_PROOF_FAILED', 'stage': STAGE, 'reason': str(error) if isinstance(error, ValueError) else type(error).__name__, 'rawErrorsPrinted': False, 'productionAccess': False}))
         raise SystemExit(1)

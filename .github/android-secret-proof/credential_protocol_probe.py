@@ -19,7 +19,7 @@ def run_probe(root, sql, docker, name):
         return subprocess.run(['docker', 'exec', '-i', name, 'psql', '-h', '/tmp', '-U', 'postgres', '-d', 'postgres', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'ECHO=none', '-v', 'VERBOSITY=sqlstate'], input=data.encode(), capture_output=True, timeout=60)
     result = execute(batch)
     lines = result.stdout.decode().splitlines()
-    if result.returncode or lines[:len(values)] != ['t'] * len(values) or lines[len(values)] != 'CREATED_TWO' or not all(json.loads(lines[len(values)+1]).values()):
+    if result.returncode or lines[:len(values)] != ['t'] * len(values) or lines[len(values)] != 'CREATED_TWO' or lines[len(values)+1] != 't':
         raise ValueError('SYNTHETIC_BIND_OR_VAULT_ROUNDTRIP_FAILED')
     failure_value = 'BARBER_SYNTHETIC_BIND_SENTINEL_ERROR_' + values[3]
     failed = execute(header + 'select length(convert_from(decode($1,\'base64\'),\'UTF8\'))/0 /* BARBER_BIND_EXPECTED_ERROR */\n' + protocol.bind_one(failure_value))

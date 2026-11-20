@@ -84,13 +84,14 @@ select case when f.id is not null and w.id is not null then 'CREATED_TWO'else 'I
 VERIFY = """select json_build_object(
  'fcmMatches',coalesce((select decrypted_secret=convert_from(decode($1,'base64'),'UTF8')from vault.decrypted_secrets where name='customer_android_live_fcm'),false),
  'wakeMatches',coalesce((select decrypted_secret=$2::text from vault.decrypted_secrets where name='customer_android_live_dispatch_secret'),false),
- 'exactNamesPresent',(select count(*)=2 from vault.secrets where name in('customer_android_live_fcm','customer_android_live_dispatch_secret')))
+ 'exactNamesPresent',(select count(*)=2 from vault.secrets where name in('customer_android_live_fcm','customer_android_live_dispatch_secret')))checks
 """
 
 def credential_statements(fcm, wake):
     # SQL contains placeholders only; values occur solely in the private psql
     # meta-command stream and are sent via PostgreSQL extended Bind messages.
-    return CREATE + bind_credentials(fcm, wake) + VERIFY + bind_credentials(fcm, wake)
+    verified = "with verified as (" + VERIFY + ")select 1/(((checks->>'fcmMatches')::boolean and(checks->>'wakeMatches')::boolean and(checks->>'exactNamesPresent')::boolean)::integer)=1 from verified\n"
+    return CREATE + bind_credentials(fcm, wake) + verified + bind_credentials(fcm, wake)
 
 def safe_sqlstate(stderr):
     match = re.search(rb'ERROR:\s+([0-9A-Z]{5})(?:\s|$)', stderr)
