@@ -18,6 +18,7 @@ def platform_objects_for_replay(toc):
         ' TRIGGER auth users enforce_customer_password_proof ',
         ' TRIGGER auth users guard_account_email ',
         ' TRIGGER auth sessions detach_customer_session_push ',
+        ' TRIGGER auth sessions android_live_push_session_retire ',
         ' POLICY storage objects Barber avatars ',
         ' POLICY storage objects Enrolled staff require verified MFA ',
         ' POLICY storage objects Storage requires a live account session ',

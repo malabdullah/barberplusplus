@@ -36,3 +36,13 @@ b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:
 # Exact introduction fingerprints only; no rule or path-wide exclusion.
 7c7420e132eec55647b4f5acd55bd75c195834e7:wrangler.cloud-test.jsonc:generic-api-key:20
 7c7420e132eec55647b4f5acd55bd75c195834e7:ops/cloud-test/worker-configuration.d.ts:generic-api-key:7
+
+# Reviewed Android source-only PEM delimiter check/parser and a unit test that
+# generates a fresh RSA key in memory. Neither contains encoded key material.
+# Exact introduction fingerprints only; no private-key rule/path exclusion.
+1d2e01a97fb9240bf6fa3935b04d05b383f275f8:supabase/functions/customer-android-push-dispatch/fcm.ts:private-key:21
+1d2e01a97fb9240bf6fa3935b04d05b383f275f8:supabase/functions/customer-android-push-dispatch/fcm_test.ts:private-key:32
+# Public immutable deployed Function bundle SHA-256 digests, not API credentials.
+# Current report references the structured receipt instead of duplicating them.
+1d2e01a97fb9240bf6fa3935b04d05b383f275f8:docs/release-review/android-live-2026-11-20/REPORT.md:generic-api-key:55
+1d2e01a97fb9240bf6fa3935b04d05b383f275f8:docs/release-review/android-live-2026-11-20/REPORT.md:generic-api-key:57

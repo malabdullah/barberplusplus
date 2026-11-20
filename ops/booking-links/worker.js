@@ -1,3 +1,4 @@
+import associations from '../auth-return/associations.live.json' with { type: 'json' };
 export const HANDOFF_ORIGIN = 'https://barber-open.alabdullah-cs.workers.dev';
 export const BOOKING_ORIGIN = 'https://www.barberplusplus.com';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -8,6 +9,14 @@ export default {
     const reply = (status, body = '') => new Response(request.method === 'HEAD' ? null : body, { status, headers });
     if (url.origin !== HANDOFF_ORIGIN) return reply(404);
     if (!['GET', 'HEAD'].includes(request.method)) return reply(405);
+    if (url.pathname === '/.well-known/assetlinks.json' && !url.search && !url.hash) {
+      headers['Content-Type'] = 'application/json';
+      headers['Cache-Control'] = 'public, max-age=300';
+      return reply(200, JSON.stringify([{ relation: ['delegate_permission/common.handle_all_urls'], target: {
+        namespace: 'android_app', package_name: associations.androidPackage,
+        sha256_cert_fingerprints: associations.androidSha256,
+      } }]));
+    }
     if (url.pathname === '/.well-known/apple-app-site-association' && !url.search) {
       headers['Content-Type'] = 'application/json';
       headers['Cache-Control'] = 'public, max-age=300';

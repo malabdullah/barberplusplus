@@ -1,0 +1,118 @@
+{
+  "apnsHash": "e86f9d42fff4b96de0227e153f8182bd",
+  "flagsOff": true,
+  "migrations": [
+    {
+      "name": "android_live_native_bindings",
+      "version": "20261120154354",
+      "historyMd5": "504dee98be6537c006ba11f9862ee827"
+    },
+    {
+      "name": "android_live_fcm_transport",
+      "version": "20261120154434",
+      "historyMd5": "dcb74ce58d80c1e7daf26768f0300825"
+    },
+    {
+      "name": "android_live_fcm_token_validation",
+      "version": "20261120154802",
+      "historyMd5": "f23105bf094a1fdc760fcf51b3b0a7db"
+    },
+    {
+      "name": "android_live_fcm_dispatch_alias",
+      "version": "20261120155248",
+      "historyMd5": "d3849a346b858f456cf5bbfc99ccd74b"
+    },
+    {
+      "name": "android_live_fcm_immediate_claim",
+      "version": "20261120155341",
+      "historyMd5": "05733715ee5ea98551f49921c5b14c25"
+    },
+    {
+      "name": "android_live_fcm_scheduler",
+      "version": "20261120155602",
+      "historyMd5": "e3fa7b9da66b9c24f06b784eab9e2eb6"
+    },
+    {
+      "name": "android_live_native_binding_replay_guard",
+      "version": "20261120162705",
+      "historyMd5": "c91637f087752750660aa68b4cb33daa"
+    }
+  ],
+  "cronInactive": true,
+  "newQueueEmpty": true,
+  "privateRoutines": [
+    {
+      "name": "android_live_push_allowed",
+      "definer": false,
+      "signature": "p_job uuid"
+    },
+    {
+      "name": "android_live_push_api",
+      "definer": true,
+      "signature": "p_action text, p_data jsonb"
+    },
+    {
+      "name": "android_live_push_bound",
+      "definer": false,
+      "signature": "r private.android_live_push_runtime"
+    },
+    {
+      "name": "android_live_push_configure",
+      "definer": true,
+      "signature": "p_data jsonb"
+    },
+    {
+      "name": "android_live_push_dispatch",
+      "definer": true,
+      "signature": "p_action text, p_data jsonb"
+    },
+    {
+      "name": "android_live_push_dispatch_secret",
+      "definer": true,
+      "signature": "p_secret text"
+    },
+    {
+      "name": "android_live_push_event_wake",
+      "definer": true,
+      "signature": ""
+    },
+    {
+      "name": "android_live_push_owner",
+      "definer": false,
+      "signature": "person uuid, session uuid"
+    },
+    {
+      "name": "android_live_push_retire",
+      "definer": true,
+      "signature": ""
+    },
+    {
+      "name": "kick_android_live_push",
+      "definer": true,
+      "signature": ""
+    }
+  ],
+  "newRegistryEmpty": true,
+  "fixtureAccountsAbsent": true,
+  "functions": [
+    {
+      "slug": "customer-auth",
+      "version": 41,
+      "sha256": "19db9c08943ef94f7cdfe71f385d523ad61c340853d2a613f0207a8afaa28705",
+      "allFilesExact": true
+    },
+    {
+      "slug": "customer-android-push-dispatch",
+      "version": 4,
+      "sha256": "5f85536af5917bd98fcb4307e691fda2ba50243cd3c8f3a1e51d64e6d569360d",
+      "allFilesExact": true
+    }
+  ],
+  "duplicateSignup": {
+    "status": 409,
+    "error": "SIGNUP_EMAIL_EXISTS",
+    "requestOrPendingHandle": false,
+    "accountsBindingsEmailsAndFixtureTimestampUnchanged": true
+  },
+  "changedPublicRoutineBodiesMatchExpected": true
+}

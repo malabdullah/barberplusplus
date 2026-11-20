@@ -45,8 +45,40 @@ test('preserves only validated native state and recovery request binding', () =>
   assert.equal(new URL(verificationUrl(link('recovery',target),config).url).search, new URL(target).search);
   assert.throws(()=>verificationUrl(link('recovery',target.replace(request,'bad')),config));
 });
+test('passes Android signup, recovery and magic links directly to the native callback', () => {
+  const target = `${appUrl}/customer/email-callback?client=android&state=${request}&request_id=${request}&next=book`;
+  for (const type of ['signup', 'recovery', 'magiclink']) {
+    const result = verificationUrl(link(type, target), config);
+    const url = new URL(result.url);
+    assert.equal(url.origin, appUrl);
+    assert.equal(url.pathname, '/customer/email-callback');
+    assert.equal(url.search, new URL(target).search);
+    assert.equal(result.customer, true);
+    assert.equal(new URLSearchParams(url.hash.slice(1)).get('type'), type);
+    assert.equal(new URLSearchParams(url.hash.slice(1)).get('token_hash'), token);
+    assert.ok(!url.searchParams.has('token_hash'));
+  }
+});
+test('keeps Android native callbacks restricted to validated clients and own-site destinations', () => {
+  for (const type of ['signup', 'recovery', 'magiclink']) {
+    for (const client of ['', 'Android', 'windows', 'android-ios']) {
+      assert.throws(() => verificationUrl(link(type, `${appUrl}/customer/email-callback?client=${client}`), config), /INVALID_LINK/);
+    }
+    for (const target of [
+      'https://evil.example/customer/email-callback?client=android',
+      `${appUrl}/reset-password?client=android`,
+      `${appUrl}/customer/email-callback?client=android&state=invalid`,
+      `${appUrl}/customer/email-callback?client=android&request_id=invalid`,
+      `${appUrl}/customer/email-callback?client=android&next=https://evil.example`,
+      `${appUrl}/customer/email-callback?client=android&redirect=https://evil.example`,
+      `${appUrl}/customer/email-callback?client=android#untrusted`,
+    ]) {
+      assert.throws(() => verificationUrl(link(type, target), config), /INVALID_LINK/);
+    }
+  }
+});
 test('rejects forged destinations, unsafe protocols and unknown return parameters', () => {
-  for (const target of ['https://evil.example/reset-password', `https://attacker@${new URL(appUrl).host}/reset-password`, `${appUrl}/customer/email-callback?next=https://evil.example`, `${appUrl}/customer/email-callback?client=android`, `${appUrl}/reset-password?redirect=https://evil.example`, `${appUrl}/untrusted`, `${appUrl}/reset-password#secret`, 'javascript:alert(1)']) {
+  for (const target of ['https://evil.example/reset-password', `https://attacker@${new URL(appUrl).host}/reset-password`, `${appUrl}/customer/email-callback?next=https://evil.example`, `${appUrl}/customer/email-callback?client=windows`, `${appUrl}/reset-password?redirect=https://evil.example`, `${appUrl}/untrusted`, `${appUrl}/reset-password#secret`, 'javascript:alert(1)']) {
     assert.throws(() => verificationUrl(link('recovery', target), config), /INVALID_LINK/);
   }
   assert.throws(() => verificationUrl(link('unknown'), config));
