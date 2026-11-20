@@ -90,3 +90,15 @@ it.each([null, 'missing-shop'])('blocks a service write with invalid selection %
     expect(fixture.services.create).not.toHaveBeenCalled();
   } finally { cleanup(); }
 });
+
+it('scopes manager collections to the shops returned by RLS on initial load and refresh', async () => {
+  fixture.branches.getAll.mockResolvedValue([fixture.shop]);
+  const app = await mount();
+  try {
+    expect(fixture.services.getAll).toHaveBeenLastCalledWith([fixture.shop.id]);
+    expect(fixture.bookings.getAll).toHaveBeenLastCalledWith({ branchIds: [fixture.shop.id] });
+    await act(async () => { await app().reloadData(); });
+    expect(fixture.services.getAll).toHaveBeenLastCalledWith([fixture.shop.id]);
+    expect(fixture.bookings.getAll).toHaveBeenLastCalledWith({ branchIds: [fixture.shop.id] });
+  } finally { cleanup(); }
+});

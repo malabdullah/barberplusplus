@@ -3686,7 +3686,15 @@
     "monthlyEquivalent": "ما يعادل نحو {{amount}} شهريًا، يُدفع سنويًا.",
     "chooseManager": "اختر مديراً",
     "discountValue": "القيمة",
-    "noAlternativeManager": "عيّن مديراً آخر لهذه المنشأة قبل نقل مسؤولية الفوترة."
+    "noAlternativeManager": "عيّن مديراً آخر لهذه المنشأة قبل نقل مسؤولية الفوترة.",
+    "monthlyPayments": "الدفعات الشهرية الأولى: {{count}}",
+    "billingPeriodEnds": "نهاية فترة الفوترة",
+    "complimentaryAccessExpires": "انتهاء الوصول المجاني",
+    "scheduledComplimentaryExpiry": "انتهاء الوصول المجاني المجدول",
+    "trialEnds": "نهاية الفترة التجريبية",
+    "transitionEnds": "نهاية الفترة الانتقالية",
+    "graceEnds": "نهاية فترة السماح",
+    "manualAccessExpires": "انتهاء صلاحية الحجز اليدوي"
   },
   "subscriptionFoundation": {
     "foundationLabel": "إعداد الاشتراك",
@@ -3759,6 +3767,10 @@
       "BILLING_BOOKING_UNAVAILABLE": "لا يقبل هذا الصالون حجوزات جديدة حاليًا. اختر صالونًا آخر؛ حجوزاتك الحالية محفوظة."
     },
     "gatewayPostponed": "الدفع غير متاح حاليًا. تحدد تواريخ التجربة أو الاشتراك أو صلاحيات الإدارة إمكانية الحجز.",
-    "manualCapacity": "متاح فقط في الصالونات التي تملك صلاحية حجز يدوي سارية"
+    "manualCapacity": "متاح فقط في الصالونات التي تملك صلاحية حجز يدوي سارية",
+    "addBarberToday": "إضافة حلاق نشط واحد اليوم",
+    "renewBeforeAdding": "جدّد الاشتراك أولاً",
+    "subscriptionBeforeAdding": "يلزم اشتراك",
+    "notAvailable": "غير متاح"
   }
 }

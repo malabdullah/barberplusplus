@@ -89,6 +89,10 @@ export const bookingsService = {
   getAll: async (filters = {}) => {
     // Join customers table to get customer details
     let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone, email)');
+    if (Array.isArray(filters.branchIds)) {
+      if (!filters.branchIds.length) return [];
+      query = query.in('branch_id', filters.branchIds);
+    }
     if (filters.branchId) query = query.eq('branch_id', filters.branchId);
     if (filters.barberId) query = query.eq('barber_id', filters.barberId);
     if (filters.date) query = query.eq('date', filters.date);
