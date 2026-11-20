@@ -30,7 +30,11 @@ export async function nativeEmailAction(c: Context): Promise<{ status: number; b
     if (!strong(c.body.password)) throw Error('WEAK_PASSWORD');
     const binding = await nativeBinding(c.body, false, c);
     await limited(`email:email-signup:${email}`, 5);
+    // Share the existing explicit-duplicate policy and its global enumeration
+    // bound. Never claim a verification email was sent for an occupied address.
+    if (!await c.limit('email-signup:v2:global', 100)) throw Error('RATE_LIMITED');
     const userId = await c.deps.account(name, email, c.body.password);
+    if (!userId) return { status: 409, body: { error: 'SIGNUP_EMAIL_EXISTS' } };
     const requestId = crypto.randomUUID(), pendingHandle = crypto.randomUUID();
     await c.deps.rpc('start', { request_id: requestId, pending_handle: pendingHandle, email, user_id: userId, ...binding });
     const callback = new URL('/customer/email-callback', c.appUrl);

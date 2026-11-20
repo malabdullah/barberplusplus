@@ -27,8 +27,16 @@ Deno.test('signup stores no password in a binding and exposes no credentials in 
 Deno.test('rate limiting occurs before account creation or email dispatch',async()=>{
  const f=fixture('email-signup',signup);f.c.limit=async()=>false;f.c.deps.account=()=>{throw Error('Must not create');};await rejects(f.run,'RATE_LIMITED');assert(f.calls.length===0&&f.mail.length===0);
 });
-Deno.test('signup has a generic result for an occupied or ineligible identity without sending mail',async()=>{
- const f=fixture('email-signup',signup);f.c.deps.account=async()=>null;const result=await f.run();assert(result?.body.success===true&&f.mail.length===0);assert(f.calls.find(x=>x.action==='start')?.data.user_id===null);
+Deno.test('occupied or ineligible email returns canonical duplicate without mail or phantom verification binding',async()=>{
+ const f=fixture('email-signup',signup);f.c.deps.account=async()=>null;const result=await f.run();
+ assert(result?.status===409&&result.body.error==='SIGNUP_EMAIL_EXISTS'&&!result.body.requestId&&!result.body.pendingHandle);
+ assert(f.mail.length===0&&f.calls.length===0);
+});
+Deno.test('native duplicate lookup requires the shared global rate bound and infrastructure errors stay unavailable',async()=>{
+ const f=fixture('email-signup',signup);let accounts=0;f.c.limit=async(key)=>key!=='email-signup:v2:global';f.c.deps.account=async()=>{accounts++;return null;};
+ await rejects(f.run,'RATE_LIMITED');assert(accounts===0&&f.calls.length===0&&f.mail.length===0);
+ const unavailable=fixture('email-signup',signup);unavailable.c.deps.account=async()=>{throw Error('UNAVAILABLE');};
+ await rejects(unavailable.run,'UNAVAILABLE');assert(unavailable.calls.length===0&&unavailable.mail.length===0);
 });
 Deno.test('code verification uses device verifier hash and server-bound identity, not supplied email/challenge',async()=>{
  const f=fixture('email-native-verify',{...verify,email:'forged@example.test',nativeChallenge:'forged'});const result=await f.run();assert(result?.body.session===session);

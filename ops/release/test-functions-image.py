@@ -118,7 +118,7 @@ Deno.serve(async (request) => {
                         # The test mailbox must compile but stay unavailable
                         # outside cloud-test. Require that exact closed state;
                         # do not accept 404 for ordinary application workers.
-                        expected = [503] if function in ('customer-account-deletion','customer-android-push-dispatch') else [404] if function == 'cloud-test-inbox' else [403] if function in ('customer-push-dispatch','customer-booking-email','admin-push-dispatch') else [200, 204, 401, 405]
+                        expected = [503] if function == 'customer-account-deletion' else [503] if function == 'customer-android-push-dispatch' else [404] if function == 'cloud-test-inbox' else [403] if function in ('customer-push-dispatch','customer-booking-email','admin-push-dispatch') else [200, 204, 401, 405]
                         if result['status'] not in expected: raise ValueError('Unexpected synthetic handler response: ' + str(result['status']))
                         if function == 'customer-account-deletion' and result.get('closedError') != 'NOT_ENABLED': raise ValueError('Deletion must fail closed before any configured backend access')
                         results.append(result); last = None; break

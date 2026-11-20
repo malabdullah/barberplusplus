@@ -115,14 +115,17 @@ Deno.serve(createCustomerAuthHandler({
       if(lookup.data){
         const current=await admin.auth.admin.getUserById(String(lookup.data.id));
         if(current.error)throw Error('UNAVAILABLE');
-        return current.data.user?.app_metadata.role==='customer' && !current.data.user.email_confirmed_at ? current.data.user.id : null;
+        const user=current.data.user;
+        if(!user)throw Error('UNAVAILABLE');
+        return user.app_metadata.role==='customer' && !user.email_confirmed_at && !user.deleted_at ? user.id : null;
       }
       const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
       if(created.error){
         if(['email_exists','user_already_exists'].includes(String(created.error.code)))return null;
         throw Error('UNAVAILABLE');
       }
-      return created.data.user?.id || null;
+      if(!created.data.user?.id)throw Error('UNAVAILABLE');
+      return created.data.user.id;
     },
     send:async(email,callback)=>{
       const result=await emailClient.auth.resend({type:'signup',email,options:{emailRedirectTo:callback}});

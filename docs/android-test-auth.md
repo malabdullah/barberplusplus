@@ -43,9 +43,7 @@ authorization. Credentials and provider tokens must not enter logs or analytics.
 | `email-resend` | same binding/handle as status | same request ID, remaining expiry; no extension |
 | `email-native-verify` | `requestId`, `nativeState`, `nativeVerifier`, exactly one of `code` or `deliveryToken` | matching `session` and canonical `profile` |
 
-Keep `requestId` and `pendingHandle` privately with the verifier. A generic
-signup response does not prove a new account was created: occupied or ineligible
-addresses receive the same response, without changing their password or role.
+Keep `requestId` and `pendingHandle` privately with the verifier only after a successful response. Occupied or ineligible addresses return HTTP409 `SIGNUP_EMAIL_EXISTS`, without a pending handle, request or email. Stay on signup and offer sign-in/recovery; do not open verification or create a pending journal. This response exposes no role/provider details and is bounded by email/IP plus the shared global signup limit. Eligible unconfirmed customer registrations can resume without resetting their existing credentials.
 
 Verification codes are 6–10 digits. Do not mix code and delivery handle, send
 raw `tokenHash` to app verification, or substitute another pending request.

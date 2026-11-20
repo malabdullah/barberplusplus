@@ -92,8 +92,8 @@
   "functions": [
     {
       "slug": "customer-auth",
-      "version": 40,
-      "sha256": "327e97598eac1f7ecb0f6850d15db194a7871c316e1f7213d3e119b706df4850",
+      "version": 41,
+      "sha256": "19db9c08943ef94f7cdfe71f385d523ad61c340853d2a613f0207a8afaa28705",
       "allFilesExact": true
     },
     {
@@ -102,5 +102,11 @@
       "sha256": "1b78edbd129bf83157189beba57f2f230122e94ff0f541bd299e093d2b0bcdbc",
       "allFilesExact": true
     }
-  ]
+  ],
+  "duplicateSignup": {
+    "status": 409,
+    "error": "SIGNUP_EMAIL_EXISTS",
+    "requestOrPendingHandle": false,
+    "accountsBindingsEmailsAndFixtureTimestampUnchanged": true
+  }
 }

@@ -20,10 +20,18 @@ begin
  assert not(select prosecdef from pg_proc where oid='public.customer_android_live_push_api(text,jsonb)'::regprocedure),'public wrapper invoker';
  assert (select count(*)=4 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private'and c.relname like 'android_live_push_%'and c.relkind='r'and c.relrowsecurity),'four RLS tables';
  perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+ if to_regclass('private.customer_android_push_devices')is not null then
  select jsonb_build_array((select count(*)from private.customer_android_push_devices),(select count(*)from private.customer_android_push_deliveries),(select md5(to_jsonb(r)::text)from private.customer_android_push_runtime r))into before_test;
+ end if;
  select count(*)into before_apns from private.customer_push_deliveries;
  payload:=jsonb_build_object('deviceId',device,'deviceSecret',repeat('a',64),'user_id',person,'session_id',sid,'version',1,'token',repeat('synthetic-token-',4),'projectId','barber-plus-plus-phone-prod','packageName','com.barberplusplus.customer','permission',true,'language','en');
  denied:=false;begin perform public.customer_android_live_push_api('push-register',payload);exception when others then denied:=sqlerrm='PUSH_NOT_CONFIGURED';end;assert denied,'Live transport rejects Test deployment binding';
+ -- The release-only CI schema intentionally lacks the older Test experiment.
+ -- Its disposable runtime is bound to the same synthetic Test tuple inside this
+ -- rollback only; hosted Test already has this value and is not changed.
+ if (select api_url from private.customer_push_runtime where singleton)is distinct from'https://qvkucvcjmojjbphlzlks.supabase.co'then
+  update private.customer_push_runtime set api_url='https://qvkucvcjmojjbphlzlks.supabase.co'where singleton;
+ end if;
  -- Test tuple is scoped to this rolled-back transaction and uses no credentials.
  update private.android_live_push_runtime set environment='cloud-test',api_url='https://qvkucvcjmojjbphlzlks.supabase.co',project_id='barber-plus-plus-phone-test',package_name='com.barberplusplus.customer.test',registration_enabled=true,delivery_enabled=true,activated_at=now()-interval'1 second';
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values(person,person||'@example.test',now(),'{"role":"manager"}'),(other_person,other_person||'@example.test',now(),'{"role":"customer"}');
@@ -112,7 +120,9 @@ begin
  denied:=false;begin perform public.customer_android_live_push_api('push-register',payload||'{"version":6,"user_id":null,"session_id":null}');exception when others then denied:=sqlerrm='DEVICE_REQUIRED';end;assert denied,'closed installation cannot revive';
  assert (select not active from cron.job where jobname='customer-android-live-push-dispatch'),'Android cron remains inactive';
  assert before_apns=(select count(*)from private.customer_push_deliveries),'APNs delivery queue untouched';
+ if before_test is not null then
  assert before_test=jsonb_build_array((select count(*)from private.customer_android_push_devices),(select count(*)from private.customer_android_push_deliveries),(select md5(to_jsonb(r)::text)from private.customer_android_push_runtime r)),'two-device Test experiment untouched';
+ end if;
 end$checks$;
 select pass('44 Android Live registry and queue assertions passed');
 select * from finish();

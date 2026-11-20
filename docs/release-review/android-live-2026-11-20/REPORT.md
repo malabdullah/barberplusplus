@@ -10,13 +10,13 @@ The exact additive database, RLS/grant, routine, trigger, Function, cron, public
 | --- | --- |
 | Native signup/recovery database protocol | 42 assertions passed; fixtures rolled back |
 | General Android registry/queue database protocol | 44 assertions passed; fixtures rolled back |
-| Deno Function tests | 334 passed; lint and type checks passed |
+| Deno Function tests | 335 passed; lint and type checks passed |
 | Frontend tests | 96 files / 530 tests passed |
 | Operational unit tests | 83 passed after allowing their isolated mock loopback servers |
 | Auth/booking helper tests | 33 passed, including all three Play signing SHA-256 associations and unchanged iOS AASA behavior |
 | Exact Auth glob dependency | 35 checks / 5 proposed URL patterns passed with gobwas/glob v0.2.3 and separators `.`/`/` from Auth v2.189.0; zero provider calls |
 | Build, migration names and environment-neutral domain guard | Passed; existing large-bundle warning remains |
-| Hosted customer-auth | v40; every uploaded dependency byte-matched source on readback |
+| Hosted customer-auth | v41; every uploaded dependency byte-matched source on readback |
 | Hosted Android dispatcher | v3; every uploaded dependency byte-matched source on readback |
 | Hosted negative requests | Missing customer identity denied; malformed native email/recovery denied; guest push denied; direct Function and website gate denied unauthenticated requests |
 | Hosted Test auth helper | Fixed credential-free fallbacks, malformed input denial and existing single Test signer verified |
@@ -29,6 +29,8 @@ The first aggregate `npm run check` reached operational tests and encountered sa
 The private-table security advisor reports informational RLS-with-no-policy entries for the four new transport tables. This is intentional deny-by-default: direct table privileges are revoked even for service_role; bounded routines own access. No client policy was added to suppress those notices. Existing unrelated project notices were not modified.
 
 ## Scenario evidence
+
+- Occupied/ineligible native signup returns HTTP409 `SIGNUP_EMAIL_EXISTS` after email/IP and shared global rate limits; no verification request/handle or mail. The approved existing synthetic staff-email probe confirmed no account/binding/mail/timestamp change. Eligible unconfirmed-customer resume remains supported; no iOS/Web behavior changed.
 
 - Live project/package or unset flags cannot be used against Test. No caller selects a backend, Firebase project, package or sender.
 - The gateway derives account and current session; a client-supplied owner is ignored. Cross-account device capability, wrong secret, revoked/foreign session and malformed versions fail.
@@ -52,8 +54,8 @@ Corrections are explicit follow-up migrations, preserving the exact Test migrati
 ## Hosted identities
 
 - Test project: `qvkucvcjmojjbphlzlks`.
-- customer-auth v40 bundle: `327e97598eac1f7ecb0f6850d15db194a7871c316e1f7213d3e119b706df4850`.
-- Android dispatcher v3 bundle: `1b78edbd129bf83157189beba57f2f230122e94ff0f541bd299e093d2b0bcdbc`.
+- customer-auth: see the exact version and bundle digest in `hosted-test-result.json`.
+- Android dispatcher: see the exact version and bundle digest in `hosted-test-result.json`.
 - Test auth helper Worker: `fdee9cc0-2233-4f46-b286-c23ab65b1a77`.
 - Privacy-only Test carrier: `cacdab3`, based on settlement `b35d938`; Worker `3492709d-8942-4ff5-a6e0-d99dc6527e38`.
 - Carrier asset: `/assets/main-DMhFNGHE.js`, SHA-256 `38eb5a003ec0358c366e70a04430dd245762678d52dc6d0d4372b8e277f41e4f`.
@@ -69,3 +71,7 @@ The privacy carrier changes only the two `customerPrivacy` translation objects. 
 5. Obtain approval for the smallest real Play-delivered sign-in, link and notification/tap checks. No real notification was sent here. Keep guest push and arbitrary Admin announcement destinations out of the claim: the current Android client supports signed-in booking notifications only.
 
 Rollback first disables only Android flags/cron and restores prior Function/website/Worker versions. Retain additive database rows and terminal delivery states; do not drop tables, replay historical events, revoke iOS keys or reset accounts.
+
+## CI correction evidence
+
+Initial review head `fd2b6fe` run `44771700802` found three integration issues: the image-probe source test required its original deletion conditional; the release-only database fixture lacked older Test-experiment tables; and Gitleaks classified two literal PEM parsing/test expressions plus two public bundle digests as secrets. The image conditional is preserved with an additive Android branch; the SQL test conditionally verifies Test-only tables and uses a transaction-only synthetic binding in CI. The scanner remains fully enabled with four exact historical commit/path/rule/line false-positive fingerprints only, and public digests now live in the structured receipt. No sensitive scanner value is reproduced here. Final CI outcome must be recorded against the latest immutable source, not these failed/superseded runs.

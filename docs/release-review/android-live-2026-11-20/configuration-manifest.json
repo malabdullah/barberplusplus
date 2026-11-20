@@ -284,10 +284,11 @@
   },
   "functions": {
     "customer-auth": {
-      "testVersion": 40,
-      "bundleSha256": "327e97598eac1f7ecb0f6850d15db194a7871c316e1f7213d3e119b706df4850",
+      "testVersion": 41,
+      "bundleSha256": "19db9c08943ef94f7cdfe71f385d523ad61c340853d2a613f0207a8afaa28705",
       "sourceReadbackExact": true,
-      "changes": "Explicit Android environment flag; native email/recovery binding; production routes to new bounded Android registry; iOS/Web preserved"
+      "changes": "Explicit Android environment flag; native email/recovery binding; production routes to new bounded Android registry; iOS/Web preserved",
+      "duplicateSignup": "HTTP409 SIGNUP_EMAIL_EXISTS after shared global + email/IP limits; no phantom pending proof or mail; eligible unconfirmed-customer resume retained; iOS/Web unchanged"
     },
     "customer-android-push-dispatch": {
       "testVersion": 3,
