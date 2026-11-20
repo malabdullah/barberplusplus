@@ -1,5 +1,8 @@
 -- Transaction-only synthetic registry/queue verification. No provider calls.
 begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(1);
 do $checks$
 #variable_conflict use_variable
 declare
@@ -111,5 +114,6 @@ begin
  assert before_apns=(select count(*)from private.customer_push_deliveries),'APNs delivery queue untouched';
  assert before_test=jsonb_build_array((select count(*)from private.customer_android_push_devices),(select count(*)from private.customer_android_push_deliveries),(select md5(to_jsonb(r)::text)from private.customer_android_push_runtime r)),'two-device Test experiment untouched';
 end$checks$;
+select pass('44 Android Live registry and queue assertions passed');
+select * from finish();
 rollback;
-select 'ANDROID_LIVE_TRANSPORT_PASS' as status,not exists(select 1 from auth.users where id in('ad670000-0000-4000-8000-000000000001','ad670000-0000-4000-8000-000000000002'))as fixtures_rolled_back;
