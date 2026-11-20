@@ -24,7 +24,6 @@
     "authProject": "barber-plus-plus-auth-prod",
     "projectNumber": "329116823579",
     "existingWebAudience": "329116823579-l6docsu447em92i55sf3lmu55v9v07re.apps.googleusercontent.com",
-    "proposed": "Create/update only Android OAuth identities for this package and each actually applicable Play signing SHA-1. Preserve the existing Web audience. Do not infer a Google Auth audience from the Phone/FCM project.",
     "signingFingerprints": [
       {
         "signer": "legacy",
@@ -42,7 +41,8 @@
         "sha1": "FE:C5:0D:8F:74:17:8B:27:E1:13:3F:FD:D7:73:46:FB:DE:D6:E2:B5"
       }
     ],
-    "portalStatus": "Three Android clients created by coordinator under explicit owner approval; existing iOS/Web clients preserved."
+    "portalStatus": "Three Android clients created by coordinator under explicit owner approval; existing iOS/Web clients preserved.",
+    "verifiedState": "Verified by coordinator: exactly three Android OAuth identities created for actual Play distribution signers in auth-prod; existing iOS/Web clients preserved. Existing Web audience remains the Android server audience; no audience inferred from phone-prod."
   },
   "apple": {
     "serviceId": "com.barberplusplus.authentication.prod.web",
@@ -69,25 +69,33 @@
     "project": "barber-plus-plus-phone-prod",
     "projectNumber": "791534621841",
     "androidApp": "com.barberplusplus.customer",
-    "proposed": [
-      "Android FCM-only app registered by coordinator; no Firebase SHA1/OAuth provisioning because auth-prod owns those package/signing identities",
-      "Export public google-services.json with oauth_client=[] through coordinator; separate auth-prod Web audience remains explicit",
-      "FCM HTTP v1 already enabled; no API enable or billing changes"
-    ],
     "sender": {
-      "proposedEmail": "barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com",
-      "reuseCondition": "An existing same-project approved sender has the exact required send permission; otherwise prefer a dedicated least-privilege sender",
+      "reuseCondition": "Resolved: coordinator verified no approved send-only identity existed, then created the dedicated owner-approved account and sole-permission role.",
       "permission": "cloudmessaging.messages.create",
       "oauthScope": "https://www.googleapis.com/auth/firebase.messaging",
-      "privateKey": "Only if workload identity/existing approved credentials are insufficient; separate owner approval, no key values in source/chat, store in production Vault only",
+      "privateKey": "Created by coordinator under separate owner approval and held only in manager-owned Keychain. Server-only Vault installation still requires reviewed release approval; no values in Test/source/chat/client.",
       "vaultSecretName": "customer_android_live_fcm",
       "roleId": "barberAndroidFcmSender",
       "roleName": "projects/barber-plus-plus-phone-prod/roles/barberAndroidFcmSender",
       "roleTitle": "Barber++ Android FCM Sender",
-      "setupOwner": "Coordinator; Website did not create IAM identity/key or receive credential material"
+      "setupOwner": "Coordinator; Website did not create IAM identity/key or receive credential material",
+      "verifiedSetup": {
+        "role": "projects/barber-plus-plus-phone-prod/roles/barberAndroidFcmSender",
+        "solePermission": "cloudmessaging.messages.create",
+        "account": "barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com",
+        "bindingVerifiedByCoordinator": true,
+        "keyCustody": "One Active key held solely by coordinator in Keychain; not read, installed or exported by Website",
+        "backendInstallationOrActivation": false
+      },
+      "verifiedEmail": "barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com"
     },
     "androidAppId": "1:791534621841:android:9e9b35bf2a6b0ed2315b30",
-    "httpV1AlreadyEnabled": true
+    "httpV1AlreadyEnabled": true,
+    "verifiedState": [
+      "Coordinator registered Android app with exact package/AppID; no Firebase SHA1/OAuth provisioning",
+      "Coordinator verified public SDK config with oauth_client=[]; separate auth-prod Web audience retained",
+      "FCM HTTP v1 already enabled; no API enable or billing change"
+    ]
   },
   "associations": {
     "authHelper": "/.well-known/assetlinks.json",
