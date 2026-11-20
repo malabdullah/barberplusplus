@@ -729,11 +729,6 @@ begin
  return to_jsonb(b);
 end $$;
 ALTER FUNCTION "public"."create_managed_barber"("p_shop" "uuid", "p_data" "jsonb") OWNER TO "postgres";
-CREATE OR REPLACE FUNCTION "public"."customer_android_live_push_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
-    LANGUAGE "sql"
-    SET "search_path" TO ''
-    AS $$select private.android_live_push_api(p_action,p_data);$$;
-ALTER FUNCTION "public"."customer_android_live_push_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -766,6 +761,11 @@ select case
 end;
 $$;
 ALTER FUNCTION "public"."customer_account_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."customer_android_live_push_api"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select private.android_live_push_api(p_action,p_data);$$;
+ALTER FUNCTION "public"."customer_android_live_push_api"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."customer_android_live_push_dispatch"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
