@@ -103,8 +103,8 @@
     },
     {
       "slug": "customer-android-push-dispatch",
-      "version": 3,
-      "sha256": "1b78edbd129bf83157189beba57f2f230122e94ff0f541bd299e093d2b0bcdbc",
+      "version": 4,
+      "sha256": "5f85536af5917bd98fcb4307e691fda2ba50243cd3c8f3a1e51d64e6d569360d",
       "allFilesExact": true
     }
   ],

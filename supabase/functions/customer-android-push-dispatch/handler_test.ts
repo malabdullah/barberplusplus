@@ -91,3 +91,12 @@ Deno.test('dedicated Live scheduler secret is checked before queue access and ca
  const denied=liveHarness();assert((await createAndroidPushDispatcher({...denied.deps,authorizeDispatch:()=>Promise.resolve(false)})(req)).status===403&&denied.calls.claim===0);
  const t=harness();assert((await createAndroidPushDispatcher({...t.deps,authorizeDispatch:()=>Promise.resolve(true)})(req)).status===403&&t.calls.claim===0);
 });
+
+Deno.test('Live token acquisition failure retries without a send; possible send uncertainty stays terminal',async()=>{
+ const h=liveHarness();
+ const response=await createAndroidPushDispatcher({...h.deps,token:()=>{h.calls.token++;throw Error('synthetic credential outage');}})(request());
+ assert(response.status===200&&h.calls.token===1&&h.calls.send===0&&h.calls.outcomes.length===1&&h.calls.outcomes[0].outcome==='retryable');
+ const possible=liveHarness();
+ await createAndroidPushDispatcher({...possible.deps,send:()=>{possible.calls.send++;throw Error('synthetic uncertain send');}})(request());
+ assert(possible.calls.send===1&&possible.calls.outcomes[0].outcome==='uncertain');
+});

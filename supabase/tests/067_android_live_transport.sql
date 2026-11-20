@@ -30,7 +30,7 @@ begin
  -- Its disposable runtime is bound to the same synthetic Test tuple inside this
  -- rollback only; hosted Test already has this value and is not changed.
  if (select api_url from private.customer_push_runtime where singleton)is distinct from'https://qvkucvcjmojjbphlzlks.supabase.co'then
-  update private.customer_push_runtime set api_url='https://qvkucvcjmojjbphlzlks.supabase.co'where singleton;
+  insert into private.customer_push_runtime(singleton,api_url,topic,environments)values(true,'https://qvkucvcjmojjbphlzlks.supabase.co','com.barberplusplus.customer.test',array['sandbox'])on conflict(singleton)do update set api_url=excluded.api_url;
  end if;
  -- Test tuple is scoped to this rolled-back transaction and uses no credentials.
  update private.android_live_push_runtime set environment='cloud-test',api_url='https://qvkucvcjmojjbphlzlks.supabase.co',project_id='barber-plus-plus-phone-test',package_name='com.barberplusplus.customer.test',registration_enabled=true,delivery_enabled=true,activated_at=now()-interval'1 second';

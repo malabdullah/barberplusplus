@@ -297,10 +297,11 @@
       "duplicateSignup": "HTTP409 SIGNUP_EMAIL_EXISTS after shared global + email/IP limits; no phantom pending proof or mail; eligible unconfirmed-customer resume retained; iOS/Web unchanged"
     },
     "customer-android-push-dispatch": {
-      "testVersion": 3,
-      "bundleSha256": "1b78edbd129bf83157189beba57f2f230122e94ff0f541bd299e093d2b0bcdbc",
+      "testVersion": 4,
+      "bundleSha256": "5f85536af5917bd98fcb4307e691fda2ba50243cd3c8f3a1e51d64e6d569360d",
       "sourceReadbackExact": true,
-      "changes": "Separate pinned runtime/project/package/sender; current owner/token/version rechecked before send; same localized booking alerts; explicit transient backoff and terminal uncertainty; Test contract retained"
+      "changes": "Separate pinned runtime/project/package/sender; current owner/token/version rechecked before send; same localized booking alerts; explicit transient backoff and terminal uncertainty; Test contract retained",
+      "tokenAcquisitionFailure": "Before deps.send only: existing bounded Live retry schedule; possible send exceptions remain terminal uncertain. No Test experiment retry policy change."
     }
   },
   "testFrontendCarrier": {
@@ -326,7 +327,8 @@
     "Server-only installation/verification of dedicated FCM JSON and new random dispatch secret; no credential ever in Test/source/client",
     "Apply seven additive migrations and matching Functions/frontend with ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED initially false; DB flags OFF and cron inactive",
     "Separately approve staged Live registration/notification activation and focused real Play-delivered sign-in/link/push checks; no delivery occurred in this Test pass",
-    "Current Android contract is signed-in booking notifications only: guest push and arbitrary Admin announcement destinations unsupported"
+    "Current Android contract is signed-in booking notifications only: guest push and arbitrary Admin announcement destinations unsupported",
+    "Restricted helper has no reviewed-release verb: existing automatic_sql rejects this DDL. Coordinator must identify the existing operator adoption/reconciliation path or separately review a fixed candidate-specific entrypoint; do not bypass the allowlist."
   ],
   "rollback": [
     "Disable ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED; set registration/delivery flags false and deactivate only new Android cron",

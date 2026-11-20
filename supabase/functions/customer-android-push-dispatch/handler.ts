@@ -37,12 +37,22 @@ export function createAndroidPushDispatcher(deps: Dependencies) {
           if (job.mode === 'capture' && config.mode === 'capture') outcome = { outcome: 'captured' };
           else if (job.mode === 'send' && config.mode === 'send' && config.credential) {
             stage = 'delivery';
-            try {
-              const token = await deps.token(config.credential, target);
-              // Credential minting may take time. Recheck ownership, permission,
-              // revision, current token/version and the lease immediately before send.
-              if (await deps.validate(job) === true) outcome = await deps.send(job, token, target);
-            } catch { outcome = { outcome: 'failed' }; }
+            let token: string | null = null;
+            try { token = await deps.token(config.credential, target); }
+            catch {
+              // No FCM send has been attempted. Live may use the existing bounded
+              // queue backoff; the limited Test experiment keeps its old outcome.
+              outcome = { outcome: runtime.environment === 'production' ? 'retryable' : 'failed' };
+            }
+            if (token !== null) {
+              try {
+                // Recheck ownership/token/version after credential acquisition.
+                if (await deps.validate(job) === true) outcome = await deps.send(job, token, target);
+              } catch {
+                // Once send may have run, never classify uncertainty as retryable.
+                outcome = { outcome: runtime.environment === 'production' ? 'uncertain' : 'failed' };
+              }
+            }
           }
         }
         stage = 'acknowledgment'; await deps.finish(job, outcome);
