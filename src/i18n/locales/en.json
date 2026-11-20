@@ -3641,7 +3641,15 @@
     "monthlyEquivalent": "Equivalent to approximately {{amount}}/month, paid yearly.",
     "chooseManager": "Choose a manager",
     "discountValue": "Value",
-    "noAlternativeManager": "Assign another manager to this business before transferring billing."
+    "noAlternativeManager": "Assign another manager to this business before transferring billing.",
+    "monthlyPayments": "First {{count}} monthly payments",
+    "billingPeriodEnds": "Billing period ends",
+    "complimentaryAccessExpires": "Complimentary access expires",
+    "scheduledComplimentaryExpiry": "Scheduled complimentary access expires",
+    "trialEnds": "Trial ends",
+    "transitionEnds": "Transition ends",
+    "graceEnds": "Grace period ends",
+    "manualAccessExpires": "Manual booking access expires"
   },
   "subscriptionFoundation": {
     "foundationLabel": "Subscription setup",
@@ -3714,6 +3722,10 @@
       "BILLING_BOOKING_UNAVAILABLE": "This shop is not accepting new bookings. Choose another shop; your existing appointments are unchanged."
     },
     "gatewayPostponed": "Payments are not connected. Access follows trial, subscription or Admin grant dates.",
-    "manualCapacity": "Available only in shops with a current manual-access grant"
+    "manualCapacity": "Available only in shops with a current manual-access grant",
+    "addBarberToday": "Add one active barber today",
+    "renewBeforeAdding": "Renew subscription first",
+    "subscriptionBeforeAdding": "Subscription required",
+    "notAvailable": "Not available"
   }
 }

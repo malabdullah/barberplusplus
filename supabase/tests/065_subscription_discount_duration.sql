@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public,pg_catalog;
+select plan(7);
+select lives_ok($$insert into private.billing_discount_codes(code,kind,value,eligibility,payments,expires_at)values('QA50TWELVE','percent',50,'monthly',12,clock_timestamp()+interval'1 day')$$,'twelve monthly payments are supported');
+select is((select payments from private.billing_discount_codes where code='QA50TWELVE'),12,'duration is stored as twelve payments');
+select throws_ok($$insert into private.billing_discount_codes(code,kind,value,eligibility,payments,expires_at)values('QA12YEAR','percent',50,'yearly',12,clock_timestamp()+interval'1 day')$$,'23514',null,'twelve-payment offer rejects yearly');
+select throws_ok($$insert into private.billing_discount_codes(code,kind,value,eligibility,payments,expires_at)values('QA12BOTH','percent',50,'both',12,clock_timestamp()+interval'1 day')$$,'23514',null,'twelve-payment offer rejects mixed eligibility');
+select throws_ok($$insert into private.billing_discount_codes(code,kind,value,eligibility,payments,expires_at)values('QA12BAD','percent',50,'monthly',13,clock_timestamp()+interval'1 day')$$,'23514',null,'unsupported durations remain rejected');
+select lives_ok($$insert into private.billing_discount_codes(code,kind,value,eligibility,payments,expires_at)values('QA12ONE','percent',50,'both',1,clock_timestamp()+interval'1 day'),('QA12THREE','percent',50,'monthly',3,clock_timestamp()+interval'1 day')$$,'existing one and three-payment codes remain valid');
+select is((select count(*)::integer from private.billing_invoices where provider_reference like 'QA12%'),0,'duration configuration does not create paid invoices');
+select * from finish();
+rollback;
