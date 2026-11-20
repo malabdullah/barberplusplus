@@ -169,6 +169,12 @@
         "sha256": "891afb54230a6b08ceaac7a74f7851f0a88daf5705235df93e857dc77f334798",
         "installedTestVersion": "20261120155602",
         "historyMd5": "e3fa7b9da66b9c24f06b784eab9e2eb6"
+      },
+      {
+        "file": "supabase/migrations/20261120162705_android_live_native_binding_replay_guard.sql",
+        "sha256": "64f9e001a5c330b68bd6dce300760281bf6df6e2fdb6313844e6779159c0b38c",
+        "installedTestVersion": "20261120162705",
+        "historyMd5": "c91637f087752750660aa68b4cb33daa"
       }
     ],
     "newTables": [
@@ -318,7 +324,7 @@
     "Deploy new Live auth helper and additive booking assetlinks with all three actual Play certificates, preserving exact iOS AASA/routes",
     "Append only five corrected Auth redirect patterns; preserve existing Site URL, iOS/Web redirect entries and Google/Apple audiences; no unnecessary Firebase API/billing change",
     "Server-only installation/verification of dedicated FCM JSON and new random dispatch secret; no credential ever in Test/source/client",
-    "Apply six additive migrations and matching Functions/frontend with ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED initially false; DB flags OFF and cron inactive",
+    "Apply seven additive migrations and matching Functions/frontend with ANDROID_CUSTOMER_ENABLED and ANDROID_PUSH_ENABLED initially false; DB flags OFF and cron inactive",
     "Separately approve staged Live registration/notification activation and focused real Play-delivered sign-in/link/push checks; no delivery occurred in this Test pass",
     "Current Android contract is signed-in booking notifications only: guest push and arbitrary Admin announcement destinations unsupported"
   ],

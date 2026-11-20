@@ -31,6 +31,11 @@
       "name": "android_live_fcm_scheduler",
       "version": "20261120155602",
       "historyMd5": "e3fa7b9da66b9c24f06b784eab9e2eb6"
+    },
+    {
+      "name": "android_live_native_binding_replay_guard",
+      "version": "20261120162705",
+      "historyMd5": "c91637f087752750660aa68b4cb33daa"
     }
   ],
   "cronInactive": true,
@@ -108,5 +113,6 @@
     "error": "SIGNUP_EMAIL_EXISTS",
     "requestOrPendingHandle": false,
     "accountsBindingsEmailsAndFixtureTimestampUnchanged": true
-  }
+  },
+  "changedPublicRoutineBodiesMatchExpected": true
 }

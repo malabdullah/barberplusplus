@@ -4,7 +4,7 @@ The coordinator owns credential retrieval, private transport, installation and c
 
 ## Inputs
 
-- Exact reviewed candidate commit and artifact/checksum; six migration filenames/hashes in `configuration-manifest.json`.
+- Exact reviewed candidate commit and artifact/checksum; seven migration filenames/hashes in `configuration-manifest.json`.
 - Coordinator's existing custody receipt for the one active Google service-account key. Retrieve the complete JSON only into protected manager/server memory or a temporary `0600` file inside a `0700` directory. Delete only temporary transport copies after verification; preserve canonical Keychain custody.
 - Credential JSON must have `type=service_account`, `project_id=barber-plus-plus-phone-prod`, `client_email=barber-android-sender@barber-plus-plus-phone-prod.iam.gserviceaccount.com`, a 40-lowerhex `private_key_id`, PEM PKCS8 `private_key`, and `token_uri=https://oauth2.googleapis.com/token`. Never substitute the Test credential or Firebase client SDK config.
 - Separately generate 32 cryptographically random bytes as 64 lowercase hexadecimal characters for the fixed `customer_android_live_dispatch_secret` name. No existing APNs secret is reused.
