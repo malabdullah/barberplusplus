@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { billingWriteIntent, subscriptionRpc } from '../services/subscriptionBilling.service';
 import { previewFixedFils } from '../utils/subscriptionPreview';
@@ -25,6 +25,13 @@ function BillingDialog({ title, close, children, busy }) {
     <header className="billing-dialog-heading"><h2 id={titleId}>{title}</h2><button className="billing-icon" type="button" disabled={busy} onClick={close} aria-label={t('billingPreview.close')}><X size={20}/></button></header>
     {children}
   </dialog>;
+}
+
+function BillingDisclosure({ title, children }) {
+  return <details className="manager-billing-disclosure">
+    <summary>{title}<ChevronDown size={18} aria-hidden="true"/></summary>
+    <div className="manager-billing-disclosure-body">{children}</div>
+  </details>;
 }
 
 const freshCode = { code: '', kind: 'percent', value: '20', eligibility: 'monthly', payments: '1', expiresOn: '', limit: '', reason: '' };
@@ -131,7 +138,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
     && Number.isFinite(capacity.additionalFils) && capacity.additionalFils >= 0;
   const additionPrice = hasAdditionPrice ? money(capacity.additionalFils)
     : t(`subscriptionEnforcement.${capacity?.reason === 'BILLING_RENEW_REQUIRED' ? 'renewBeforeAdding' : capacity?.reason === 'BILLING_ACCESS_REQUIRED' ? 'subscriptionBeforeAdding' : 'notAvailable'}`);
-  const title = codesOnly ? sp('discountCodes') : admin ? detail?.name || sp('subscriptions') : bp('title');
+  const title = codesOnly ? sp('discountCodes') : admin ? detail?.name || sp('subscriptions') : fb('managerTitle');
   useEffect(() => { const previous = document.title; document.title = `${title} | Barber++`; return () => { document.title = previous; }; }, [title]);
   async function showCodeHistory(item) {
     open('code-history', item); setCodeHistory([]); setBusy(true);
@@ -141,49 +148,118 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
   }
   const actions = { 'code-history': sp('history'), grant: sp('manageAccess'), 'revoke-grant': sp('removeException'), transfer: sp('transferBilling'), 'create-code': sp('newCode'), 'toggle-code': sp(target?.enabled ? 'pauseCode' : 'enableCode'), preferences: bp('manageSubscription') };
 
-  return <div className="billing-preview billing-foundation" data-theme={theme} dir={language === 'ar' ? 'rtl' : 'ltr'} lang={language}>
+  const billingDates = detail && <dl className="subscription-summary-dates">{subscriptionDateRows(detail).map(row =>
+    <div key={`${row.label}:${row.value}`}>
+      <dt>{sp(row.label)}</dt>
+      <dd>{row.value ? <time dateTime={row.value}>{date(row.value)}</time> : '—'}{row.startsAt && <small>{sp('startsOn')} · {date(row.startsAt)}</small>}</dd>
+    </div>
+  )}</dl>;
+  const businessDetails = detail && <dl className="billing-review-rows">
+    <div><dt>{bp('billingManager')}</dt><dd>{detail.managerName}{admin && <button className="billing-text-button" type="button" onClick={() => { setManagerId(''); open('transfer'); }}>{sp('transfer')}</button>}</dd></div>
+    <div><dt>{admin ? sp('branches') : t('nav.branches')}</dt><dd>{detail.shops.map(shop => shop.name).join(' · ') || '—'}</dd></div>
+    <div><dt>{bp('billingFrequency')}</dt><dd>{bp(detail.frequency)}{detail.nextFrequency && <> · {fb('nextFrequency', { frequency: bp(detail.nextFrequency) })}</>}</dd></div>
+    <div><dt>{fb('renewalPreference')}</dt><dd>{fb(detail.renewalRequested ? 'renewalRequested' : 'renewalStopped')}</dd></div>
+  </dl>;
+  const invoices = detail && (detail.invoices.length
+    ? <ul className="manager-billing-invoices">{detail.invoices.map(invoice => <li key={invoice.id}>{date(invoice.created_at)} · <bdi>{money(invoice.total_fils)}</bdi> · {invoice.state}</li>)}</ul>
+    : <p className="subscription-empty">{fb('noInvoices')}</p>);
+  const history = detail && (detail.history.length
+    ? <ol className="subscription-history">{detail.history.map(entry => <li key={entry.id}>
+      <div><strong>{fb(`actions.${entry.action}`)}</strong><time dateTime={entry.created_at}>{date(entry.created_at)}</time></div>
+      <p>{entry.reason}</p>
+    </li>)}</ol>
+    : <p className="subscription-empty">{fb('noHistory')}</p>);
+  const price = detail && <div className="billing-price">
+    <div><strong><bdi>{money(detail.priceFils)}</bdi></strong><span>{bp(detail.frequency === 'monthly' ? 'perMonth' : 'perYear')}</span></div>
+    <p>{bp('activeBarbers', { count: detail.count })}</p>
+  </div>;
+
+  return <div className={`billing-preview billing-foundation${admin ? '' : ' manager-billing'}`} data-theme={theme} dir={language === 'ar' ? 'rtl' : 'ltr'} lang={language}>
     <div className="subscription-main">
       {admin && (businessId || codesOnly) && <Link className="subscription-back" to={base}><ArrowLeft size={16}/>{sp('subscriptions')}</Link>}
-      <div className="billing-page-heading"><div><h1>{title}</h1>{detail && !admin && <p className="subscription-subtle">{detail.name}</p>}</div><div className="subscription-heading-actions"><span className="billing-preview-label">{enforced ? t('subscriptionEnforcement.enforced') : fb('foundationLabel')}</span></div></div>
-      <p className="subscription-subtle">{enforced ? t('subscriptionEnforcement.gatewayPostponed') : fb('gatewayPostponed')}</p>
+      <div className="billing-page-heading">
+        <div><h1>{title}</h1>{detail && !admin && rows.length <= 1 && <p className="subscription-subtle">{detail.name}</p>}</div>
+        {admin && <div className="subscription-heading-actions">
+          <span className="billing-preview-label">{enforced ? t('subscriptionEnforcement.enforced') : fb('foundationLabel')}</span>
+        </div>}
+      </div>
+      {admin && <p className="subscription-subtle">{enforced ? t('subscriptionEnforcement.gatewayPostponed') : fb('gatewayPostponed')}</p>}
       {notice && <p role="status" className="subscription-notice">{notice}</p>}
       {!dialog && errorMessage}
-      {loading ? <p role="status">{t('common.loading')}</p> : detail ? <>
-        {!admin && rows.length > 1 && <label className="subscription-field">{fb('chooseBusiness')}<select value={selectedId} onChange={event => setSelectedId(event.target.value)}>{rows.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
-        <section className="subscription-admin-summary" aria-label={bp('currentSubscription')}>
-          <div className="billing-price"><div><strong><bdi>{money(detail.priceFils)}</bdi></strong><span>{bp(detail.frequency === 'monthly' ? 'perMonth' : 'perYear')}</span></div><p>{bp('activeBarbers', { count: detail.count })}</p></div>
-          <div>{status(detail.access.status)}<dl className="subscription-summary-dates">{subscriptionDateRows(detail).map(row => <div key={`${row.label}:${row.value}`}><dt>{sp(row.label)}</dt><dd>{row.value ? <time dateTime={row.value}>{date(row.value)}</time> : '—'}{row.startsAt && <small>{sp('startsOn')} · {date(row.startsAt)}</small>}</dd></div>)}</dl></div>
-          {admin ? <button className="billing-primary" onClick={() => { setGrant({ kind: 'full', startsOn: today, endsOn: '', branchIds: [] }); open('grant'); }}>{sp('manageAccess')}</button> : detail.canManage ? <button className="billing-primary" onClick={() => { setFrequency(detail.nextFrequency || detail.frequency); setRenewal(detail.renewalRequested); open('preferences'); }}>{bp('manageSubscription')}</button> : <span>{fb('managedBy', { name: detail.managerName })}</span>}
+      {loading ? <p role="status">{t('common.loading')}</p> : detail && !admin ? <>
+        {rows.length > 1 && <label className="subscription-field manager-billing-selector">{fb('chooseBusiness')}
+          <select value={selectedId} onChange={event => setSelectedId(event.target.value)}>
+            {rows.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>}
+        <section className="manager-billing-summary" aria-label={bp('currentSubscription')}>
+          <div className="manager-billing-summary-top">
+            <div>
+              <h2>{bp('currentSubscription')}</h2>
+              {price}
+            </div>
+            {status(detail.access.status)}
+          </div>
+          {billingDates}
+          {detail.access.enforced && capacity && <dl className="manager-billing-capacity">
+            <div><dt>{t('subscriptionEnforcement.addBarberToday')}</dt><dd><bdi>{additionPrice}</bdi></dd></div>
+          </dl>}
+          <div className="manager-billing-summary-action">
+            {detail.canManage
+              ? <button type="button" className="billing-primary" onClick={() => { setFrequency(detail.nextFrequency || detail.frequency); setRenewal(detail.renewalRequested); open('preferences'); }}>{bp('manageSubscription')}</button>
+              : <span>{fb('managedBy', { name: detail.managerName })}</span>}
+            <p>{fb('paymentsUnavailable')}</p>
+          </div>
         </section>
-        <section className="subscription-admin-section"><h2>{sp('businessDetails')}</h2><dl className="billing-review-rows">
-          <div><dt>{bp('billingManager')}</dt><dd>{detail.managerName}{admin && <button className="billing-text-button" onClick={() => { setManagerId(''); open('transfer'); }}>{sp('transfer')}</button>}</dd></div>
-          <div><dt>{admin ? sp('branches') : t('nav.branches')}</dt><dd>{detail.shops.map(shop => shop.name).join(' · ')}</dd></div>
-          <div><dt>{bp('billingFrequency')}</dt><dd>{bp(detail.frequency)}{detail.nextFrequency && <> · {fb('nextFrequency', { frequency: bp(detail.nextFrequency) })}</>}</dd></div>
-          <div><dt>{fb('renewalPreference')}</dt><dd>{fb(detail.renewalRequested ? 'renewalRequested' : 'renewalStopped')}</dd></div>
-        </dl></section>
-        {detail.access.enforced && detail.capacity && <section className="subscription-admin-section"><h2>{t('subscriptionEnforcement.capacity')}</h2><dl className="billing-review-rows">
-          {!admin ? <div><dt>{t('subscriptionEnforcement.addBarberToday')}</dt><dd><bdi>{additionPrice}</bdi></dd></div> : <>
+        <div className="manager-billing-disclosures" key={detail.id}>
+          <BillingDisclosure title={sp('calculator')}>
+            <form className="subscription-form manager-billing-estimate" onSubmit={estimate}>
+              <label className="subscription-field">{bp('billingFrequency')}
+                <select value={estimateFrequency} onChange={event => { setEstimateFrequency(event.target.value); setQuote(null); }}>
+                  <option value="monthly">{bp('monthly')}</option><option value="yearly">{bp('yearly')}</option>
+                </select>
+              </label>
+              <label className="subscription-field">{sp('discountCode')}
+                <input value={codeText} maxLength={24} onChange={event => { setCodeText(event.target.value); setQuote(null); }} autoCapitalize="characters"/>
+              </label>
+              <button className="billing-secondary" disabled={busy} type="submit">{fb('calculate')}</button>
+            </form>
+            {quote && <dl className="billing-review-rows" aria-live="polite">
+              <div><dt>{sp('estimate')}</dt><dd><strong><bdi>{money(quote.totalFils)}</bdi></strong></dd></div>
+              <div><dt>{sp('activeCount')}</dt><dd>{quote.count}</dd></div>
+              <div><dt>{fb('subtotal')}</dt><dd><bdi>{money(quote.subtotalFils)}</bdi></dd></div>
+              {quote.discountFils > 0 && <div><dt>{sp('discount')}</dt><dd><bdi>{money(quote.discountFils)}</bdi></dd></div>}
+              {quote.discountPayments > 0 && <div><dt>{sp('duration')}</dt><dd>{quote.discountPayments === 1 ? sp('firstPayment') : sp('monthlyPayments', { count: quote.discountPayments })}</dd></div>}
+              <div><dt>{sp('standardRenewal')}</dt><dd><bdi>{money(quote.normalRenewalFils)}</bdi></dd></div>
+            </dl>}
+          </BillingDisclosure>
+          <BillingDisclosure title={bp('invoices')}>{invoices}</BillingDisclosure>
+          <BillingDisclosure title={sp('history')}>{history}</BillingDisclosure>
+          <BillingDisclosure title={sp('businessDetails')}>{businessDetails}</BillingDisclosure>
+        </div>
+      </> : detail ? <>
+        <section className="subscription-admin-summary" aria-label={bp('currentSubscription')}>
+          {price}
+          <div>{status(detail.access.status)}{billingDates}</div>
+          <button className="billing-primary" onClick={() => { setGrant({ kind: 'full', startsOn: today, endsOn: '', branchIds: [] }); open('grant'); }}>{sp('manageAccess')}</button>
+        </section>
+        <section className="subscription-admin-section"><h2>{sp('businessDetails')}</h2>{businessDetails}</section>
+        {detail.access.enforced && capacity && <section className="subscription-admin-section"><h2>{t('subscriptionEnforcement.capacity')}</h2><dl className="billing-review-rows">
           <div><dt>{sp('activeCount')}</dt><dd>{detail.count}</dd></div>
           {['active', 'grace'].includes(detail.access.status) && <div><dt>{t('subscriptionEnforcement.paidCapacity')}</dt><dd>{detail.paidCapacity}</dd></div>}
-          <div><dt>{t('subscriptionEnforcement.nextBarber')}</dt><dd>{detail.access.status === 'manual' ? t('subscriptionEnforcement.manualCapacity') : detail.capacity.allowed ? t('subscriptionEnforcement.available') : t(`subscriptionEnforcement.errors.${detail.capacity.reason}`)}</dd></div>
-          {detail.capacity.additionalFils > 0 && <div><dt>{t('subscriptionEnforcement.additional')}</dt><dd>{money(detail.capacity.additionalFils)}</dd></div>}
-          </>}
+          <div><dt>{t('subscriptionEnforcement.nextBarber')}</dt><dd>{detail.access.status === 'manual' ? t('subscriptionEnforcement.manualCapacity') : capacity.allowed ? t('subscriptionEnforcement.available') : t(`subscriptionEnforcement.errors.${capacity.reason}`)}</dd></div>
+          {capacity.additionalFils > 0 && <div><dt>{t('subscriptionEnforcement.additional')}</dt><dd>{money(capacity.additionalFils)}</dd></div>}
         </dl></section>}
-        {!admin && <section className="subscription-admin-section"><h2>{sp('calculator')}</h2><form className="subscription-form" onSubmit={estimate}>
-          <label className="subscription-field">{bp('billingFrequency')}<select value={estimateFrequency} onChange={event => { setEstimateFrequency(event.target.value); setQuote(null); }}><option value="monthly">{bp('monthly')}</option><option value="yearly">{bp('yearly')}</option></select></label>
-          <label className="subscription-field">{sp('discountCode')}<input value={codeText} maxLength={24} onChange={event => { setCodeText(event.target.value); setQuote(null); }} autoCapitalize="characters"/></label>
-          <button className="billing-secondary" disabled={busy} type="submit">{fb('calculate')}</button>
-        </form>{quote && <dl className="billing-review-rows" aria-live="polite"><div><dt>{sp('activeCount')}</dt><dd>{quote.count}</dd></div><div><dt>{fb('subtotal')}</dt><dd>{money(quote.subtotalFils)}</dd></div><div><dt>{sp('discount')}</dt><dd>{money(quote.discountFils)}</dd></div><div><dt>{sp('estimate')}</dt><dd><strong>{money(quote.totalFils)}</strong></dd></div><div><dt>{sp('standardRenewal')}</dt><dd>{money(quote.normalRenewalFils)}</dd></div>{quote.discountPayments > 0 && <div><dt>{sp('duration')}</dt><dd>{sp(quote.discountPayments === 1 ? 'firstPayment' : 'monthlyPayments', { count: quote.discountPayments })}</dd></div>}</dl>}</section>}
-        {admin && <section className="subscription-admin-section"><h2>{sp('accessException')}</h2>{detail.grants.length ? <ul className="subscription-foundation-grants">{detail.grants.map(item => <li key={item.id}><div><strong>{sp(item.kind === 'full' ? 'fullAccess' : 'manualAccess')}</strong><span>{date(item.starts_at)} – {date(item.ends_at)}</span></div><p>{item.reason}</p>{item.kind === 'manual' && <p>{detail.shops.filter(shop => item.branch_ids.includes(shop.id)).map(shop => shop.name).join(' · ')}</p>}<button className="billing-text-button subscription-danger" onClick={() => open('revoke-grant', item)}>{sp('removeException')}</button></li>)}</ul> : <p className="subscription-empty">{sp('noException')}</p>}</section>}
-        <section className="subscription-admin-section"><h2>{bp('invoices')}</h2>{detail.invoices.length ? <ul>{detail.invoices.map(invoice => <li key={invoice.id}>{date(invoice.created_at)} · {money(invoice.total_fils)} · {invoice.state}</li>)}</ul> : <p className="subscription-empty">{fb('noInvoices')}</p>}</section>
-        <section className="subscription-admin-section"><h2>{sp('history')}</h2>{detail.history.length ? <ol className="subscription-history">{detail.history.map(entry => <li key={entry.id}><div><strong>{fb(`actions.${entry.action}`)}</strong><time dateTime={entry.created_at}>{date(entry.created_at)}</time></div><p>{entry.reason}</p></li>)}</ol> : <p className="subscription-empty">{fb('noHistory')}</p>}</section>
-      </> : <>
+        <section className="subscription-admin-section"><h2>{sp('accessException')}</h2>{detail.grants.length ? <ul className="subscription-foundation-grants">{detail.grants.map(item => <li key={item.id}><div><strong>{sp(item.kind === 'full' ? 'fullAccess' : 'manualAccess')}</strong><span>{date(item.starts_at)} – {date(item.ends_at)}</span></div><p>{item.reason}</p>{item.kind === 'manual' && <p>{detail.shops.filter(shop => item.branch_ids.includes(shop.id)).map(shop => shop.name).join(' · ')}</p>}<button className="billing-text-button subscription-danger" onClick={() => open('revoke-grant', item)}>{sp('removeException')}</button></li>)}</ul> : <p className="subscription-empty">{sp('noException')}</p>}</section>
+        <section className="subscription-admin-section"><h2>{bp('invoices')}</h2>{invoices}</section>
+        <section className="subscription-admin-section"><h2>{sp('history')}</h2>{history}</section>
+      </> : !admin ? !error && <p className="subscription-empty">{sp('noResults')}</p> : <>
         <div className="subscription-list-tools"><label className="subscription-search"><span className="billing-sr-only">{sp(codesOnly ? 'searchCodes' : 'searchBusinesses')}</span><input type="search" placeholder={sp(codesOnly ? 'searchCodes' : 'searchBusinesses')} value={query} onChange={event => { setQuery(event.target.value); setPage(0); }}/></label>
           {!codesOnly && admin && <label className="subscription-filter"><span className="billing-sr-only">{sp('accessStatus')}</span><select value={filter} onChange={event => { setFilter(event.target.value); setPage(0); }}><option value="all">{sp('allStatuses')}</option>{['not_started', 'active', 'trial', 'transition', 'grace', 'expired', 'complimentary', 'manual'].map(value => <option key={value} value={value}>{fb(`states.${value}`)}</option>)}</select></label>}
           {admin && (codesOnly ? <button className="billing-primary" onClick={() => { setCodeForm({ ...freshCode, expiresOn: today }); open('create-code'); }}>{sp('newCode')}</button> : <Link className="billing-secondary" to={`${base}/discounts`}>{sp('discountCodes')}</Link>)}
         </div>
-        {rows.length > 0 && <div className="subscription-list" role="region" aria-label={title} tabIndex={0}><table><caption className="billing-sr-only">{title}</caption><thead>{codesOnly ? <tr>{['code','discount','eligibility','duration','redemptions','expires'].map(key => <th scope="col" key={key}>{sp(key)}</th>)}<th scope="col">{bp('status')}</th><th scope="col"><span className="billing-sr-only">{sp('actions')}</span></th></tr> : <tr><th scope="col">{sp('business')}</th><th scope="col">{bp('billingManager')}</th><th scope="col">{sp('barbers')}</th><th scope="col">{sp('price')}</th><th scope="col">{sp('accessStatus')}</th><th scope="col">{sp('renewalOrExpiry')}</th><th scope="col"><span className="billing-sr-only">{sp('actions')}</span></th></tr>}</thead><tbody>{rows.map(item => codesOnly ? <tr key={item.id}><td><strong>{item.code}</strong></td><td>{item.kind === 'percent' ? `${item.value}%` : money(item.value)}</td><td>{sp(`eligibilityOptions.${item.eligibility}`)}</td><td>{sp(item.payments === 1 ? 'firstPayment' : 'monthlyPayments', { count: item.payments })}</td><td>{item.used} / {item.redemption_limit ?? sp('unlimited')}</td><td>{date(new Date(new Date(item.expires_at).getTime()-1).toISOString())}</td><td>{status(item.enabled ? 'enabled' : 'paused')}</td><td><button className="billing-text-button" onClick={() => open('toggle-code',item)}>{sp(item.enabled ? 'pause' : 'enable')}</button><button className="billing-text-button" onClick={() => showCodeHistory(item)}>{sp('history')}</button></td></tr> : <tr key={item.id}><td><Link className="subscription-business-link" to={`${base}/${item.id}`}>{item.name}</Link></td><td>{item.managerName || '—'}</td><td>{item.count}</td><td><bdi>{money(item.priceFils)}</bdi><small>{bp(item.frequency)}</small></td><td>{status(item.access.status)}</td><td>{date(item.access.until)}</td><td><Link className="billing-icon" to={`${base}/${item.id}`} aria-label={sp('viewBusiness',{name:item.name})}><ArrowRight size={18}/></Link></td></tr>)}</tbody></table></div>}
-        {!rows.length ? <p className="subscription-empty">{sp('noResults')}</p> : <ul className="subscription-foundation-list subscription-foundation-mobile">{rows.map(item => <li key={item.id}>{codesOnly ? <><div><strong>{item.code}</strong>{status(item.enabled ? 'enabled' : 'paused')}</div><dl><div><dt>{sp('discount')}</dt><dd>{item.kind === 'percent' ? `${item.value}%` : money(item.value)}</dd></div><div><dt>{sp('eligibility')}</dt><dd>{sp(`eligibilityOptions.${item.eligibility}`)}</dd></div><div><dt>{sp('duration')}</dt><dd>{sp(item.payments === 1 ? 'firstPayment' : 'monthlyPayments', { count: item.payments })}</dd></div><div><dt>{sp('expires')}</dt><dd>{date(new Date(new Date(item.expires_at).getTime() - 1).toISOString())}</dd></div><div><dt>{sp('redemptions')}</dt><dd>{item.used} / {item.redemption_limit ?? sp('unlimited')}</dd></div></dl><button className="billing-text-button" onClick={() => open('toggle-code', item)}>{sp(item.enabled ? 'pause' : 'enable')}</button><button className="billing-text-button" onClick={() => showCodeHistory(item)}>{sp('history')}</button></> : <><div><Link className="subscription-business-link" to={admin ? `${base}/${item.id}` : '/dashboard/billing'} onClick={() => { if (!admin) setSelectedId(item.id); }}>{item.name}</Link>{status(item.access.status)}</div><dl><div><dt>{bp('billingManager')}</dt><dd>{item.managerName}</dd></div><div><dt>{sp('barbers')}</dt><dd>{item.count}</dd></div><div><dt>{sp('price')}</dt><dd>{money(item.priceFils)} / {bp(item.frequency)}</dd></div><div><dt>{sp('renewalOrExpiry')}</dt><dd>{date(item.access.until)}</dd></div></dl><Link className="billing-text-button" to={`${base}/${item.id}`}>{sp('manageAccess')}<ArrowRight size={16}/></Link></>}</li>)}</ul>}
+        {rows.length > 0 && <div className="subscription-list" role="region" aria-label={title} tabIndex={0}><table><caption className="billing-sr-only">{title}</caption><thead>{codesOnly ? <tr>{['code','discount','eligibility','duration','redemptions','expires'].map(key => <th scope="col" key={key}>{sp(key)}</th>)}<th scope="col">{bp('status')}</th><th scope="col"><span className="billing-sr-only">{sp('actions')}</span></th></tr> : <tr><th scope="col">{sp('business')}</th><th scope="col">{bp('billingManager')}</th><th scope="col">{sp('barbers')}</th><th scope="col">{sp('price')}</th><th scope="col">{sp('accessStatus')}</th><th scope="col">{sp('renewalOrExpiry')}</th><th scope="col"><span className="billing-sr-only">{sp('actions')}</span></th></tr>}</thead><tbody>{rows.map(item => codesOnly ? <tr key={item.id}><td><strong>{item.code}</strong></td><td>{item.kind === 'percent' ? `${item.value}%` : money(item.value)}</td><td>{sp(`eligibilityOptions.${item.eligibility}`)}</td><td>{item.payments === 1 ? sp('firstPayment') : sp('monthlyPayments', { count: item.payments })}</td><td>{item.used} / {item.redemption_limit ?? sp('unlimited')}</td><td>{date(new Date(new Date(item.expires_at).getTime()-1).toISOString())}</td><td>{status(item.enabled ? 'enabled' : 'paused')}</td><td><button className="billing-text-button" onClick={() => open('toggle-code',item)}>{sp(item.enabled ? 'pause' : 'enable')}</button><button className="billing-text-button" onClick={() => showCodeHistory(item)}>{sp('history')}</button></td></tr> : <tr key={item.id}><td><Link className="subscription-business-link" to={`${base}/${item.id}`}>{item.name}</Link></td><td>{item.managerName || '—'}</td><td>{item.count}</td><td><bdi>{money(item.priceFils)}</bdi><small>{bp(item.frequency)}</small></td><td>{status(item.access.status)}</td><td>{date(item.access.until)}</td><td><Link className="billing-icon" to={`${base}/${item.id}`} aria-label={sp('viewBusiness',{name:item.name})}><ArrowRight size={18}/></Link></td></tr>)}</tbody></table></div>}
+        {!rows.length ? <p className="subscription-empty">{sp('noResults')}</p> : <ul className="subscription-foundation-list subscription-foundation-mobile">{rows.map(item => <li key={item.id}>{codesOnly ? <><div><strong>{item.code}</strong>{status(item.enabled ? 'enabled' : 'paused')}</div><dl><div><dt>{sp('discount')}</dt><dd>{item.kind === 'percent' ? `${item.value}%` : money(item.value)}</dd></div><div><dt>{sp('eligibility')}</dt><dd>{sp(`eligibilityOptions.${item.eligibility}`)}</dd></div><div><dt>{sp('duration')}</dt><dd>{item.payments === 1 ? sp('firstPayment') : sp('monthlyPayments', { count: item.payments })}</dd></div><div><dt>{sp('expires')}</dt><dd>{date(new Date(new Date(item.expires_at).getTime() - 1).toISOString())}</dd></div><div><dt>{sp('redemptions')}</dt><dd>{item.used} / {item.redemption_limit ?? sp('unlimited')}</dd></div></dl><button className="billing-text-button" onClick={() => open('toggle-code', item)}>{sp(item.enabled ? 'pause' : 'enable')}</button><button className="billing-text-button" onClick={() => showCodeHistory(item)}>{sp('history')}</button></> : <><div><Link className="subscription-business-link" to={admin ? `${base}/${item.id}` : '/dashboard/billing'} onClick={() => { if (!admin) setSelectedId(item.id); }}>{item.name}</Link>{status(item.access.status)}</div><dl><div><dt>{bp('billingManager')}</dt><dd>{item.managerName}</dd></div><div><dt>{sp('barbers')}</dt><dd>{item.count}</dd></div><div><dt>{sp('price')}</dt><dd>{money(item.priceFils)} / {bp(item.frequency)}</dd></div><div><dt>{sp('renewalOrExpiry')}</dt><dd>{date(item.access.until)}</dd></div></dl><Link className="billing-text-button" to={`${base}/${item.id}`}>{sp('manageAccess')}<ArrowRight size={16}/></Link></>}</li>)}</ul>}
         <div className="subscription-pagination"><button className="billing-icon" disabled={page === 0 || loading} onClick={() => setPage(value => value - 1)} aria-label={sp('previousPage')}><ChevronLeft size={20}/></button><span>{fb('page', { page: page + 1 })}</span><button className="billing-icon" disabled={!hasMore || loading} onClick={() => setPage(value => value + 1)} aria-label={sp('nextPage')}><ChevronRight size={20}/></button></div>
       </>}
 

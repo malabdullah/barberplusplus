@@ -23,6 +23,7 @@ const open = () => render(<MemoryRouter><SubscriptionBilling /></MemoryRouter>);
 it('shows a twelve-payment monthly discount with its correct duration and amount', async () => {
   rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business] } : action === 'detail' ? business : { count: 3, subtotalFils: 30000, totalFils: 15000, discountFils: 15000, normalRenewalFils: 30000, discountPayments: 12 }));
   open(); await screen.findByText(business.name);
+  fireEvent.click(screen.getByText('Pricing calculator', { selector: 'summary' }));
   fireEvent.click(screen.getByRole('button', { name: 'Calculate estimate' }));
   await screen.findByText('First 12 monthly payments');
   expect(screen.getAllByText('KD 15.000')).toHaveLength(2);
@@ -30,6 +31,7 @@ it('shows a twelve-payment monthly discount with its correct duration and amount
 it('uses backend totals and re-reads after a saved preference', async () => {
   open();
   await screen.findByText(business.name);
+  fireEvent.click(screen.getByText('Pricing calculator', { selector: 'summary' }));
   fireEvent.click(screen.getByRole('button', { name: 'Calculate estimate' }));
   await screen.findByText('KD 24.000');
   fireEvent.click(screen.getByRole('button', { name: 'Manage subscription' }));
@@ -109,7 +111,6 @@ it('opens discount codes from a populated subscription list without reusing its 
   await screen.findByText('No matching results.');
   expect(rpc).toHaveBeenCalledWith('codes', expect.any(Object));
 });
-
 
 it.each([false, true])('separates the Kuwait billing and complimentary expiry dates for admin=%s', async admin => {
   const actual = { ...business, periodEndsAt: '2026-12-19T22:05:45Z',

@@ -24,3 +24,58 @@
 .subscription-heading-actions { display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
 .billing-foundation .status-transition, .billing-foundation .status-not_started { color: var(--billing-ink); background: var(--billing-subtle); }
 @media(max-width:760px) { .billing-foundation { padding: 18px; } .subscription-foundation-list { display: block; } .billing-foundation .billing-page-heading { align-items: start; flex-direction: column; gap: 12px; } .billing-foundation .billing-review-rows > div { grid-template-columns: minmax(0,1fr); gap: 8px; } }
+
+.manager-billing { padding: 0; max-width: 1040px; margin-inline: auto; background: transparent; }
+.manager-billing .billing-page-heading { margin-bottom: 20px; }
+.manager-billing .billing-page-heading > div { display: block; }
+.manager-billing .billing-page-heading h1 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 2.75rem); line-height: 1.15; }
+.manager-billing .billing-page-heading p { margin: 7px 0 0; }
+.manager-billing-selector { max-width: 420px; margin-bottom: 16px; }
+.manager-billing-summary {
+  padding: clamp(16px, 3.5vw, 28px); border: 1px solid var(--billing-border); border-radius: 12px;
+  background: var(--billing-surface);
+}
+.manager-billing-summary-top { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px 18px; }
+.manager-billing .manager-billing-summary-top h2 { font: inherit; color: var(--billing-muted); margin-bottom: 7px; }
+.manager-billing .billing-price strong { font-size: clamp(1.9rem, 5vw, 3.05rem); line-height: 1.14; }
+.manager-billing .billing-price p, .manager-billing .billing-price > div > span { font-size: .94rem; }
+.manager-billing .subscription-summary-dates {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr)); gap: 12px 20px;
+  border-top: 1px solid var(--billing-border); padding-top: 16px; margin-top: 16px;
+}
+.manager-billing .subscription-summary-dates:empty { display: none; }
+.manager-billing-capacity { margin: 16px 0 0; }
+.manager-billing-capacity > div {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  border-block: 1px solid var(--billing-border); padding-block: 11px;
+}
+.manager-billing-capacity dt { color: var(--billing-muted); font-size: .875rem; }
+.manager-billing-capacity dd { margin: 0; text-align: end; font-weight: 600; }
+.manager-billing-summary-action { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin-top: 18px; }
+.manager-billing-summary-action p { margin: 0; font-size: .875rem; color: var(--billing-muted); }
+.manager-billing-disclosures { margin-top: 20px; border-top: 1px solid var(--billing-border); }
+.manager-billing-disclosure { border-bottom: 1px solid var(--billing-border); }
+.manager-billing-disclosure > summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  min-height: 54px; padding-block: 9px; list-style: none; cursor: pointer; font-weight: 600;
+}
+.manager-billing-disclosure > summary::-webkit-details-marker { display: none; }
+.manager-billing-disclosure > summary svg { flex: none; color: var(--billing-muted); }
+.manager-billing-disclosure[open] > summary svg { transform: rotate(180deg); }
+.manager-billing-disclosure-body { padding: 0 0 16px; }
+.manager-billing .manager-billing-estimate {
+  max-width: none; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: end; gap: 12px;
+}
+.manager-billing .billing-review-rows { margin: 8px 0 0; }
+.manager-billing .billing-review-rows > div { padding-block: 9px; gap: 14px; }
+.manager-billing .billing-review-rows > div:last-child { border: 0; }
+.manager-billing .subscription-empty { margin: 0; padding: 4px 0 16px; }
+.manager-billing-invoices { margin: 0; padding-inline-start: 20px; }
+.manager-billing-invoices li { padding-block: 5px; }
+@media (max-width: 630px) {
+  .manager-billing .manager-billing-estimate { grid-template-columns: minmax(0, 1fr); }
+  .manager-billing-summary-action { align-items: start; flex-direction: column; }
+  .manager-billing .subscription-summary-dates { grid-template-columns: minmax(0, 1fr); }
+  .manager-billing .subscription-summary-dates > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .manager-billing .subscription-summary-dates dd { text-align: end; }
+}

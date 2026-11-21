@@ -2429,6 +2429,11 @@ begin
   return receipt;
 end $$;
 ALTER FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select settlement_api.dispatch(p_action,p_data,true);$$;
+ALTER FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -2736,6 +2741,11 @@ begin
 end;
 $$;
 ALTER FUNCTION "public"."shop_reviews"("p_page" integer) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select settlement_api.dispatch(p_action,p_data,false);$$;
+ALTER FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3516,6 +3526,8 @@ CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDAT
 CREATE OR REPLACE TRIGGER "provision_booking_public_link" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."provision_booking_public_link"();
 CREATE OR REPLACE TRIGGER "require_barber_invitation" BEFORE INSERT ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."require_barber_invitation"();
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
+CREATE OR REPLACE TRIGGER "settlement_booking_history" BEFORE UPDATE OF "branch_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_settlement_history"();
+CREATE OR REPLACE TRIGGER "settlement_shop_history" BEFORE DELETE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_settlement_history"();
 CREATE OR REPLACE TRIGGER "stamp_booking_cancellation" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."stamp_booking_cancellation"();
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "phone", "country_code", "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "name", "phone", "country_code", "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
@@ -3982,6 +3994,8 @@ REVOKE ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid
 GRANT ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
@@ -4002,6 +4016,8 @@ GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "auth
 GRANT ALL ON FUNCTION "public"."shop_booking_policy"("p_branch" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "service_role";
