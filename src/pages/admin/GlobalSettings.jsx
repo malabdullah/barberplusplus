@@ -16,6 +16,7 @@ import { adminService } from '../../services';
 import { useApp } from '../../context/AppContext';
 import './AdminPages.css';
 import './GlobalSettings.css';
+import { settlementFeaturesEnabled } from '../../lib/runtimeConfig';
 
 // Reusable section component
 function SettingsSection({ icon: Icon, title, description, children }) {
@@ -338,6 +339,9 @@ export default function GlobalSettings() {
             </div>
           </SettingsItem>
 
+          {settlementFeaturesEnabled ? <SettingsItem label={t('admin.globalSettings.financial.commission')}>
+            <Link className="btn btn-secondary" to="/admin/settlements">{t('settlements.settings')}</Link>
+          </SettingsItem> : (
           <SettingsItem
             label={t('admin.globalSettings.financial.commission')}
             description={t('admin.globalSettings.financial.commissionDesc')}
@@ -356,6 +360,7 @@ export default function GlobalSettings() {
               <span className="admin-input-suffix">%</span>
             </div>
           </SettingsItem>
+          )}
         </SettingsSection>
 
         {/* Feature Toggles Section */}

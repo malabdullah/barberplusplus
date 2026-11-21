@@ -1,0 +1,104 @@
+.settlement-page { max-width: 1440px; }
+.settlement-heading { margin-bottom: 20px; }
+.settlement-shop-name { margin: 6px 0 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.settlement-back { min-height: 32px; margin-bottom: 4px; font-size: .875rem; }
+[dir="rtl"] .settlement-back svg { transform: scaleX(-1); }
+.settlement-subtitle { max-width: 640px; margin: 0 0 20px; color: var(--text-secondary); }
+.settlement-actions, .settlement-toolbar, .settlement-toolbar form {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+}
+.settlement-heading > .settlement-actions { justify-content: end; }
+.settlement-toolbar { justify-content: space-between; margin-block: 18px; }
+.settlement-toolbar > button { margin-inline-start: auto; }
+.settlement-toolbar input {
+  min-width: 0; min-height: 44px; width: min(230px, 100%); padding-inline: 12px;
+  font: inherit; border: 1px solid var(--border-color); border-radius: 8px;
+  background: var(--bg-secondary); color: var(--text-primary);
+}
+.settlement-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.settlement-refresh { width: 44px; padding: 0; }
+.settlement-balance, .settlement-statement-total {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center;
+  gap: 0 28px; padding: clamp(16px, 3vw, 26px); background: var(--bg-secondary);
+  border: 1px solid var(--surface-divider, var(--border-color)); border-radius: 12px;
+}
+.settlement-balance { margin-block: 20px 16px; }
+.settlement-balance-main span, .settlement-statement-total span { display: block; color: var(--text-secondary); font-size: .875rem; }
+.settlement-balance-main strong, .settlement-statement-total strong {
+  display: block; margin-block: 5px; font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3.8vw, 2.65rem); line-height: 1.15; font-weight: 600; overflow-wrap: anywhere;
+}
+.settlement-balance dl, .settlement-statement-total dl { margin: 0; font-size: .875rem; }
+.settlement-balance dl > div:last-child, .settlement-statement-total dl > div:last-child { border-bottom: 0; }
+.settlement-balance dd, .settlement-statement-total dd { flex: none; }
+.settlement-breakdown { grid-column: 1 / -1; border-top: 1px solid var(--surface-divider, var(--border-color)); margin-top: 16px; }
+.settlement-breakdown summary, .settlement-row-menu summary { cursor: pointer; padding-block: 10px; color: var(--text-secondary); font-size: .875rem; }
+.settlement-header-menu { position: relative; }
+.settlement-header-menu summary { list-style: none; cursor: pointer; }
+.settlement-header-menu summary::-webkit-details-marker { display: none; }
+.settlement-header-menu > div {
+  position: absolute; z-index: 2; inset-inline-end: 0; inset-block-start: calc(100% + 6px); min-width: 168px;
+  display: grid; padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--surface-divider, var(--border-color)); background: var(--bg-primary);
+}
+.settlement-header-menu > div button { width: 100%; padding-inline: 0; }
+.settlement-tabs { display: flex; flex-wrap: wrap; gap: 0 22px; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
+.settlement-tabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 11px 0;
+  min-height: 44px; font: inherit; color: var(--text-secondary); cursor: pointer;
+}
+.settlement-tabs button.active { border-bottom-color: var(--accent-primary); color: var(--text-primary); font-weight: 600; }
+.settlement-page small { display: block; margin-top: 5px; color: var(--text-secondary); font-size: .75rem; overflow-wrap: anywhere; }
+.settlement-list { margin-block: 14px; }
+.settlement-list td { vertical-align: middle; overflow-wrap: anywhere; }
+.settlement-cell-value { min-width: 0; overflow-wrap: anywhere; }
+.settlement-list td:first-child { font-weight: 600; }
+.settlement-list small { font-weight: 400; }
+.settlement-row-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0 12px; }
+.settlement-row-actions .report-text-action { min-height: 40px; font-size: .875rem; }
+.settlement-row-menu > div { display: grid; }
+.settlement-view { padding-inline: 14px; }
+.settlement-pagination { display: flex; justify-content: end; gap: 16px; align-items: center; padding-block: 20px; }
+.settlement-dialog { max-width: min(960px, calc(100% - 32px)); width: min(880px, calc(100% - 32px)); padding: 28px; }
+.settlement-dialog h2 { margin: 0; }
+.settlement-dialog .settlement-statement-total { margin-bottom: 14px; }
+.settlement-statement-items { margin-bottom: 18px; }
+.settlement-statement-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; }
+.settlement-statement-actions button { text-align: center; }
+.settlement-dialog form > fieldset { border: 0; padding: 0; min-width: 0; display: grid; gap: 20px; }
+.settlement-dialog label > input:not([type=checkbox], [type=radio]), .settlement-dialog label > select { display: block; margin-top: 8px; min-height: 44px; width: 100%; }
+.settlement-dialog p { color: var(--text-secondary); line-height: 1.6; }
+.settlement-dialog .settlement-checkbox { display: flex; gap: 12px; align-items: center; min-height: 44px; }
+.settlement-checkbox input { width: 18px; height: 18px; accent-color: var(--accent-primary); flex-shrink: 0; }
+.settlement-booking-list { max-height: 240px; overflow-y: auto; border: 1px solid var(--surface-divider, var(--border-color)); padding: 12px; }
+.settlement-booking-list label { padding: 10px 0; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
+.settlement-dialog footer { display: flex; justify-content: end; gap: 12px; padding-top: 20px; }
+.settlement-dialog dl > div { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
+.settlement-dialog dd { margin: 0; text-align: end; }
+.settlement-dialog .report-table-scroll table { min-width: 0; }
+.settlement-journal { border-top: 1px solid var(--surface-divider, var(--border-color)); padding-block: 16px; }
+.settlement-journal > div { display: flex; justify-content: space-between; gap: 16px; }
+@media (max-width: 760px) {
+  .settlement-heading { flex-wrap: wrap; gap: 6px 14px; }
+  .settlement-heading > .settlement-actions { margin-inline-start: auto; }
+  .settlement-toolbar form { width: 100%; }
+  .settlement-toolbar input { flex: 1; }
+  .settlement-dialog { padding: 18px; }
+  .settlement-balance, .settlement-statement-total { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .settlement-breakdown { margin-top: 4px; }
+  .settlement-tabs { gap: 0 14px; }
+  .settlement-list, .settlement-statement-items { overflow: visible; }
+  .settlement-list table, .settlement-statement-items table { min-width: 0; }
+  :is(.settlement-list, .settlement-statement-items) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  :is(.settlement-list, .settlement-statement-items) tr { display: block; padding-block: 12px; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
+  :is(.settlement-list, .settlement-statement-items) td {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 0; border: 0; text-align: end;
+  }
+  :is(.settlement-list, .settlement-statement-items) td:not(:first-child, :last-child)::before,
+  .settlement-list td:last-child:not(:has(button))::before, .settlement-statement-items td:last-child::before {
+    content: attr(data-label); color: var(--text-secondary); text-align: start; font-weight: 400;
+  }
+  :is(.settlement-list, .settlement-statement-items) td:first-child { display: block; text-align: start; }
+  .settlement-list td:last-child:has(button) { justify-content: flex-start; text-align: start; }
+  .settlement-statement-actions button { flex: 1 1 auto; }
+}

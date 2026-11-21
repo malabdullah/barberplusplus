@@ -21,3 +21,5 @@ export const isTest = ['test', 'development', 'cloud-test'].includes(appConfig.e
 export const customerFeaturesEnabled = isTest || appConfig.environment === 'production';
 
 export const subscriptionFeaturesEnabled = isTest || appConfig.environment === 'production';
+
+export const settlementFeaturesEnabled = isTest || appConfig.environment === 'production';
