@@ -103,15 +103,39 @@
   .settlement-statement-actions button { flex: 1 1 auto; }
 }
 
-.settlement-reconciliation-section + .settlement-reconciliation-section {
-  margin-block-start: 32px;
-  padding-block-start: 8px;
-  border-top: 1px solid var(--surface-divider, var(--border-color));
+.settlement-reconciliation-page .settlement-heading { margin-bottom: 18px; }
+.settlement-reconciliation-page .settlement-toolbar { margin-block: 14px; }
+.settlement-reconciliation-page .report-table-scroll table { min-width: 0; }
+.settlement-reconciliation-page .report-state { padding-block: 24px; }
+.reconciliation-filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px;
+  border: 1px solid var(--surface-divider, var(--border-color)); border-radius: 8px;
 }
-.settlement-reconciliation-section .settlement-toolbar h2 { margin: 0; }
+.reconciliation-filters button {
+  min-height: 44px; padding-inline: 10px; border: 1px solid transparent; border-radius: 5px;
+  font: inherit; font-size: .875rem; color: var(--text-secondary); background: transparent; cursor: pointer;
+}
+.reconciliation-filters button[aria-pressed="true"] {
+  font-weight: 600; color: var(--text-primary); border-color: var(--accent-border); background: var(--bg-secondary);
+}
+.reconciliation-saved {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 6px 12px;
+  border-inline-start: 2px solid var(--status-success); background: var(--status-success-bg); font-size: .875rem;
+}
+.reconciliation-bank-list :is(th, td):nth-child(2) { width: 25%; text-align: end; font-variant-numeric: tabular-nums; }
+.reconciliation-bank-list :is(th, td):nth-child(3) { width: 24%; padding-inline-start: 24px; }
+.reconciliation-status { display: inline-flex; align-items: baseline; gap: 7px; font-size: .875rem; line-height: 1.35; }
+.reconciliation-status::before {
+  content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--status-warning);
+}
+.reconciliation-status[data-status="matched"]::before { background: var(--status-success); }
 .reconciliation-dialog { max-width: min(480px, calc(100% - 32px)); }
 .reconciliation-dialog form > fieldset { margin-block-start: 18px; gap: 14px; }
 .reconciliation-field select { display: block; width: 100%; min-height: 44px; margin-block-start: 8px; }
 @media (max-width: 760px) {
-  .settlement-reconciliation-page .report-table-scroll table { min-width: 0; }
+  .reconciliation-bank-list tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 4px 12px; }
+  .reconciliation-bank-list tbody td:nth-child(n) { width: auto; padding: 0; }
+  .reconciliation-bank-list tbody td:first-child { grid-row: span 2; }
+  .reconciliation-bank-list tbody td:nth-child(n+2) { justify-content: end; }
+  .reconciliation-bank-list tbody td:nth-child(n+2)::before { display: none; }
 }

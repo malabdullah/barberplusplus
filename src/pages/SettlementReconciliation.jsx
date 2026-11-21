@@ -12,11 +12,12 @@ import './Settlements.css';
 
 const pageSize = 25;
 
-function useRows(action, page, filter, refresh) {
+function useRows(action, page, filter, refresh, enabled) {
   const key = JSON.stringify([page, filter, refresh]);
   const [data, setData] = useState(null);
 
   useEffect(() => {
+    if (!enabled) return;
     let current = true;
     const scope = action === 'shops' ? { query: filter } : { filter };
     reconciliationRpc(action, { ...scope, offset: page * pageSize }).then(value => {
@@ -25,16 +26,16 @@ function useRows(action, page, filter, refresh) {
       if (current) setData({ key, error: error.message });
     });
     return () => { current = false; };
-  }, [action, page, filter, key]);
+  }, [action, page, filter, key, enabled]);
 
   return data?.key === key ? data : null;
 }
 
-function ResultTable({ columns, data, page, setPage, empty, label, errorText }) {
+function ResultTable({ columns, className = '', data, page, setPage, empty, label, errorText }) {
   if (!data) return <p role="status" className="report-state">{label('loading')}</p>;
   if (data.error) return <p role="alert" className="report-error">{errorText(data.error)}</p>;
   return <>
-    {data.rows.length ? <div className="report-table-scroll settlement-list"><table>
+    {data.rows.length ? <div className={`report-table-scroll settlement-list ${className}`}><table>
       <thead><tr>{columns.map(([name]) => <th key={name} scope="col">{label(name)}</th>)}</tr></thead>
       <tbody>{data.rows.map(row => <tr key={row.id}>{columns.map(([name, value]) =>
         <td key={name} data-label={label(name)}><div className="settlement-cell-value">{value(row)}</div></td>
@@ -54,6 +55,7 @@ function Reconciliation() {
   const label = key => t(`settlements.${key}`);
   const errorText = code => t(`settlements.errors.${code}`, { defaultValue: label('errors.SETTLEMENT_FAILED') });
   const money = fils => <bdi>{reportMoney(fils, language)}</bdi>;
+  const [view, setView] = useState('bank');
   const [refresh, setRefresh] = useState(0);
   const [shopPage, setShopPage] = useState(0);
   const [bankPage, setBankPage] = useState(0);
@@ -62,17 +64,23 @@ function Reconciliation() {
   const [filter, setFilter] = useState('unmatched');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [saved, setSaved] = useState(false);
   const dialog = useRef(null);
   const opener = useRef(null);
+  const allEntriesButton = useRef(null);
   const pending = useRef(false);
-  const shops = useRows('shops', shopPage, query, refresh);
-  const bank = useRows('entries', bankPage, filter, refresh);
+  const shops = useRows('shops', shopPage, query, refresh, view === 'shops');
+  const bank = useRows('entries', bankPage, filter, refresh, view === 'bank');
+
+  function showBankEntries(value) {
+    setFilter(value);
+    setBankPage(0);
+  }
 
   function openEntry() {
     dialog.current.querySelector('form').reset();
     setFormError('');
-    setNotice('');
+    setSaved(false);
     dialog.current.showModal();
   }
 
@@ -94,7 +102,7 @@ function Reconciliation() {
         amountFils, reference, direction: fields.get('direction'), bookedOn: fields.get('bookedOn'),
       });
       dialog.current?.close();
-      setNotice('bankEntrySaved');
+      setSaved(true);
       setBankPage(0);
       setRefresh(value => value + 1);
     } catch (error) {
@@ -116,42 +124,57 @@ function Reconciliation() {
       </div>
     </header>
 
-    <section className="settlement-reconciliation-section" aria-labelledby="settlement-shop-balances">
+    <nav className="settlement-tabs" aria-label={label('reconciliation')}>
+      <button type="button" className={view === 'bank' ? 'active' : ''} aria-pressed={view === 'bank'} onClick={() => setView('bank')}>
+        {label('bankEntries')}
+      </button>
+      <button type="button" className={view === 'shops' ? 'active' : ''} aria-pressed={view === 'shops'} onClick={() => setView('shops')}>
+        {label('shopBalances')}
+      </button>
+    </nav>
+
+    {view === 'shops' ? <section aria-label={label('shopBalances')}>
       <div className="settlement-toolbar">
-        <h2 id="settlement-shop-balances">{label('shopBalances')}</h2>
-        <form onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setShopPage(0); }}>
+        <form className="reconciliation-search" onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setShopPage(0); }}>
           <label className="settlement-sr-only" htmlFor="reconciliation-shop-search">{label('searchShops')}</label>
           <input id="reconciliation-shop-search" placeholder={label('searchShops')} value={search} maxLength={100} onChange={event => setSearch(event.target.value)} />
           <button type="submit" className="btn btn-secondary">{label('search')}</button>
         </form>
       </div>
-      <p className="settlement-subtitle">{label('owedExplanation')}</p>
       <ResultTable data={shops} page={shopPage} setPage={setShopPage} label={label} errorText={errorText} empty="empty" columns={[
         ['shops', row => localizedReportName(row, language)],
         ['owedFils', row => money(row.owedFils)],
         ['transferredFils', row => money(row.transferredFils)],
       ]} />
-    </section>
-
-    <section className="settlement-reconciliation-section" aria-labelledby="settlement-bank-entries">
+    </section> : <section aria-label={label('bankEntries')}>
       <div className="settlement-toolbar">
-        <h2 id="settlement-bank-entries">{label('bankEntries')}</h2>
-        <button type="button" ref={opener} className="btn btn-primary" onClick={openEntry}><Plus size={17} />{label('recordBankEntry')}</button>
+        <div className="reconciliation-filters" role="group" aria-label={label('bankEntryFilter')}>
+          {['unmatched', 'all'].map(value => <button key={value} type="button"
+            ref={value === 'all' ? allEntriesButton : null}
+            aria-pressed={filter === value} onClick={() => showBankEntries(value)}>
+            {label(value === 'all' ? 'allBankEntries' : 'unmatchedBankEntries')}
+          </button>)}
+        </div>
+        <button type="button" ref={opener} className="btn btn-primary" onClick={openEntry}><Plus size={17} />{label('addBankEntry')}</button>
       </div>
-      {notice && <p role="status">{label(notice)}</p>}
-      <nav className="settlement-tabs" aria-label={label('bankEntries')}>
-        {['unmatched', 'all'].map(value => <button key={value} type="button" className={filter === value ? 'active' : ''}
-          aria-pressed={filter === value} onClick={() => { setFilter(value); setBankPage(0); }}>{label(value === 'all' ? 'allBankEntries' : 'unmatchedBankEntries')}</button>)}
-      </nav>
-      <ResultTable data={bank} page={bankPage} setPage={setBankPage} label={label} errorText={errorText}
+      {saved && <div className="reconciliation-saved">
+        <p role="status">{label('bankEntrySaved')}</p>
+        {filter === 'unmatched' && <button type="button" className="report-text-action" onClick={() => {
+          showBankEntries('all');
+          allEntriesButton.current?.focus();
+        }}>
+          {label('viewAllBankEntries')}
+        </button>}
+      </div>}
+      <ResultTable className="reconciliation-bank-list" data={bank} page={bankPage} setPage={setBankPage} label={label} errorText={errorText}
         empty={filter === 'all' ? 'noBankEntries' : 'noUnmatchedEntries'} columns={[
-          ['reference', row => <bdi>{row.reference}</bdi>],
-          ['bankDate', row => reportDate(row.bookedOn, language)],
-          ['bankDirection', row => label(row.direction === 'out' ? 'bankOut' : 'bankIn')],
+          ['bankReference', row => <><bdi>{row.reference}</bdi>
+            <small>{reportDate(row.bookedOn, language)} · {label(row.direction === 'out' ? 'bankOut' : 'bankIn')}</small>
+          </>],
           ['amountFils', row => money(row.amountFils)],
-          ['state', row => label(`bankStatus_${row.status}`)],
+          ['state', row => <span className="reconciliation-status" data-status={row.status}>{label(`bankStatus_${row.status}`)}</span>],
         ]} />
-    </section>
+    </section>}
     <dialog ref={dialog} aria-labelledby="reconciliation-entry-title" className="report-filter-dialog settlement-dialog reconciliation-dialog"
       onClose={() => opener.current?.focus()} onCancel={event => { if (pending.current) event.preventDefault(); }}>
       <form onSubmit={record}>
@@ -171,7 +194,7 @@ function Reconciliation() {
         {formError && <p role="alert" className="report-error">{errorText(formError)}</p>}
         <footer>
           <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => dialog.current.close()}>{label('close')}</button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>{label(saving ? 'loading' : 'confirm')}</button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>{label(saving ? 'loading' : 'saveBankEntry')}</button>
         </footer>
       </form>
     </dialog>
