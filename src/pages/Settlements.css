@@ -112,7 +112,7 @@
   border: 1px solid var(--surface-divider, var(--border-color)); border-radius: 8px;
 }
 .reconciliation-filters button {
-  min-height: 44px; padding-inline: 10px; border: 1px solid transparent; border-radius: 5px;
+  min-height: 44px; padding-inline: 8px; border: 1px solid transparent; border-radius: 5px;
   font: inherit; font-size: .875rem; color: var(--text-secondary); background: transparent; cursor: pointer;
 }
 .reconciliation-filters button[aria-pressed="true"] {
@@ -134,7 +134,7 @@
 .reconciliation-field select { display: block; width: 100%; min-height: 44px; margin-block-start: 8px; }
 @media (max-width: 760px) {
   .reconciliation-bank-list tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 4px 12px; }
-  .reconciliation-bank-list tbody td:nth-child(n) { width: auto; padding: 0; }
+  .reconciliation-bank-list tbody td:nth-child(n) { width: auto; padding: 0; border: 0; }
   .reconciliation-bank-list tbody td:first-child { grid-row: span 2; }
   .reconciliation-bank-list tbody td:nth-child(n+2) { justify-content: end; }
   .reconciliation-bank-list tbody td:nth-child(n+2)::before { display: none; }
