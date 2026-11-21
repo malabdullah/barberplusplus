@@ -50,9 +50,10 @@ function ResultTable({ columns, data, page, setPage, empty, label, errorText }) 
 
 function Reconciliation() {
   const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const label = key => t(`settlements.${key}`);
   const errorText = code => t(`settlements.errors.${code}`, { defaultValue: label('errors.SETTLEMENT_FAILED') });
-  const money = fils => <bdi>{reportMoney(fils, i18n.language)}</bdi>;
+  const money = fils => <bdi>{reportMoney(fils, language)}</bdi>;
   const [refresh, setRefresh] = useState(0);
   const [shopPage, setShopPage] = useState(0);
   const [bankPage, setBankPage] = useState(0);
@@ -104,7 +105,7 @@ function Reconciliation() {
     }
   }
 
-  return <main className="reports-page settlement-page">
+  return <main className="reports-page settlement-page settlement-reconciliation-page" lang={language} dir={language.startsWith('ar') ? 'rtl' : 'ltr'}>
     <header className="reports-heading settlement-heading">
       <div>
         <Link to="/admin/settlements" className="report-text-action settlement-back"><ArrowLeft size={16} />{label('title')}</Link>
@@ -126,7 +127,7 @@ function Reconciliation() {
       </div>
       <p className="settlement-subtitle">{label('owedExplanation')}</p>
       <ResultTable data={shops} page={shopPage} setPage={setShopPage} label={label} errorText={errorText} empty="empty" columns={[
-        ['shops', row => localizedReportName(row, i18n.language)],
+        ['shops', row => localizedReportName(row, language)],
         ['owedFils', row => money(row.owedFils)],
         ['transferredFils', row => money(row.transferredFils)],
       ]} />
@@ -145,7 +146,7 @@ function Reconciliation() {
       <ResultTable data={bank} page={bankPage} setPage={setBankPage} label={label} errorText={errorText}
         empty={filter === 'all' ? 'noBankEntries' : 'noUnmatchedEntries'} columns={[
           ['reference', row => <bdi>{row.reference}</bdi>],
-          ['bankDate', row => reportDate(row.bookedOn, i18n.language)],
+          ['bankDate', row => reportDate(row.bookedOn, language)],
           ['bankDirection', row => label(row.direction === 'out' ? 'bankOut' : 'bankIn')],
           ['amountFils', row => money(row.amountFils)],
           ['state', row => label(`bankStatus_${row.status}`)],
@@ -156,7 +157,13 @@ function Reconciliation() {
       <form onSubmit={record}>
         <h2 id="reconciliation-entry-title">{label('recordBankEntry')}</h2>
         <fieldset disabled={saving}>
-          <label>{label('bankDirection')}<select name="direction" defaultValue="in"><option value="in">{label('bankIn')}</option><option value="out">{label('bankOut')}</option></select></label>
+          <div className="reconciliation-field">
+            <label htmlFor="reconciliation-entry-direction">{label('bankDirection')}</label>
+            <select id="reconciliation-entry-direction" name="direction" defaultValue="in">
+              <option value="in">{label('bankIn')}</option>
+              <option value="out">{label('bankOut')}</option>
+            </select>
+          </div>
           <label>{label('bankDate')}<input name="bookedOn" type="date" defaultValue={financeToday()} min="2000-01-01" max={financeToday()} required /></label>
           <label>{label('reference')}<input name="reference" maxLength={120} autoComplete="off" required /></label>
           <label>{label('amount')}<input name="amount" inputMode="decimal" autoComplete="off" required /></label>

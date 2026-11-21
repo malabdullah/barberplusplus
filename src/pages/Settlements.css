@@ -111,3 +111,7 @@
 .settlement-reconciliation-section .settlement-toolbar h2 { margin: 0; }
 .reconciliation-dialog { max-width: min(480px, calc(100% - 32px)); }
 .reconciliation-dialog form > fieldset { margin-block-start: 18px; gap: 14px; }
+.reconciliation-field select { display: block; width: 100%; min-height: 44px; margin-block-start: 8px; }
+@media (max-width: 760px) {
+  .settlement-reconciliation-page .report-table-scroll table { min-width: 0; }
+}
