@@ -2,7 +2,7 @@
 import hashlib, json, os, pathlib, subprocess, sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-SOURCE = '80907548f6dcf3fa95ac74fbfe3fd6415b462ab1'
+SOURCE = '9275d8f50eeaebe66475cfd01da02e1132fb2b58'
 BRANCH = 'refs/heads/codex/finance-settlement-schema-proof-20261121'
 
 def verify(root):

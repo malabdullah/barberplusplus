@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "source": "80907548f6dcf3fa95ac74fbfe3fd6415b462ab1",
+  "source": "9275d8f50eeaebe66475cfd01da02e1132fb2b58",
   "baselineCommit": "720b760951a278551af1c8a90e216a16ed7cdc9d",
   "baselineMigrations": [
     {
@@ -631,7 +631,7 @@
     }
   ],
   "sourceFileSha256": {
-    "ops/release/test-postgres-image.py": "5be3b6a29fc4403ab43a57957690e1c674d9554aa765b3b23a695e3771173918",
+    "ops/release/test-postgres-image.py": "ca12b5d913e030cfcdec7a35e7964bb68b56ff2243ee9569fd82cdf1e1f99c18",
     "ops/release/runtime-lock.json": "81b0f05d3be62febd7ae1087523cc5bd0e3d68a44cd4d1e33dc91ce0ca66a2b7",
     "ops/release/dump-schema.sh": "5cd57189f6565ddf651ff149995398a4c9b1971ca34a0093a77c011a41f21d64",
     "ops/release/dump-production-schema.sh": "f6bc3838d0d640ea3a3bc9eba3f08311d59a2cedbe9a52d85ab4c2444e40ad41",
