@@ -102,3 +102,12 @@
   .settlement-list td:last-child:has(button) { justify-content: flex-start; text-align: start; }
   .settlement-statement-actions button { flex: 1 1 auto; }
 }
+
+.settlement-reconciliation-section + .settlement-reconciliation-section {
+  margin-block-start: 32px;
+  padding-block-start: 8px;
+  border-top: 1px solid var(--surface-divider, var(--border-color));
+}
+.settlement-reconciliation-section .settlement-toolbar h2 { margin: 0; }
+.reconciliation-dialog { max-width: min(480px, calc(100% - 32px)); }
+.reconciliation-dialog form > fieldset { margin-block-start: 18px; gap: 14px; }
