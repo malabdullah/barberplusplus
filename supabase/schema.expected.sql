@@ -2429,6 +2429,11 @@ begin
   return receipt;
 end $$;
 ALTER FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."platform_settlement_reconciliation"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
+    LANGUAGE "sql"
+    SET "search_path" TO ''
+    AS $$select settlement_api.reconciliation(p_action,p_data);$$;
+ALTER FUNCTION "public"."platform_settlement_reconciliation"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "sql"
     SET "search_path" TO ''
@@ -3994,6 +3999,8 @@ REVOKE ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid
 GRANT ALL ON FUNCTION "public"."native_close_booking_attempt"("p_booking" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."native_customer_booking"("p_action" "text", "p_data" "jsonb") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."platform_settlement_reconciliation"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."platform_settlement_reconciliation"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
