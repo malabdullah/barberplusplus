@@ -9,13 +9,14 @@ import {
   Send,
   Settings2,
   CreditCard,
+  Landmark,
   Tag,
   Shield,
   Settings,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { subscriptionFeaturesEnabled } from '../../lib/runtimeConfig';
+import { subscriptionFeaturesEnabled, settlementFeaturesEnabled } from '../../lib/runtimeConfig';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
@@ -31,6 +32,7 @@ const navItems = [
     { path: '/admin/subscriptions', icon: CreditCard, labelKey: 'subscriptionDesign.subscriptions' },
     { path: '/admin/subscriptions/discounts', icon: Tag, labelKey: 'subscriptionDesign.discountCodes' },
   ] : []),
+  ...(settlementFeaturesEnabled ? [{ path: '/admin/settlements', icon: Landmark, labelKey: 'settlements.title' }] : []),
   { path: '/admin/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
