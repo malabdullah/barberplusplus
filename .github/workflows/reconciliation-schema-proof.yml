@@ -1,0 +1,30 @@
+name: Reconciliation schema proof
+on:
+  push:
+    branches: [codex/reconciliation-schema-proof-20261121]
+permissions:
+  contents: read
+jobs:
+  gateway-proof:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { path: supplement, persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: f14c2ff8cd05956186bbe52dda90fe377f61d371
+          path: application
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: { node-version: 24.20.0 }
+      - name: Bootstrap owned synthetic platform
+        working-directory: application
+        run: npm run local:setup
+      - name: Replay exact schema and preserve approved gateway
+        working-directory: application
+        run: python3 ../supplement/.github/finance-settlement-schema-proof/driver.py
+      - name: Remove owned synthetic platform
+        if: always()
+        working-directory: application
+        run: npm run local:stop
