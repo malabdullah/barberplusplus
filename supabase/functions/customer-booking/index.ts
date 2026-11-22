@@ -5,6 +5,7 @@ import { createCustomerBookingHandler } from './handler.ts';
 import { confirmGooglePhone, startGoogleTestPhone } from './google-phone.ts';
 import { bookingMonth } from './statistics.ts';
 import { bookingRPC, recoveredServiceNames } from './native-compatibility.ts';
+import { bookingPaymentPilot, pilotProject, pilotSite } from './upayments.ts';
 
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -28,10 +29,22 @@ async function bookingShareUrl(id: string) {
 type RecoveryRow = {
   id: string; date: string; time: string; duration: number; price: number; status: string;
   service_ids: string[]; service_snapshot: unknown; package_snapshot: unknown; created_at: string;
+  customers: { email: string | null } | null;
   branches: { name: string; name_ar: string | null; address: string | null; location_url: string | null };
   barbers: { name: string; name_ar: string | null };
 };
-Deno.serve(createCustomerBookingHandler({
+const sandboxToken = Deno.env.get('UPAYMENTS_SANDBOX_TOKEN') || '';
+const sandboxSecret = Deno.env.get('UPAYMENTS_SANDBOX_HMAC') || '';
+const pilot = cloudTest && Deno.env.get('SUPABASE_URL') === pilotProject && Deno.env.get('APP_URL') === pilotSite
+  && sandboxToken && sandboxSecret ? bookingPaymentPilot({
+    token: sandboxToken, secret: sandboxSecret,
+    rpc: async (action, id, data) => {
+      const result = await admin.rpc('upayments_test_booking', { p_action: action, p_id: id, p_data: data });
+      if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
+      return result.data;
+    },
+  }) : undefined;
+const web = createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
   productionEnabled: Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED') === 'true',
   cloudTestProjectRef: Deno.env.get('CLOUD_TEST_PROJECT_REF'),
@@ -40,6 +53,7 @@ Deno.serve(createCustomerBookingHandler({
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
   phone,
+  paymentPilot: pilot,
   checkoutPolicy: async () => {
     const result = await admin.rpc('customer_checkout_policy');
     if (result.error || !['standard', 'email_only'].includes(result.data)) throw Error('Checkout policy unavailable');
@@ -149,7 +163,7 @@ Deno.serve(createCustomerBookingHandler({
   },
   recover: async (proof: { id: string }) => {
     const { data: b, error } = await admin.from('bookings')
-      .select('id,date,time,duration,price,status,service_ids,service_snapshot,package_snapshot,created_at,branches!inner(name,name_ar,address,location_url),barbers!inner(name,name_ar)')
+      .select('id,date,time,duration,price,status,service_ids,service_snapshot,package_snapshot,created_at,branches!inner(name,name_ar,address,location_url),barbers!inner(name,name_ar),customers(email)')
       .eq('id', proof.id).returns<RecoveryRow[]>().maybeSingle();
     if (error) throw Error('Recovery unavailable');
     // The signed random ID is the receipt capability. Later canonical contact
@@ -164,7 +178,7 @@ Deno.serve(createCustomerBookingHandler({
       date: b.date, time: b.time.slice(0, 5), duration: b.duration, price: b.price, status: b.status,
       branch_name: b.branches.name, branch_name_ar: b.branches.name_ar, address: b.branches.address,
       location_url: b.branches.location_url, barber_name: b.barbers.name, barber_name_ar: b.barbers.name_ar,
-      service_names: serviceNames, package: b.package_snapshot, created_at: b.created_at, shareUrl: await bookingShareUrl(b.id) };
+      service_names: serviceNames, package: b.package_snapshot, created_at: b.created_at, receiptEmail: b.customers?.email, shareUrl: await bookingShareUrl(b.id) };
   },
   },
   booking: async (action, data) => {
@@ -172,4 +186,5 @@ Deno.serve(createCustomerBookingHandler({
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
     return action === 'book' ? { ...result.data, shareUrl: await bookingShareUrl(result.data.id) } : result.data;
   },
-}));
+});
+Deno.serve(req => pilot ? pilot.background(req, web) : web(req));

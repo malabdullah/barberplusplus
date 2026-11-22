@@ -211,3 +211,15 @@
 .cb-catalog-rating { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
 .cb-catalog-rating svg { color: var(--booking-link); flex-shrink: 0; }
 .cb-catalog-score { font-weight: 600; color: var(--booking-text); }
+
+.cb-payment-method {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 20px 0;
+  border: 0;
+  padding: 0;
+}
+.cb-payment-method legend { margin-bottom: 8px; font-weight: 600; }
+.cb-payment-method label { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.cb-payment-method input { accent-color: var(--booking-gold, #c99846); }

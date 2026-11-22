@@ -1,6 +1,7 @@
 import { customerRuntime } from '../_shared/customer-runtime.ts';
 import type { GooglePhoneConfig } from './google-phone.ts';
 type Body = Record<string, unknown>;
+type PaymentAttempt = { id: string; state: string; accountSaved: boolean };
 type Dependencies = {
   environment: string;
   productionEnabled?: boolean;
@@ -24,6 +25,11 @@ type Dependencies = {
   close?: (id: string) => Promise<{ found: boolean; closed: boolean }>;
   recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
+  paymentPilot?: {
+    start: (data: Body, capability: string) => Promise<unknown>;
+    check: (capability: string) => Promise<PaymentAttempt | null>;
+    slots: (data: Body) => Promise<unknown>;
+  };
 };
 type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean; email?: string; guest_contact?: 'email'; account_contact?: 'email'; language?: string };
 const encoder = new TextEncoder();
@@ -85,6 +91,28 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
+      const pilot = req.headers.get('x-barber-test-web') === '1' ? deps.paymentPilot : undefined;
+      const online = body.action === 'online-start';
+      if (online || body.action === 'online-check') {
+        if (!pilot) return reply(404, { error: 'NOT_AVAILABLE' });
+        if (typeof body.capability !== 'string' || !uuid.test(body.capability)) return reply(400, { error: 'INVALID_REQUEST' });
+        if (!online) {
+          const attempt = await pilot.check(body.capability);
+          if (attempt?.state !== 'paid' || !deps.recover) return reply(200, { attempt });
+          // Only the unguessable, hashed browser capability grants receipt access.
+          const receipt = await deps.recover({ purpose: 'receipt', id: attempt.id, name: '', phone: '', country_code: '', expires: 0 });
+          if (!receipt) throw Error('UPAYMENTS_CHECK_UNAVAILABLE');
+          const { receiptEmail, ...publicReceipt } = receipt;
+          const expires = Date.parse(String(receipt.created_at)) + 60 * 60_000;
+          const claimToken = !attempt.accountSaved && typeof receiptEmail === 'string' && expires > Date.now()
+            ? await sign({ purpose: 'receipt', id: attempt.id, name: '', phone: '', country_code: '', expires,
+              guest_contact: 'email', email: receiptEmail })
+            : undefined;
+          return reply(200, { attempt, receipt: { ...publicReceipt, accountSaved: attempt.accountSaved, paidOnline: true, claimToken } });
+        }
+        // Reuse the standard booking proof, expected-price and selection checks.
+        body.action = 'book';
+      }
       // Recovery capabilities remain valid across policy switches. New proof and
       // booking requests always read the authoritative policy; errors fail closed.
       const policyActions = ['phone-config', 'phone-start', 'phone-confirm', 'account-proof', 'guest-proof', 'book', 'claim-booking'];
@@ -107,8 +135,9 @@ export function createCustomerBookingHandler(deps: Dependencies) {
           if (!result.found) throw Error('Resolution unavailable');
         }
         if (!deps.recover) throw Error('Recovery unavailable');
-        const receipt = await deps.recover(proof);
-        if (!receipt) return reply(200, { found: false });
+        const recovery = await deps.recover(proof);
+        const { receiptEmail: _receiptEmail, ...receipt } = recovery || {};
+        if (!recovery) return reply(200, { found: false });
         const expires = Date.parse(String(receipt.created_at)) + 60 * 60_000;
         const claimToken = !proof.user_id && expires > Date.now()
           ? await sign({ ...proof, purpose: 'receipt', expires }) : undefined;
@@ -200,6 +229,19 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (action === 'entry' && (!['shop', 'barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId)))) return reply(400, { error: 'INVALID_REQUEST' });
         const mode = body.mode ?? 'shop';
         const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
+        let locationFilter: { cities: string[]; governorate_id: number } | undefined;
+        if ('cities' in body || 'governorateId' in body) {
+          const { cities, governorateId } = body;
+          if (action !== 'search' || (body.city !== undefined && body.city !== '')
+            || !Array.isArray(cities) || cities.length === 0 || cities.length > 64
+            || typeof governorateId !== 'number' || !Number.isInteger(governorateId)
+            || governorateId < 1 || governorateId > 2147483647) {
+            return reply(400, { error: 'INVALID_REQUEST' });
+          }
+          const names = cities.map(value => typeof value === 'string' ? value.trim() : '');
+          if (names.some(name => name.length === 0 || name.length > 120)) return reply(400, { error: 'INVALID_REQUEST' });
+          locationFilter = { cities: [...new Set(names)], governorate_id: governorateId };
+        }
         if (!['shop', 'barber', 'time'].includes(String(mode))
           || ['city', 'query'].some(field => body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 120))
           || ['branchId', 'barberId'].some(field => body[field] !== undefined && body[field] !== '' && !uuid.test(String(body[field])))
@@ -213,6 +255,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (token && !account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
         return reply(200, await deps.discovery(action, {
           mode, city: body.city, query: body.query, branch_id: action === 'entry' && body.kind === 'shop' ? body.targetId : body.branchId, barber_id: action === 'entry' && body.kind === 'barber' ? body.targetId : body.barberId,
+          ...locationFilter,
           ...(action === 'entry' ? { kind: body.kind } : {}),
           date: body.date, range_start: body.rangeStart, range_end: body.rangeEnd, cursor: body.cursor,
           ...(account ? { account_user_id: account.id, session_id: account.session_id } : {}),
@@ -303,6 +346,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (proof.guest_contact === 'email') Object.assign(data, { guest_contact:'email',email:proof.email,language:proof.language });
         else data.language = body.language === 'ar' ? 'ar' : 'en';
       }
+      if (online && pilot) return reply(200, { attempt: await pilot.start(data, String(body.capability)) });
+      if (body.action === 'slots' && pilot) return reply(200, await pilot.slots(data));
       let result;
       try { result = await deps.booking(String(body.action), data); }
       catch (failure) {
@@ -337,6 +382,9 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
       if (/ATTEMPT_CLOSED/.test(message)) return reply(409, { error: 'ATTEMPT_CLOSED' });
+      if (/UPAYMENTS_NOT_AVAILABLE/.test(message)) return reply(409, { error: 'UPAYMENTS_NOT_AVAILABLE' });
+      if (/UPAYMENTS_FORBIDDEN/.test(message)) return reply(403, { error: 'FORBIDDEN' });
+      if (/UPAYMENTS_/.test(message)) return reply(503, { error: 'UPAYMENTS_CHECK_UNAVAILABLE' });
       if (/PRICE_CHANGED/.test(message)) return reply(409, { error: 'PRICE_CHANGED' });
       if (/PHONE_IN_USE|23505.*customers_phone_unique/.test(message)) return reply(409, { error: 'PHONE_IN_USE' });
       if (/SLOT_UNAVAILABLE|overlapping|Booking conflict|23P01/.test(message)) return reply(409, { error: 'SLOT_UNAVAILABLE' });

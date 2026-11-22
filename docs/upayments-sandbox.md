@@ -96,3 +96,33 @@ renewal preferences, one invoice after a repeated capture, and no discount
 redemption on the add-on. The original Test demo binding and billing state
 were restored. The full checks passed with 342 Edge tests, 554 frontend tests,
 84 operations tests and a successful build.
+
+## Customer booking pilot
+
+[Test Fahaheel — Classic Cuts 01](https://barber-test.alabdullah-cs.workers.dev/book?shop=b6110203-0000-4000-8000-000000000031)
+is the enabled Test shop. Choose Omar — Fahaheel 01, Classic haircut
+(KD 5.000) and an available time. In checkout, select **Pay online (Test)** and
+**Continue to payment**. Use [UPayments' published KNET test card](https://developers.upayments.com/reference/test-cards)
+and return in the same browser tab. The confirmation shows **Paid online (Test)**
+after the server verifies capture.
+
+The default is **Pay at the shop**. Online payment requires auto-confirmation,
+a positive server quote, an eligible future slot and an enabled settlement
+policy. The pilot retains a slot for seven minutes and the payment link has
+a five-minute expiry. A failed payment or expired hold releases the slot.
+A delayed capture that cannot confirm the appointment triggers a refund request.
+
+The booking and one settlement receipt commit together after verified capture.
+The receipt uses a distinct UPayments booking reference, starts without a known
+gateway fee or bank settlement and uses the shop's configured commission terms.
+Cancelling the paid booking requests one full sandbox refund. The settlement
+ledger posts the refund after UPayments confirms it. An ambiguous refund
+submission goes to review and is never repeated automatically.
+
+The migration under `ops/cloud-test/migrations` is exclusive to hosted Test.
+`customer-booking` enables the gateway only for the exact Test project, site and
+credentials. Reads and starts through the website use the existing Test gate.
+The webhook authenticates the signed payload and verifies the actual provider
+transaction. The scheduler uses its own Test vault secret. The hosted pilot
+shop is enabled through `upayments_test.booking_fixture` and uses a synthetic
+zero-commission, platform-fee policy.
