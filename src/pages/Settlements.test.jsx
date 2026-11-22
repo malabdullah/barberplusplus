@@ -1,6 +1,8 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render as renderWithLibrary, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+const render = element => renderWithLibrary(element, { wrapper: MemoryRouter });
 const { rpc, context } = vi.hoisted(() => ({ rpc: vi.fn(), context: { user: { id: 'manager' } } }));
 vi.mock('../services/settlements.service', () => ({ settlementRpc: rpc }));
 vi.mock('../services/settlementExport.service', () => ({ exportSettlement: vi.fn() }));

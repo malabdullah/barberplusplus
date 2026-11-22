@@ -86,6 +86,7 @@ const CustomerPrivacy = lazy(() => import('./pages/CustomerPrivacy'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Finances = lazy(() => import('./pages/Finances'));
 const Settlements = lazy(() => import('./pages/Settlements'));
+const SettlementReconciliation = lazy(() => import('./pages/SettlementReconciliation'));
 const SubscriptionDesign = lazy(() => import('./pages/SubscriptionDesign'));
 const SubscriptionBilling = lazy(() => import('./pages/SubscriptionBilling'));
 
@@ -297,6 +298,7 @@ function AppRoutes() {
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
         {settlementFeaturesEnabled && <Route path="settlements" element={<Suspense fallback={null}><Settlements admin /></Suspense>} />}
+        {settlementFeaturesEnabled && <Route path="settlements/reconciliation" element={<Suspense fallback={null}><SettlementReconciliation /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="subscriptions" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="subscriptions/discounts" element={<Suspense fallback={null}><SubscriptionBilling key="admin-discount-codes" admin codesOnly /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="subscriptions/:businessId" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}

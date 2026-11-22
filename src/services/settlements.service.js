@@ -8,3 +8,9 @@ export async function settlementRpc(admin, action, data = {}) {
   if (error) throw new Error(settlementError(error));
   return value;
 }
+
+export async function reconciliationRpc(action, data = {}) {
+  const { data: value, error } = await supabase.rpc('platform_settlement_reconciliation', { p_action: action, p_data: data });
+  if (error) throw new Error(settlementError(error));
+  return value;
+}

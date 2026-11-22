@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, RefreshCw, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { settlementRpc } from '../services/settlements.service';
@@ -189,6 +190,7 @@ export default function Settlements({ admin = false }) {
         {shop && <p className="settlement-shop-name">{localizedReportName(shop, i18n.language)}</p>}
       </div>
       <div className="settlement-actions">
+        {admin && !shop && <Link to="/admin/settlements/reconciliation" className="btn btn-secondary">{label('reconciliation')}</Link>}
         {admin && (shop ? <details className="settlement-header-menu">
           <summary className="btn btn-secondary">{label('settingsAction')}</summary>
           <div>{button('settings', null)}{button('save-beneficiary')}</div>

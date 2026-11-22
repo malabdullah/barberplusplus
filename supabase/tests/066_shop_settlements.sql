@@ -118,11 +118,35 @@ begin
  perform pg_temp.sa(pg_temp.se('prepare-statement',jsonb_build_object('shopId',shop,'period',date_trunc('month',day)::date),'SETTLEMENT_NO_ITEMS'),'final receipts not duplicated into new statement');
  pid:=(pg_temp.sw('prepare-payout',jsonb_build_object('shopId',shop,'statementId',sid,'amountFils','50000'))->>'id')::uuid;
  perform pg_temp.sa((select sum(reserved_fils)=50000 from private.settlement_receipt_state where shop_id=shop),'prepared partial transfer reserves exactly amount');
+ select item into row from jsonb_array_elements(public.platform_settlement_reconciliation('shops','{"query":"Settlement isolated QA"}')->'rows') item where item->>'id'=shop::text;
+ perform pg_temp.sa(row->>'owedFils'='189000' and row->>'transferredFils'='0','prepared transfers remain owed without counting as sent');
  perform pg_temp.sa(pg_temp.se('prepare-payout',jsonb_build_object('shopId',shop,'statementId',sid,'amountFils','140000'),'SETTLEMENT_INSUFFICIENT'),'reserved money cannot be allocated twice');
  perform pg_temp.sa(pg_temp.se('save-beneficiary',jsonb_build_object('shopId',shop,'payeeName','Other','beneficiaryRef','Other','ibanLastFour','9876','reason','Changed beneficiary'),'SETTLEMENT_BENEFICIARY_BUSY'),'beneficiary frozen while transfer pending');
  perform pg_temp.sa(pg_temp.se('confirm-payout',jsonb_build_object('shopId',shop,'id',pid,'amountFils','49999','reference','qa-bank-1','transferredAt',clock_timestamp()),'SETTLEMENT_TRANSFER_MISMATCH'),'bank amount must match reservation');
  perform pg_temp.sw('confirm-payout',jsonb_build_object('shopId',shop,'id',pid,'amountFils','50000','reference','qa-bank-1','transferredAt',clock_timestamp()));
  perform pg_temp.sa((select sum(paid_fils)=50000 and sum(reserved_fils)=0 from private.settlement_receipt_state where shop_id=shop),'partial bank confirmation moves reservation to paid');
+ select item into row from jsonb_array_elements(public.platform_settlement_reconciliation('shops','{"query":"Settlement isolated QA"}')->'rows') item where item->>'id'=shop::text;
+ perform pg_temp.sa(row->>'owedFils'='139000' and row->>'transferredFils'='50000','reconciliation separates finalized outstanding money from confirmed cash transfers');
+ payload:=jsonb_build_object('bookedOn',day,'amountFils','100000','direction','in','reference',b::text);
+ execute 'set local role authenticated';
+ v:=public.platform_settlement_reconciliation('record',payload);
+ denied:=public.platform_settlement_reconciliation('record',payload)=v;
+ v2:=public.platform_settlement_reconciliation('record',jsonb_build_object('bookedOn',day,'amountFils','50000','direction','out','reference','qa-bank-1'));
+ execute 'reset role';
+ perform pg_temp.sa(denied,'identical bank entry retry returns the original record');
+ perform pg_temp.sa((select count(*)from jsonb_array_elements(public.platform_settlement_reconciliation('entries','{"filter":"all"}')->'rows')item
+  where item->>'status'='matched' and item->>'id' in (v->>'id',v2->>'id'))=2,'verified receipt and confirmed transfer match bank lines in their respective directions');
+ denied:=false;begin perform public.platform_settlement_reconciliation('record',payload||'{"amountFils":"99000"}');exception when others then denied:=sqlerrm='SETTLEMENT_BANK_REFERENCE_EXISTS';end;
+ perform pg_temp.sa(denied,'same bank reference with a different amount is not silently replaced');
+ v:=public.platform_settlement_reconciliation('record',payload||'{"direction":"out"}');
+ v2:=public.platform_settlement_reconciliation('record',payload||jsonb_build_object('reference',b2::text,'amountFils','99999'));
+ perform pg_temp.sa((select count(*)from jsonb_array_elements(public.platform_settlement_reconciliation('entries','{}')->'rows')item
+  where item->>'status'='unmatched' and item->>'id' in (v->>'id',v2->>'id'))=2,'wrong directions and mismatched amounts remain unmatched');
+ perform pg_temp.sa(not has_table_privilege('authenticated','private.settlement_bank_entries','SELECT')
+  and not has_function_privilege('anon','public.platform_settlement_reconciliation(text,jsonb)','EXECUTE'),'bank data has no direct client or anonymous access');
+ denied:=false;begin perform public.platform_settlement_reconciliation('record',payload||jsonb_build_object('bookedOn',day+1));exception when others then denied:=sqlerrm='SETTLEMENT_INVALID';end;
+ perform pg_temp.sa(denied,'future bank statement dates are rejected');
+
  pid:=(pg_temp.sw('prepare-payout',jsonb_build_object('shopId',shop,'statementId',sid,'amountFils','139000'))->>'id')::uuid;
  perform pg_temp.sw('record-refund',jsonb_build_object('shopId',shop,'id',receipt,'amountFils','20000','reference','qa-refund-20','reason','QA customer refund'));
  perform pg_temp.sa((select net_fils=75000 and current_commission_fils=4000 from private.settlement_receipt_state where id=receipt),'partial refund reverses commission proportionally');
@@ -192,6 +216,15 @@ begin
  perform pg_temp.sa(pg_temp.se('settings',jsonb_build_object('shopId',shop),'SETTLEMENT_FORBIDDEN',false),'manager cannot read internal bank configuration');
  perform pg_temp.sa(pg_temp.se('record-refund',jsonb_build_object('shopId',shop),'SETTLEMENT_FORBIDDEN',false),'manager cannot write platform money');
  perform pg_temp.sa(pg_temp.se('shops','{}','SETTLEMENT_FORBIDDEN'),'manager cannot call admin wrapper');
+ denied:=false;begin
+  perform public.platform_settlement_reconciliation('entries','{"filter":"all"}');
+ exception when insufficient_privilege then denied:=sqlerrm='SETTLEMENT_FORBIDDEN';end;
+ perform pg_temp.sa(denied,'manager cannot list bank entries');
+ denied:=false;begin
+  perform public.platform_settlement_reconciliation('record',payload);
+ exception when insufficient_privilege then denied:=sqlerrm='SETTLEMENT_FORBIDDEN';end;
+ perform pg_temp.sa(denied,'manager cannot record bank entries');
+
  perform pg_temp.sa(not(public.shop_settlements('payouts',jsonb_build_object('shopId',shop))::text like '%QA-verified-bank-id%'),'bank internal reference hidden from manager');
  perform pg_temp.sa(not(public.shop_settlements('history',jsonb_build_object('shopId',shop))::text like '%QA customer refund%'),'internal reasons hidden from manager');
  perform set_config('request.jwt.claims',oc,true);
