@@ -88,7 +88,8 @@
   .settlement-breakdown { margin-top: 4px; }
   .settlement-tabs { gap: 0 14px; }
   .settlement-list, .settlement-statement-items { overflow: visible; }
-  .settlement-list table, .settlement-statement-items table { min-width: 0; }
+  .settlement-page .settlement-list table, .settlement-dialog .settlement-statement-items table { min-width: 0; }
+  .settlement-page .settlement-list :is(table, tbody), .settlement-dialog .settlement-statement-items :is(table, tbody) { display: block; width: 100%; }
   :is(.settlement-list, .settlement-statement-items) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   :is(.settlement-list, .settlement-statement-items) tr { display: block; padding-block: 12px; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
   :is(.settlement-list, .settlement-statement-items) td {
