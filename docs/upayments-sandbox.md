@@ -80,3 +80,19 @@ Repository checks passed with 340 Edge tests, 551 frontend tests, 84 operations
 tests and a successful build. Eight additional Test Worker checks passed. The
 hosted Worker version is `107097b7-5881-4cdf-996a-d51fd7b215df` and the
 UPayments Test Function is version 5.
+
+## Prorated place purchase verification
+
+An isolated draft shop started with three paid places, three active barbers
+and a fourth inactive managed barber halfway through a synthetic monthly term.
+The manager UI blocked the fourth activation and quoted **KD 4.999** for the
+rest of the term. KNET sandbox capture matched the frozen quote. Barber++
+increased capacity to four and issued one separate PDF invoice. The fourth
+barber stayed inactive until the manager activated the profile successfully
+through **Manage barbers**.
+
+The database confirmed the exact proration, the original term dates and
+renewal preferences, one invoice after a repeated capture, and no discount
+redemption on the add-on. The original Test demo binding and billing state
+were restored. The full checks passed with 342 Edge tests, 554 frontend tests,
+84 operations tests and a successful build.
