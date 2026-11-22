@@ -3907,5 +3907,10 @@
     },
     "feeAmount": "Actual processing fee (KD, optional)",
     "statement": "Statement"
+  },
+  "serviceDurations": {
+    "title": "Service durations",
+    "reset": "Use shop default",
+    "invalid": "Enter a whole number from 5 to 480 minutes."
   }
 }

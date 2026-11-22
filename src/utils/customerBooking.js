@@ -1,3 +1,5 @@
+import { withBarberDurations } from './serviceDurations';
+
 export const getKuwaitDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Kuwait', year: 'numeric', month: '2-digit', day: '2-digit',
 }).format(date);
@@ -18,7 +20,7 @@ export const searchBranches = (branches, city, query) => {
 
 export const getBarberServices = (catalog, branchId, barberId) => {
   const barber = catalog.barbers.find(item => item.id === barberId && item.branchId === branchId);
-  return catalog.services.filter(service => service.branchId === branchId && barber?.serviceIds.includes(service.id));
+  return withBarberDurations(catalog.services.filter(service => service.branchId === branchId && barber?.serviceIds.includes(service.id)), barber);
 };
 
 export const safeBookingUrl = value => {

@@ -21,6 +21,7 @@ const toFrontend = (barber) => {
     profilePicture: barber.avatar_url,
     avatarUrl: barber.avatar_url,
     services: barber.service_ids || [],
+    serviceDurations: barber.service_durations || {},
     availability: barber.availability,
     availabilityRevision: barber.availability_revision,
     availabilityApprovedAt: barber.availability_approved_at,

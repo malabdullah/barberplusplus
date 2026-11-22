@@ -12,6 +12,7 @@ import { checkBookingConflicts } from '../../utils/bookingConflicts';
 import { bookingServices } from '../../utils/bookingServices';
 import PackagePicker from '../Packages/PackagePicker';
 import ServicePicker from './ServicePicker';
+import { withBarberDurations } from '../../utils/serviceDurations';
 import { packagesService } from '../../services/packages.service';
 import { mapPackage } from '../../utils/servicePackages';
 import { packageSelection, packageTotals } from '../../utils/servicePackages';
@@ -142,7 +143,7 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
   }, [selectedBarber?.id, selectedBarber?.branchId, formData.date, booking?.id, booking?.packageOfferId]);
   const selectedOffer = formData.packageOfferId ? (booking?.packageOfferId === formData.packageOfferId ? historicalOffer : offers.find(item => item.id === formData.packageOfferId)) : null;
   const calculatedServices = selectedOffer && booking?.packageOfferId === formData.packageOfferId
-    ? services.map(service => ({ ...service, ...bookingServices(booking, services).find(item => item.id === service.id) })) : services;
+    ? services.map(service => ({ ...service, ...bookingServices(booking, services).find(item => item.id === service.id) })) : withBarberDurations(services, selectedBarber);
   const { selectedServices, totalDuration, totalPrice } = useMemo(() => {
     const unchanged = booking && JSON.stringify(formData.serviceIds) === JSON.stringify(booking.serviceIds) && (formData.packageOfferId || '') === (booking.packageOfferId || '');
     const selected = unchanged ? bookingServices(booking, services) : formData.serviceIds.map(id => calculatedServices.find(service => service.id === id)).filter(Boolean);
