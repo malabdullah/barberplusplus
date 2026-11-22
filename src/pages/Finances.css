@@ -72,7 +72,24 @@
     inset-block: var(--finance-top-inset) var(--finance-bottom-inset);
     inset-inline: 0;
     margin: auto;
+    overflow: hidden;
     max-height: calc(100dvh - var(--finance-top-inset) - var(--finance-bottom-inset) - 1rem);
+  }
+
+  .finance-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .finance-dialog header,
+  .finance-dialog footer {
+    flex: none;
+  }
+
+  .finance-dialog-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .finance-dialog footer {
