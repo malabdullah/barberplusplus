@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
+vi.mock('../lib/runtimeConfig', () => ({ appConfig: { environment: 'test' } }));
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }));
 vi.mock('../context/AppContext', () => ({ useApp: () => settings }));
 import '../i18n';

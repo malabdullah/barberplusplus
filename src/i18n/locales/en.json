@@ -3912,5 +3912,36 @@
     "title": "Service durations",
     "reset": "Use shop default",
     "invalid": "Enter a whole number from 5 to 480 minutes."
+  },
+  "upaymentsTest": {
+    "title": "UPayments checkout",
+    "badge": "Test",
+    "sandbox": "Use UPayments test card details for this simulated payment.",
+    "places": "Barber places",
+    "review": "Review total",
+    "pay": "Pay with UPayments (Test)",
+    "check": "Check payment",
+    "resume": "Return to UPayments",
+    "receipt": "Receipt",
+    "total": "Total",
+    "periodEnd": "Billing period ends",
+    "states": {
+      "paid": "Test payment verified",
+      "pending": "Waiting for payment verification",
+      "creating": "Checking whether checkout opened",
+      "failed": "Payment was declined, cancelled, or expired. You can try again.",
+      "review": "Test payment needs review"
+    },
+    "errors": {
+      "default": "Unable to complete checkout. Check the payment status before trying again.",
+      "UPAYMENTS_QUOTE_CHANGED": "Your quote changed. Review the total again.",
+      "UPAYMENTS_TERM_ACTIVE": "This business already has an active billing period.",
+      "UPAYMENTS_UNRESOLVED": "A payment is already in progress. Check its status.",
+      "UPAYMENTS_VERIFY_UNAVAILABLE": "UPayments hasn’t confirmed the result yet. Check again shortly.",
+      "BILLING_CODE_UNAVAILABLE": "This discount code is unavailable for this checkout.",
+      "BILLING_CODE_USED": "This discount code has already been used.",
+      "UPAYMENTS_ZERO_TOTAL": "This sandbox checkout requires a positive total.",
+      "UPAYMENTS_INVALID": "Choose a valid term and enough barber places for your active barbers."
+    }
   }
 }

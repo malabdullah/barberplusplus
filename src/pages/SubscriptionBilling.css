@@ -79,3 +79,13 @@
   .manager-billing .subscription-summary-dates > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .manager-billing .subscription-summary-dates dd { text-align: end; }
 }
+
+.upayments-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 0.75rem);
+}
+
+.upayments-receipt {
+  overflow-wrap: anywhere;
+}

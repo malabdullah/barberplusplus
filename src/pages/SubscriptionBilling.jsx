@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import UPaymentsTestCheckout, { showUPaymentsTest } from '../components/Subscriptions/UPaymentsTestCheckout';
 import { useApp } from '../context/AppContext';
 import { billingWriteIntent, subscriptionRpc } from '../services/subscriptionBilling.service';
 import { previewFixedFils } from '../utils/subscriptionPreview';
@@ -38,6 +39,11 @@ const freshCode = { code: '', kind: 'percent', value: '20', eligibility: 'monthl
 
 export default function SubscriptionBilling({ admin = false, codesOnly = false }) {
   const { businessId } = useParams();
+  const [paymentReturn] = useState(() => showUPaymentsTest && new URLSearchParams(window.location.search).get('upayments') === 'return');
+  useEffect(() => {
+    if (paymentReturn) window.history.replaceState(window.history.state, '', window.location.pathname);
+    // Clear provider return parameters without restarting the manager route.
+  }, [paymentReturn]);
   const { user, theme, language } = useApp();
   const { t } = useTranslation();
   const bp = (key, options) => t(`billingPreview.${key}`, options);
@@ -45,6 +51,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
   const fb = (key, options) => t(`subscriptionFoundation.${key}`, options);
   const [rows, setRows] = useState([]);
   const [detail, setDetail] = useState(null);
+  const [upaymentsBusiness, setUPaymentsBusiness] = useState(null);
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
@@ -55,6 +62,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const refreshBilling = useCallback(() => setRefresh(value => value + 1), []);
   const [dialog, setDialog] = useState(null);
   const [target, setTarget] = useState(null);
   const [reason, setReason] = useState('');
@@ -208,9 +216,11 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
             {detail.canManage
               ? <button type="button" className="billing-primary" onClick={() => { setFrequency(detail.nextFrequency || detail.frequency); setRenewal(detail.renewalRequested); open('preferences'); }}>{bp('manageSubscription')}</button>
               : <span>{fb('managedBy', { name: detail.managerName })}</span>}
-            <p>{fb('paymentsUnavailable')}</p>
+            {upaymentsBusiness !== detail.id && <p>{fb('paymentsUnavailable')}</p>}
           </div>
         </section>
+        {showUPaymentsTest && detail.canManage && <UPaymentsTestCheckout key={detail.id}
+          business={detail} date={date} money={money} returnPending={paymentReturn} onEligible={setUPaymentsBusiness} onPaid={refreshBilling}/>}
         <div className="manager-billing-disclosures" key={detail.id}>
           <BillingDisclosure title={sp('calculator')}>
             <form className="subscription-form manager-billing-estimate" onSubmit={estimate}>
