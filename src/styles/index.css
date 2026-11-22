@@ -771,3 +771,8 @@ a:active {
 }
 
 /* First protected release with verified CI receipts. */
+
+.service-duration-row { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; padding:.75rem 0; border-bottom:1px solid var(--surface-divider); }
+.service-duration-row label { flex:1 1 10rem; }
+.service-duration-row input { width:5.5rem; }
+@media(max-width:480px) { .service-duration-row label { flex-basis:100%; } .service-duration-row .btn { padding:.5rem .75rem; } }

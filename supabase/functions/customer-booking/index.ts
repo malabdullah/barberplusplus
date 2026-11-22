@@ -100,7 +100,7 @@ Deno.serve(createCustomerBookingHandler({
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services, ratingResult, accessResult, barberAccessResult] = await Promise.all([
       admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').eq('publication_state', 'published').order('name'),
-      admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,max_booking_days,availability').eq('status', 'active').order('name'),
+      admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,service_durations,max_booking_days,availability').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
       admin.rpc('customer_catalog_ratings'),
       admin.rpc('customer_bookable_shops'),
@@ -121,7 +121,7 @@ Deno.serve(createCustomerBookingHandler({
         const opening = shopHours[day];
         if (!(hours.enabled ?? hours.available) || !hours.start || !hours.end || !opening?.open || !opening.close) return false;
         const available = Math.min(minutes(hours.end), minutes(opening.close)) - Math.max(minutes(hours.start), minutes(opening.open));
-        return offered.some(service => service.duration <= available);
+        return offered.some(service => Number((barber.service_durations as Record<string, number>)?.[service.id] ?? service.duration) <= available);
       });
     });
     const readyShopIds = new Set(readyBarbers.map(barber => barber.branch_id));

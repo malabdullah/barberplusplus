@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS "public"."barbers" (
     "availability_approved_at" timestamp with time zone DEFAULT "now"(),
     "auto_confirm_bookings" boolean DEFAULT true NOT NULL,
     "management_mode" "text" DEFAULT 'account'::"text" NOT NULL,
+    "service_durations" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "barbers_management_mode_check" CHECK (("management_mode" = ANY (ARRAY['account'::"text", 'managed'::"text"]))),
     CONSTRAINT "barbers_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'inactive'::"text", 'on_leave'::"text"]))),
     CONSTRAINT "managed_barber_has_no_account" CHECK ((("management_mode" <> 'managed'::"text") OR (("user_id" IS NULL) AND (NOT "manager_chair") AND ("email" IS NULL)))),
@@ -869,9 +870,10 @@ begin
        or cardinality(v_services) <> (select count(distinct x) from unnest(v_services) x) then
       raise exception 'INVALID_SELECTION';
     end if;
-    select count(*), sum(duration), sum(price) into v_count, v_duration, v_price
+    select count(*), sum(private.service_duration(v_barber.id,id,duration)), sum(price) into v_count, v_duration, v_price
       from public.services where id = any(v_services) and branch_id = v_branch.id and status = 'active';
-    if v_count <> cardinality(v_services) or v_duration not between 5 and 480 or v_price < 0 then
+    if p_action='book' and p_data->>'expected_duration' is not null and (p_data->>'expected_duration')::integer is distinct from v_duration and nullif(p_data->>'package_offer_id','') is null then raise exception 'PRICE_CHANGED';end if;
+ if v_count <> cardinality(v_services) or v_duration not between 5 and 480 or v_price < 0 then
       raise exception 'INVALID_SELECTION';
     end if;
     if nullif(p_data->>'package_offer_id','') is not null and p_action<>'appointment-slots' then
@@ -2511,6 +2513,20 @@ begin
  return jsonb_build_object('auto_confirm_bookings',p_enabled);
 end $$;
 ALTER FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."set_barber_service_duration"("p_barber" "uuid", "p_service" "uuid", "p_duration" integer) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare b public.barbers%rowtype;actor text:=private.live_staff_role();
+begin
+ select * into b from public.barbers where id=p_barber for update;
+ if actor is null or b.id is null or not coalesce((actor='manager' and exists(select 1 from public.branches where id=b.branch_id and manager_id=auth.uid()) or actor='barber' and b.user_id=auth.uid() and not b.manager_chair),false) then raise exception 'NOT_AUTHORIZED' using errcode='42501';end if;
+ if p_service is null or not coalesce(p_service=any(b.service_ids),false) or not exists(select 1 from public.services where id=p_service and branch_id=b.branch_id and status='active') then raise exception 'INVALID_SERVICE_ASSIGNMENT';end if;
+ if p_duration is not null and p_duration not between 5 and 480 then raise exception 'INVALID_SERVICE_DURATION';end if;
+ update public.barbers set service_durations=case when p_duration is null then service_durations-p_service::text else jsonb_set(service_durations,array[p_service::text],to_jsonb(p_duration)) end where id=b.id returning * into b;
+ return b.service_durations;
+end $$;
+ALTER FUNCTION "public"."set_barber_service_duration"("p_barber" "uuid", "p_service" "uuid", "p_duration" integer) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -3548,6 +3564,7 @@ CREATE OR REPLACE TRIGGER "validate_barber" BEFORE INSERT OR UPDATE ON "public".
 CREATE OR REPLACE TRIGGER "validate_barber_time_off" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_time_off"();
 CREATE OR REPLACE TRIGGER "validate_booking_integrity" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_booking_integrity"();
 CREATE OR REPLACE TRIGGER "validate_service" BEFORE INSERT OR DELETE OR UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
+CREATE OR REPLACE TRIGGER "validate_service_durations" BEFORE INSERT OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_service_durations"();
 CREATE OR REPLACE TRIGGER "validate_shop" BEFORE INSERT OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_manager_catalogue"();
 CREATE OR REPLACE TRIGGER "z_capture_customer_booking_email" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_customer_booking_email"();
 CREATE OR REPLACE TRIGGER "zz_billing_capacity" AFTER INSERT OR DELETE OR UPDATE OF "status", "branch_id", "user_id", "management_mode", "manager_chair", "invite_status" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."billing_guard_capacity"();
@@ -4012,6 +4029,8 @@ GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_c
 GRANT ALL ON FUNCTION "public"."save_work_profile"("p_name" "text", "p_country_code" "text", "p_phone" "text", "p_avatar_url" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_barber_auto_confirm"("p_barber_id" "uuid", "p_enabled" boolean) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."set_barber_service_duration"("p_barber" "uuid", "p_service" "uuid", "p_duration" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_barber_service_duration"("p_barber" "uuid", "p_service" "uuid", "p_duration" integer) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_manager_account_enabled"("manager" "uuid", "enabled" boolean) TO "service_role";

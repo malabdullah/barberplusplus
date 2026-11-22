@@ -1,3 +1,4 @@
+import { withBarberDurations } from '../utils/serviceDurations';
 import { isPlatformAdmin } from '../lib/platformRoles';
 import { bookedPackageTotals } from '../utils/servicePackages';
 import { setTerminologyRole } from '../utils/customerTerminology';
@@ -372,20 +373,19 @@ export function AppProvider({ children }) {
       try {
         // Agents use agentService.getAllBranches() which fetches all active branches
         // Other roles use branchesService which has RLS policies
-        const branchesData = userRole === 'agent'
-          ? await agentService.getAllBranches()
-          : await branchesService.getAll();
+        const ownProfile = userRole === 'barber' ? await barbersService.getByUserId(user.id) : null;
+        const branchesData = ownProfile
+          ? [await branchesService.getById(ownProfile.branchId)].filter(Boolean)
+          : userRole === 'agent' ? await agentService.getAllBranches() : await branchesService.getAll();
 
-        const managedIds = userRole === 'manager' ? branchesData.map(branch => branch.id) : null;
-        const [barbersData, servicesData, bookingsData] = await Promise.all([
-          barbersService.getAll(managedIds),
-          servicesService.getAll(managedIds),
-          bookingsService.getAll(managedIds ? { branchIds: managedIds } : {}),
-        ]);
+        const managedIds = ['manager', 'barber'].includes(userRole) ? branchesData.map(branch => branch.id) : null;
         setBranches(branchesData);
-        setBarbers(barbersData);
-        setServices(servicesData);
-        setBookings(bookingsData);
+        const results = await Promise.allSettled([
+          barbersService.getAll(managedIds).then(data => { setBarbers(data); }),
+          servicesService.getAll(managedIds).then(data => { setServices(data); }),
+          bookingsService.getAll(managedIds ? { branchIds: managedIds } : {}).then(data => { setBookings(data); }),
+        ]);
+        for (const result of results) if (result.status === 'rejected') logger.error('Workspace data request failed', result.reason);
         if (branchesData.length > 0) {
           setSelectedBranchId(branchesData[0].id);
         }
@@ -776,6 +776,15 @@ export function AppProvider({ children }) {
   }, [selectedBranchId, branches]);
 
   // Barber actions
+  useEffect(() => {
+    const update = event => {
+      setBarbers(previous => previous.map(barber => barber.id === event.detail.id ? { ...barber, serviceDurations: event.detail.serviceDurations } : barber));
+      setBarberProfile(previous => previous?.id === event.detail.id ? { ...previous, serviceDurations: event.detail.serviceDurations } : previous);
+    };
+    window.addEventListener('barber-duration-changed', update);
+    return () => window.removeEventListener('barber-duration-changed', update);
+  }, []);
+
   const updateBarber = useCallback(async (barberId, updates) => {
     try {
       const { profilePictureFile, ...data } = updates;
@@ -886,7 +895,7 @@ export function AppProvider({ children }) {
     try {
       // Support both single serviceId and multiple serviceIds
       const serviceIds = bookingData.serviceIds || (bookingData.serviceId ? [bookingData.serviceId] : []);
-      const selectedServices = services.filter(s => serviceIds.includes(s.id));
+      const selectedServices = withBarberDurations(services.filter(s => serviceIds.includes(s.id)), barbers.find(item => item.id === bookingData.barberId));
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
 
@@ -1010,8 +1019,8 @@ export function AppProvider({ children }) {
       // Calculate new values FIRST (before conflict check)
       if (booking.packageSnapshot && booking.serviceIds.includes(additionalServiceId)) throw new Error('INVALID_PACKAGE_SELECTION');
       const newServiceIds = [...(booking.serviceIds || []), additionalServiceId];
-      const allSelectedServices = newServiceIds.map(id => services.find(service => service.id === id)).filter(Boolean);
-      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).duration : allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const allSelectedServices = withBarberDurations(newServiceIds.map(id => services.find(service => service.id === id)).filter(Boolean), barbers.find(item => item.id === booking.barberId));
+      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, withBarberDurations(services, barbers.find(item => item.id === booking.barberId))).duration : allSelectedServices.reduce((sum, s) => sum + s.duration, 0);
       const newPrice = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).price : allSelectedServices.reduce((sum, s) => sum + s.price, 0);
 
       // Check if extension is possible using the FULL new duration
@@ -1076,9 +1085,9 @@ export function AppProvider({ children }) {
       const barber = barbers.find(b => b.id === booking.barberId);
 
       // Calculate new totals - iterate over newServiceIds to count duplicates
-      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).duration : newServiceIds.reduce((sum, id) => {
+      const newTotalDuration = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, withBarberDurations(services, barber)).duration : newServiceIds.reduce((sum, id) => {
         const service = services.find(s => s.id === id);
-        return sum + (service?.duration || 0);
+        return sum + (barber?.serviceDurations?.[id] ?? service?.duration ?? 0);
       }, 0);
       const newPrice = booking.packageSnapshot ? bookedPackageTotals(booking, newServiceIds, services).price : newServiceIds.reduce((sum, id) => {
         const service = services.find(s => s.id === id);
