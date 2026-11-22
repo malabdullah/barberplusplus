@@ -177,6 +177,10 @@
   border-bottom: none;
 }
 
+.admin-roster-label {
+  display: none;
+}
+
 /* Back Link */
 .admin-back-link {
   display: inline-flex;
@@ -637,6 +641,118 @@
 
   .admin-table {
     min-width: 800px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-roster-page {
+    padding: 0;
+  }
+
+  .admin-roster-page .admin-toolbar,
+  .admin-roster-page .admin-page-header {
+    margin-block-end: var(--space-lg);
+  }
+
+  .admin-roster-page .admin-search-wrapper input {
+    width: 100%;
+    min-width: 0;
+    min-height: 28px;
+    font-size: 1rem;
+  }
+
+  .admin-roster-page .admin-search-wrapper:focus-within {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  .admin-roster-page .admin-filters select {
+    min-height: 44px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 1rem;
+  }
+
+  .admin-roster-page .admin-count {
+    text-align: start;
+  }
+
+  .admin-roster-page .admin-table-container {
+    overflow: visible;
+    border: 0;
+    background: none;
+  }
+
+  .admin-roster-page .admin-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .admin-roster-page .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .admin-roster-page .admin-table tbody {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  .admin-roster-page .admin-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+  }
+
+  .admin-roster-page .admin-table td {
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-roster-page .admin-roster-name {
+    margin-block-end: var(--space-sm);
+    font-weight: 600;
+  }
+
+  .admin-roster-field {
+    display: grid;
+    grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  .admin-roster-field > :last-child {
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .admin-roster-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .admin-roster-page .admin-roster-actions {
+    margin-block-start: var(--space-sm);
+  }
+
+  .admin-roster-page .admin-action-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .admin-roster-page .admin-details {
+    overflow-wrap: anywhere;
   }
 }
 

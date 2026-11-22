@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import './Modal.css';
 
 // PERFORMANCE: Wrap in React.memo to prevent unnecessary re-renders
 const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'default' }) {
+  const { t } = useTranslation();
   // PERFORMANCE: Use ref to avoid effect re-running when onClose changes
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -39,7 +41,7 @@ const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'de
       >
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" type="button" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} strokeWidth={1.5} />
           </button>
         </div>

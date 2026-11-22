@@ -469,19 +469,20 @@ export default function MyBookings() {
             {t('bookings.today')}
           </button>
           <div className="calendar-nav-arrows">
-            <button className="nav-arrow" onClick={() => navigateWeek('prev')}>
-              <ChevronLeft size={20} strokeWidth={1.5} />
+            <button className="nav-arrow" onClick={() => navigateWeek('prev')} aria-label={t('bookings.previousWeek')}>
+              <ChevronLeft size={20} strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <button className="nav-arrow" onClick={() => navigateWeek('next')}>
-              <ChevronRight size={20} strokeWidth={1.5} />
+            <button className="nav-arrow" onClick={() => navigateWeek('next')} aria-label={t('bookings.nextWeek')}>
+              <ChevronRight size={20} strokeWidth={1.5} aria-hidden="true" />
             </button>
           </div>
           <input
             type="date"
             className="calendar-date-picker form-input"
+            aria-label={t('common.date')}
             value={format(currentWeek, 'yyyy-MM-dd')}
             onChange={(e) => e.target.value && setCurrentWeek(new Date(e.target.value))}
-            onClick={(e) => e.target.showPicker()}
+            onClick={(e) => e.currentTarget.showPicker?.()}
           />
           <h3 className="calendar-period">
             {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
