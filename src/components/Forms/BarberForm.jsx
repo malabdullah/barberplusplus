@@ -1,3 +1,4 @@
+import ServiceDurationEditor from './ServiceDurationEditor';
 import { validateImageFile } from '../../utils/imageValidation';
 import { getErrorMessage as imageErrorMessage } from '../../utils/errorMessages';
 import React, { useState, useEffect, useRef } from 'react';
@@ -244,6 +245,7 @@ export default function BarberForm({ barber, managed = barber?.managerManaged ==
 
       </div>
 
+      {barber && <ServiceDurationEditor barber={barber} services={services} />}
       {disabledReason && <p className="error-banner" role="alert">{disabledReason}</p>}
       {submissionError && submissionError.field !== 'phone' && <p ref={errorRef} className="error-banner" role="alert" tabIndex={-1}>{submissionError.message}</p>}
       <div className="form-actions">

@@ -306,6 +306,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
       .then(async result => { if (active && !pageLeaving.current) {
+        if (!packageOfferId && Number.isFinite(result.duration) && result.duration !== duration) { setTime(''); setError('PRICE_CHANGED'); await recoverUnavailableSelection(() => active, true); return; }
         if (packageOfferId && (!result.package_quote || Math.abs(Number(result.package_quote.price) - price) > 0.0005 || Number(result.package_quote.duration) !== duration)) {
           setPackageQuote(null); setTime(''); setError('PACKAGE_CHANGED');
           await recoverUnavailableSelection(() => active, true);
@@ -430,13 +431,14 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         }
       }
       setVerification(proof);
-      const result = await customerBookingService.book({ ...selection, time, verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, language:isArabic?'ar':'en', bookingPolicy: bookingPolicy || undefined });
+      const result = await customerBookingService.book({ ...selection, time, expectedDuration: String(duration), expectedPrice: String(price), verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, language:isArabic?'ar':'en', bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
       saveBookingReceipt(confirmed); setReceipt(confirmed);
     } catch (failure) {
       if (failure.message === 'PHONE_CANCELLED') return;
       if (packageErrors.includes(failure.message)) { setPackageRetry(value => value + 1); setSlotRetry(value => value + 1); openPanel('services'); }
       setError(failure.message);
+      if (failure.message === 'PRICE_CHANGED') { setTime(''); await recoverUnavailableSelection(() => true, true); }
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
       if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
       if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection();

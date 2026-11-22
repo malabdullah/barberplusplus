@@ -32,7 +32,7 @@ export const mapCatalog = result => ({
       })),
       barbers: result.barbers.map(barber => ({
         id: barber.id, branchId: barber.branch_id, name: barber.name, nameAr: barber.name_ar,
-        avatarUrl: barber.avatar_url, serviceIds: barber.service_ids || [], maxBookingDays: barber.max_booking_days, rating: barber.rating,
+        serviceDurations: barber.service_durations || {}, avatarUrl: barber.avatar_url, serviceIds: barber.service_ids || [], maxBookingDays: barber.max_booking_days, rating: barber.rating,
       })),
       services: result.services.map(service => ({
         id: service.id, branchId: service.branch_id, name: service.name, nameAr: service.name_ar,

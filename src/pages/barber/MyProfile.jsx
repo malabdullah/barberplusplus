@@ -1,3 +1,4 @@
+import ServiceDurationEditor from '../../components/Forms/ServiceDurationEditor';
 import { validateImageFile } from '../../utils/imageValidation';
 import { getErrorMessage as imageErrorMessage } from '../../utils/errorMessages';
 import React, { useState, useEffect } from 'react';
@@ -39,7 +40,7 @@ export default function MyProfile({ chair = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (currentBarber) {
+    if (currentBarber && !hasChanges) {
       setFormData({
         name: currentBarber.name || '',
         nameAr: currentBarber.nameAr || '',
@@ -51,7 +52,7 @@ export default function MyProfile({ chair = false }) {
         services: currentBarber.services || [],
       });
     }
-  }, [currentBarber]);
+  }, [currentBarber, hasChanges]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -300,13 +301,13 @@ export default function MyProfile({ chair = false }) {
           </div>
 
           <div className="profile-section-content">
-            <p className="profile-section-desc">
+            {chair && <p className="profile-section-desc">
               {t('profile.selectServicesDescription')}
-            </p>
+            </p>}
 
             {barberServices.length > 0 ? (
               <div className="services-grid">
-                {barberServices.filter(service => !chair || service.status === 'active').map((service) => (
+                {barberServices.filter(service => chair ? service.status === 'active' : currentBarber.services.includes(service.id)).map((service) => (
                   <label
                     key={service.id}
                     className={`service-card ${formData.services.includes(service.id) ? 'selected' : ''}`}
@@ -314,12 +315,13 @@ export default function MyProfile({ chair = false }) {
                     <input
                       type="checkbox"
                       checked={formData.services.includes(service.id)}
+                      disabled={!chair}
                       onChange={() => toggleService(service.id)}
                     />
                     <div className="service-card-content">
                       <span className="service-name">{service.name}</span>
                       <div className="service-meta">
-                        <span>{service.duration} {t('common.min')}</span>
+                        <span>{currentBarber.serviceDurations?.[service.id] ?? service.duration} {t('common.min')}</span>
                         <span className="service-price">{service.price} {t('common.currency')}</span>
                       </div>
                     </div>
@@ -334,6 +336,7 @@ export default function MyProfile({ chair = false }) {
             )}
           </div>
         </div>
+        <ServiceDurationEditor barber={currentBarber} services={barberServices} />
       </form>
     </div>
   );
