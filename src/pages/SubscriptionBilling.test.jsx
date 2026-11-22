@@ -82,6 +82,45 @@ it('replaces the checkout after a billing refresh and quotes the edited discount
   expect(checkout.queryByText('KD 22.500')).toBeNull();
 });
 
+it('reviews a mid-term capacity purchase and refreshes paid places after verification', async () => {
+  const periodEnd = new Date(Date.now() + 86400000).toISOString();
+  let capacity = 3;
+  let attempt = null;
+  const active = { ...business, access: { status: 'active' }, periodEndsAt: periodEnd };
+  const quote = { quoteId: 'capacity-quote', kind: 'capacity', count: 4, addedPlaces: 1, totalFils: 5001, periodEnd };
+  rpc.mockImplementation(async action => action === 'businesses' ? { rows: [active] } : { ...active, paidCapacity: capacity });
+  fetch.mockImplementation(async (_url, options) => {
+    const { action, ...intent } = JSON.parse(options.body);
+    switch (action) {
+      case 'quote':
+        expect(intent).toEqual({ businessId: 'one', kind: 'capacity', count: 4 });
+        return Response.json(quote);
+      case 'start':
+        expect(intent).toMatchObject({ kind: 'capacity', count: 4, quote });
+        attempt = { state: 'pending', quote };
+        return Response.json({ attempt });
+      case 'check':
+        capacity = 4;
+        attempt = { state: 'paid', quote, periodEnd, invoiceId: 'capacity-invoice' };
+        return Response.json({ eligible: true, attempt });
+      default:
+        return Response.json({ eligible: true, attempt });
+    }
+  });
+  open();
+  const checkout = within(await screen.findByRole('region', { name: 'UPayments checkout' }));
+  expect(checkout.getByRole('spinbutton')).toHaveValue(4);
+  expect(checkout.queryByText('Discount code')).toBeNull();
+  fireEvent.click(checkout.getByRole('button', { name: 'Review additional places' }));
+  await checkout.findByText('KD 5.001');
+  fireEvent.click(checkout.getByRole('button', { name: 'Pay with UPayments (Test)' }));
+  fireEvent.click(await checkout.findByRole('button', { name: 'Check payment' }));
+  await screen.findByText('4 paid places', { exact: false });
+  expect(screen.getByRole('link', { name: 'Manage barbers' })).toHaveAttribute('href', '/dashboard/barbers');
+  expect(screen.getByRole('spinbutton', { name: 'Barber places after purchase' })).toHaveValue(5);
+  await waitFor(() => expect(rpc.mock.calls.filter(([action]) => action === 'detail')).toHaveLength(2));
+});
+
 it('downloads the original recorded invoice amounts from Billing', async () => {
   const invoice = { id: 'invoice-paid', state: 'paid', currency: 'KWD', subtotal_fils: 30000, discount_fils: 7500,
     total_fils: 22500, created_at: '2026-11-22T14:00:00Z', period_starts_at: '2026-11-22T14:00:00Z',

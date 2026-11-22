@@ -93,3 +93,12 @@
 .upayments-receipt {
   overflow-wrap: anywhere;
 }
+
+.upayments-capacity-heading {
+  margin-block-start: 16px;
+  border-block-start: 1px solid var(--billing-border);
+  padding-block-start: 14px;
+}
+
+.upayments-capacity-heading h3 { font-size: 1rem; margin: 0; }
+.upayments-capacity-heading p { margin: 4px 0 12px; color: var(--billing-muted); }

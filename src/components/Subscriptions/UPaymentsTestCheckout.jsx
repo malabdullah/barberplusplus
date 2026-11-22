@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { appConfig } from '../../lib/runtimeConfig';
@@ -30,10 +31,10 @@ function openCheckout(url) {
 
 export default function UPaymentsTestCheckout({ business, date, money, returnPending, onEligible, onPaid }) {
   const { t, i18n } = useTranslation();
-  const label = key => t(`upaymentsTest.${key}`);
+  const label = (key, options) => t(`upaymentsTest.${key}`, options);
   const [eligible, setEligible] = useState(false);
   const [attempt, setAttempt] = useState(null);
-  const [count, setCount] = useState(Math.max(1, business.count));
+  const [count, setCount] = useState(null);
   const [frequency, setFrequency] = useState(business.nextFrequency || business.frequency);
   const [code, setCode] = useState('');
   const [quote, setQuote] = useState(null);
@@ -67,8 +68,23 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
   }, [business.id, returnPending, onEligible]);
 
   useEffect(() => {
-    if (attempt?.state === 'paid' && Date.parse(attempt.periodEnd) > (Date.parse(business.periodEndsAt) || 0)) onPaid();
-  }, [attempt, business.periodEndsAt, onPaid]);
+    if (attempt?.state !== 'paid') return;
+    const receiptEnd = Date.parse(attempt.periodEnd);
+    const currentEnd = Date.parse(business.periodEndsAt) || 0;
+    if (receiptEnd > currentEnd || (receiptEnd === currentEnd && receiptEnd > Date.now()
+      && attempt.quote.count > (business.paidCapacity ?? 0))) onPaid();
+  }, [attempt, business.periodEndsAt, business.paidCapacity, onPaid]);
+
+  const state = attempt?.state;
+  const unresolved = ['pending','creating','review'].includes(state);
+  const periodEnd = Math.max(Date.parse(business.periodEndsAt) || 0,
+    state === 'paid' ? Date.parse(attempt.periodEnd) || 0 : 0);
+  const termActive = periodEnd > Date.now();
+  const paidPlaces = Math.max(business.paidCapacity ?? 0,
+    state === 'paid' && Date.parse(attempt.periodEnd) === periodEnd ? attempt.quote.count : 0);
+  const minPlaces = Math.max(1, business.count, termActive ? paidPlaces + 1 : 1);
+  const requestedPlaces = count ?? minPlaces;
+  const canQuote = !unresolved && minPlaces <= 100;
 
   async function run(action) {
     if (operation.current) return;
@@ -76,7 +92,9 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
     setBusy(true);
     setError('');
     try {
-      const intent = { count: Number(count), frequency, code: code.trim() };
+      const intent = termActive
+        ? { kind: 'capacity', count: Number(requestedPlaces) }
+        : { count: Number(requestedPlaces), frequency, code: code.trim() };
       if (action === 'quote') {
         setQuote(await checkout('quote', business.id, intent));
         request.current = null;
@@ -91,7 +109,10 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
         if (response.attempt?.checkoutUrl) openCheckout(response.attempt.checkoutUrl);
       } else {
         const result = await checkout('check', business.id, { language: i18n.language });
-        if (mounted.current) setAttempt(result.attempt);
+        if (mounted.current) {
+          setAttempt(result.attempt);
+          if (result.attempt?.state === 'paid') setCount(null);
+        }
       }
     } catch (failure) {
       if (mounted.current) {
@@ -111,10 +132,7 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
   }
 
   if (!eligible) return null;
-  const state = attempt?.state;
-  const unresolved = ['pending','creating','review'].includes(state);
-  const termActive = state === 'paid' && new Date(attempt.periodEnd) > new Date()
-    || business.periodEndsAt && new Date(business.periodEndsAt) > new Date();
+  const capacityAttempt = attempt?.quote?.kind === 'capacity';
 
   return <section className="manager-billing-summary" aria-labelledby="upayments-test-heading">
     <div className="manager-billing-summary-top">
@@ -123,15 +141,19 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
     </div>
     <p>{label('sandbox')}</p>
     {state && <div aria-live="polite">
-      <strong>{label(`states.${state}`)}</strong>
+      <strong>{label(state === 'paid' && capacityAttempt ? 'additionalPlacesVerified' : `states.${state}`)}</strong>
       {(state === 'paid' || unresolved) && <dl className="billing-review-rows">
         <div><dt>{label('total')}</dt><dd><bdi>{money(attempt.quote.totalFils)}</bdi></dd></div>
-        <div><dt>{label('places')}</dt><dd>{attempt.quote.count}</dd></div>
+        {capacityAttempt && <div><dt>{label('addedPlaces')}</dt><dd>{attempt.quote.addedPlaces}</dd></div>}
+        <div><dt>{label(capacityAttempt ? 'totalPlaces' : 'places')}</dt><dd>{attempt.quote.count}</dd></div>
         {state === 'paid' && <>
           <div><dt>{label('periodEnd')}</dt><dd><time dateTime={attempt.periodEnd}>{date(attempt.periodEnd)}</time></dd></div>
           <div><dt>{label('receipt')}</dt><dd><bdi className="upayments-receipt">{attempt.invoiceId}</bdi></dd></div>
         </>}
       </dl>}
+      {state === 'paid' && capacityAttempt && termActive && <Link className="billing-text-button" to="/dashboard/barbers">
+        {label('manageBarbers')}
+      </Link>}
     </div>}
     {['pending', 'creating'].includes(state) && <div className="upayments-actions">
       <button type="button" className="billing-secondary" disabled={busy} onClick={() => run('check')}>{label('check')}</button>
@@ -140,27 +162,37 @@ export default function UPaymentsTestCheckout({ business, date, money, returnPen
         {label('resume')}
       </button>}
     </div>}
-    {!unresolved && !termActive && <form className="subscription-form manager-billing-estimate" onSubmit={event => { event.preventDefault(); run('quote'); }}>
-      <label className="subscription-field">{t('billingPreview.billingFrequency')}
+    {canQuote && termActive && <div className="upayments-capacity-heading">
+      <h3>{label('addPlaces')}</h3>
+      <p>{label('placesInUse', { active: business.count, paid: paidPlaces })}</p>
+    </div>}
+    {canQuote && <form className="subscription-form manager-billing-estimate" onSubmit={event => { event.preventDefault(); run('quote'); }}>
+      {!termActive && <label className="subscription-field">{t('billingPreview.billingFrequency')}
         <select value={frequency} disabled={busy} onChange={event => { setFrequency(event.target.value); setQuote(null); }}>
           <option value="monthly">{t('billingPreview.monthly')}</option>
           <option value="yearly">{t('billingPreview.yearly')}</option>
         </select>
-      </label>
-      <label className="subscription-field">{label('places')}
-        <input type="number" min={Math.max(1, business.count)} max={100} step={1} required value={count}
+      </label>}
+      <label className="subscription-field">{label(termActive ? 'placesAfterPurchase' : 'places')}
+        <input type="number" min={minPlaces} max={100} step={1} required value={requestedPlaces}
           disabled={busy} onChange={event => { setCount(event.target.value); setQuote(null); }}/>
       </label>
-      <label className="subscription-field">{t('subscriptionDesign.discountCode')}
+      {!termActive && <label className="subscription-field">{t('subscriptionDesign.discountCode')}
         <input value={code} maxLength={24} disabled={busy} onChange={event => { setCode(event.target.value); setQuote(null); }}/>
-      </label>
-      <button type="submit" className="billing-secondary" disabled={busy}>{label('review')}</button>
+      </label>}
+      <button type="submit" className="billing-secondary" disabled={busy}>{label(termActive ? 'reviewAdditionalPlaces' : 'review')}</button>
     </form>}
-    {quote && !unresolved && !termActive && <>
+    {quote && canQuote && (quote.kind === 'capacity') === termActive && <>
       <dl className="billing-review-rows" aria-live="polite">
-        <div><dt>{t('subscriptionFoundation.subtotal')}</dt><dd><bdi>{money(quote.subtotalFils)}</bdi></dd></div>
-        {quote.discountFils > 0 && <div><dt>{t('subscriptionDesign.discount')}</dt><dd><bdi>{money(quote.discountFils)}</bdi></dd></div>}
-        <div><dt>{label('total')}</dt><dd><strong><bdi>{money(quote.totalFils)}</bdi></strong></dd></div>
+        {termActive ? <>
+          <div><dt>{label('addedPlaces')}</dt><dd>{quote.addedPlaces}</dd></div>
+          <div><dt>{label('totalPlaces')}</dt><dd>{quote.count}</dd></div>
+          <div><dt>{label('periodEnd')}</dt><dd><time dateTime={quote.periodEnd}>{date(quote.periodEnd)}</time></dd></div>
+        </> : <>
+          <div><dt>{t('subscriptionFoundation.subtotal')}</dt><dd><bdi>{money(quote.subtotalFils)}</bdi></dd></div>
+          {quote.discountFils > 0 && <div><dt>{t('subscriptionDesign.discount')}</dt><dd><bdi>{money(quote.discountFils)}</bdi></dd></div>}
+        </>}
+        <div><dt>{label(termActive ? 'proratedTotal' : 'total')}</dt><dd><strong><bdi>{money(quote.totalFils)}</bdi></strong></dd></div>
       </dl>
       <button type="button" className="billing-primary" disabled={busy} onClick={() => run('start')}>{label('pay')}</button>
     </>}

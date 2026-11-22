@@ -40,7 +40,7 @@ const freshCode = { code: '', kind: 'percent', value: '20', eligibility: 'monthl
 
 export default function SubscriptionBilling({ admin = false, codesOnly = false }) {
   const { businessId } = useParams();
-  const [paymentReturn] = useState(() => showUPaymentsTest && new URLSearchParams(window.location.search).get('upayments') === 'return');
+  const [paymentReturn] = useState(() => showUPaymentsTest && new URLSearchParams(window.location.search).get('upayments')?.split('?')[0] === 'return');
   useEffect(() => {
     if (paymentReturn) window.history.replaceState(window.history.state, '', window.location.pathname);
     // Clear provider return parameters without restarting the manager route.

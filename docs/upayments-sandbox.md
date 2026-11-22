@@ -8,7 +8,7 @@ only opens Billing and checks the previously stored attempt.
 
 ## Setup
 
-- Deploy the two gateway migrations from `ops/cloud-test/migrations` to
+- Deploy the UPayments migrations from `ops/cloud-test/migrations` to
   `qvkucvcjmojjbphlzlks` in order. They are exclusive to hosted Test.
 - Set `UPAYMENTS_SANDBOX_TOKEN` and `UPAYMENTS_SANDBOX_HMAC` in that project's
   Edge secrets using the non-whitelabel values from the [UPayments sandbox
@@ -36,6 +36,25 @@ If the charge request loses its connection before the link can be saved, the
 attempt stays in **Checking whether checkout opened**. Verify the outstanding
 sandbox order before clearing it. The system never issues a second charge for
 that intent automatically. Keep the normal simulator for other Test shops.
+
+## Buy extra barber places during a paid term
+
+1. Open **Billing & Subscription** and find **Add barber places** in the Test checkout.
+2. Enter the total number of places you want after payment. With three paid
+   places, enter four to add one, then select **Review additional places**.
+3. The five-minute quote uses the difference in term prices for the time left in
+   the current billing period. For example, a KD 10.000 full-month difference
+   costs about KD 5.000 halfway through the term. Subscription discount codes
+   apply to the subscription quote and the separate capacity charge uses the
+   existing undiscounted proration rule.
+4. Choose **Pay with UPayments (Test)**. After verification, the additional
+   places appear in the current term. **Invoices** includes a separate
+   prorated place-purchase PDF. Open **Manage barbers** to activate the barber.
+
+Capacity is applied once, only after provider capture. The current billing
+period and renewal preferences are preserved. A pending attempt keeps the
+original checkout open. A stale quote must be reviewed again. Captures received
+after the applicable term has changed are marked for review.
 
 ## Hosted verification on 22 November 2026
 

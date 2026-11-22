@@ -110,7 +110,7 @@ export function createSubscriptionInvoice({ invoice, businessName, language, lab
   text(labels.description, 0, chargesTop, { size: 10, bold: true, color: muted });
   text(labels.amount, width, chargesTop, { align: endAlign, size: 10, bold: true, color: muted });
   rule(chargesTop + 5);
-  text(labels.lineItem, 0, chargesTop + 16, { size: 13, bold: true });
+  text(invoice.kind === 'capacity' ? labels.capacityLineItem : labels.lineItem, 0, chargesTop + 16, { size: 13, bold: true });
   text(money(invoice.subtotal_fils), width, chargesTop + 16, { align: endAlign });
   let totalsTop = chargesTop + 27;
   if (Number(invoice.discount_fils) > 0) {

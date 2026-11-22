@@ -3725,7 +3725,7 @@
     "additional": "Additional amount this period",
     "errors": {
       "BILLING_ACCESS_REQUIRED": "An active subscription or Admin access grant is required. Open Billing & Subscription.",
-      "BILLING_CAPACITY_REQUIRED": "This barber needs an additional paid place. View the estimate in Billing & Subscription. Payments are not available yet; you can save the barber as inactive.",
+      "BILLING_CAPACITY_REQUIRED": "This barber needs another paid place. Check Billing & Subscription. You can save the barber as inactive.",
       "BILLING_RENEW_REQUIRED": "Renew the subscription before adding active barbers. Existing paid places can still be reused during the grace period.",
       "BILLING_BOOKING_UNAVAILABLE": "This shop is not accepting new bookings. Choose another shop; your existing appointments are unchanged."
     },
@@ -3925,6 +3925,15 @@
     "receipt": "Receipt",
     "total": "Total",
     "periodEnd": "Billing period ends",
+    "addPlaces": "Add barber places",
+    "placesInUse": "{{active}} active · {{paid}} paid places",
+    "placesAfterPurchase": "Barber places after purchase",
+    "reviewAdditionalPlaces": "Review additional places",
+    "addedPlaces": "Additional places",
+    "totalPlaces": "Total paid places",
+    "proratedTotal": "Prorated amount due today",
+    "additionalPlacesVerified": "Additional places purchased",
+    "manageBarbers": "Manage barbers",
     "states": {
       "paid": "Test payment verified",
       "pending": "Waiting for payment verification",
@@ -3933,6 +3942,8 @@
       "review": "Test payment needs review"
     },
     "errors": {
+      "UPAYMENTS_QUOTE_EXPIRED": "This quote expired. Review the additional places again.",
+      "UPAYMENTS_CAPACITY_UNAVAILABLE": "Additional places are unavailable for this billing period. Check your subscription.",
       "default": "Unable to complete checkout. Check the payment status before trying again.",
       "UPAYMENTS_QUOTE_CHANGED": "Your quote changed. Review the total again.",
       "UPAYMENTS_TERM_ACTIVE": "This business already has an active billing period.",
@@ -3958,6 +3969,7 @@
     "periodEnd": "Ends",
     "description": "Description",
     "amount": "Amount",
+    "capacityLineItem": "Additional barber places (prorated)",
     "lineItem": "Shop subscription",
     "billedTo": "Billed to",
     "discount": "Discount",

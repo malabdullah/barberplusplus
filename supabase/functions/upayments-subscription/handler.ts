@@ -7,7 +7,7 @@ const orderPattern = /^[a-f0-9]{32}$/;
 const encoder = new TextEncoder();
 
 type Payload = Record<string, unknown>;
-type Attempt = { id: string; state: string; quote: { totalFils: number } };
+type Attempt = { id: string; state: string; quote: { totalFils: number; kind?: string; periodEnd?: string } };
 type Config = {
   token: string;
   secret: string;
@@ -112,21 +112,31 @@ export function createHandler(config: Config) {
       return await config.provider('capture', uuid(orderId), evidence);
     }
     // An unsuccessful card attempt can leave the checkout session usable.
-    if (transaction.result === 'NOT CAPTURED' && transaction.isTerminalStatus === true) {
+    if (['NOT CAPTURED','CANCELED','FAILED'].includes(transaction.result) && transaction.isTerminalStatus === true) {
       return await config.provider('failed', uuid(orderId), evidence);
     }
     return null;
   };
 
   async function createCharge(attempt: Attempt, language: unknown) {
+    const capacity = attempt.quote.kind === 'capacity';
+    const expiry = capacity
+      ? Math.min(20, Math.floor((Date.parse(attempt.quote.periodEnd || '') - Date.now()) / 60000))
+      : 20;
+    if (!(expiry >= 1)) {
+      return await config.provider('create-rejected', attempt.id, {});
+    }
     if (!await config.provider('claim-create', attempt.id, {})) return attempt;
     const id = attempt.id.replaceAll('-', '');
     const billing = testSite + '/dashboard/billing?upayments=return';
     const result = await requestProvider('POST', 'charge', JSON.stringify({
-      order: { id, reference: id, description: 'Barber++ Test subscription', amount: attempt.quote.totalFils / 1000, currency: 'KWD' },
+      order: {
+        id, reference: id, amount: attempt.quote.totalFils / 1000, currency: 'KWD',
+        description: capacity ? 'Barber++ Test additional barber places' : 'Barber++ Test subscription',
+      },
       reference: { id }, tokens: {}, language: language === 'ar' ? 'ar' : 'en',
       returnUrl: billing, cancelUrl: billing, notificationUrl: webhookUrl + '/' + id,
-      paymentLinkExpiryInMinutes: 20,
+      paymentLinkExpiryInMinutes: expiry,
     }));
     if ([400,401,403,422].includes(result.http) && result.body?.status === false) {
       return await config.provider('create-rejected', attempt.id, {});

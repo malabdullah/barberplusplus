@@ -10,13 +10,13 @@ function expect(condition: unknown, message: string) {
   if (!condition) throw new Error(message);
 }
 
-function fixture(result = 'CAPTURED', terminal = true) {
+function fixture(result = 'CAPTURED', terminal = true, quote: { totalFils: number; kind?: string; periodEnd?: string } = { totalFils: 25001 }) {
   const calls: Array<{ action: string; data: unknown }> = [];
   let claimed = false;
   const handler = createHandler({
     token: 'sandbox-token', secret, allowsStaff: req => Promise.resolve(req.headers.has('x-test-gate')),
     manager: (_token, action) => Promise.resolve(action === 'start'
-      ? { create: !claimed, attempt: { id, state: 'creating', quote: { totalFils: 25001 } } }
+      ? { create: !claimed, attempt: { id, state: 'creating', quote } }
       : { eligible: true, attempt: { id, state: 'pending' } }),
     provider: (action, _id, data) => {
       calls.push({ action, data });
@@ -37,7 +37,11 @@ function fixture(result = 'CAPTURED', terminal = true) {
       expect(headers.get('x-signature') === await sign(secret, headers.get('x-timestamp') + String(options?.method) + path + raw), 'request signature');
       if (path === 'charge') {
         const input = JSON.parse(raw);
-        expect(input.order.amount === 25.001 && input.order.currency === 'KWD', 'fils conversion');
+        expect(input.order.amount === quote.totalFils / 1000 && input.order.currency === 'KWD', 'fils conversion');
+        if (quote.kind === 'capacity') {
+          expect(input.order.description === 'Barber++ Test additional barber places', 'capacity description');
+          expect(input.paymentLinkExpiryInMinutes >= 1 && input.paymentLinkExpiryInMinutes <= 6, 'cannot extend beyond the existing term');
+        }
         expect(input.notificationUrl === webhookUrl + '/' + order && !input.customer, 'no customer data');
         return Response.json({ status: true, data: { link: 'https://sandbox.upayments.com/?session_id=' + session } }, { status: 201 });
       }
@@ -97,4 +101,21 @@ Deno.test('signed order route reconciles a gateway callback with a different bod
     method: 'POST', body: raw, headers: { 'x-timestamp': stamp, 'x-signature': signature },
   }));
   expect(accepted.ok && calls.some(call => call.action === 'capture'), 'verified session evidence');
+});
+
+Deno.test('capacity checkout sends the exact prorated fils with payment expiry inside the term', async () => {
+  const { handler, calls } = fixture('CAPTURED', true, {
+    totalFils: 5001, kind: 'capacity', periodEnd: new Date(Date.now() + 360000).toISOString(),
+  });
+  expect((await handler(staff('start'))).ok, 'capacity link created');
+  expect(calls.some(call => call.action === 'attach'), 'capacity charge session attached');
+});
+
+Deno.test('cancellation only unlocks a new payment once the provider marks it terminal', async () => {
+  const pending = fixture('CANCELED', false);
+  const terminal = fixture('CANCELED');
+  await pending.handler(staff('check'));
+  await terminal.handler(staff('check'));
+  expect(!pending.calls.some(call => call.action === 'failed'), 'keep original session pending');
+  expect(terminal.calls.some(call => call.action === 'failed'), 'allow retry after terminal cancellation');
 });
