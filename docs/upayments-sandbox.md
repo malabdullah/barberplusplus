@@ -36,3 +36,28 @@ If the charge request loses its connection before the link can be saved, the
 attempt stays in **Checking whether checkout opened**. Verify the outstanding
 sandbox order before clearing it. The system never issues a second charge for
 that intent automatically. Keep the normal simulator for other Test shops.
+
+## Hosted verification on 22 November 2026
+
+| Scenario | Result |
+| --- | --- |
+| KNET capture | Verified KD 22.500 after a 25% one-payment discount. Billing showed the receipt, three paid places and 22 December 2026 as the period end. The database recorded one invoice and one redemption. |
+| Mastercard capture | Verified KD 30.000 through Mastercard’s 3-D Secure emulator. The signed webhook activated three paid places through 22 December before the manager reopened Billing. The mobile receipt matched the quote. |
+| Declined card | UPayments returned `FAILED` with a non-terminal flag. The order stayed pending and the same provider session accepted the later successful test. |
+| KNET cancellation | The provider returned `CANCELED` with a non-terminal flag. Checking payment showed the original attempt still pending, with zero invoices and zero paid places. A terminal failure releases the attempt for a fresh quote, as exercised by the automated handler test. |
+| Repeated or unsigned callback | Two signed repeats returned 200 and the card business retained one invoice. An unsigned callback returned 401. |
+| Manager authorization | The pilot stayed hidden for another synthetic manager. Reading the pilot returned no attempt and starting a charge returned 403. |
+| Mobile | English quote and receipt checked at 390 px. Arabic quote and pay action checked in RTL at 375 px, with no checkout overflow. |
+
+The first KNET capture exposed two sandbox response details. The real webhook
+body did not match the documented example, and the status API returned an
+internal session identifier after capture. The deployed handler now obtains the
+order from the signed URL and looks up the original checkout session before
+matching the provider order, amount and currency. The manager's **Check payment**
+action recovered that first KNET receipt. The later Mastercard callback verified
+the corrected automatic path.
+
+Repository checks passed with 340 Edge tests, 551 frontend tests, 84 operations
+tests and a successful build. Eight additional Test Worker checks passed. The
+hosted Worker version is `107097b7-5881-4cdf-996a-d51fd7b215df` and the
+UPayments Test Function is version 5.
