@@ -4,8 +4,14 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
-vi.mock('../lib/runtimeConfig', () => ({ appConfig: { environment: 'test' } }));
-vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }));
+vi.mock('../lib/runtimeConfig', () => ({ appConfig: {
+  environment: 'cloud-test',
+  cloudTestProjectRef: 'qvkucvcjmojjbphlzlks',
+  appUrl: 'https://barber-test.alabdullah-cs.workers.dev',
+} }));
+vi.mock('../lib/supabase', () => ({ supabase: {
+  rpc: vi.fn(), auth: { getSession: async () => ({ data: { session: { access_token: 'test-session' } } }) },
+} }));
 vi.mock('../context/AppContext', () => ({ useApp: () => settings }));
 import '../i18n';
 import i18next from 'i18next';
@@ -16,10 +22,14 @@ import SubscriptionBilling from './SubscriptionBilling';
 const business = { id: 'one', name: 'A real Test business', managerId: 'manager', managerName: 'Manager', count: 3, frequency: 'monthly', nextFrequency: null, renewalRequested: true, revision: 4, priceFils: 30000, canManage: true, access: { status: 'not_started', until: null }, shops: [], managers: [], invoices: [], history: [], grants: [] };
 beforeEach(() => {
   rpc.mockReset(); settings.language = 'en'; settings.theme = 'light';
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ eligible: false })));
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business], hasMore: false } : action === 'detail' ? business : action === 'quote' ? { count: 3, subtotalFils: 30000, totalFils: 24000, discountFils: 6000, normalRenewalFils: 30000, discountPayments: 1 } : { saved: true }));
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 const open = () => render(<MemoryRouter><SubscriptionBilling /></MemoryRouter>);
 it('shows a twelve-payment monthly discount with its correct duration and amount', async () => {
   rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [business] } : action === 'detail' ? business : { count: 3, subtotalFils: 30000, totalFils: 15000, discountFils: 15000, normalRenewalFils: 30000, discountPayments: 12 }));
@@ -42,6 +52,34 @@ it('uses backend totals and re-reads after a saved preference', async () => {
   await waitFor(() => expect(rpc).toHaveBeenCalledWith('preferences', expect.objectContaining({ businessId: 'one', renewalRequested: false, revision: 4, requestId: expect.any(String) })));
   await screen.findByText('Changes saved.');
 });
+it('replaces the checkout after a billing refresh and quotes the edited discount code', async () => {
+  fetch.mockImplementation(async (_url, options) => {
+    const { action, code } = JSON.parse(options.body);
+    if (action === 'read') return Response.json({ eligible: true });
+    return Response.json({ subtotalFils: 30000, discountFils: code === 'TEST25' ? 7500 : 0, totalFils: code === 'TEST25' ? 22500 : 30000 });
+  });
+  open();
+  const originalCheckout = await screen.findByRole('region', { name: 'UPayments checkout' });
+  const billingRpc = rpc.getMockImplementation();
+  let finishRefresh;
+  const refreshRead = new Promise(resolve => { finishRefresh = resolve; });
+  rpc.mockImplementation((action, data) => action === 'detail' ? refreshRead : billingRpc(action, data));
+  fireEvent.click(screen.getByRole('button', { name: 'Manage subscription' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(rpc.mock.calls.filter(([action]) => action === 'detail')).toHaveLength(2));
+  expect(originalCheckout).not.toBeInTheDocument();
+  finishRefresh(business);
+  const checkout = within(await screen.findByRole('region', { name: 'UPayments checkout' }));
+  const field = checkout.getByRole('textbox', { name: 'Discount code' });
+  fireEvent.change(field, { target: { value: 'TEST25' } });
+  expect(field).toHaveValue('TEST25');
+  fireEvent.click(checkout.getByRole('button', { name: 'Review total' }));
+  await checkout.findByText('KD 22.500');
+  fireEvent.change(field, { target: { value: '' } });
+  expect(field).toHaveValue('');
+  expect(checkout.queryByText('KD 22.500')).toBeNull();
+});
+
 it('keeps a failed write retry bound to the same intent', async () => {
   rpc.mockImplementation(action => action === 'preferences' ? Promise.reject(new Error('BILLING_STALE')) : Promise.resolve(action === 'businesses' ? { rows: [business] } : business));
   open();

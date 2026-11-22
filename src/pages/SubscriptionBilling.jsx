@@ -219,9 +219,9 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
             {upaymentsBusiness !== detail.id && <p>{fb('paymentsUnavailable')}</p>}
           </div>
         </section>
-        {showUPaymentsTest && detail.canManage && <UPaymentsTestCheckout key={detail.id}
+        {showUPaymentsTest && detail.canManage && <UPaymentsTestCheckout key={`upayments:${detail.id}`}
           business={detail} date={date} money={money} returnPending={paymentReturn} onEligible={setUPaymentsBusiness} onPaid={refreshBilling}/>}
-        <div className="manager-billing-disclosures" key={detail.id}>
+        <div className="manager-billing-disclosures" key={`disclosures:${detail.id}`}>
           <BillingDisclosure title={sp('calculator')}>
             <form className="subscription-form manager-billing-estimate" onSubmit={estimate}>
               <label className="subscription-field">{bp('billingFrequency')}
