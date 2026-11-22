@@ -38,12 +38,12 @@ function fixture(result = 'CAPTURED', terminal = true) {
       if (path === 'charge') {
         const input = JSON.parse(raw);
         expect(input.order.amount === 25.001 && input.order.currency === 'KWD', 'fils conversion');
-        expect(input.notificationUrl === webhookUrl && !input.customer, 'no customer data');
+        expect(input.notificationUrl === webhookUrl + '/' + order && !input.customer, 'no customer data');
         return Response.json({ status: true, data: { link: 'https://sandbox.upayments.com/?session_id=' + session } }, { status: 201 });
       }
       return Response.json({ status: true, data: { transaction: {
-        merchant_requested_order_id: order, result,
-        isTerminalStatus: terminal, session_id: session, track_id: result === 'CAPTURED' ? track : '',
+        merchant_requested_order_id: order, reference: order, notify_url: webhookUrl + '/' + order, result,
+        isTerminalStatus: terminal, session_id: 'provider-internal-id', track_id: result === 'CAPTURED' ? track : '',
         total_paid_non_kwd: '25.001', currency_type: 'KWD',
       } } }, { status: 201 });
     },
@@ -83,6 +83,18 @@ Deno.test('webhook signature is required and capture is supported without a brow
   const accepted = await handler(new Request(webhookUrl, {
     method: 'POST', body: raw, headers: { 'x-timestamp': stamp, 'x-signature': signature },
   }));
-  expect(accepted.ok && calls.length === 1 && calls[0].action === 'capture', 'independent verification');
-  expect(JSON.stringify(calls[0].data).includes('25001'), 'verified fils from provider');
+  expect(accepted.ok && calls.length === 2 && calls[1].action === 'capture', 'independent verification');
+  expect(JSON.stringify(calls[1].data).includes('25001'), 'verified fils from provider');
+});
+
+Deno.test('signed order route reconciles a gateway callback with a different body shape', async () => {
+  const { handler, calls } = fixture();
+  const target = webhookUrl + '/' + order;
+  const raw = 'provider_status=paid';
+  const stamp = String(Math.floor(Date.now() / 1000));
+  const signature = await sign(secret, stamp + 'POST' + target + raw);
+  const accepted = await handler(new Request(target, {
+    method: 'POST', body: raw, headers: { 'x-timestamp': stamp, 'x-signature': signature },
+  }));
+  expect(accepted.ok && calls.some(call => call.action === 'capture'), 'verified session evidence');
 });

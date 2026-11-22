@@ -32,13 +32,13 @@ export async function sign(secret: string, value: string) {
   return btoa(String.fromCharCode(...await signedDigest(secret, value)));
 }
 
-async function authorizedWebhook(req: Request, raw: string, secret: string) {
+async function authorizedWebhook(req: Request, raw: string, secret: string, notificationUrl: string) {
   const stamp = req.headers.get('x-timestamp') || '';
   const signature = req.headers.get('x-signature') || '';
   if (!/^\d{10}$/.test(stamp) || Math.abs(Date.now() / 1000 - Number(stamp)) > 300
     || !/^[A-Za-z0-9+/]{43}=$/.test(signature)) return false;
   const actual = atob(signature);
-  const expected = await signedDigest(secret, stamp + 'POST' + webhookUrl + raw);
+  const expected = await signedDigest(secret, stamp + 'POST' + notificationUrl + raw);
   let difference = 0;
   for (let i = 0; i < expected.length; i++) difference |= expected[i] ^ actual.charCodeAt(i);
   return difference === 0;
@@ -88,23 +88,23 @@ export function createHandler(config: Config) {
     return { http: result.status, body: await result.json().catch(() => null) };
   };
 
-  const reconcile = async (orderId: string, reference: { sessionId: string } | { trackId: string }) => {
-    const session = 'sessionId' in reference;
-    const value = session ? reference.sessionId : reference.trackId;
-    if (!trackPattern.test(value)) throw new Error('UPAYMENTS_PROVIDER_MISMATCH');
-    const path = session ? '?session_id=' + encodeURIComponent(value) : '/' + encodeURIComponent(value);
-    const result = await requestProvider('GET', 'get-payment-status' + path);
+  const reconcile = async (orderId: string, reference: { sessionId: string }) => {
+    const { sessionId } = reference;
+    if (!trackPattern.test(sessionId)) throw new Error('UPAYMENTS_PROVIDER_MISMATCH');
+    // UPayments returns an internal session ID after capture. Querying with the
+    // stored checkout token binds the result to this session across both states.
+    const result = await requestProvider('GET', 'get-payment-status?session_id=' + encodeURIComponent(sessionId));
     const transaction = result.body?.data?.transaction;
     if (result.http !== 201 || result.body?.status !== true || !transaction) {
       throw new Error('UPAYMENTS_VERIFY_UNAVAILABLE');
     }
-    if (transaction.merchant_requested_order_id !== orderId
-      || (session ? transaction.session_id !== value : transaction.track_id !== value)) {
+    if (transaction.merchant_requested_order_id !== orderId || transaction.reference !== orderId
+      || ![webhookUrl, webhookUrl + '/' + orderId].includes(transaction.notify_url)) {
       throw new Error('UPAYMENTS_PROVIDER_MISMATCH');
     }
 
     const evidence = {
-      orderId, sessionId: transaction.session_id, trackId: transaction.track_id, currency: transaction.currency_type,
+      orderId, sessionId, trackId: transaction.track_id, currency: transaction.currency_type,
       totalFils: fils(transaction.total_paid_non_kwd),
     };
     if (transaction.result === 'CAPTURED') {
@@ -112,7 +112,7 @@ export function createHandler(config: Config) {
       return await config.provider('capture', uuid(orderId), evidence);
     }
     // An unsuccessful card attempt can leave the checkout session usable.
-    if (session && transaction.result === 'NOT CAPTURED' && transaction.isTerminalStatus === true) {
+    if (transaction.result === 'NOT CAPTURED' && transaction.isTerminalStatus === true) {
       return await config.provider('failed', uuid(orderId), evidence);
     }
     return null;
@@ -125,7 +125,7 @@ export function createHandler(config: Config) {
     const result = await requestProvider('POST', 'charge', JSON.stringify({
       order: { id, reference: id, description: 'Barber++ Test subscription', amount: attempt.quote.totalFils / 1000, currency: 'KWD' },
       reference: { id }, tokens: {}, language: language === 'ar' ? 'ar' : 'en',
-      returnUrl: billing, cancelUrl: billing, notificationUrl: webhookUrl,
+      returnUrl: billing, cancelUrl: billing, notificationUrl: webhookUrl + '/' + id,
       paymentLinkExpiryInMinutes: 20,
     }));
     if ([400,401,403,422].includes(result.http) && result.body?.status === false) {
@@ -140,23 +140,18 @@ export function createHandler(config: Config) {
     return await config.provider('attach', attempt.id, { sessionId, checkoutUrl: link.href });
   }
 
-  async function handleWebhook(req: Request) {
+  async function handleWebhook(req: Request, routeOrder?: string) {
     const raw = await bodyText(req);
-    if (!await authorizedWebhook(req, raw, config.secret)) return response({ error: 'UPAYMENTS_SIGNATURE' }, 401);
-    const event = JSON.parse(raw);
-    const order = event.requested_order_id;
-    if (typeof order !== 'string' || !orderPattern.test(order)
-      || (event.result === 'CAPTURED' && (typeof event.track_id !== 'string' || !trackPattern.test(event.track_id)))) {
+    const notificationUrl = routeOrder ? webhookUrl + '/' + routeOrder : webhookUrl;
+    if (!await authorizedWebhook(req, raw, config.secret, notificationUrl)) return response({ error: 'UPAYMENTS_SIGNATURE' }, 401);
+    // The actual sandbox webhook body can differ from the documented sample.
+    // Use the signed order path and look up the original session for evidence.
+    const hint = routeOrder || JSON.parse(raw).requested_order_id;
+    if (typeof hint !== 'string' || !orderPattern.test(hint)) {
       return response({ error: 'UPAYMENTS_INVALID' }, 400);
     }
-    // A terminal failure still needs confirmation against the entire session.
-    if (event.result === 'NOT CAPTURED') {
-      if (event.isTerminalStatus !== true) return response({ received: true });
-      const pending = await config.provider('inquire', uuid(order), {}) as { sessionId: string } | null;
-      if (pending?.sessionId) await reconcile(order, pending);
-    } else if (event.result === 'CAPTURED') {
-      await reconcile(order, { trackId: event.track_id });
-    }
+    const pending = await config.provider('inquire', uuid(hint), {}) as { sessionId: string } | null;
+    if (pending?.sessionId) await reconcile(hint, pending);
     return response({ received: true });
   }
 
@@ -165,7 +160,8 @@ export function createHandler(config: Config) {
     if (!config.token || !config.secret) return response({ error: 'UPAYMENTS_UNAVAILABLE' }, 503);
     const path = new URL(req.url).pathname;
     try {
-      if (path.endsWith('/upayments-subscription/webhook')) return await handleWebhook(req);
+      const webhook = path.match(/\/upayments-subscription\/webhook(?:\/([a-f0-9]{32}))?$/);
+      if (webhook) return await handleWebhook(req, webhook[1]);
       if (!path.endsWith('/upayments-subscription') || !await config.allowsStaff(req)) {
         return response({ error: 'UPAYMENTS_FORBIDDEN' }, 403);
       }
