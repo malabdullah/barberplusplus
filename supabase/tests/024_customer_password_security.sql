@@ -24,6 +24,17 @@ select throws_ok($$select public.customer_password_api('prepare',current_setting
 select throws_ok($$select public.customer_password_api('current-begin',current_setting('password.identity')::jsonb||'{"reauth_session_id":"af220000-0000-4000-8000-000000000011"}')$$,'P0001','CURRENT_PASSWORD_REQUIRED','original session is not fresh password proof');
 select throws_ok($$select public.customer_password_api('current-begin',current_setting('password.identity')::jsonb||'{"reauth_session_id":"af220000-0000-4000-8000-000000000031"}')$$,'P0001','CURRENT_PASSWORD_REQUIRED','another user cannot reauthenticate this account');
 set constraints auth.enforce_customer_password_proof immediate;
+insert into auth.users(id,email,encrypted_password,raw_app_meta_data,raw_user_meta_data) values
+('af220000-0000-4000-8000-000000000004','apple-passwordless@customer.test','','{"provider":"apple","providers":["apple"]}','{}'),
+('af220000-0000-4000-8000-000000000005','google-passwordless@customer.test','','{"provider":"google","providers":["google"]}','{}');
+select lives_ok($$update auth.users set encrypted_password=null where id='af220000-0000-4000-8000-000000000004'$$,
+  'Apple confirmation can normalize an empty password');
+select lives_ok($$update auth.users set encrypted_password=null where id='af220000-0000-4000-8000-000000000005'$$,
+  'Google confirmation can normalize an empty password');
+select throws_ok($$update auth.users set encrypted_password='unexpected-hash' where id='af220000-0000-4000-8000-000000000004'$$,
+  'P0001','PASSWORD_PROOF_REQUIRED','setting a real password still requires proof');
+select throws_ok($$update auth.users set encrypted_password=null where id='af220000-0000-4000-8000-000000000001'$$,
+  'P0001','PASSWORD_PROOF_REQUIRED','removing a real password still requires proof');
 select throws_ok($$update auth.users set encrypted_password='bypassed' where id='af220000-0000-4000-8000-000000000001'$$,'P0001','PASSWORD_PROOF_REQUIRED','direct Auth password write is rejected');
 select throws_ok($$update auth.users set encrypted_password='bypassed',raw_user_meta_data='{"barber_password_operation":"af220000-0000-4000-8000-000000000099"}' where id='af220000-0000-4000-8000-000000000001'$$,'P0001','PASSWORD_PROOF_REQUIRED','editable metadata cannot authorize a password');
 set constraints auth.enforce_customer_password_proof deferred;
