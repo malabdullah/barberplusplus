@@ -41,7 +41,7 @@ export default function BarbersList() {
     setLoading(true);
     try {
       const [barbersResult, managersResult] = await Promise.all([
-        adminService.getAllBarbers({ limit: 1000 }),
+        adminService.getAllBarbers({ limit: 1000, countTotal: false }),
         adminService.getAllManagers({}),
       ]);
       setBarbers(barbersResult.barbers || []);
