@@ -320,7 +320,7 @@ export default function Settlements({ admin = false }) {
         {action === 'uncertain-payout' && <p>{label('uncertainConfirm')}</p>}
         {(reasonActions.includes(action) || action === 'settings') && field('reason', 'text', true, { minLength: 3, maxLength: 240 })}
       </fieldset>
-        {!readOnlyDialog && <footer><button type="button" className="btn btn-secondary" onClick={close} disabled={saving}>{label('close')}</button><button className="btn btn-primary" disabled={saving || (action === 'record-receipt' && !form.bookingId)}>{saving ? label('saving') : label('confirm')}</button></footer>}
+        {!readOnlyDialog && <footer><button type="button" className="btn btn-secondary" onClick={close} disabled={saving}>{label('close')}</button><button className="btn btn-primary" disabled={saving || (action === 'settings' && !details) || (action === 'record-receipt' && !form.bookingId)}>{saving ? label('saving') : label('confirm')}</button></footer>}
       </form>
       {action === 'statement' && !details && !error && <p role="status">{label('loading')}</p>}
       {action === 'statement' && details && <>

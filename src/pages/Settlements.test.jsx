@@ -147,3 +147,15 @@ it('restores the shop search, page, focus and scroll position after reviewing a 
   expect(scrollingElement.scrollTop).toBe(480);
   delete document.scrollingElement;
 });
+
+it('keeps confirmation disabled until commission settings finish loading', async () => {
+  let finishLoading;
+  const pendingSettings = new Promise(resolve => { finishLoading = resolve; });
+  rpc.mockImplementation(async (_, action) => action === 'settings' ? pendingSettings : { rows: [shop] });
+  render(<Settlements admin />);
+  fireEvent.click(screen.getByRole('button', { name: 'Default commission', exact: true }));
+  const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm', exact: true });
+  expect(confirm).toBeDisabled();
+  finishLoading({ defaultRate: { rateBps: 500 } });
+  await waitFor(() => expect(confirm).toBeEnabled());
+});
