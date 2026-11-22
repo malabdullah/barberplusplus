@@ -2,6 +2,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=extensions,public,pg_catalog;
 select no_plan();
+select ok(has_function_privilege('service_role','private.service_duration(uuid,uuid,integer)','EXECUTE'),'trusted gateway can resolve durations');
+select ok(not has_function_privilege('authenticated','private.service_duration(uuid,uuid,integer)','EXECUTE'),'clients cannot call private duration helper');
 -- Fixture-only setting; restored by the transaction rollback.
 update private.billing_enforcement set enabled=false;
 insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data,raw_user_meta_data) values
