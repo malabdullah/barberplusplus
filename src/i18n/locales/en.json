@@ -3943,5 +3943,24 @@
       "UPAYMENTS_ZERO_TOTAL": "This sandbox checkout requires a positive total.",
       "UPAYMENTS_INVALID": "Choose a valid term and enough barber places for your active barbers."
     }
+  },
+  "subscriptionInvoice": {
+    "language": "en",
+    "title": "Subscription invoice",
+    "download": "Download PDF",
+    "downloadFailed": "Couldn’t download the invoice. Please try again.",
+    "paid": "Paid",
+    "refunded": "Refunded",
+    "reference": "Invoice number",
+    "status": "Status",
+    "issuedOn": "Issued on",
+    "periodStart": "Billing period starts",
+    "periodEnd": "Billing period ends",
+    "billedTo": "Billed to",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "total": "Invoice total",
+    "test": "TEST INVOICE",
+    "testNote": "Issued in the Barber++ Test environment. No real payment was collected."
   }
 }

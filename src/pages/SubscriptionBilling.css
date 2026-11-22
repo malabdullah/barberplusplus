@@ -72,6 +72,10 @@
 .manager-billing .subscription-empty { margin: 0; padding: 4px 0 16px; }
 .manager-billing-invoices { margin: 0; padding-inline-start: 20px; }
 .manager-billing-invoices li { padding-block: 5px; }
+.manager-billing-invoices-downloadable { list-style: none; padding-inline-start: 0; }
+.manager-billing-invoices-downloadable li {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px;
+}
 @media (max-width: 630px) {
   .manager-billing .manager-billing-estimate { grid-template-columns: minmax(0, 1fr); }
   .manager-billing-summary-action { align-items: start; flex-direction: column; }

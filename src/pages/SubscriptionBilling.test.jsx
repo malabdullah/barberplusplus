@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
+const { rpc, downloadPdf, settings } = vi.hoisted(() => ({ rpc: vi.fn(), downloadPdf: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
 vi.mock('../lib/runtimeConfig', () => ({ appConfig: {
   environment: 'cloud-test',
@@ -12,6 +12,7 @@ vi.mock('../lib/runtimeConfig', () => ({ appConfig: {
 vi.mock('../lib/supabase', () => ({ supabase: {
   rpc: vi.fn(), auth: { getSession: async () => ({ data: { session: { access_token: 'test-session' } } }) },
 } }));
+vi.mock('../utils/subscriptionInvoicePdf', () => ({ downloadSubscriptionInvoice: downloadPdf }));
 vi.mock('../context/AppContext', () => ({ useApp: () => settings }));
 import '../i18n';
 import i18next from 'i18next';
@@ -21,6 +22,7 @@ import SubscriptionBilling from './SubscriptionBilling';
 
 const business = { id: 'one', name: 'A real Test business', managerId: 'manager', managerName: 'Manager', count: 3, frequency: 'monthly', nextFrequency: null, renewalRequested: true, revision: 4, priceFils: 30000, canManage: true, access: { status: 'not_started', until: null }, shops: [], managers: [], invoices: [], history: [], grants: [] };
 beforeEach(() => {
+  downloadPdf.mockReset();
   rpc.mockReset(); settings.language = 'en'; settings.theme = 'light';
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ eligible: false })));
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -78,6 +80,20 @@ it('replaces the checkout after a billing refresh and quotes the edited discount
   fireEvent.change(field, { target: { value: '' } });
   expect(field).toHaveValue('');
   expect(checkout.queryByText('KD 22.500')).toBeNull();
+});
+
+it('downloads the original recorded invoice amounts from Billing', async () => {
+  const invoice = { id: 'invoice-paid', state: 'paid', currency: 'KWD', subtotal_fils: 30000, discount_fils: 7500,
+    total_fils: 22500, created_at: '2026-11-22T14:00:00Z', period_starts_at: '2026-11-22T14:00:00Z',
+    period_ends_at: '2026-12-22T14:00:00Z' };
+  const actual = { ...business, invoices: [invoice], priceFils: 50000 };
+  rpc.mockImplementation(action => Promise.resolve(action === 'businesses' ? { rows: [actual] } : actual));
+  open();
+  fireEvent.click(await screen.findByText('Invoices', { selector: 'summary' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+  await waitFor(() => expect(downloadPdf).toHaveBeenCalledWith(expect.objectContaining({
+    businessName: actual.name, invoice, language: 'en',
+  })));
 });
 
 it('keeps a failed write retry bound to the same intent', async () => {
