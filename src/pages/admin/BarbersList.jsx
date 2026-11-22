@@ -41,7 +41,7 @@ export default function BarbersList() {
     setLoading(true);
     try {
       const [barbersResult, managersResult] = await Promise.all([
-        adminService.getAllBarbers({ limit: 1000 }),
+        adminService.getAllBarbers({ limit: 1000, countTotal: false }),
         adminService.getAllManagers({}),
       ]);
       setBarbers(barbersResult.barbers || []);
@@ -121,7 +121,7 @@ export default function BarbersList() {
   };
 
   return (
-    <div className="admin-page">
+    <div className="admin-page admin-roster-page">
       {/* Header */}
       <div className="admin-page-header">
         <Link to="/admin/users" className="admin-back-link">
@@ -179,23 +179,23 @@ export default function BarbersList() {
         </div>
       ) : filteredBarbers.length > 0 ? (
         <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.email')}</th>
-                <th>{t('common.phone')}</th>
-                <th>{t('admin.users.branch')}</th>
-                <th>{t('admin.users.manager')}</th>
-                <th>{t('common.status')}</th>
-                <th>{t('common.date')}</th>
-                <th>{t('common.actions')}</th>
+          <table className="admin-table" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" scope="col">{t('common.name')}</th>
+                <th role="columnheader" scope="col">{t('common.email')}</th>
+                <th role="columnheader" scope="col">{t('common.phone')}</th>
+                <th role="columnheader" scope="col">{t('admin.users.branch')}</th>
+                <th role="columnheader" scope="col">{t('admin.users.manager')}</th>
+                <th role="columnheader" scope="col">{t('common.status')}</th>
+                <th role="columnheader" scope="col">{t('common.date')}</th>
+                <th role="columnheader" scope="col">{t('common.actions')}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {filteredBarbers.map((barber) => (
-                <tr key={barber.id}>
-                  <td>
+                <tr role="row" key={barber.id}>
+                  <td role="cell" className="admin-roster-name">
                     <div className="admin-user-cell">
                       {barber.avatarUrl ? (
                         <img
@@ -211,27 +211,33 @@ export default function BarbersList() {
                       <span>{barber.name || t('common.unknown')}</span>
                     </div>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.email')}</span>
                     <span className="admin-cell-secondary">{barber.email || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.phone')}</span>
                     <span className="admin-cell-secondary">{barber.phone || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('admin.users.branch')}</span>
                     <span className="admin-cell-secondary">{barber.branchName || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('admin.users.manager')}</span>
                     <span className="admin-cell-secondary">{barber.managerName || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.status')}</span>
                     <span className={`status-badge ${barber.status === 'active' ? 'active' : 'inactive'}`}>
                       {barber.status === 'active' ? t('common.active') : t('common.inactive')}
                     </span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.date')}</span>
                     <span className="admin-cell-secondary">{formatDate(barber.createdAt)}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-actions">
                     <div className="admin-actions">
                       <button
                         className="admin-action-btn"

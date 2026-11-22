@@ -310,7 +310,7 @@ export const adminService = {
   /**
    * Get all barbers platform-wide with pagination
    */
-  getAllBarbers: async ({ page = 1, limit = 25, search = '', branchId = null, status = 'all', managerId = null } = {}) => {
+  getAllBarbers: async ({ page = 1, limit = 25, search = '', branchId = null, status = 'all', managerId = null, countTotal = true } = {}) => {
     try {
       // Get managers using SECURITY DEFINER function for name lookups
       const { data: managersData } = await supabase
@@ -324,13 +324,14 @@ export const adminService = {
       let query = supabase
         .from('barbers')
         .select(`
-          *,
+          id, name, name_ar, user_id, manager_chair, email, phone, country_code,
+          status, avatar_url, branch_id, invite_status, created_at,
           branches:branch_id (
             id,
             name,
             manager_id
           )
-        `, { count: 'exact' })
+        `, countTotal ? { count: 'exact' } : undefined)
         .order('created_at', { ascending: false });
 
       // Apply search filter (escape wildcards to prevent enumeration attacks)
@@ -385,7 +386,7 @@ export const adminService = {
           inviteStatus: barber.invite_status,
           createdAt: barber.created_at,
         })) || [],
-        total: count || 0,
+        total: count ?? data?.length ?? 0,
         page,
         limit,
       };

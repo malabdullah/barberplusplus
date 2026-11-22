@@ -20,4 +20,31 @@
 .bf-pagination { display: flex; gap: 1rem; align-items: center; justify-content: center; margin-block: 1.5rem; }
 .bf-pagination .cb-secondary { min-width: 0; }
 [dir='rtl'] .bf-method > svg:last-child, [dir='rtl'] .bf-result > svg:last-child, [dir='rtl'] .bf-toolbar svg { transform: scaleX(-1); }
-@media (max-width: 480px) { .bf-method { padding: 1.1rem; } .bf-pagination { gap: .5rem; } }
+@media (max-width: 480px) {
+  .bf-page .cb-main { padding-block-end: var(--space-xl); }
+  .bf-method { padding: 1.1rem; }
+  .bf-toolbar { gap: 0 var(--space-md); margin-block: var(--space-md); }
+  .bf-range > .cb-date {
+    min-height: 48px;
+    padding: 10px 14px;
+    border: 1px solid var(--booking-control);
+    border-radius: 8px;
+    background: var(--booking-surface);
+  }
+  .bf-range > .cb-date:focus-visible {
+    outline: 2px solid var(--booking-link);
+    outline-offset: 3px;
+  }
+  .bf-range-times input {
+    direction: ltr;
+    padding-inline: 10px;
+    resize: none;
+  }
+  [dir='rtl'] .bf-range > .cb-primary svg { transform: scaleX(-1); }
+  .bf-pagination { flex-wrap: wrap; gap: .5rem; }
+  .bf-pagination .cb-secondary { padding-inline: 14px; }
+}
+
+@media (max-width: 360px) {
+  .bf-range-times { grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+}
