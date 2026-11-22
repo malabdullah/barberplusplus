@@ -207,7 +207,14 @@
     min-height: 48px;
   }
 
-  .search-input {
+  .search-input-wrapper > svg {
+    flex: none;
+  }
+
+  .layout-content .search-input-wrapper .search-input {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0;
     font-size: 16px; /* Prevent iOS zoom */
   }
 

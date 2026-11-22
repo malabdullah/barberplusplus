@@ -119,3 +119,43 @@ it('keeps an unknown-outcome transfer reserved instead of offering cancellation'
   expect(screen.getByRole('button', { name: 'Record confirmed bank transfer' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Confirm transfer failed' })).toBeVisible();
 });
+
+it('restores the shop search, page, focus and scroll position after reviewing a shop', async () => {
+  rpc.mockImplementation(async (_, action) => {
+    if (action === 'shops') return { rows: [shop], hasMore: true };
+    return { rows: [receipt] };
+  });
+  const scrollingElement = document.documentElement;
+  Object.defineProperty(document, 'scrollingElement', { configurable: true, value: scrollingElement });
+  render(<Settlements admin />);
+  await screen.findByRole('button', { name: shop.name });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search' }), { target: { value: 'QA' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search', exact: true }));
+  await waitFor(() => expect(rpc).toHaveBeenLastCalledWith(true, 'shops', { offset: 0, query: 'QA' }));
+  await screen.findByRole('button', { name: shop.name });
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await waitFor(() => expect(rpc).toHaveBeenLastCalledWith(true, 'shops', { offset: 25, query: 'QA' }));
+  const openShop = await screen.findByRole('button', { name: shop.name });
+  scrollingElement.scrollTop = 480;
+  fireEvent.click(openShop);
+  await screen.findByText(receipt.sourceRef);
+  fireEvent.click(screen.getByRole('button', { name: 'Shops', exact: true }));
+  const restoredShop = await screen.findByRole('button', { name: shop.name });
+  expect(screen.getByRole('textbox', { name: 'Search' })).toHaveValue('QA');
+  expect(rpc).toHaveBeenLastCalledWith(true, 'shops', { offset: 25, query: 'QA' });
+  expect(restoredShop).toHaveFocus();
+  expect(scrollingElement.scrollTop).toBe(480);
+  delete document.scrollingElement;
+});
+
+it('keeps confirmation disabled until commission settings finish loading', async () => {
+  let finishLoading;
+  const pendingSettings = new Promise(resolve => { finishLoading = resolve; });
+  rpc.mockImplementation(async (_, action) => action === 'settings' ? pendingSettings : { rows: [shop] });
+  render(<Settlements admin />);
+  fireEvent.click(screen.getByRole('button', { name: 'Default commission', exact: true }));
+  const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm', exact: true });
+  expect(confirm).toBeDisabled();
+  finishLoading({ defaultRate: { rateBps: 500 } });
+  await waitFor(() => expect(confirm).toBeEnabled());
+});

@@ -474,14 +474,17 @@
   }
 
   .topbar-notifications-dropdown {
-    min-width: calc(100% - var(--space-md) * 2);
-    right: calc(-1 * var(--space-md));
-    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - var(--space-md) * 2));
+    min-width: 0;
+    right: 0;
+    max-height: min(70dvh, calc(100dvh - var(--topbar-height) - var(--environment-banner-height, 0px) - var(--space-xl) - env(safe-area-inset-bottom, 0px)));
   }
 
   [dir="rtl"] .topbar-notifications-dropdown {
     right: auto;
-    left: calc(-1 * var(--space-md));
+    left: 0;
   }
 
   .topbar-branch-dropdown {

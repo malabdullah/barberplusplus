@@ -127,7 +127,7 @@ export default function ManagersList() {
   };
 
   return (
-    <div className="admin-page">
+    <div className="admin-page admin-roster-page">
       {/* Header */}
       <div className="admin-page-header">
         <Link to="/admin/users" className="admin-back-link">
@@ -172,22 +172,22 @@ export default function ManagersList() {
         </div>
       ) : filteredManagers.length > 0 ? (
         <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>{t('common.name')}</th>
-                <th>{t('common.email')}</th>
-                <th>{t('common.phone')}</th>
-                <th>{t('admin.users.branches')}</th>
-                <th>{t('common.status')}</th>
-                <th>{t('common.date')}</th>
-                <th>{t('common.actions')}</th>
+          <table className="admin-table" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" scope="col">{t('common.name')}</th>
+                <th role="columnheader" scope="col">{t('common.email')}</th>
+                <th role="columnheader" scope="col">{t('common.phone')}</th>
+                <th role="columnheader" scope="col">{t('admin.users.branches')}</th>
+                <th role="columnheader" scope="col">{t('common.status')}</th>
+                <th role="columnheader" scope="col">{t('common.date')}</th>
+                <th role="columnheader" scope="col">{t('common.actions')}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {filteredManagers.map((manager) => (
-                <tr key={manager.id}>
-                  <td>
+                <tr role="row" key={manager.id}>
+                  <td role="cell" className="admin-roster-name">
                     <div className="admin-user-cell">
                       <div className="admin-user-avatar">
                         {manager.name?.charAt(0) || '?'}
@@ -195,24 +195,29 @@ export default function ManagersList() {
                       <span>{manager.name || t('common.unknown')}</span>
                     </div>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.email')}</span>
                     <span className="admin-cell-secondary">{manager.email || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.phone')}</span>
                     <span className="admin-cell-secondary">{manager.phone || '-'}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('admin.users.branches')}</span>
                     <span className="admin-badge">{manager.branchCount}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.status')}</span>
                     <span className={`status-badge ${manager.isActive ? 'active' : 'inactive'}`}>
                       {manager.isActive ? t('common.active') : t('common.inactive')}
                     </span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-field">
+                    <span className="admin-roster-label" aria-hidden="true">{t('common.date')}</span>
                     <span className="admin-cell-secondary">{formatDate(manager.createdAt)}</span>
                   </td>
-                  <td>
+                  <td role="cell" className="admin-roster-actions">
                     <div className="admin-actions">
                       <button
                         className="admin-action-btn"

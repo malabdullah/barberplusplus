@@ -49,6 +49,8 @@ export default function Settlements({ admin = false }) {
   const [exporting, setExporting] = useState(false);
   const modal = useRef(null);
   const dialogTrigger = useRef(null);
+  const shopListPosition = useRef(null);
+  const restoreShopList = useRef(false);
   const sequence = useRef(0);
   const active = useRef(true);
   const identity = `${admin}:${user?.id}`;
@@ -64,6 +66,7 @@ export default function Settlements({ admin = false }) {
   }
   useEffect(() => {
     active.current = true;
+    shopListPosition.current = null; restoreShopList.current = false;
     setShop(null); setRows([]); setDialog(null); setDetails(null); setPage(0); setSaving(false); setExporting(false);
     return () => { active.current = false; sequence.current++; exportAbort.current?.abort(); };
   }, [user?.id, admin]);
@@ -97,6 +100,23 @@ export default function Settlements({ admin = false }) {
     }).catch(failure => { if (current) fail(failure); });
     return () => { current = false; };
   }, [dialog, detailPage, admin, user?.id]);
+  useEffect(() => {
+    if (shop || dataKey !== viewKey || !restoreShopList.current) return;
+    restoreShopList.current = false;
+    const position = shopListPosition.current;
+    document.getElementById(`settlement-shop-${position.id}`)?.focus({ preventScroll: true });
+    if (document.scrollingElement) document.scrollingElement.scrollTop = position.scrollTop;
+  }, [shop, dataKey, viewKey]);
+  function selectShop(row) {
+    shopListPosition.current = { id: row.id, page, query, search, scrollTop: document.scrollingElement?.scrollTop || 0 };
+    setShop(row); setPage(0); setTab('receipts'); setQuery(''); setSearch('');
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+  }
+  function backToShops() {
+    const position = shopListPosition.current;
+    restoreShopList.current = Boolean(position);
+    setShop(null); setPage(position?.page || 0); setQuery(position?.query || ''); setSearch(position?.search || '');
+  }
   const changeTab = value => { setTab(value); setPage(0); setQuery(''); setSearch(''); };
   function open(kind, row = null, global = false) {
     dialogTrigger.current = document.activeElement;
@@ -185,8 +205,10 @@ export default function Settlements({ admin = false }) {
   return <main className="reports-page settlement-page">
     <header className="reports-heading settlement-heading">
       <div>
-        {shop && <button type="button" className="report-text-action settlement-back" onClick={() => { setShop(null); setPage(0); setQuery(''); setSearch(''); }}><ArrowLeft size={16} />{label('shops')}</button>}
-        <h1>{label('title')}</h1>
+        {shop && <button type="button" className="report-text-action settlement-back" onClick={backToShops}><ArrowLeft size={16} />{label('shops')}</button>}
+        <div className="settlement-title-row"><h1>{label('title')}</h1>
+          <button type="button" className="btn btn-secondary settlement-refresh" onClick={() => setRefresh(v => v + 1)} aria-label={label('refresh')} title={label('refresh')}><RefreshCw size={17} /></button>
+        </div>
         {shop && <p className="settlement-shop-name">{localizedReportName(shop, i18n.language)}</p>}
       </div>
       <div className="settlement-actions">
@@ -194,8 +216,10 @@ export default function Settlements({ admin = false }) {
         {admin && (shop ? <details className="settlement-header-menu">
           <summary className="btn btn-secondary">{label('settingsAction')}</summary>
           <div>{button('settings', null)}{button('save-beneficiary')}</div>
-        </details> : <button type="button" className="report-text-action" onClick={() => open('settings', null, true)}>{label('defaultRate')}</button>)}
-        <button type="button" className="btn btn-secondary settlement-refresh" onClick={() => setRefresh(v => v + 1)} aria-label={label('refresh')} title={label('refresh')}><RefreshCw size={17} /></button>
+        </details> : <details className="settlement-header-menu">
+          <summary className="btn btn-secondary">{label('moreActions')}</summary>
+          <div><button type="button" className="report-text-action" onClick={() => open('settings', null, true)}>{label('defaultRate')}</button></div>
+        </details>)}
       </div>
     </header>
     {!shop && <p className="settlement-subtitle">{label(admin ? 'adminSubtitle' : 'managerSubtitle')}</p>}
@@ -229,10 +253,17 @@ export default function Settlements({ admin = false }) {
     </div>}
     {dataKey !== viewKey ? (busy || !error ? <p className="report-state" role="status">{label('loading')}</p> : null) : !rows.length
       ? <p className="report-state">{label('empty')}</p>
-      : <div className="report-table-scroll settlement-list"><table><thead><tr>{columns.map(key => <th scope="col" key={key}>{label(key)}</th>)}</tr></thead><tbody>
+      : <div className={`report-table-scroll settlement-list${!shop ? ' settlement-shop-list' : ''}`}><table><thead><tr>{columns.map(key => <th scope="col" key={key}>{label(key)}</th>)}</tr></thead><tbody>
         {rows.map(row => <tr key={row.id}>
           {!shop ? <>
-            {cell('shops', <button type="button" className="report-text-action" onClick={() => { setShop(row); setPage(0); setTab('receipts'); setQuery(''); setSearch(''); }}>{localizedReportName(row, i18n.language)}</button>)}
+            {cell('shops', <button id={`settlement-shop-${row.id}`} type="button" className="report-text-action settlement-shop-open" aria-label={localizedReportName(row, i18n.language)} aria-describedby={`settlement-balance-${row.id}`} onClick={() => selectShop(row)}>
+              <span className="settlement-shop-label">{localizedReportName(row, i18n.language)}</span>
+              <span id={`settlement-balance-${row.id}`} className="settlement-mobile-balance">
+                <span>{label('availableFils')}</span><strong>{money(row.availableFils)}</strong>
+                {Number(row.reservedFils) !== 0 && <span className="settlement-mobile-reserved">{label('reservedFils')} · {money(row.reservedFils)}</span>}
+              </span>
+              <ChevronRight className="settlement-shop-chevron" size={18} aria-hidden="true" />
+            </button>)}
             {cell('availableFils', money(row.availableFils))}
             {cell('reservedFils', money(row.reservedFils))}
           </> : tab === 'receipts' ? <>
@@ -275,7 +306,7 @@ export default function Settlements({ admin = false }) {
       </tbody></table></div>}
     {pagination(page, setPage, more)}
     <dialog ref={modal} className="report-filter-dialog settlement-dialog" onCancel={event => { event.preventDefault(); close(); }} aria-labelledby="settlement-dialog-title"><header><h2 id="settlement-dialog-title">{label(action || 'title')}</h2><button className="btn btn-secondary" onClick={close} disabled={saving} aria-label={label('close')}><X size={20} /></button></header>
-      {dialog && <><form onSubmit={submit}><fieldset disabled={saving || (action === 'settings' && !details)}>
+      {dialog && <><form className="settlement-dialog-form" onSubmit={submit}><fieldset disabled={saving || (action === 'settings' && !details)}>
         {error && <p className="report-error" role="alert">{error}</p>}
         {action === 'settings' && <>{details && <dl><div><dt>{label('defaultRate')}</dt><dd>{details.defaultRate ? `${details.defaultRate.rateBps / 100}%` : label('unset')}</dd></div>{!dialog.global && <><div><dt>{label('shopRate')}</dt><dd>{details.shopRate?.rateBps != null ? `${details.shopRate.rateBps / 100}%` : label('useDefault')}</dd></div><div><dt>{label('feeBearer')}</dt><dd>{details.agreement ? label(details.agreement.feeBearer) : label('unset')}</dd></div></>}</dl>}{!dialog.global && <label className="settlement-checkbox"><input type="checkbox" checked={form.useDefault} onChange={e => setForm(v => ({ ...v, useDefault: e.target.checked }))} />{label('useDefault')}</label>}{(dialog.global || !form.useDefault) && field('rate', 'text', true, { inputMode: 'decimal' })}{!dialog.global && <label>{label('feeBearer')}<select value={form.feeBearer} onChange={e => setForm(v => ({ ...v, feeBearer: e.target.value }))}><option value="shop">{label('shop')}</option><option value="platform">{label('platform')}</option></select></label>}</>}
         {action === 'save-beneficiary' && <>{field('payeeName', 'text', true, { maxLength: 160 })}{field('beneficiaryRef', 'text', true, { maxLength: 120 })}{field('ibanLastFour', 'text', true, { minLength: 4, maxLength: 4, pattern: '[A-Za-z0-9]{4}' })}<p>{label('beneficiaryConfirm')}</p></>}
@@ -288,8 +319,9 @@ export default function Settlements({ admin = false }) {
         {action === 'confirm-payout' && <p>{label('transferConfirm', { amount: money(dialog.row.amountFils) })} {money(dialog.row.amountFils)} · {dialog.row.payeeName} · •••• {dialog.row.ibanLastFour}</p>}
         {action === 'uncertain-payout' && <p>{label('uncertainConfirm')}</p>}
         {(reasonActions.includes(action) || action === 'settings') && field('reason', 'text', true, { minLength: 3, maxLength: 240 })}
-        {!readOnlyDialog && <footer><button type="button" className="btn btn-secondary" onClick={close} disabled={saving}>{label('close')}</button><button className="btn btn-primary" disabled={saving || (action === 'record-receipt' && !form.bookingId)}>{saving ? label('saving') : label('confirm')}</button></footer>}
-      </fieldset></form>
+      </fieldset>
+        {!readOnlyDialog && <footer><button type="button" className="btn btn-secondary" onClick={close} disabled={saving}>{label('close')}</button><button className="btn btn-primary" disabled={saving || (action === 'settings' && !details) || (action === 'record-receipt' && !form.bookingId)}>{saving ? label('saving') : label('confirm')}</button></footer>}
+      </form>
       {action === 'statement' && !details && !error && <p role="status">{label('loading')}</p>}
       {action === 'statement' && details && <>
         <div className="settlement-statement-total">

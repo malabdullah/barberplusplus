@@ -88,7 +88,8 @@
   .settlement-breakdown { margin-top: 4px; }
   .settlement-tabs { gap: 0 14px; }
   .settlement-list, .settlement-statement-items { overflow: visible; }
-  .settlement-list table, .settlement-statement-items table { min-width: 0; }
+  .settlement-page .settlement-list table, .settlement-dialog .settlement-statement-items table { min-width: 0; }
+  .settlement-page .settlement-list :is(table, tbody), .settlement-dialog .settlement-statement-items :is(table, tbody) { display: block; width: 100%; }
   :is(.settlement-list, .settlement-statement-items) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   :is(.settlement-list, .settlement-statement-items) tr { display: block; padding-block: 12px; border-bottom: 1px solid var(--surface-divider, var(--border-color)); }
   :is(.settlement-list, .settlement-statement-items) td {
@@ -138,4 +139,40 @@
   .reconciliation-bank-list tbody td:first-child { grid-row: span 2; }
   .reconciliation-bank-list tbody td:nth-child(n+2) { justify-content: end; }
   .reconciliation-bank-list tbody td:nth-child(n+2)::before { display: none; }
+}
+
+.settlement-title-row { display: flex; align-items: center; gap: 12px; }
+.settlement-title-row h1 { min-width: 0; }
+.settlement-title-row .settlement-refresh { flex-shrink: 0; }
+.settlement-mobile-balance, .settlement-shop-chevron { display: none; }
+.settlement-shop-open { text-align: start; max-width: 100%; }
+.settlement-shop-label { overflow-wrap: anywhere; }
+.settlement-shop-open:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; border-radius: 6px; }
+@media (max-width: 760px) {
+  .settlement-heading > div:first-child { width: 100%; }
+  .settlement-title-row { justify-content: space-between; }
+  .settlement-heading > .settlement-actions { margin-inline-start: 0; justify-content: start; gap: 8px; }
+  .settlement-actions > .btn, .settlement-header-menu > summary { min-height: 44px; }
+  .settlement-header-menu > div { inset-inline-end: auto; inset-inline-start: 0; min-width: min(230px, 75vw); }
+  .settlement-header-menu > div button { min-height: 44px; text-align: start; }
+  .settlement-shop-list tbody tr { padding: 0; }
+  .settlement-shop-list tbody td:first-child { padding: 0; }
+  .settlement-shop-list tbody td:nth-child(n+2) { display: none; }
+  .settlement-shop-list .settlement-shop-open {
+    display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 8px 12px;
+    width: 100%; min-height: 88px; padding: 16px 4px; font-weight: 600; color: var(--text-primary);
+  }
+  .settlement-mobile-balance { display: flex; grid-column: 1; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: .875rem; font-weight: 400; color: var(--text-secondary); }
+  .settlement-mobile-balance strong { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .settlement-mobile-reserved { flex-basis: 100%; }
+  .settlement-shop-chevron { display: block; grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--text-secondary); }
+  [dir="rtl"] .settlement-shop-chevron { transform: scaleX(-1); }
+  .settlement-dialog:has(.settlement-dialog-form)[open] { display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+  .settlement-dialog > header { flex: none; margin-bottom: 16px; }
+  .settlement-dialog-form { min-height: 0; overflow: auto; }
+  .settlement-dialog-form:has(> footer) { display: flex; flex-direction: column; overflow: hidden; }
+  .settlement-dialog-form > fieldset { overflow-y: auto; min-height: 0; padding: 3px; }
+  .settlement-dialog-form > footer { flex-shrink: 0; }
+  .settlement-dialog-form > footer { position: sticky; bottom: 0; background: var(--bg-primary); margin: 0; padding-block: 14px max(4px, env(safe-area-inset-bottom)); border-top: 1px solid var(--surface-divider, var(--border-color)); flex-wrap: wrap; }
+  .settlement-dialog-form > footer .btn { min-height: 44px; flex: 1 1 auto; }
 }
