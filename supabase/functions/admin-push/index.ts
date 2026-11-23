@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2.89.0';
 import { sessionId } from '../_shared/customer-session.ts';
 import { createAdminPushHandler } from './handler.ts';
 const admin = createClient(

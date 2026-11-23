@@ -12,9 +12,10 @@ print(json.dumps(p.summarize(records,lock)))
 test('the pinned-runtime rehearsal requires the exact default-disabled deletion response',()=>{
  const program=`from pathlib import Path
 s=Path('ops/release/test-functions-image.py').read_text()
-assert "[503] if function == 'customer-account-deletion'"in s
-assert "result.get('closedError') != 'NOT_ENABLED'"in s
+assert "name === 'customer-account-deletion' ? [503]"in s
+assert "result.closedError !== 'NOT_ENABLED'"in s
 assert 'closedError:closed.error'in s
+assert "'--network', 'none'" in s
 print('closed state assertion installed')
 `;
  assert.match(execFileSync('python3',['-c',program],{encoding:'utf8'}),/closed state assertion installed/);

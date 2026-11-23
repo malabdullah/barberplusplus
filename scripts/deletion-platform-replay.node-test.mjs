@@ -10,9 +10,11 @@ lines=['1; 0 0 POLICY storage objects Storage requires a live account session su
 '2; 0 0 POLICY storage objects Keep unrelated policy supabase_admin',
 '3; 0 0 TRIGGER auth users assign_default_manager_role supabase_admin',
 '4; 0 0 TRIGGER auth users Keep platform trigger supabase_admin',
-'5; 0 0 TABLE storage objects supabase_admin']
+'5; 0 0 TABLE storage objects supabase_admin',
+'6; 0 0 TRIGGER auth users discard_unverified_customer_password postgres',
+'7; 0 0 TRIGGER auth users discard_unverified_customer_password_other supabase_admin']
 actual=module.platform_objects_for_replay('\\n'.join(lines))
-assert actual=='\\n'.join([lines[1],lines[3],lines[4]])+'\\n'
+assert actual=='\\n'.join([lines[1],lines[3],lines[4],lines[6]])+'\\n'
 print('PASS')`], { encoding: 'utf8' });
   assert.equal(result.trim(), 'PASS');
 });

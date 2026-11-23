@@ -47,7 +47,7 @@ export async function managerRegistrationAction(c: Context): Promise<{ status: n
       if (!emailPattern.test(email) || email.length > 254 || name.length < 2 || name.length > 120) return reply(400, { error: 'INVALID_DETAILS' });
       if (!/^\+(?:965[569]\d{7}|9665\d{8}|9715\d{8}|973\d{8}|974[3567]\d{7}|968[79]\d{7})$/.test(phone)) return reply(400, { error: 'INVALID_PHONE' });
       if (typeof password !== 'string' || password.length < 8 || new TextEncoder().encode(password).length > 72 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^\w\s]/.test(password)) return reply(400, { error: 'WEAK_PASSWORD' });
-      await limited(`signup:${email}`, 5); await limited(`signup-ip:${c.ip}`, 20);
+      await limited(`signup-ip:${c.ip}`, 20); await limited(`signup:${email}`, 5);
       const user = await c.deps.signup({ name, email, phone, password });
       if (user.email !== email) throw Error('UNAVAILABLE');
       return reply(200, { success: true, confirmationRequired: !user.verified, email, ...(!user.verified ? await issue(user.id, email) : {}) });

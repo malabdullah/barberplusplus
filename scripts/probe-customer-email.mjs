@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { loadEnv } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 import { localDockerProbe } from './local-docker-probe.mjs';
@@ -30,13 +31,14 @@ async function message(subject) {
 try {
  const signup=await call('email-signup',{name:'Email Probe Customer',email,password:'Short12!',returnTo:'/book'});assert.equal(signup.status,200,JSON.stringify(signup.data));
  assert.equal((await call('email-login',{email,password:'Short12!'})).status,401,'unconfirmed account cannot login');
- let link=await message('Confirm your Barber++ account');assert.equal(link.type,'signup');
+ let link=await message('Confirm your Barber++ account');assert.equal(link.type,'magiclink');
  if(process.env.PROBE_RESEND==='1') {
   assert.equal((await call('email-resend',{email,returnTo:'/book'})).status,200);
   const resent=await message('Confirm your Barber++ account');assert.equal(resent.type,'magiclink');
   link=resent;
  }
  const verified=await client.auth.verifyOtp(link);assert.ifError(verified.error);assert.equal(verified.data.user.app_metadata.role,'customer');
+ assert.equal((await call('email-login',{email,password:'Short12!'})).status,401,'confirming the email does not install the pre-verification password');
  const reused=await client.auth.verifyOtp(link);assert.ok(reused.error,'used confirmation cannot be reused');
  assert.equal((await call('email-signup',{name:'Other Name',email,password:'Otherpass1!'})).status,200,'duplicate signup remains generic');
  const token=verified.data.session.access_token;const profile=await call('email-ensure',{},token);assert.equal(profile.status,200,JSON.stringify(profile.data));
@@ -50,6 +52,8 @@ try {
  const slots=await call('slots',selection,'','customer-booking');assert.equal(slots.status,200);assert.ok(slots.data.slots.length);
  const booking=await call('book',{...selection,time:slots.data.slots[0],verification:proof.data.verification},token,'customer-booking');if(booking.data.id)createdBookings.push(booking.data.id);assert.equal(booking.status,200,JSON.stringify(booking.data));
  const mine=await call('bookings',{},token);assert.equal(mine.status,200);assert.ok(mine.data.bookings.some(item=>item.id===booking.data.id));
+ // Local verification uses GoTrue's magic link and shares its one-second recovery cooldown.
+ await delay(1250);
  const recovery=await call('email-recovery',{email,returnTo:'/book'});assert.equal(recovery.status,200,JSON.stringify(recovery.data));
  const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await call('password-recovery-verify',{requestId:recovery.data.requestId,tokenHash:resetLink.token_hash});assert.equal(recovered.status,200,JSON.stringify(recovered.data));
  const reset=await call('email-reset',{password:'Newpass1!',confirmPassword:'Newpass1!',proof:recovered.data.proof},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));

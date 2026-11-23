@@ -3,7 +3,8 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public, pg_catalog;
 select plan(27);
 
-select ok('search_path=pg_catalog, public, pg_temp' = any(p.proconfig), p.proname || ' has a fixed trusted path')
+select ok('search_path=pg_catalog, public, pg_temp' = any(p.proconfig)
+  or (p.proname='detect_suspicious_login_activity' and 'search_path=""'=any(p.proconfig)), p.proname || ' has a fixed trusted path')
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname in ('check_auth_rate_limit','reset_auth_rate_limit',
   'update_whatsapp_conversation_timestamp','create_booking_reminder','cancel_booking_reminder',

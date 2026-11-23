@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
-import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import {createClient} from 'jsr:@supabase/supabase-js@2.89.0';
 import {customerIdentity} from '../_shared/customer-session.ts';
 import {createBookingShareHandler} from './handler.ts';
 const secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';

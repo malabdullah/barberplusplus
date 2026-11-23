@@ -2,6 +2,7 @@ import { registerWebApple } from './customerApple.service';
 import { customerCapable } from '../lib/accountSession';
 import { redirectStaffMfa } from '../lib/staffMfaReturn';
 import { passwordProof, rememberPasswordProof, forgetPasswordProof } from '../lib/customerPasswordProof';
+import { verifyEmailInIsolation } from './signupConfirmation.service';
 import { nativeEmailReturn } from '../lib/nativeEmailReturn';
 import { rememberBookingReturn } from '../utils/customerBookingDraft';
 import { appConfig, customerFeaturesEnabled } from '../lib/runtimeConfig';
@@ -122,7 +123,7 @@ export const customerAuthService = {
     return profile;
   },
   async login({ email, password }) { return acceptSession(await request('email-login', { email, password })); },
-  requestSignup: ({ name, email, password, returnTo }) => request('email-signup', { name, email, password, returnTo }),
+  requestSignup: ({ name, email, returnTo }) => request('email-signup', { name, email, returnTo }),
   resendConfirmation: ({ email, returnTo }) => request('email-resend', { email, returnTo }),
   requestRecovery: ({ email, returnTo, audience }) => request('email-recovery', { email, returnTo, ...(audience === 'work' ? { audience } : {}) }),
   passwordStatus: () => request('password-status', {}, true),
@@ -142,6 +143,10 @@ export const customerAuthService = {
   async verifyRecovery({ requestId, code, tokenHash, signInPath }) {
     const result = await request('password-recovery-verify', { requestId, ...(tokenHash ? { tokenHash } : { code }) });
     if (!result.session || (!customerCapable(result.session.user?.app_metadata?.role) && !result.legacyRecovery)) throw new Error('INVALID_CODE');
+    const current = await customerSupabase.auth.getSession();
+    if (current.error || (current.data.session && current.data.session.user.id !== result.session.user.id)) {
+      throw new Error('INVALID_CODE');
+    }
     const { error } = await customerSupabase.auth.setSession(result.session);
     if (error) throw new Error('INVALID_CODE');
     rememberPasswordProof(result, signInPath);
@@ -158,12 +163,7 @@ export const customerAuthService = {
   async verifyEmailCode({ email, code, purpose, requestId, signInPath }) {
     if (!['signup', 'recovery'].includes(purpose) || !/^\d{6,10}$/.test(code)) throw new Error('INVALID_CODE');
     if (purpose === 'recovery') return this.verifyRecovery({ requestId, code, signInPath });
-    const result = await customerSupabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code, type: purpose === 'recovery' ? 'recovery' : 'email' });
-    if (result.error) throw new Error(result.error.status === 429 ? 'RATE_LIMITED' : result.error.status >= 500 ? 'UNAVAILABLE' : 'INVALID_CODE');
-    if (!customerCapable(result.data.user?.app_metadata?.role) || !result.data.user?.email_confirmed_at || !result.data.session) {
-      await customerSupabase.auth.signOut({ scope: 'local' });
-      throw new Error('INVALID_CODE');
-    }
+    return verifyEmailInIsolation({ email: email.trim().toLowerCase(), token: code, type: 'email' }, { adopt: true });
   },
   async resetPassword({ password, confirmPassword }) {
     const proof = passwordProof();
@@ -179,7 +179,11 @@ export const customerAuthService = {
     const fragment = new URLSearchParams(callback.hash.slice(1));
     type ||= fragment.get('type');
     const token = callback.searchParams.get('token_hash') || fragment.get('token_hash');
-    const code = callback.searchParams.get('code');
+    if (callback.origin !== appConfig.appUrl || callback.pathname !== '/customer/email-callback') throw new Error('INVALID_CODE');
+    if (fragment.has('access_token') || fragment.has('refresh_token')) {
+      window.history.replaceState(null, '', callback.pathname);
+      throw new Error('INVALID_CODE');
+    }
     // Remove one-time credentials and provider error details before rendering links.
     window.history.replaceState(null, '', callback.pathname);
     if (callback.searchParams.has('error') || fragment.has('error')) throw new Error('INVALID_CODE');
@@ -188,19 +192,11 @@ export const customerAuthService = {
       const result = await this.verifyRecovery({ requestId: callback.searchParams.get('request_id'), tokenHash: token, signInPath: callback.searchParams.get('next') === 'work' ? '/login' : '/customer/sign-in' });
       return { recovery: true, legacyRecovery: result.legacyRecovery === true, returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account' };
     }
-    let result;
-    if (fragment.has('access_token') && fragment.has('refresh_token') && ['signup', 'magiclink', 'recovery', 'email_change'].includes(fragment.get('type'))) {
-      if (type && type !== fragment.get('type')) throw new Error('INVALID_CODE');
-      type = fragment.get('type');
-      result = await customerSupabase.auth.setSession({ access_token: fragment.get('access_token'), refresh_token: fragment.get('refresh_token') });
-    } else if (token && ['signup', 'magiclink', 'recovery', 'email_change'].includes(type)) result = await customerSupabase.auth.verifyOtp({ type, token_hash: token });
-    else if (code) result = await customerSupabase.auth.exchangeCodeForSession(code);
-    else throw new Error('INVALID_CODE');
-    if (result.error || !customerCapable(result.data.user?.app_metadata?.role) || !result.data.user?.email_confirmed_at) {
-      await customerSupabase.auth.signOut({ scope: 'local' });
-      throw new Error('INVALID_CODE');
-    }
-    return { recovery: type === 'recovery', returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account' };
+    if (!token || !['signup', 'magiclink'].includes(type)) throw new Error('INVALID_CODE');
+    return verifyEmailInIsolation({ type, token_hash: token }, {
+      work: callback.searchParams.get('next') === 'work',
+      returnTo: callback.searchParams.get('next') === 'book' ? '/book' : '/customer/account',
+    });
   },
   changeEmail() { return Promise.reject(new Error('EMAIL_ADMIN_ONLY')); },
   async updateProfile(data) {
