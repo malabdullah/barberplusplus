@@ -3552,6 +3552,7 @@ CREATE OR REPLACE TRIGGER "settlement_shop_history" BEFORE DELETE ON "public"."b
 CREATE OR REPLACE TRIGGER "stamp_booking_cancellation" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."stamp_booking_cancellation"();
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "phone", "country_code", "email" ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
 CREATE OR REPLACE TRIGGER "sync_personal_work_contact" AFTER UPDATE OF "name", "phone", "country_code", "email" ON "public"."customers" FOR EACH ROW EXECUTE FUNCTION "private"."sync_personal_work_contact"();
+CREATE OR REPLACE TRIGGER "sync_shop_area_city" BEFORE INSERT OR UPDATE OF "area_id", "city" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."sync_shop_area_city"();
 CREATE OR REPLACE TRIGGER "trigger_detect_suspicious_booking" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "public"."detect_suspicious_booking_activity"();
 CREATE OR REPLACE TRIGGER "trigger_detect_suspicious_login" AFTER INSERT ON "public"."logs" FOR EACH ROW EXECUTE FUNCTION "public"."detect_suspicious_login_activity"();
 CREATE OR REPLACE TRIGGER "trigger_update_notification_preferences_timestamp" BEFORE UPDATE ON "public"."user_notification_preferences" FOR EACH ROW EXECUTE FUNCTION "public"."update_notification_preferences_timestamp"();

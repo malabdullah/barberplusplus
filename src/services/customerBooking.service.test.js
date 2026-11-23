@@ -19,7 +19,7 @@ it.each([null,-1,'500+',Infinity])('rejects unavailable or invalid statistics: %
   await expect(customerBookingService.getStatistics()).rejects.toThrow('UNAVAILABLE');
 });
 
-it('makes legacy shops searchable by their saved area when city is absent, without changing records', async () => {
+it('uses saved area names for blank, missing and stale city text', async () => {
   const records = [
     { id: 'legacy', name: 'Legacy shop', city: null, areas: { name_en: 'Hawalli', name_ar: 'حولي' } },
     { id: 'blank', name: 'Blank city shop', city: '  ', areas: { name_en: 'Salmiya', name_ar: 'السالمية' } },
@@ -30,7 +30,8 @@ it('makes legacy shops searchable by their saved area when city is absent, witho
   const { branches } = await customerBookingService.getCatalog();
   expect(searchBranches(branches, 'Hawalli', '')).toMatchObject([{ id: 'legacy', cityAr: 'حولي' }]);
   expect(branches[1]).toMatchObject({ city: 'Salmiya', cityAr: 'السالمية' });
-  expect(branches[2]).toMatchObject({ city: 'Kuwait City', cityAr: '' });
+  expect(branches[2]).toMatchObject({ city: 'Qibla', cityAr: 'القبلة' });
+  expect(searchBranches(branches, 'Kuwait City', '')).toEqual([]);
   expect(branches[3].city).toBe('');
   expect(records[0].city).toBeNull();
   expect(records[1].city).toBe('  ');
@@ -46,14 +47,16 @@ it('preserves governorate labels and falls back to the saved area relation', asy
   for (const branch of branches) expect(branch).toMatchObject({ city: 'New district', governorateId: 2, governorateName: 'Hawalli', governorateNameAr: 'حولي' });
 });
 
-it('uses the saved Arabic area name when an explicit city matches it, without translating a different city', async () => {
+it('keeps the canonical Arabic area and the city-name fallback for unmapped shops', async () => {
   functionFetch.mockResolvedValue({ ok: true, json: async () => ({ branches: [
     { id: 'matched', city: '  Sharq  ', areas: { name_en: 'Sharq', name_ar: 'شرق' } },
     { id: 'different', city: 'Mirqab', areas: { name_en: 'Sharq', name_ar: 'شرق' } },
+    { id: 'legacy', city: '  Mirqab  ', areas: null },
   ], barbers: [], services: [] }) });
   const { branches } = await customerBookingService.getCatalog();
   expect(branches[0]).toMatchObject({ city: 'Sharq', cityAr: 'شرق' });
-  expect(branches[1]).toMatchObject({ city: 'Mirqab', cityAr: '' });
+  expect(branches[1]).toMatchObject({ city: 'Sharq', cityAr: 'شرق' });
+  expect(branches[2]).toMatchObject({ city: 'Mirqab', cityAr: '' });
 });
 
 it('keeps the native-compatible shop-access error while showing specific website wording', async () => {
