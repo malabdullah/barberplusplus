@@ -2780,7 +2780,7 @@ ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phon
 CREATE OR REPLACE FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
+    AS $_$
 declare role_name text:=private.live_staff_role(); e164 text; contact public.customers%rowtype;
 begin
   if role_name is null or p_branch_id is null or not (
@@ -2806,7 +2806,7 @@ begin
   if contact.status<>'active' then raise exception 'CUSTOMER_UNAVAILABLE'; end if;
   return jsonb_build_object('id',contact.id,'name',contact.name,'country_code',contact.country_code,'phone',contact.phone);
 end
-$$;
+$_$;
 ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_factor_satisfied"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
