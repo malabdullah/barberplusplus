@@ -848,7 +848,8 @@ begin
     select * into v_booking from public.bookings where id = v_id;
     if found then
       if not exists (select 1 from public.customers where id = v_booking.customer_id
-        and phone is not distinct from v_phone and country_code = v_code
+        and country_code = v_code and (case when coalesce(v_email_guest,false)
+          then coalesce(booking_contact_phone,phone) else phone end) is not distinct from v_phone
         and (not coalesce(v_email_guest,false) or lower(email)=v_email)) then
         raise exception 'INVALID_REQUEST';
       end if;
@@ -926,7 +927,7 @@ begin
       if not exists(select 1 from public.customers where id=v_customer and phone is not distinct from v_phone and country_code=v_code) then raise exception 'INVALID_REQUEST'; end if;
     elsif coalesce(v_email_guest,false) then
       -- Unverified contact details never select or edit an existing person.
-      insert into public.customers(name,country_code,phone,email,preferred_branch_id,preferred_barber_id,created_by_type)
+      insert into public.customers(name,country_code,booking_contact_phone,email,preferred_branch_id,preferred_barber_id,created_by_type)
         values(v_name,v_code,v_phone,v_email,v_branch.id,v_barber.id,'customer') returning id into v_customer;
     else
       -- Guests reuse a contact without editing it or acquiring its history.
@@ -1792,59 +1793,25 @@ $$;
 ALTER FUNCTION "public"."detect_suspicious_booking_activity"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."detect_suspicious_login_activity"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
+    SET "search_path" TO ''
     AS $$
-DECLARE
-  recent_failures INTEGER;
-  user_identifier TEXT;
-BEGIN
-  -- Only check login-related log entries
-  IF NEW.log_type != 'auth' OR NEW.action NOT IN ('login', 'login_failure') THEN
-    RETURN NEW;
-  END IF;
-
-  user_identifier := COALESCE(NEW.user_id::TEXT, NEW.metadata ->> 'email');
-
-  -- Count recent failed logins for this user/email in last 15 minutes
-  IF NEW.action = 'login_failure' THEN
-    SELECT COUNT(*) INTO recent_failures
-    FROM logs
-    WHERE (user_id = NEW.user_id OR metadata ->> 'email' = NEW.metadata ->> 'email')
-      AND log_type = 'auth'
-      AND action = 'login_failure'
-      AND created_at > now() - interval '15 minutes';
-
-    -- Flag as suspicious if more than 5 failures in 15 minutes
-    IF recent_failures >= 5 THEN
-      INSERT INTO suspicious_activities (
-        user_id,
-        activity_type,
-        severity,
-        description,
-        metadata,
-        source_ip
-      ) VALUES (
-        NEW.user_id,
-        'multiple_failed_logins',
-        CASE 
-          WHEN recent_failures >= 10 THEN 'critical'
-          WHEN recent_failures >= 7 THEN 'high'
-          ELSE 'medium'
-        END,
+declare recent_failures integer;
+begin
+  if not new.server_verified or new.log_type <> 'auth' or new.action <> 'login_failure' or new.user_id is null then
+    return new;
+  end if;
+  select count(*) into recent_failures from public.logs where user_id=new.user_id
+    and server_verified and log_type='auth' and action='login_failure'
+    and created_at>now()-interval '15 minutes';
+  if recent_failures in (5,7,10) then
+    insert into public.suspicious_activities(user_id,activity_type,severity,description,metadata)
+      values(new.user_id,'multiple_failed_logins',
+        case recent_failures when 10 then 'critical' when 7 then 'high' else 'medium' end,
         'Multiple failed login attempts detected (' || recent_failures || ' in 15 minutes)',
-        jsonb_build_object(
-          'failure_count', recent_failures,
-          'email', NEW.metadata ->> 'email',
-          'user_agent', NEW.user_agent,
-          'last_attempt', now()
-        ),
-        NEW.metadata ->> 'ip'
-      );
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
+        jsonb_build_object('failure_count',recent_failures,'last_attempt',now()));
+  end if;
+  return new;
+end
 $$;
 ALTER FUNCTION "public"."detect_suspicious_login_activity"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."enforce_account_session"() RETURNS "void"
@@ -2441,6 +2408,16 @@ CREATE OR REPLACE FUNCTION "public"."platform_settlements"("p_action" "text", "p
     SET "search_path" TO ''
     AS $$select settlement_api.dispatch(p_action,p_data,true);$$;
 ALTER FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."record_server_login_failure"("p_email" "text") RETURNS "void"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  insert into public.logs(user_id,level,log_type,action,message,server_verified)
+  select id,'warning','auth','login_failure','Password sign-in rejected',true
+  from auth.users where lower(email)=lower(p_email) and deleted_at is null
+    and (banned_until is null or banned_until<=now());
+$$;
+ALTER FUNCTION "public"."record_server_login_failure"("p_email" "text") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'pg_catalog', 'public', 'pg_temp'
@@ -2783,16 +2760,54 @@ CREATE OR REPLACE FUNCTION "public"."staff_customer_lookup"("p_country_code" "te
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-declare role_name text:=private.live_staff_role(); result jsonb;
+declare role_name text:=private.live_staff_role(); shop_ids uuid[];
 begin
- if role_name is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
- if (select count(*) from public.logs where user_id=auth.uid() and action='customer_lookup' and created_at>now()-interval '1 minute')>=30 then raise exception 'RATE_LIMITED'; end if;
- result:=private.staff_contact(p_country_code,p_phone,null);
- insert into public.logs(user_id,user_role,level,log_type,action,entity_type,message)
- values(auth.uid(),role_name,'info','action','customer_lookup','customer','Exact contact lookup');
- return result;
-end $$;
+  if role_name is null then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  if role_name='manager' then
+    shop_ids:=array(select distinct id from public.branches where manager_id=auth.uid() limit 2);
+  elsif role_name='barber' then
+    shop_ids:=array(select distinct branch_id from public.barbers where user_id=auth.uid() and not manager_chair limit 2);
+  else
+    shop_ids:=array(select id from public.branches order by id limit 1);
+  end if;
+  if cardinality(shop_ids)=1 then
+    return public.staff_customer_lookup(p_country_code,p_phone,shop_ids[1]);
+  end if;
+  return null;
+end
+$$;
 ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare role_name text:=private.live_staff_role(); e164 text; contact public.customers%rowtype;
+begin
+  if role_name is null or p_branch_id is null or not (
+    role_name in ('admin','agent')
+    or (role_name='manager' and exists(select 1 from public.branches where id=p_branch_id and manager_id=auth.uid()))
+    or (role_name='barber' and exists(select 1 from public.barbers where branch_id=p_branch_id and user_id=auth.uid() and not manager_chair))
+  ) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('staff-contact-rate:'||auth.uid(),0));
+  if (select count(*) from public.logs where user_id=auth.uid() and action='customer_lookup' and created_at>now()-interval '1 minute')>=30
+  then raise exception 'RATE_LIMITED'; end if;
+  e164:=private.canonical_phone(p_phone,p_country_code);
+  if e164 is null or e164 !~ '^\+(965[569][0-9]{7}|9665[0-9]{8}|9715[0-9]{8}|973[0-9]{8}|974[3567][0-9]{7}|968[79][0-9]{7})$'
+  then raise exception 'INVALID_PHONE'; end if;
+  insert into public.logs(user_id,user_role,level,log_type,action,entity_type,message)
+    values(auth.uid(),role_name,'info','action','customer_lookup','customer','Exact contact lookup');
+  select c.* into contact from public.customers c
+  where c.country_code=p_country_code and c.phone=substring(e164 from length(p_country_code)+1)
+    and (role_name in ('admin','agent') or exists(
+      select 1 from public.bookings b where b.customer_id=c.id and b.branch_id=p_branch_id
+      and (role_name='manager' or exists(select 1 from public.barbers r where r.id=b.barber_id and r.user_id=auth.uid() and not r.manager_chair))
+    ));
+  if contact.id is null then return null; end if;
+  if contact.status<>'active' then raise exception 'CUSTOMER_UNAVAILABLE'; end if;
+  return jsonb_build_object('id',contact.id,'name',contact.name,'country_code',contact.country_code,'phone',contact.phone);
+end
+$$;
+ALTER FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_factor_satisfied"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3133,6 +3148,7 @@ CREATE TABLE IF NOT EXISTS "public"."customers" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "account_deleted_at" timestamp with time zone,
+    "booking_contact_phone" "text",
     CONSTRAINT "customers_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('active'::character varying)::"text", ('inactive'::character varying)::"text", ('blocked'::character varying)::"text"])))
 );
 ALTER TABLE "public"."customers" OWNER TO "postgres";
@@ -3220,6 +3236,7 @@ CREATE TABLE IF NOT EXISTS "public"."logs" (
     "session_id" "uuid",
     "request_id" "uuid" DEFAULT "gen_random_uuid"(),
     "client_ip_hash" "text",
+    "server_verified" boolean DEFAULT false NOT NULL,
     CONSTRAINT "logs_level_check" CHECK ((("level")::"text" = ANY (ARRAY[('error'::character varying)::"text", ('warning'::character varying)::"text", ('info'::character varying)::"text", ('debug'::character varying)::"text"]))),
     CONSTRAINT "logs_log_type_check" CHECK ((("log_type")::"text" = ANY (ARRAY[('error'::character varying)::"text", ('action'::character varying)::"text", ('navigation'::character varying)::"text", ('system'::character varying)::"text", ('auth'::character varying)::"text"])))
 );
@@ -3523,6 +3540,7 @@ CREATE OR REPLACE TRIGGER "capture_customer_push" AFTER INSERT OR UPDATE ON "pub
 CREATE OR REPLACE TRIGGER "capture_deadline_activity" AFTER INSERT OR UPDATE OF "setting_value" ON "public"."admin_settings" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
 CREATE OR REPLACE TRIGGER "capture_shop_hours_activity" AFTER UPDATE OF "working_hours" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."capture_account_activity"();
 CREATE OR REPLACE TRIGGER "clear_customer_phone_verification" AFTER UPDATE ON "public"."customers" FOR EACH ROW WHEN (((("old"."phone")::"text" IS DISTINCT FROM ("new"."phone")::"text") OR (("old"."country_code")::"text" IS DISTINCT FROM ("new"."country_code")::"text"))) EXECUTE FUNCTION "private"."clear_customer_phone_verification"();
+CREATE OR REPLACE TRIGGER "clear_deleted_booking_contact" BEFORE UPDATE ON "public"."customers" FOR EACH ROW WHEN (("new"."account_deleted_at" IS NOT NULL)) EXECUTE FUNCTION "private"."clear_deleted_booking_contact"();
 CREATE OR REPLACE TRIGGER "close_transferred_manager_chair" AFTER UPDATE OF "manager_id" ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."close_transferred_manager_chair"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
 CREATE OR REPLACE TRIGGER "enforce_global_phone" AFTER INSERT OR DELETE OR UPDATE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_global_phone"();
@@ -3704,7 +3722,9 @@ CREATE POLICY "Barbers can update own bookings" ON "public"."bookings" FOR UPDAT
   WHERE (("barbers"."user_id" = "auth"."uid"()) AND (NOT "barbers"."manager_chair")))));
 CREATE POLICY "Barbers can update own record" ON "public"."barbers" FOR UPDATE USING (("user_id" = "auth"."uid"()));
 CREATE POLICY "Barbers can view assigned branch" ON "public"."branches" FOR SELECT USING (("id" = "public"."get_barber_branch_id"()));
-CREATE POLICY "Barbers can view bookings in their branch" ON "public"."bookings" FOR SELECT USING (("branch_id" = "public"."get_barber_branch_id"()));
+CREATE POLICY "Barbers can view own bookings" ON "public"."bookings" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."barbers" "r"
+  WHERE (("r"."id" = "bookings"."barber_id") AND ("r"."user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT "r"."manager_chair")))));
 CREATE POLICY "Barbers can view own record" ON "public"."barbers" FOR SELECT USING (("user_id" = "auth"."uid"()));
 CREATE POLICY "Barbers can view services in their branch" ON "public"."services" FOR SELECT USING (("branch_id" = "public"."get_barber_branch_id"()));
 CREATE POLICY "Barbers view branch logs via barber record" ON "public"."logs" FOR SELECT USING (("barber_id" IN ( SELECT "barbers"."id"
@@ -3779,7 +3799,7 @@ CREATE POLICY "Users can update own settings" ON "public"."user_settings" FOR UP
 CREATE POLICY "Users can view own branches" ON "public"."branches" FOR SELECT USING (("manager_id" = "auth"."uid"()));
 CREATE POLICY "Users can view own preferences" ON "public"."user_notification_preferences" FOR SELECT USING (("auth"."uid"() = "user_id"));
 CREATE POLICY "Users can view own settings" ON "public"."user_settings" FOR SELECT USING (("auth"."uid"() = "user_id"));
-CREATE POLICY "Users insert own logs" ON "public"."logs" FOR INSERT WITH CHECK (("user_id" = "auth"."uid"()));
+CREATE POLICY "Users insert own logs" ON "public"."logs" FOR INSERT WITH CHECK ((("user_id" = "auth"."uid"()) AND (NOT "server_verified")));
 CREATE POLICY "Users view own logs" ON "public"."logs" FOR SELECT USING (("user_id" = "auth"."uid"()));
 ALTER TABLE "public"."admin_settings" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "admins_delete_customers" ON "public"."customers" FOR DELETE USING ("public"."is_admin"());
@@ -4021,6 +4041,8 @@ REVOKE ALL ON FUNCTION "public"."platform_settlement_reconciliation"("p_action" 
 GRANT ALL ON FUNCTION "public"."platform_settlement_reconciliation"("p_action" "text", "p_data" "jsonb") TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."platform_settlements"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."record_server_login_failure"("p_email" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_server_login_failure"("p_email" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reset_auth_rate_limit"("p_identifier" "text") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."save_customer_profile"("p_id" "uuid", "p_data" "jsonb") FROM PUBLIC;
@@ -4051,6 +4073,9 @@ GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "serv
 REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."staff_customer_lookup"("p_country_code" "text", "p_phone" "text", "p_branch_id" "uuid") TO "service_role";
 REVOKE ALL ON FUNCTION "public"."staff_factor_satisfied"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_factor_satisfied"() TO "service_role";

@@ -46,7 +46,7 @@ export default function CustomerEmailCallback() {
         if (result.sessionPreserved) { setStatus('session-preserved'); return; }
         if (result.signInRequired) {
           if (result.work) forgetRegistration();
-          navigate(result.work ? '/login' : '/customer/sign-in', { replace: true, state: { emailVerified: true, returnTo: result.returnTo } });
+          navigate(result.work ? '/login' : '/customer/sign-in', { replace: true, state: { emailVerified: true, email: result.email, returnTo: result.returnTo } });
           return;
         }
         if (result.recovery) { navigate(result.legacyRecovery ? '/reset-password' : '/customer/reset-password', { replace: true, state: { recovery: true, returnTo: result.returnTo } }); return; }
@@ -62,7 +62,7 @@ export default function CustomerEmailCallback() {
   useEffect(() => {
     if (status !== 'native' || native.client !== 'ios' || !native.url || nativeAttempted.current) return;
     const type = new URLSearchParams(new URL(originalUrl.current).hash.slice(1)).get('type');
-    if (type !== 'signup') return; // Recovery/invitation behavior is unchanged.
+    if (type !== 'signup' || !native.url.startsWith('https:')) return;
     nativeAttempted.current = true;
     window.location.assign(native.url);
   }, [status, native.url, native.client]);

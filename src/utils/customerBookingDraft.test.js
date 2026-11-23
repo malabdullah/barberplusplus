@@ -1,11 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, customerReturnTo, rememberBookingReturn } from './customerBookingDraft';
+import { clearBookingSession, configureBookingSession, readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, customerReturnTo, rememberBookingReturn } from './customerBookingDraft';
 const draft = { city: 'Sharq', branchId: 'shop', barberId: 'barber', serviceIds: ['service'], date: '2026-11-03', time: '10:00', step: 2, panel: 'details', guest: true, details: { name: 'Guest', countryCode: '+965', phone: '50000099', notes: 'Keep this note' } };
 beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); sessionStorage.clear(); });
-it('resumes all chosen data and typed details in another same-origin tab without auth credentials', () => {
+it('keeps typed details in their tab and resumes only selections in another tab', () => {
   saveBookingDraft({ ...draft, password: 'never-store', verification: 'never-store' });
-  sessionStorage.clear();
   expect(readBookingDraft()).toMatchObject(draft);
+  sessionStorage.clear();
+  expect(readBookingDraft()).toMatchObject({ branchId: draft.branchId });
+  expect(readBookingDraft().details).toBeUndefined();
   const stored = localStorage.getItem('barber-customer-booking-draft');
   expect(stored).not.toContain('never-store');
 });
@@ -32,4 +34,35 @@ it('keeps the discovery city set separate from the selected shop city across che
   expect(readBookingDraft()).toMatchObject({ city: 'Mirqab', ...location });
   saveBookingDraft({ ...draft, locationCities: location.locationCities });
   expect(readBookingDraft()).toBeNull();
+});
+
+it('opens a signed-in receipt only for its originating account and tab', () => {
+  configureBookingSession('test-auth');
+  const login = id => localStorage.setItem('test-auth', JSON.stringify({ user: { id } }));
+  login('first');
+  saveBookingDraft(draft);
+  saveBookingReceipt({ id: 'booking', reference: 'REF', date: '2026-11-03', time: '10:00', duration: 30, price: 5, services: [], claimToken: 'private-proof' });
+  expect(localStorage.getItem('barber-customer-booking-receipt')).toBeNull();
+  expect(readBookingReceipt().reference).toBe('REF');
+  login('second');
+  expect(readBookingReceipt()).toBeNull();
+  expect(readBookingDraft()).toBeNull();
+  clearBookingSession();
+  login('first');
+  expect(readBookingReceipt()).toBeNull();
+});
+it('only hands off a guest receipt when explicitly requested for the same verified email', () => {
+  const receipt = { id: 'guest', reference: 'GUEST', date: '2026-11-03', time: '10:00', duration: 30, price: 5, services: [], claimToken: 'private-proof' };
+  configureBookingSession('test-auth');
+  const login = email => localStorage.setItem('test-auth', JSON.stringify({ user: { id: 'account', email, email_confirmed_at: 'verified' } }));
+  saveBookingReceipt(receipt, 'guest@example.test');
+  rememberBookingReturn({ claimGuestReceipt: true });
+  login('guest@example.test');
+  expect(readBookingReceipt().id).toBe('guest');
+
+  localStorage.removeItem('test-auth');
+  saveBookingReceipt(receipt, 'guest@example.test');
+  rememberBookingReturn({ claimGuestReceipt: true });
+  login('another@example.test');
+  expect(readBookingReceipt()).toBeNull();
 });

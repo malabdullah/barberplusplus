@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2.89.0';
 import { createCustomerAuthHandler } from './handler.ts';
 import { sendTestEmail } from './test-mail.ts';
 import { createCustomerEmailDelivery } from './email-delivery.ts';
@@ -46,14 +46,14 @@ Deno.serve(createCustomerAuthHandler({
       if(lookup.error)throw Error('UNAVAILABLE');
       return lookup.data;
     },
-    create:async(name,email,password)=>{
-      const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
+    create:async(name,email)=>{
+      const created=await admin.auth.admin.createUser({email,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
       return created.error;
     },
-    deliver:async(email,password,returnTo,created)=>{
+    deliver:async(email,returnTo)=>{
       if(useAuthMail) {await deliverEmail(email,'confirm',returnTo);return;}
-      const type=created?'signup':'magiclink';
-      const link=await admin.auth.admin.generateLink(created?{type:'signup',email,password}:{type:'magiclink',email});
+      const type='magiclink';
+      const link=await admin.auth.admin.generateLink({type,email});
       if(link.error)throw Error('UNAVAILABLE');
       await sendTestEmail(email,'Confirm your Barber++ account',`${Deno.env.get('APP_URL')}/customer/email-callback?type=${type}&next=${returnTo}&token_hash=${encodeURIComponent(link.data.properties.hashed_token)}`);
     },
@@ -72,7 +72,13 @@ Deno.serve(createCustomerAuthHandler({
   emailSignIn:async(email,password)=>{
     const client=createClient(url,Deno.env.get('SUPABASE_ANON_KEY') || '',{auth:{persistSession:false,autoRefreshToken:false}});
     const {data,error}=await client.auth.signInWithPassword({email,password});
-    if(error || !data.session)return null;
+    if(error || !data.session) {
+      if(error?.code==='invalid_credentials') {
+        const logged=await admin.rpc('record_server_login_failure',{p_email:email});
+        if(logged.error)console.warn('Could not record rejected sign-in');
+      }
+      return null;
+    }
     if(!['customer','manager','barber'].includes(data.user.app_metadata.role) || !data.user.email_confirmed_at){await admin.auth.admin.signOut(data.session.access_token,'local');return null;}
     const name=typeof data.user.user_metadata?.name==='string'?data.user.user_metadata.name:'';
     return {session:data.session,identity:{user_id:data.user.id,session_id:sessionId(data.session.access_token)},name,mfaRequired:['manager','barber'].includes(String(data.user.app_metadata.role)) && Boolean(data.user.factors?.some(f=>f.status==='verified'))};
@@ -109,7 +115,7 @@ Deno.serve(createCustomerAuthHandler({
       if(result.error)throw Error(result.error.message);
       return result.data;
     },
-    account:async(name,email,password)=>{
+    account:async(name,email)=>{
       const lookup=await admin.rpc('customer_account_api',{p_action:'email-lookup',p_data:{email}});
       if(lookup.error)throw Error('UNAVAILABLE');
       if(lookup.data){
@@ -119,7 +125,7 @@ Deno.serve(createCustomerAuthHandler({
         if(!user)throw Error('UNAVAILABLE');
         return user.app_metadata.role==='customer' && !user.email_confirmed_at && !user.deleted_at ? user.id : null;
       }
-      const created=await admin.auth.admin.createUser({email,password,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
+      const created=await admin.auth.admin.createUser({email,email_confirm:false,app_metadata:{role:'customer'},user_metadata:{name}});
       if(created.error){
         if(['email_exists','user_already_exists'].includes(String(created.error.code)))return null;
         throw Error('UNAVAILABLE');

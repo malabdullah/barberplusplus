@@ -1,12 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { confirmSignup } from './signupConfirmation.service';
+import { confirmSignup, verifyEmailInIsolation } from './signupConfirmation.service';
 const mock = vi.hoisted(() => ({ verifyOtp: vi.fn(), signOut: vi.fn(), stopAutoRefresh: vi.fn(), getSession: vi.fn(), createClient: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: mock.createClient }));
 vi.mock('../lib/runtimeConfig', () => ({ appConfig: { appUrl: 'https://app.example.test', supabaseUrl: 'https://backend.example.test', supabasePublishableKey: 'synthetic-public-key' } }));
 vi.mock('../lib/functionFetch', () => ({ functionFetch: vi.fn() }));
 vi.mock('../lib/customerSupabase', () => ({ customerSupabase: { auth: { getSession: mock.getSession } } }));
 const input = `https://app.example.test/customer/email-callback?next=book#type=signup&token_hash=${'a'.repeat(56)}`;
-function verified(role = 'customer') { return { data: { user: { id: 'verified-user', app_metadata: { role }, email_confirmed_at: 'confirmed' }, session: { access_token: 'synthetic-token' } }, error: null }; }
+function verified(role = 'customer') { return { data: { user: { id: 'verified-user', email: 'verified@example.test', app_metadata: { role }, email_confirmed_at: 'confirmed' }, session: { access_token: 'synthetic-token' } }, error: null }; }
 beforeEach(() => {
   vi.resetAllMocks();
   mock.createClient.mockReturnValue({ auth: mock });
@@ -15,7 +15,7 @@ beforeEach(() => {
   mock.signOut.mockResolvedValue({ error: null });
 });
 it('confirms once in an isolated nonpersistent client and continues through normal sign-in', async () => {
-  expect(await confirmSignup(input)).toEqual({ work: false, returnTo: '/book', recovery: false, signInRequired: true, sessionPreserved: false });
+  expect(await confirmSignup(input)).toEqual({ email: 'verified@example.test', work: false, returnTo: '/book', recovery: false, signInRequired: true, sessionPreserved: false });
   expect(mock.verifyOtp).toHaveBeenCalledExactlyOnceWith({ type: 'signup', token_hash: 'a'.repeat(56) });
   expect(mock.createClient.mock.calls[0][2].auth).toMatchObject({ persistSession: false, autoRefreshToken: false, detectSessionInUrl: false });
   expect(mock.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' });
@@ -63,4 +63,10 @@ it.each([
 ])('rejects malformed or mixed-purpose callbacks before verifying', async value => {
   await expect(confirmSignup(value)).rejects.toThrow('INVALID_CODE');
   expect(mock.verifyOtp).not.toHaveBeenCalled();
+});
+
+it('keeps the active account when a typed code is for a different account', async () => {
+  mock.getSession.mockResolvedValue({ data: { session: { user: { id: 'existing-user' } } } });
+  await expect(verifyEmailInIsolation({ email: 'verified@example.test', token: '123456', type: 'email' }, { adopt: true })).rejects.toThrow('INVALID_CODE');
+  expect(mock.signOut).toHaveBeenCalledWith({ scope: 'local' });
 });

@@ -40,3 +40,12 @@ it('Live Android returns only its opaque device-bound delivery on the Live auth 
  expect([...output.searchParams.keys()]).toEqual(['requestId','state','delivery']);
  expect(output.href).not.toContain('token_hash');expect(()=>nativeEmailReturn(input,config,id)).toThrow('INVALID_CODE');
 });
+it.each(['signup', 'magiclink'])('routes legacy iOS %s confirmation through the associated HTTPS origin', type => {
+  const token = 'c'.repeat(64);
+  const callback = `${appUrl}/customer/email-callback?client=ios&state=${id}#type=${type}&token_hash=${token}`;
+  const target = new URL(nativeEmailReturn(callback, config));
+  expect(target.origin).toBe('https://barber-open-test.alabdullah-cs.workers.dev');
+  expect(target.pathname).toBe('/auth/email');
+  expect(target.searchParams.has('token_hash')).toBe(false);
+  expect(new URLSearchParams(target.hash.slice(1)).get('token_hash')).toBe(token);
+});

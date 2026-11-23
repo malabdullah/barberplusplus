@@ -16,7 +16,7 @@ type Dependencies = {
   deleteUser: (id: string) => Promise<void>;
   signIn: (phone: string, password: string) => Promise<{ session: unknown; identity: Identity } | null>;
   identity: (token: string) => Promise<Identity | null>;
-  emailSignup?: (name: string, email: string, password: string, returnTo: string) => Promise<'exists' | void>;
+  emailSignup?: (name: string, email: string, returnTo: string) => Promise<'exists' | void>;
   emailLink?: (email: string, purpose: 'confirm' | 'recovery', returnTo: string) => Promise<void>;
   emailSignIn?: (email: string, password: string) => Promise<{ session: unknown; identity: Identity; name: string; mfaRequired?: boolean } | null>;
   emailName?: (token: string) => Promise<string>;
@@ -100,7 +100,7 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         const email=typeof body.email==='string' ? body.email.trim().toLowerCase() : '';
         if (email.length>254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return reply(400,{error:'INVALID_DETAILS'});
         const ip=req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local';
-        if(!await deps.rpc('limit',{key:await hash(`email:${action}:${email}`),max:action==='email-login'?10:5}) || !await deps.rpc('limit',{key:await hash(`ip:${action}:${ip}`),max:100}))return reply(429,{error:'RATE_LIMITED'});
+        if(!await deps.rpc('limit',{key:await hash(`ip:${action}:${ip}`),max:100}) || !await deps.rpc('limit',{key:await hash(`email:${action}:${email}`),max:action==='email-login'?10:5}))return reply(429,{error:'RATE_LIMITED'});
         if(action==='email-login') {
           if(typeof body.password!=='string' || !body.password || new TextEncoder().encode(body.password).length>72)return reply(401,{error:'INVALID_LOGIN'});
           const result=await deps.emailSignIn?.(email,body.password);
@@ -120,13 +120,13 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(action==='email-signup') {
           const name=typeof body.name==='string' ? body.name.trim() : '';
           if(name.length<2 || name.length>120)return reply(400,{error:'INVALID_DETAILS'});
-          if(!strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
+          if(body.password !== undefined && !strong(body.password))return reply(400,{error:'WEAK_PASSWORD'});
           if(body.signupResponseVersion !== undefined && body.signupResponseVersion !== 2)return reply(400,{error:'INVALID_REQUEST'});
           if(!deps.emailSignup)throw Error('UNAVAILABLE');
           if(body.client==='ios' && (!uuid.test(String(body.nativeState)) || !['production','cloud-test'].includes(deps.environment))) return reply(400,{error:'INVALID_REQUEST'});
           // Bound explicit existence responses even without trustworthy caller-IP provenance.
           if(body.signupResponseVersion === 2 && !await deps.rpc('limit',{key:await hash('email-signup:v2:global'),max:100}))return reply(429,{error:'RATE_LIMITED'});
-          const result=await deps.emailSignup(name,email,body.password,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
+          const result=await deps.emailSignup(name,email,body.client==='ios'?`${body.nativeReturn === 'https' ? 'native-https' : 'native'}:${body.nativeState}`:body.returnTo==='/book'?'book':'account');
           if(body.signupResponseVersion === 2 && result === 'exists')return reply(409,{error:'SIGNUP_EMAIL_EXISTS'});
         } else {
           if(!deps.emailLink)throw Error('UNAVAILABLE');
@@ -215,9 +215,9 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(!patterns[countryCode]?.test(phone))return reply(400,{error:'INVALID_PHONE'});
         const phoneE164=countryCode+phone;
         const limit=action==='login' ? 10 : 5;
-        if(!await deps.rpc('limit',{key:await hash(`phone:${action}:${phoneE164}`),max:limit}))return reply(429,{error:'RATE_LIMITED'});
         const ip=req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'local';
         if(!await deps.rpc('limit',{key:await hash(`ip:${action}:${ip}`),max:100}))return reply(429,{error:'RATE_LIMITED'});
+        if(!await deps.rpc('limit',{key:await hash(`phone:${action}:${phoneE164}`),max:limit}))return reply(429,{error:'RATE_LIMITED'});
         if(action==='login') {
           if(typeof body.password!=='string' || !body.password || new TextEncoder().encode(body.password).length>72)return reply(401,{error:'INVALID_LOGIN'});
           const result=await deps.signIn(phoneE164,body.password);

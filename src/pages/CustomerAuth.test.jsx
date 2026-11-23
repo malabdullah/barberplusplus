@@ -32,9 +32,10 @@ describe('customer authentication screens', () => {
     mount('sign-up', { returnTo: '/book' });
     fill('Your name', 'Test Customer'); fill(en.customerAuth.email.label, 'test@example.test');
     expect(screen.queryByLabelText('Mobile number')).not.toBeInTheDocument();
-    fill('Password', 'Short12!'); fill('Confirm password', 'Short12!'); click('Create account');
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    click('Create account');
     await screen.findByRole('status');
-    expect(customerAuthService.requestSignup).toHaveBeenCalledWith(expect.objectContaining({ name: 'Test Customer', email: 'test@example.test', password: 'Short12!', returnTo: '/book' }));
+    expect(customerAuthService.requestSignup).toHaveBeenCalledWith(expect.objectContaining({ name: 'Test Customer', email: 'test@example.test', returnTo: '/book' }));
     expect(screen.getByLabelText(en.customerAuth.email.codeLabel)).toHaveAttribute('autocomplete', 'one-time-code');
     expect(screen.getByRole('button', { name: /Resend in/ })).toBeDisabled();
   });
@@ -51,10 +52,9 @@ describe('customer authentication screens', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(en.customerPassword.success);
     expect(customerAuthService.resetPassword).toHaveBeenCalledWith({ currentPassword: '', password: 'Newpass1!', confirmPassword: 'Newpass1!' });
   });
-  it('rejects invalid email and weak or mismatched passwords', async () => {
-    mount('sign-up'); click('Create account'); expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.INVALID_DETAILS);
-    fill('Your name', 'Test Customer'); fill(en.customerAuth.email.label, 'test@example.test'); fill('Password', 'weak'); fill('Confirm password', 'weak'); click('Create account'); expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.WEAK_PASSWORD);
-    fill('Password', 'Short12!'); fill('Confirm password', 'Different12!'); click('Create account'); expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.PASSWORD_MISMATCH);
+  it('requires valid customer details before sending signup email', () => {
+    mount('sign-up'); click('Create account');
+    expect(screen.getByRole('alert')).toHaveTextContent(en.customerAuth.errors.INVALID_DETAILS);
     expect(customerAuthService.requestSignup).not.toHaveBeenCalled();
   });
   it('handles a missing reset link and renders Arabic correctly', async () => {

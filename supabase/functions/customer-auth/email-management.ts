@@ -14,7 +14,7 @@ export async function emailManagementAction(c: { action: string; body: Data; tok
       const email=address(c.body.email);const newEmail=address(c.body.newEmail);
       const audience=c.body.audience;const password=c.body.password;
       if (!valid(email) || !valid(newEmail) || email===newEmail || !['customer','team'].includes(String(audience)) || typeof password!=='string' || password.length<8 || new TextEncoder().encode(password).length>72) return reply(400,{error:'INVALID_DETAILS'});
-      if (!await c.limit(`email-correction:${email}`,5) || !await c.limit(`email-correction-ip:${c.ip}`,20)) return reply(429,{error:'RATE_LIMITED'});
+      if (!await c.limit(`email-correction-ip:${c.ip}`,20) || !await c.limit(`email-correction:${email}`,5)) return reply(429,{error:'RATE_LIMITED'});
       const changed=await c.deps.correct({email,newEmail,password,audience:String(audience)});
       let delivered=true;
       try { await c.deps.deliver(changed.email,String(audience),c.body.returnTo==='/book'?'/book':'/customer/account'); } catch { delivered=false; }

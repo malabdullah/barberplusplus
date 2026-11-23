@@ -362,7 +362,7 @@ it('keeps guest details and notes when sign-in is cancelled or the page reloads'
   await chooseAppointment(); await requestVerification();
   fireEvent.change(screen.getByLabelText(en.customerBooking.notesLabel), { target: { value: 'Please keep my note' } });
   expect(screen.getByRole('link', { name: 'Sign in', exact: true })).toHaveAttribute('href', '/customer/sign-in?next=book');
-  cleanup(); sessionStorage.clear();
+  cleanup();
   render(<I18nextProvider i18n={i18n}><MemoryRouter><CustomerBooking /></MemoryRouter></I18nextProvider>);
   expect(await screen.findByLabelText('Your name')).toHaveValue('Test Customer');
   expect(screen.getByLabelText('Email address')).toHaveValue('guest@example.test');

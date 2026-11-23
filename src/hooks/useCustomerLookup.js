@@ -12,7 +12,7 @@ const DEFAULT_DEBOUNCE_MS = 400;
  * @param {number} [options.debounceMs=400] - Debounce delay in milliseconds
  * @returns {{ customer: object|null, loading: boolean, error: string|null, isNewCustomer: boolean, reset: function }}
  */
-export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEBOUNCE_MS } = {}) {
+export function useCustomerLookup(countryCode, phone, { branchId, debounceMs = DEFAULT_DEBOUNCE_MS } = {}) {
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -20,7 +20,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
 
   const timeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const lastSearchRef = useRef({ countryCode: '', phone: '' });
+  const lastSearchRef = useRef({ countryCode: '', phone: '', branchId: null });
 
   useEffect(() => {
     // Clear previous timeout
@@ -39,7 +39,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
     const cleanPhone = phone?.replace(/\s/g, '') || '';
 
     // Don't search if phone is too short
-    if (!cleanPhone || !validatePhoneNumber(cleanPhone, countryCode).valid) {
+    if (!branchId || !cleanPhone || !validatePhoneNumber(cleanPhone, countryCode).valid) {
       setCustomer(null);
       setIsNewCustomer(false);
       setLoading(false);
@@ -48,27 +48,28 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
     }
 
     // Skip if same as last search
-    if (lastSearchRef.current.countryCode === countryCode && lastSearchRef.current.phone === cleanPhone) {
+    if (lastSearchRef.current.countryCode === countryCode && lastSearchRef.current.phone === cleanPhone && lastSearchRef.current.branchId === branchId) {
       return;
     }
 
+    setCustomer(null);
+    setIsNewCustomer(false);
     // Set loading immediately for visual feedback
     setLoading(true);
     setError(null);
 
     // Debounce the actual API call
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     timeoutRef.current = setTimeout(async () => {
       try {
-        // Create abort controller for this request
-        abortControllerRef.current = new AbortController();
-
         // Store current search params
-        lastSearchRef.current = { countryCode, phone: cleanPhone };
+        lastSearchRef.current = { countryCode, phone: cleanPhone, branchId };
 
-        const result = await customersService.searchByPhone(countryCode, cleanPhone);
+        const result = await customersService.searchByPhone(countryCode, cleanPhone, branchId);
 
         // Check if request was aborted
-        if (abortControllerRef.current?.signal.aborted) {
+        if (controller.signal.aborted) {
           return;
         }
 
@@ -81,7 +82,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
         }
       } catch (err) {
         // Ignore abort errors
-        if (err.name === 'AbortError') {
+        if (controller.signal.aborted || err.name === 'AbortError') {
           return;
         }
         setError(err.message || 'Failed to search customer');
@@ -89,7 +90,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
         setIsNewCustomer(false);
       } finally {
         // Only update loading if not aborted
-        if (!abortControllerRef.current?.signal.aborted) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -106,7 +107,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
         abortControllerRef.current = null;
       }
     };
-  }, [countryCode, phone, debounceMs]);
+  }, [countryCode, phone, branchId, debounceMs]);
 
   // Reset function for external use
   const reset = useCallback(() => {
@@ -122,7 +123,7 @@ export function useCustomerLookup(countryCode, phone, { debounceMs = DEFAULT_DEB
     setIsNewCustomer(false);
     setLoading(false);
     setError(null);
-    lastSearchRef.current = { countryCode: '', phone: '' };
+    lastSearchRef.current = { countryCode: '', phone: '', branchId: null };
   }, []);
 
   return {

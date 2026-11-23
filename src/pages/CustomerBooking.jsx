@@ -434,7 +434,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       setVerification(proof);
       const result = await customerBookingService.book({ ...selection, time, expectedDuration: String(duration), expectedPrice: String(price), verification: proof, ...(packageOfferId ? { packageQuote } : {}), notes: details.notes, language:isArabic?'ar':'en', bookingPolicy: bookingPolicy || undefined });
       const confirmed = { ...result, accountSaved: Boolean(customer) };
-      saveBookingReceipt(confirmed); setReceipt(confirmed);
+      saveBookingReceipt(confirmed, customer ? undefined : details.email); setReceipt(confirmed);
     } catch (failure) {
       if (failure.message === 'PHONE_CANCELLED') return;
       if (packageErrors.includes(failure.message)) { setPackageRetry(value => value + 1); setSlotRetry(value => value + 1); openPanel('services'); }
@@ -520,7 +520,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
             {receipt.accountSaved ? <><p role="status"><CheckCircle2 size={20} aria-hidden="true" />{tr('accountChoice.saved')}</p><Link className="cb-text-button" to="/customer/account">{t('customerAuth.myAccount')}</Link></> : <>
               <h2>{tr('accountChoice.saveTitle')}</h2><p>{tr('accountChoice.saveHint')}</p>
               {claimError && <p className="cb-alert" role="alert">{tr(`accountChoice.${claimError === 'CLAIM_UNAVAILABLE' ? 'claimMismatch' : 'claimFailed'}`)}</p>}
-              {!customer ? <Link className="cb-secondary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{tr('accountChoice.signInSave')}</Link> : <>
+              {!customer ? <Link className="cb-secondary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={() => rememberBookingReturn({ claimGuestReceipt: true })}>{tr('accountChoice.signInSave')}</Link> : <>
                 <button className="cb-secondary" type="button" disabled={claimBusy || accountLoading || !receipt.claimToken} onClick={async () => {
                   setClaimBusy(true); setClaimError('');
                   try { await customerBookingService.claim(receipt.claimToken); const saved = { ...receipt, accountSaved: true, claimToken: undefined }; saveBookingReceipt(saved); setReceipt(saved); }
@@ -630,7 +630,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
 
 export default function CustomerBooking() {
   const location = useLocation();
+  const { bookingOwner } = useCustomerAuth();
   const target = parseBookingEntry(location.search);
-  if (target) return <BookingEntry key={location.search} target={target} />;
-  return <BookingFinder checkout={CustomerBookingCheckout} />;
+  if (target) return <BookingEntry key={`${bookingOwner || 'guest'}:${location.search}`} target={target} />;
+  return <BookingFinder key={bookingOwner || 'guest'} checkout={CustomerBookingCheckout} />;
 }

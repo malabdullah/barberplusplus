@@ -5,7 +5,7 @@ The SSH key must have a forced command pointing at this file, with no PTY,
 forwarding, agent forwarding or user rc. It never accepts an arbitrary shell.
 """
 import fcntl, hashlib, importlib.util, io, json, os, pathlib, re, shutil, stat
-import subprocess, sys, tarfile, time, zipfile
+import subprocess, sys, tarfile, tempfile, time, urllib.request, zipfile
 from state_store import atomic_json
 from backup_policy import verify_backup_readiness
 
@@ -13,6 +13,10 @@ SHA = re.compile(r'[a-f0-9]{40}')
 HASH = re.compile(r'[a-f0-9]{64}')
 MIGRATION = re.compile(r'\d{14}_[a-z0-9_]+\.sql')
 LIMIT = 256 * 1024 * 1024
+REPOSITORY = 'malabdullah/barberplusplus'
+WORKFLOW = '.github/workflows/release.yml'
+MAIN_REF = 'refs/heads/main'
+ATTESTATION_LIMIT = 512 * 1024
 
 def digest(data): return hashlib.sha256(data).hexdigest()
 def staged_path(live, commit, name): return live / ('.barber-next-' + commit + '-' + name)
@@ -32,8 +36,7 @@ def automatic_sql(text):
     return bool(statements) and all(re.fullmatch(index, s, re.I) or re.fullmatch(column, s, re.I) for s in statements)
 
 def extract_bundle(raw, commit, target):
-    # Frontend consumer independently verifies GitHub/Sigstore attestations.
-    # This endpoint binds the exact received archive to its forced SSH command.
+    # This parser only runs after the independent backend signature check.
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         infos = z.infolist()
         if sorted(i.filename for i in infos) != ['backend.tar.gz', 'release.json'] or sum(i.file_size for i in infos) > LIMIT:
@@ -49,7 +52,7 @@ def extract_bundle(raw, commit, target):
         for e in entries:
             p = pathlib.PurePosixPath(e.name)
             if p.is_absolute() or '..' in p.parts or not (e.isfile() or e.isdir()): raise ValueError('Unsafe archive member')
-            if p.parts and ('.env' in p.name or p.parts[0] not in ['supabase', 'scripts', 'ops']): raise ValueError('Unexpected payload member')
+            if p.parts and ('.env' in p.name or (p.parts[0] not in ['supabase', 'scripts', 'ops'] and p.as_posix() not in ['deno.json', 'deno.lock'])): raise ValueError('Unexpected payload member')
         for e in entries:
             p = target / e.name
             if e.isdir(): p.mkdir(parents=True, exist_ok=True)
@@ -62,6 +65,43 @@ def extract_bundle(raw, commit, target):
     expected = [{'name': p.name, 'sha256': digest(p.read_bytes())} for p in files]
     if any(not MIGRATION.fullmatch(p.name) for p in files) or expected != m.get('migrations'): raise ValueError('Migration tree mismatch')
     return m
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError('Unexpected attestation redirect')
+
+
+def require_current_main(commit, command):
+    if not SHA.fullmatch(commit):
+        raise ValueError('Invalid signed source commit')
+    tip = command(['git', 'ls-remote', '--refs', f'https://github.com/{REPOSITORY}.git', MAIN_REF]).split()
+    if tip != [commit, MAIN_REF]:
+        raise ValueError('The requested commit is not current main')
+
+
+def verify_backend_release(raw, commit, command):
+    """Verify the received ZIP before staging any caller-controlled files."""
+    require_current_main(commit, command)
+    subject = digest(raw)
+    url = f'https://api.github.com/repos/{REPOSITORY}/attestations/sha256:{subject}'
+    request = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json'})
+    with urllib.request.build_opener(NoRedirect).open(request, timeout=20) as response:
+        encoded = response.read(ATTESTATION_LIMIT+1)
+    if len(encoded) > ATTESTATION_LIMIT:
+        raise ValueError('Attestation response too large')
+    candidates = json.loads(encoded).get('attestations', [])
+    if not candidates:
+        raise ValueError('Missing release attestation')
+    with tempfile.TemporaryDirectory(prefix='barber-verify-release-') as directory:
+        path = pathlib.Path(directory)
+        bundle = path / 'attestations.jsonl'
+        bundle.write_text(''.join(json.dumps(row['bundle'])+'\n' for row in candidates))
+        artifact = path / 'release.zip'
+        artifact.write_bytes(raw)
+        command(['gh', 'attestation', 'verify', str(artifact), '--bundle', str(bundle),
+                 '--repo', REPOSITORY, '--signer-workflow', REPOSITORY+'/'+WORKFLOW,
+                 '--source-ref', MAIN_REF, '--source-digest', commit, '--deny-self-hosted-runners'])
+
 
 class Backend:
     def __init__(self, config):
@@ -230,12 +270,21 @@ def main():
             raw = sys.stdin.buffer.read(LIMIT + 1)
             if len(raw) > LIMIT or digest(raw) != parts[3]: raise ValueError('Received archive mismatch')
             if target.exists(): raise ValueError('Existing release requires operator reconciliation')
+            verify_backend_release(raw, commit, backend.command)
             target.mkdir(parents=True, mode=0o700)
             m = extract_bundle(raw, commit, target)
+            if m.get('workflow') != WORKFLOW:
+                raise ValueError('Release workflow mismatch')
             atomic_json(backend.root / commit / 'manifest.json',m)
+            atomic_json(backend.root / commit / 'verified-source.json',{'commit':commit,'archiveSha256':parts[3]})
             result = {'status': 'RECEIVED'}
         else:
             m = private_json(backend.root / commit / 'manifest.json')
+            if mode in ('preflight','apply'):
+                require_current_main(commit, backend.command)
+                proof = private_json(backend.root / commit / 'verified-source.json')
+                if proof.get('commit') != commit or not HASH.fullmatch(proof.get('archiveSha256','')):
+                    raise ValueError('Missing independent release verification')
             result = {'status': 'PREFLIGHT_PASS', 'pendingMigrations': len(backend.preflight(target, m))} if mode == 'preflight' else backend.apply(target, m) if mode == 'apply' else backend.rollback(commit)
         print(json.dumps(result))
 

@@ -14,6 +14,7 @@ const shouldIncludeBooking = (booking, filters) => {
 const toFrontend = (booking) => {
   if (!booking) return null;
   const customer = booking.customer || {};
+  const contactPhone = customer.booking_contact_phone || customer.phone;
   return {
     id: booking.id,
     branchId: booking.branch_id,
@@ -29,13 +30,13 @@ const toFrontend = (booking) => {
       id: customer.id,
       name: customer.name,
       countryCode: customer.country_code,
-      phone: customer.phone,
+      phone: contactPhone,
       email: customer.email || null,
     } : null,
     // Backward compatibility - flatten customer fields
     customerName: customer.name || null,
     customerCountryCode: customer.country_code || null,
-    customerPhone: customer.phone || null,
+    customerPhone: contactPhone || null,
     customerEmail: customer.email || null,
     date: booking.date,
     time: booking.time?.slice(0, 5),
@@ -88,7 +89,7 @@ export const bookingsService = {
    */
   getAll: async (filters = {}) => {
     // Join customers table to get customer details
-    let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone, email)');
+    let query = supabase.from('bookings').select('*, customer:customers(id, name, country_code, phone, booking_contact_phone, email)');
     if (Array.isArray(filters.branchIds)) {
       if (!filters.branchIds.length) return [];
       query = query.in('branch_id', filters.branchIds);
@@ -125,7 +126,7 @@ export const bookingsService = {
   getById: async (id) => {
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, country_code, phone, email), barber:barbers(name)')
+      .select('*, customer:customers(id, name, country_code, phone, booking_contact_phone, email), barber:barbers(name)')
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;
@@ -203,7 +204,7 @@ export const bookingsService = {
       .from('bookings')
       .update(toDatabase(bookingData))
       .eq('id', id)
-      .select('*, customer:customers(id, name, country_code, phone, email)')
+      .select('*, customer:customers(id, name, country_code, phone, booking_contact_phone, email)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -224,7 +225,7 @@ export const bookingsService = {
       .from('bookings')
       .update(updateData)
       .eq('id', id)
-      .select('*, customer:customers(id, name, country_code, phone, email)')
+      .select('*, customer:customers(id, name, country_code, phone, booking_contact_phone, email)')
       .single();
     if (error) throw error;
     return toFrontend(data);
@@ -240,7 +241,7 @@ export const bookingsService = {
   getByDateRange: async (startDate, endDate, branchId = null) => {
     let query = supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, country_code, phone, email)')
+      .select('*, customer:customers(id, name, country_code, phone, booking_contact_phone, email)')
       .gte('date', startDate)
       .lte('date', endDate);
     if (branchId) query = query.eq('branch_id', branchId);

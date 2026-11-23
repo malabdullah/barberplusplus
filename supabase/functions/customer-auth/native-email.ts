@@ -4,7 +4,7 @@ type Data = Record<string, unknown>;
 type Session = { access_token: string; refresh_token: string; user: { id: string; email?: string; email_confirmed_at?: string; app_metadata: Data; user_metadata?: Data } };
 export type NativeEmailDependencies = {
   rpc: (action: string, data: Data) => Promise<Data>;
-  account: (name: string, email: string, password: string) => Promise<string | null>;
+  account: (name: string, email: string) => Promise<string | null>;
   send: (email: string, callback: string) => Promise<void>;
   verify: (params: { email?: string; code?: string; tokenHash?: string }) => Promise<Session | null>;
   discard: (token: string) => Promise<void>;
@@ -21,7 +21,7 @@ export async function nativeEmailAction(c: Context): Promise<{ status: number; b
   if (c.body.client !== 'android' || !androidAuthEnabled(c)) throw Error('INVALID_REQUEST');
   const reply = (body: Data) => ({ status: 200, body });
   const limited = async (key: string, max: number) => {
-    if (!await c.limit(key, max) || !await c.limit(`native-email-ip:${c.action}:${c.ip}`, 100)) throw Error('RATE_LIMITED');
+    if (!await c.limit(`native-email-ip:${c.action}:${c.ip}`, 100) || !await c.limit(key, max)) throw Error('RATE_LIMITED');
   };
   if (c.action === 'email-signup') {
     const email = typeof c.body.email === 'string' ? c.body.email.trim().toLowerCase() : '';
@@ -33,7 +33,7 @@ export async function nativeEmailAction(c: Context): Promise<{ status: number; b
     // Share the existing explicit-duplicate policy and its global enumeration
     // bound. Never claim a verification email was sent for an occupied address.
     if (!await c.limit('email-signup:v2:global', 100)) throw Error('RATE_LIMITED');
-    const userId = await c.deps.account(name, email, c.body.password);
+    const userId = await c.deps.account(name, email);
     if (!userId) return { status: 409, body: { error: 'SIGNUP_EMAIL_EXISTS' } };
     const requestId = crypto.randomUUID(), pendingHandle = crypto.randomUUID();
     await c.deps.rpc('start', { request_id: requestId, pending_handle: pendingHandle, email, user_id: userId, ...binding });
