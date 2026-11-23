@@ -51,8 +51,10 @@ first comparison.
 
 `release.json` binds the source commit, workflow run,
 frontend digest, backend archive digest, production runtime lock and ordered
-migration hashes. The backend archive contains versioned Functions and migrations,
-with environment files excluded.
+migration hashes. The backend archive contains the Deno lockfile, versioned
+Functions bundled with frozen dependencies, and migrations. Environment files
+are excluded. CI cold-starts the bundles on the pinned runtime with network
+access disabled.
 
 Install `ops/release/controller.py` on the frontend VPS with root-owned config,
 state and credentials. Its timer runs every 60 seconds; it exposes no HTTP port.
@@ -64,7 +66,13 @@ The Dokploy key stays in a protected file; track and rotate its expiry. That key
 has organization permissions because this Dokploy UI offers no per-app scope.
 
 The backend SSH key must use a forced command invoking `ops/release/backend.py`,
-with forwarding, PTY and user rc disabled. The helper has fixed database,
+with forwarding, PTY and user rc disabled. Install the reviewed root-owned
+helper and a version of GitHub CLI supporting `gh attestation verify` on the
+database server. The helper independently verifies the current main commit and
+the archive's signed release-workflow attestation before staging. It records
+the result in its private state and requires that receipt before preflight or
+apply. Verify access to public GitHub and Sigstore endpoints during adoption.
+The helper has fixed database,
 Functions and state paths. Only the reviewed adoption process may initialize
 its migration/hash ledger. Automatic releases reject edits to applied migrations,
 runtime changes, containers without a successful health check, stale backup evidence and migrations outside the narrow reviewed

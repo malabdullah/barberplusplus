@@ -1,6 +1,6 @@
 // Mail is delivered only to the isolated local Inbucket container. The caller
 // is the loopback-gated Test handler; no external SMTP host is configurable.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2.89.0';
 
 export async function sendTestEmail(to: string, subject: string, link: string): Promise<void> {
   if (Deno.env.get('APP_ENV') === 'cloud-test') {

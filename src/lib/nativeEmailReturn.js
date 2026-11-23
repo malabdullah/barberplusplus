@@ -35,6 +35,13 @@ export function nativeEmailReturn(input, config, deliveryToken) {
   if (type==='recovery') {
     if (!uuid.test(deliveryToken || '')) throw new Error('NATIVE_DELIVERY_REQUIRED');
     target.search=new URLSearchParams({state,type,request_id:request,delivery_token:deliveryToken}).toString();
-  } else target.search = new URLSearchParams({ state, type, token_hash: token, ...(request ? { request_id: request } : {}) }).toString();
+  } else {
+    const hostname = config.environment === 'cloud-test'
+      ? 'barber-open-test.alabdullah-cs.workers.dev' : 'barber-open.alabdullah-cs.workers.dev';
+    const linked = new URL('https://' + hostname + '/auth/email');
+    linked.search = new URLSearchParams({ client: 'ios', state }).toString();
+    linked.hash = new URLSearchParams({ type, token_hash: token }).toString();
+    return linked.href;
+  }
   return target.href;
 }

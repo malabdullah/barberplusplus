@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { customerAuthService } from '../services/customerAuth.service';
+import { bookingSessionOwner, clearBookingSession } from '../utils/customerBookingDraft';
 import { customerFeaturesEnabled } from '../lib/runtimeConfig';
 const CustomerAuthContext = createContext(null);
 export function CustomerAuthProvider({ children }) {
@@ -8,7 +9,8 @@ export function CustomerAuthProvider({ children }) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(customerFeaturesEnabled);
   const generation = useRef(0);
-  const identity = useRef(null);
+  const [bookingOwner, setBookingOwner] = useState(bookingSessionOwner);
+  const identity = useRef(bookingOwner);
   const { pathname } = useLocation();
   const personalArea = pathname === '/book' || pathname.startsWith('/customer/');
   const previousArea = useRef(personalArea);
@@ -24,7 +26,8 @@ export function CustomerAuthProvider({ children }) {
     refresh();
     const subscription = customerAuthService.subscribe((event, session) => {
       const next = session?.user?.id || null;
-      if (identity.current !== next) { generation.current++; setCustomer(null); setLoading(Boolean(next)); identity.current = next; }
+      if (event === 'SIGNED_OUT' || (identity.current && identity.current !== next)) clearBookingSession();
+      if (identity.current !== next) { setBookingOwner(next); generation.current++; setCustomer(null); setLoading(Boolean(next)); identity.current = next; }
       if (event === 'SIGNED_OUT') { generation.current++; setCustomer(null); setError(false); setLoading(false); }
       else { clearTimeout(timer); timer = setTimeout(refresh, 0); }
     });
@@ -43,6 +46,6 @@ export function CustomerAuthProvider({ children }) {
   const logout = async () => { await customerAuthService.logout(); generation.current++; setCustomer(null); };
   const updateProfile = async data => { const profile = await customerAuthService.updateProfile(data); generation.current++; setCustomer(profile); setLoading(false); return profile; };
   const resetPassword = async data => { await customerAuthService.resetPassword(data); generation.current++; setCustomer(null); };
-  return <CustomerAuthContext.Provider value={{ customer, loading, error, login, logout, updateProfile, resetPassword, refresh }}>{children}</CustomerAuthContext.Provider>;
+  return <CustomerAuthContext.Provider value={{ customer, bookingOwner, loading, error, login, logout, updateProfile, resetPassword, refresh }}>{children}</CustomerAuthContext.Provider>;
 }
 export const useCustomerAuth = () => useContext(CustomerAuthContext);

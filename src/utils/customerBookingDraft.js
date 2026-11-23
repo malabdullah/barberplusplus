@@ -1,3 +1,6 @@
+let authStorageKey;
+export function configureBookingSession(key) { authStorageKey = key; }
+
 const KEY = 'barber-customer-booking-draft';
 const RECEIPT_KEY = 'barber-customer-booking-receipt';
 const RETURN_KEY = 'barber-customer-booking-return';
@@ -8,21 +11,39 @@ const remove = key => {
     try { window[kind].removeItem(key); } catch { /* Storage is optional. */ }
   }
 };
+function currentAccount() {
+  try { return JSON.parse(window.localStorage.getItem(authStorageKey))?.user || null; }
+  catch { return null; }
+}
+export function bookingSessionOwner() { return currentAccount()?.id || null; }
+export function clearBookingSession() { [KEY, RECEIPT_KEY, RETURN_KEY].forEach(remove); }
+
+function readFrom(kind, key, accepts) {
+  try {
+    const value = JSON.parse(window[kind].getItem(key));
+    if (fresh(value) && accepts(value)) return value;
+    if (value) window[kind].removeItem(key);
+  } catch { /* Storage is optional. */ }
+  return null;
+}
 function read(key) {
-  const values = [];
-  for (const kind of ['localStorage', 'sessionStorage']) {
-    try { const value = JSON.parse(window[kind].getItem(key)); if (fresh(value)) values.push(value); else window[kind].removeItem(key); } catch { /* Try the other storage. */ }
-  }
-  return values.sort((a, b) => b.savedAt - a.savedAt)[0] || null;
+  const owner = bookingSessionOwner();
+  const accepts = value => value.owner === owner;
+  const tab = readFrom('sessionStorage', key, accepts);
+  const shared = readFrom('localStorage', key, accepts);
+  return tab && (!shared || tab.savedAt >= shared.savedAt) ? tab : shared;
+}
+function writeTo(kind, key, value) {
+  try { window[kind].setItem(key, JSON.stringify(value)); } catch { /* Storage is optional. */ }
 }
 function write(key, value) {
   remove(key);
   if (!value) return;
-  // Same-origin tabs (including email callbacks) can resume; fall back to this
-  // tab when persistent storage is unavailable. Never store auth credentials.
-  for (const kind of ['localStorage', 'sessionStorage']) {
-    try { window[kind].setItem(key, JSON.stringify({ ...value, savedAt: Date.now() })); return; } catch { /* Try the other storage. */ }
-  }
+  const owned = { ...value, owner: bookingSessionOwner(), savedAt: Date.now() };
+  writeTo('sessionStorage', key, owned);
+  // Only booking selections can follow email redirects across tabs.
+  const { details: _details, ...selection } = owned;
+  writeTo('localStorage', key, selection);
 }
 function validBookingDraft(value) {
   if (!value || !Array.isArray(value.serviceIds) || value.serviceIds.length > 10 || value.serviceIds.some(id => typeof id !== 'string' || id.length > 120) || ![0, 1, 2].includes(value.step)) return null;
@@ -39,10 +60,13 @@ function validBookingDraft(value) {
 }
 export function readBookingDraft() { return validBookingDraft(read(KEY)); }
 export function readBookingReturnDraft() {
-  try {
-    const value = JSON.parse(window.sessionStorage.getItem(RETURN_KEY));
-    if (fresh(value)) return validBookingDraft(value.draft);
-  } catch { /* Use shared storage if tab storage is unavailable. */ }
+  const owner = bookingSessionOwner();
+  const tab = readFrom('sessionStorage', RETURN_KEY, value => value.owner === owner || (owner && value.owner === null));
+  if (tab?.draft) {
+    if (tab.owner === owner) return validBookingDraft(tab.draft);
+    const { details: _details, guest: _guest, ...selection } = tab.draft;
+    return validBookingDraft(selection);
+  }
   return validBookingDraft(read(RETURN_KEY)?.draft);
 }
 export function saveBookingDraft(selection) {
@@ -51,17 +75,34 @@ export function saveBookingDraft(selection) {
   write(KEY, { bookingMode, rangeStart, rangeEnd, finderStage, city, locationCities, locationGovernorateId, branchId, barberId, serviceIds, packageOfferId: typeof packageOfferId === 'string' ? packageOfferId.slice(0, 36) : '', packageOffer: packageOffer ? { id: packageOffer.id, name: packageOffer.name, nameAr: packageOffer.nameAr, serviceIds: packageOffer.serviceIds, price: packageOffer.price, regularPrice: packageOffer.regularPrice, duration: packageOffer.duration, startsOn: packageOffer.startsOn, endsOn: packageOffer.endsOn } : null, date, time, panel, step, rebooking, favourite, rebookNotice, guest: guest === true, query: typeof query === 'string' ? query.slice(0, 120) : undefined,
     details: details ? { email: String(details.email || '').slice(0, 254), name: String(details.name || '').slice(0, 120), countryCode: String(details.countryCode || '+965').slice(0, 4), phone: String(details.phone || '').slice(0, 20), notes: String(details.notes || '').slice(0, 500) } : undefined });
 }
-export function saveBookingReceipt(receipt) { write(RECEIPT_KEY, receipt); }
+export function saveBookingReceipt(receipt, guestEmail = '') {
+  remove(RECEIPT_KEY);
+  if (!receipt) return;
+  writeTo('sessionStorage', RECEIPT_KEY, {
+    ...receipt, owner: bookingSessionOwner(), savedAt: Date.now(), guestEmail: guestEmail.trim().toLowerCase(),
+  });
+}
 export function readBookingReceipt() {
-  const value = read(RECEIPT_KEY);
+  try { window.localStorage.removeItem(RECEIPT_KEY); } catch { /* Discard the old shared copy. */ }
+  const account = currentAccount();
+  const value = readFrom('sessionStorage', RECEIPT_KEY, item => item.owner === (account?.id || null)
+    || (item.owner === null && item.claimAfterSignIn && account?.email_confirmed_at && item.guestEmail
+      && account.email?.toLowerCase() === item.guestEmail));
   return value && typeof value.id === 'string' && typeof value.reference === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.date) && /^\d{2}:\d{2}$/.test(value.time) && Array.isArray(value.services) && Number.isFinite(Number(value.price)) && Number.isFinite(value.duration) ? value : null;
 }
-export function rememberBookingReturn({ preserveDraft = false } = {}) {
+export function rememberBookingReturn({ preserveDraft = false, claimGuestReceipt = false } = {}) {
   const draft = (preserveDraft ? readBookingReturnDraft() : null) || readBookingDraft();
-  const value = { returnTo: '/book', draft, savedAt: Date.now() };
-  write(RETURN_KEY, value);
-  // Keep this tab's OAuth handoff even if another tab opens the booking page.
-  try { window.sessionStorage.setItem(RETURN_KEY, JSON.stringify(value)); } catch { /* Optional storage. */ }
+  const value = { returnTo: '/book', draft, owner: bookingSessionOwner(), savedAt: Date.now() };
+  remove(RETURN_KEY);
+  writeTo('sessionStorage', RETURN_KEY, value);
+  const { details: _details, ...selection } = draft || {};
+  writeTo('localStorage', RETURN_KEY, { ...value, draft: draft ? selection : null });
+  if (claimGuestReceipt) {
+    const receipt = readBookingReceipt();
+    if (receipt?.owner === null && receipt.guestEmail && receipt.claimToken) {
+      writeTo('sessionStorage', RECEIPT_KEY, { ...receipt, claimAfterSignIn: true });
+    }
+  }
 }
 export function forgetBookingReturn() { remove(RETURN_KEY); }
 export function customerReturnTo(location) {

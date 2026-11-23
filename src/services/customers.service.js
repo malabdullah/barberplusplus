@@ -55,11 +55,11 @@ export const customersService = {
    * @param {string} phone - Phone number
    * @returns {object|null} Customer record or null if not found
    */
-  searchByPhone: async (countryCode, phone) => {
+  searchByPhone: async (countryCode, phone, branchId) => {
     try {
       const cleanPhone = phone.replace(/\s/g, '');
 
-      const { data, error } = await supabase.rpc('staff_customer_lookup', { p_country_code: countryCode, p_phone: cleanPhone });
+      const { data, error } = await supabase.rpc('staff_customer_lookup', { p_country_code: countryCode, p_phone: cleanPhone, p_branch_id: branchId });
       if (error) throw error;
 
       return data ? toFrontend(data) : null;

@@ -24,7 +24,7 @@ Deno.test('signup validation and both rate limits precede v2 account checks',asy
  assert((await handler(req({...body,password:'weak'}))).status===400);
  assert(attempts===0);
  assert((await handler(req(body))).status===409);assert(attempts===1);
- assert(limits.slice(-3).map(x=>x.max).join(',')==='5,100,100');
+ assert(limits.slice(-3).map(x=>x.max).join(',')==='100,5,100');
  for(const deniedCall of [1,2,3]){
   let count=0;
   const limited=make({rpc:async()=>++count!==deniedCall,emailSignup:async()=>{throw Error('Unexpected account check');}});
@@ -173,7 +173,7 @@ Deno.test('social status requires provider identity and phone linking is disable
 Deno.test('email signup uses a trusted gateway, validates details, and does not expose account existence',async()=>{
  const calls:unknown[][]=[];const f=fixture({emailSignup:async(...args:unknown[])=>{calls.push(args);}});
  assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:' Test@Example.test ',password,role:'admin',returnTo:'/book'}))).status===200);
- assert(JSON.stringify(calls[0])===JSON.stringify(['Customer Name','test@example.test',password,'book']));
+ assert(JSON.stringify(calls[0])===JSON.stringify(['Customer Name','test@example.test','book']));
  assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:'bad<@example.test',password}))).status===400);
  assert((await f.handler(req({action:'email-signup',name:'Customer Name',email:'test@example.test',password:'Abc12!x'}))).status===400);
 });

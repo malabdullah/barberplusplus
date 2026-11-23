@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2.89.0';
 import { apnsToken } from '../customer-push-dispatch/apns.ts';
 import { type AnnouncementJob, sendAnnouncement } from './delivery.ts';
 import { createAnnouncementDispatcher } from './handler.ts';

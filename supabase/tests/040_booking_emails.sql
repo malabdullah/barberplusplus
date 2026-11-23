@@ -120,7 +120,11 @@ select ok((select customer_id<>'fb101000-0000-4000-8000-000000000907'from public
 select is((select count(*)from private.customer_booking_owners where booking_id='fb101000-0000-4000-8000-000000000502'),0::bigint,'second guest booking never automatically linked by email');
 select lives_ok($$select public.customer_booking('book',current_setting('email.book')::jsonb||'{"id":"fb101000-0000-4000-8000-000000000503","time":"13:00","email":"optional@example.test","phone":"59977668"}')$$,'optional valid phone accepted without verification');
 select is((select count(*)from private.customer_phone_verifications v join public.bookings b on b.customer_id=v.customer_id where b.id='fb101000-0000-4000-8000-000000000503'),0::bigint,'unverified optional phone has no verification marker');
-select throws_ok($$select public.customer_booking('book',current_setting('email.book')::jsonb||'{"id":"fb101000-0000-4000-8000-000000000504","time":"14:00","phone":"59977669"}')$$,'23505','duplicate key value violates unique constraint "customers_phone_unique"','optional phone cannot steal an existing account contact');
+select lives_ok($$select public.customer_booking('book',current_setting('email.book')::jsonb||'{"id":"fb101000-0000-4000-8000-000000000504","time":"14:00","phone":"59977669"}')$$,'guest can provide an optional number already used by an account');
+select ok((select c.id<>'fb101000-0000-4000-8000-000000000907' and c.phone is null and c.booking_contact_phone='59977669'
+ from public.customers c join public.bookings b on b.customer_id=c.id where b.id='fb101000-0000-4000-8000-000000000504'),
+ 'unverified guest phone is separate from the canonical account phone');
+select is((select phone from public.customers where id='fb101000-0000-4000-8000-000000000907'),'59977669','existing account keeps its canonical number');
 select public.customer_booking_email_claim();
 update private.customer_booking_email_jobs set message=jsonb_set(message,'{email}','"changed@example.test"')where booking_id='fb101000-0000-4000-8000-000000000502';
 select is((select private.customer_booking_email_allowed(id)from private.customer_booking_email_jobs where booking_id='fb101000-0000-4000-8000-000000000502'),false,'changed recipient cannot reuse frozen delivery identity');
@@ -129,7 +133,7 @@ select public.customer_booking_email_claim();
 select is((select state from private.customer_booking_email_jobs where booking_id='fb101000-0000-4000-8000-000000000503'),'cancelled','expired message never sent');
 update private.customer_booking_email_runtime set enabled=false;
 select is((select private.customer_booking_email_allowed(id)from private.customer_booking_email_jobs where booking_id='fb101000-0000-4000-8000-000000000501'and kind='cancelled'),false,'pause disables delivery immediately');
-select lives_ok($$select public.customer_booking('book',current_setting('email.book')::jsonb||'{"id":"fb101000-0000-4000-8000-000000000504","time":"14:00"}')$$,'booking still works while email is disabled');
-select is((select count(*)from private.customer_booking_email_jobs where booking_id='fb101000-0000-4000-8000-000000000504'),0::bigint,'disabled period never queues historical mail');
+select lives_ok($$select public.customer_booking('book',current_setting('email.book')::jsonb||'{"id":"fb101000-0000-4000-8000-000000000505","time":"15:00"}')$$,'booking still works while email is disabled');
+select is((select count(*)from private.customer_booking_email_jobs where booking_id='fb101000-0000-4000-8000-000000000505'),0::bigint,'disabled period never queues historical mail');
 select * from finish();
 rollback;

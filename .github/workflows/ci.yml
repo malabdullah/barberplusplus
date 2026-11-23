@@ -18,13 +18,13 @@ jobs:
   application:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install the required domain scanner
         run: |
           sudo python3 .github/scripts/prepare-ubuntu-apt.py
           sudo apt-get update
           sudo apt-get install -y ripgrep
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24.20.0, cache: npm }
       - run: npm ci
       - run: npm run check
@@ -179,7 +179,7 @@ jobs:
         if: (matrix.slot == 1 || steps.pin.outputs.admitted == 'true') && steps.reuse.outputs.reused != 'true'
       - name: Retain synthetic schema diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: synthetic-schema-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.slot }}
           path: |
@@ -250,8 +250,8 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24.20.0, cache: npm }
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
@@ -259,9 +259,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { contents: read, pull-requests: read }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: false

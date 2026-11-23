@@ -24,13 +24,16 @@ async function call(action, data, token) {
 }
 async function identity(provider) {
   const email = `social-probe-${crypto.randomUUID()}@customer.test`;
-  const { data, error } = await admin.auth.admin.createUser({ email, password: 'SocialProbe123!', email_confirm: true, app_metadata: { role: 'customer' } });
+  const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: true, app_metadata: { role: 'customer' } });
   assert.ifError(error); const id = data.user.id; users.push(id); assert.match(id, /^[a-f0-9-]{36}$/);
   sql(`insert into auth.identities(user_id,provider,provider_id,identity_data,created_at,updated_at,last_sign_in_at) values('${id}','${provider}','${id}','{"sub":"${id}"}',now(),now(),now());`);
   const client = createClient(status.API_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   clients.push(client);
-  const signedIn = await client.auth.signInWithPassword({ email, password: 'SocialProbe123!' });
+  const link = await admin.auth.admin.generateLink({ type: 'magiclink', email });
+  assert.ifError(link.error);
+  const signedIn = await client.auth.verifyOtp({ type: 'magiclink', token_hash: link.data.properties.hashed_token });
   assert.ifError(signedIn.error);
+  assert.equal(signedIn.data.user.id, id);
   return { id, token: signedIn.data.session.access_token };
 }
 async function complete(user) {

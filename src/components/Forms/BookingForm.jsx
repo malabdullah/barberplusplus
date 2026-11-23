@@ -85,7 +85,11 @@ function BookingForm({ booking, initialCustomer, barbers, currentBarber, service
   } = useCustomerLookup(
     formData.customerCountryCode,
     formData.customerPhone,
-    { debounceMs: 400 }
+    {
+      branchId: contactLocked ? null : currentBarber?.branchId
+        || barbers?.find(barber => barber.id === formData.barberId)?.branchId
+        || barbers?.[0]?.branchId,
+    }
   );
 
   // Sync form data when booking prop changes (for pre-fill and edit mode)
