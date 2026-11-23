@@ -22,7 +22,18 @@ select set_config('request.jwt.claims','{"sub":"fa160000-0000-4000-8000-00000000
 select public.manage_shop_publication('fa160000-0000-4000-8000-000000000101','publish','draft');
 select set_config('request.jwt.claims','{}',true);
 select set_config('discovery.day',(((current_timestamp at time zone 'Asia/Kuwait')::date)+(8-extract(isodow from current_timestamp at time zone 'Asia/Kuwait')::int))::text,true);
-select set_config('discovery.input',jsonb_build_object('mode','time','city','Discovery QA City','barber_id','fa160000-0000-4000-8000-000000000301','date',current_setting('discovery.day'),'range_start','12:25','range_end','12:25')::text,true);
+select set_config('discovery.city',(
+  select a.name_en from public.branches b join public.areas a on a.id=b.area_id
+  where b.id='fa160000-0000-4000-8000-000000000101'
+),true);
+select set_config('discovery.shop_search',jsonb_build_object(
+  'mode','shop','query','Discovery QA Shop','city',current_setting('discovery.city')
+)::text,true);
+select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.shop_search')::jsonb)->'items'),1,
+  'the saved area places the shop in its canonical city');
+select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.shop_search')::jsonb||'{"city":"Discovery QA City"}')->'items'),0,
+  'the old city label cannot list a shop whose saved area is elsewhere');
+select set_config('discovery.input',jsonb_build_object('mode','time','city',current_setting('discovery.city'),'barber_id','fa160000-0000-4000-8000-000000000301','date',current_setting('discovery.day'),'range_start','12:25','range_end','12:25')::text,true);
 select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.input')::jsonb||'{"cursor":null}')->'items'),1,'an empty cursor loads the first page');
 select ok(not has_function_privilege('anon','public.customer_booking_discovery(text,jsonb)','EXECUTE'),'anon cannot bypass the Edge gateway');
 select ok(not has_function_privilege('authenticated','private.booking_start_windows(uuid,date,time,time,uuid)','EXECUTE'),'raw schedules stay private');
@@ -61,7 +72,7 @@ update public.barbers set vacations='[]' where id='fa160000-0000-4000-8000-00000
 select set_config('request.jwt.claims','{"sub":"fa160000-0000-4000-8000-000000000001","role":"authenticated","session_id":"fa160000-0000-4000-8000-000000000011","app_metadata":{"role":"manager"}}',true);
 select public.manage_shop_publication('fa160000-0000-4000-8000-000000000101','pause','published');
 select set_config('request.jwt.claims','{}',true);
-select is(jsonb_array_length(public.customer_booking_discovery('search','{"mode":"shop","city":"Discovery QA City"}')->'items'),0,'paused shops disappear from all entry paths');
+select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.shop_search')::jsonb)->'items'),0,'paused shops disappear from all entry paths');
 select throws_ok($$select public.customer_booking_discovery('selection',current_setting('discovery.input')::jsonb)$$,'P0001','INVALID_SELECTION','stale selection cannot bypass publication');
 select * from finish();
 rollback;
