@@ -16,6 +16,7 @@ def platform_objects_for_replay(toc):
         ' TRIGGER auth users sync_customer_confirmed_email ',
         ' TRIGGER auth users sync_personal_work_contact ',
         ' TRIGGER auth users enforce_customer_password_proof ',
+        ' TRIGGER auth users discard_unverified_customer_password ',
         ' TRIGGER auth users guard_account_email ',
         ' TRIGGER auth sessions detach_customer_session_push ',
         ' TRIGGER auth sessions android_live_push_session_retire ',
