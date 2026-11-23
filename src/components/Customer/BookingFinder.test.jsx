@@ -91,8 +91,11 @@ it('combines cities from one governorate and resets the shop and cursor when loc
   service.search.mockResolvedValue({ items: [{ id: 'shop', name: 'Example shop', city: 'Mirqab' }], kind: 'shop', nextCursor: { id: 'page' } });
   await open();
   fireEvent.click(screen.getByRole('button', { name: /Choose a shop/ }));
-  fireEvent.focus(screen.getByRole('combobox', { name: 'Cities' }));
+  const picker = screen.getByRole('combobox', { name: 'Cities' });
+  act(() => picker.focus());
   fireEvent.click(await screen.findByRole('option', { name: 'Kuwait City', exact: true }));
+  expect(picker).toHaveFocus();
+  expect(picker).toHaveAttribute('aria-expanded', 'true');
   fireEvent.click(screen.getByRole('option', { name: 'Mirqab', exact: true }));
   await waitFor(() => expect(service.search).toHaveBeenLastCalledWith(expect.objectContaining({
     mode: 'shop', city: undefined, cities: ['Kuwait City', 'Mirqab'], governorateId: 1, cursor: null,

@@ -140,7 +140,9 @@ export default function BookingFinder({ checkout: Checkout }) {
     // The selected city array lives in the draft and changes only when the filter changes.
   }, [mode, stage, catalog, draft.city, draft.locationCities, draft.locationGovernorateId, draft.branchId, draft.date, draft.rangeStart, draft.rangeEnd, query, cursor, authLoading, customer?.id, favouriteKey, retry]);
   useEffect(() => {
-    if (!catalog) { heading.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: 'instant' }); }
+    if (catalog || ['city', 'results'].includes(stage) && document.activeElement?.id === 'booking-city') return;
+    heading.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [mode, stage, catalog]);
   if (catalog) return <Checkout initialDraft={draft} scopedCatalog={catalog} cityMetadata={filters} onEditProvider={edit} onClearSelection={clearSelection} />;
   const hasSelection = Boolean(mode || draft.city || draft.branchId || draft.barberId || draft.date || query);
