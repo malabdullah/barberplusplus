@@ -200,6 +200,19 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (action === 'entry' && (!['shop', 'barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId)))) return reply(400, { error: 'INVALID_REQUEST' });
         const mode = body.mode ?? 'shop';
         const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
+        let locationFilter: { cities: string[]; governorate_id: number } | undefined;
+        if ('cities' in body || 'governorateId' in body) {
+          const { cities, governorateId } = body;
+          if (action !== 'search' || (body.city !== undefined && body.city !== '')
+            || !Array.isArray(cities) || cities.length === 0 || cities.length > 64
+            || typeof governorateId !== 'number' || !Number.isInteger(governorateId)
+            || governorateId < 1 || governorateId > 2147483647) {
+            return reply(400, { error: 'INVALID_REQUEST' });
+          }
+          const names = cities.map(value => typeof value === 'string' ? value.trim() : '');
+          if (names.some(name => name.length === 0 || name.length > 120)) return reply(400, { error: 'INVALID_REQUEST' });
+          locationFilter = { cities: [...new Set(names)], governorate_id: governorateId };
+        }
         if (!['shop', 'barber', 'time'].includes(String(mode))
           || ['city', 'query'].some(field => body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 120))
           || ['branchId', 'barberId'].some(field => body[field] !== undefined && body[field] !== '' && !uuid.test(String(body[field])))
@@ -213,6 +226,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (token && !account) return reply(401, { error: 'VERIFICATION_REQUIRED' });
         return reply(200, await deps.discovery(action, {
           mode, city: body.city, query: body.query, branch_id: action === 'entry' && body.kind === 'shop' ? body.targetId : body.branchId, barber_id: action === 'entry' && body.kind === 'barber' ? body.targetId : body.barberId,
+          ...locationFilter,
           ...(action === 'entry' ? { kind: body.kind } : {}),
           date: body.date, range_start: body.rangeStart, range_end: body.rangeEnd, cursor: body.cursor,
           ...(account ? { account_user_id: account.id, session_id: account.session_id } : {}),

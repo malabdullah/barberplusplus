@@ -266,6 +266,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (receipt) saveBookingDraft(null);
     else if (draftRestored && city) saveBookingDraft({
       bookingMode: draft?.bookingMode, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd,
+      locationCities: draft?.locationCities, locationGovernorateId: draft?.locationGovernorateId,
       city, branchId, barberId, serviceIds, packageOfferId, packageOffer: selectedPackage, date, time, panel, query,
       step: Math.floor(PANELS.indexOf(panel) / 2),
       rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
