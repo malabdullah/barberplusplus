@@ -29,7 +29,8 @@ select ok(has_function_privilege('service_role','public.record_server_login_fail
 select public.record_server_login_failure('security-established@example.test');
 select is((select count(*) from public.logs where user_id='e1230000-0000-4000-8000-000000000002'
   and action='login_failure' and server_verified),1::bigint,'server records trusted login failure');
-select ok(exists(select 1 from cron.job where jobname='customer-auth-limit-retention' and active),
+select ok(exists(select 1 from cron.job where jobname='customer-auth-limit-retention' and schedule='31 * * * *'
+  and command like 'delete from private.customer_auth_limits where window_start%'),
   'expired auth rate limit rows have scheduled cleanup');
 
 select * from finish();
