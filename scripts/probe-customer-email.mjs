@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { loadEnv } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 import { localDockerProbe } from './local-docker-probe.mjs';
@@ -51,6 +52,8 @@ try {
  const slots=await call('slots',selection,'','customer-booking');assert.equal(slots.status,200);assert.ok(slots.data.slots.length);
  const booking=await call('book',{...selection,time:slots.data.slots[0],verification:proof.data.verification},token,'customer-booking');if(booking.data.id)createdBookings.push(booking.data.id);assert.equal(booking.status,200,JSON.stringify(booking.data));
  const mine=await call('bookings',{},token);assert.equal(mine.status,200);assert.ok(mine.data.bookings.some(item=>item.id===booking.data.id));
+ // Local verification uses GoTrue's magic link and shares its one-second recovery cooldown.
+ await delay(1250);
  const recovery=await call('email-recovery',{email,returnTo:'/book'});assert.equal(recovery.status,200,JSON.stringify(recovery.data));
  const resetLink=await message('Reset your Barber++ password');assert.equal(resetLink.type,'recovery');const recovered=await call('password-recovery-verify',{requestId:recovery.data.requestId,tokenHash:resetLink.token_hash});assert.equal(recovered.status,200,JSON.stringify(recovered.data));
  const reset=await call('email-reset',{password:'Newpass1!',confirmPassword:'Newpass1!',proof:recovered.data.proof},recovered.data.session.access_token);assert.equal(reset.status,200,JSON.stringify(reset.data));
