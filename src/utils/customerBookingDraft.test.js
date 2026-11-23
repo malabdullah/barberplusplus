@@ -25,3 +25,11 @@ it('clears both copies, restricts auth returns and expires the receipt independe
   saveBookingReceipt({ id: 'booking', reference: 'REF', date: '2026-11-03', time: '10:00', duration: 30, price: 5, services: [], claimToken: 'private-proof' });
   expect(readBookingReceipt().claimToken).toBe('private-proof'); saveBookingReceipt(null); expect(readBookingReceipt()).toBeNull();
 });
+
+it('keeps the discovery city set separate from the selected shop city across checkout', () => {
+  const location = { locationCities: ['Kuwait City', 'Mirqab'], locationGovernorateId: 1 };
+  saveBookingDraft({ ...draft, city: 'Mirqab', ...location });
+  expect(readBookingDraft()).toMatchObject({ city: 'Mirqab', ...location });
+  saveBookingDraft({ ...draft, locationCities: location.locationCities });
+  expect(readBookingDraft()).toBeNull();
+});
