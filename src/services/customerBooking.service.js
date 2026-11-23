@@ -19,17 +19,20 @@ const request = async (action, body = {}) => {
 };
 
 export const mapCatalog = result => ({
-      branches: result.branches.map(branch => ({
-        id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar),
-        city: branch.city?.trim() || branch.areas?.name_en || '',
-        cityAr: !branch.city?.trim() || branch.city.trim() === branch.areas?.name_en
-          ? branch.areas?.name_ar || '' : '',
-        address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url, rating: branch.rating,
-        area: branch.areas?.name_en || '', areaAr: branch.areas?.name_ar || '',
-        governorateId: (branch.governorates || branch.areas?.governorates)?.id ?? null,
-        governorateName: (branch.governorates || branch.areas?.governorates)?.name_en || '',
-        governorateNameAr: (branch.governorates || branch.areas?.governorates)?.name_ar || '',
-      })),
+      branches: result.branches.map(branch => {
+        const area = branch.areas;
+        const governorate = area?.governorates || branch.governorates;
+        return {
+          id: branch.id, name: shopWording(branch.name), nameAr: shopWording(branch.name_ar),
+          city: area?.name_en || branch.city?.trim() || '',
+          cityAr: area?.name_ar || branch.city_ar || '',
+          address: branch.address, logoUrl: branch.image_url, locationUrl: branch.location_url, rating: branch.rating,
+          area: area?.name_en || '', areaAr: area?.name_ar || '',
+          governorateId: governorate?.id ?? null,
+          governorateName: governorate?.name_en || '',
+          governorateNameAr: governorate?.name_ar || '',
+        };
+      }),
       barbers: result.barbers.map(barber => ({
         id: barber.id, branchId: barber.branch_id, name: barber.name, nameAr: barber.name_ar,
         serviceDurations: barber.service_durations || {}, avatarUrl: barber.avatar_url, serviceIds: barber.service_ids || [], maxBookingDays: barber.max_booking_days, rating: barber.rating,

@@ -113,7 +113,7 @@ const web = createCustomerBookingHandler({
   catalog: async () => {
     // Explicit projections: no customer records, staff contacts or booking data.
     const [branches, barbers, services, ratingResult, accessResult, barberAccessResult] = await Promise.all([
-      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').eq('publication_state', 'published').order('name'),
+      admin.from('branches').select('id,name,name_ar,city,address,image_url,location_url,working_hours,governorates:governorate_id(id,name_en,name_ar),areas:area_id(id,name_en,name_ar,governorates:governorate_id(id,name_en,name_ar))').eq('status', 'active').eq('publication_state', 'published').order('name'),
       admin.from('barbers').select('id,branch_id,name,name_ar,avatar_url,service_ids,service_durations,max_booking_days,availability').eq('status', 'active').order('name'),
       admin.from('services').select('id,branch_id,name,name_ar,description,duration,price').eq('status', 'active').order('name'),
       admin.rpc('customer_catalog_ratings'),
@@ -144,7 +144,12 @@ const web = createCustomerBookingHandler({
     if (ratingResult.error) console.warn('Catalog ratings unavailable', ratingResult.error.code);
     const ratings = ratingResult.error ? undefined : ratingResult.data;
     return {
-      branches: readyBranches.map(({ working_hours: _hours, ...branch }) => ({ ...branch, rating: ratings ? ratings.shops[branch.id] ?? null : undefined })),
+      branches: readyBranches.map(({ working_hours: _hours, ...branch }) => {
+        const area = Array.isArray(branch.areas) ? branch.areas[0] : branch.areas;
+        return { ...branch, city: area?.name_en || branch.city?.trim() || '', city_ar: area?.name_ar ?? null,
+          area_id: area?.id ?? null, governorates: area?.governorates || branch.governorates,
+          rating: ratings ? ratings.shops[branch.id] ?? null : undefined };
+      }),
       barbers: readyBarbers.filter(barber => branchIds.has(barber.branch_id))
         .map(({ availability: _hours, ...barber }) => ({ ...barber, rating: ratings ? ratings.barbers[barber.id] ?? null : undefined })),
       services: services.data.filter(service => branchIds.has(service.branch_id)),
