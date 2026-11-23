@@ -1671,6 +1671,7 @@
       "statusTitle": "Booking payment",
       "checking": "Checking your payment…",
       "statusUnavailable": "Payment status is temporarily unavailable. Check again before paying.",
+      "retryableFailure": "Payment didn’t go through. You can try again in the same checkout.",
       "pending": "Payment is still pending. Continue your checkout or check the status again.",
       "preparing": "Your checkout is being prepared. Check the status again shortly.",
       "failed": "Payment didn’t go through. You can return to booking.",

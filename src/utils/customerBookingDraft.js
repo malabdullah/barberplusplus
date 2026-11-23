@@ -1,5 +1,6 @@
 const KEY = 'barber-customer-booking-draft';
 const RECEIPT_KEY = 'barber-customer-booking-receipt';
+const ONLINE_RECEIPT_KEY = 'barber-customer-online-booking-receipt';
 const RETURN_KEY = 'barber-customer-booking-return';
 const LIFETIME = 60 * 60 * 1000;
 const fresh = value => value && Number.isFinite(value.savedAt) && Date.now() - value.savedAt < LIFETIME && value.savedAt <= Date.now();
@@ -48,10 +49,28 @@ export function saveBookingDraft(selection) {
     details: details ? { email: String(details.email || '').slice(0, 254), name: String(details.name || '').slice(0, 120), countryCode: String(details.countryCode || '+965').slice(0, 4), phone: String(details.phone || '').slice(0, 20), notes: String(details.notes || '').slice(0, 500) } : undefined });
 }
 export function saveBookingReceipt(receipt) { write(RECEIPT_KEY, receipt); }
-export function readBookingReceipt() {
-  const value = read(RECEIPT_KEY);
+function validBookingReceipt(value) {
   return value && typeof value.id === 'string' && typeof value.reference === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.date) && /^\d{2}:\d{2}$/.test(value.time) && Array.isArray(value.services) && Number.isFinite(Number(value.price)) && Number.isFinite(value.duration) ? value : null;
 }
+export function readBookingReceipt() { return validBookingReceipt(read(RECEIPT_KEY)); }
+
+export function saveOnlineBookingReceipt(receipt) {
+  try {
+    if (receipt) window.sessionStorage.setItem(ONLINE_RECEIPT_KEY, JSON.stringify({ ...receipt, savedAt: Date.now() }));
+    else window.sessionStorage.removeItem(ONLINE_RECEIPT_KEY);
+    return true;
+  } catch { return false; }
+}
+
+export function readOnlineBookingReceipt() {
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(ONLINE_RECEIPT_KEY));
+    if (fresh(value) && value.paidOnline === true) return validBookingReceipt(value);
+    window.sessionStorage.removeItem(ONLINE_RECEIPT_KEY);
+  } catch { /* A missing tab receipt can be recovered with the payment capability. */ }
+  return null;
+}
+
 export function rememberBookingReturn({ preserveDraft = false } = {}) {
   const draft = (preserveDraft ? readBookingReturnDraft() : null) || readBookingDraft();
   const value = { returnTo: '/book', draft, savedAt: Date.now() };

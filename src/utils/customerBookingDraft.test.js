@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, customerReturnTo, rememberBookingReturn } from './customerBookingDraft';
+import { readBookingDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, readOnlineBookingReceipt, saveOnlineBookingReceipt, customerReturnTo, rememberBookingReturn } from './customerBookingDraft';
 const draft = { city: 'Sharq', branchId: 'shop', barberId: 'barber', serviceIds: ['service'], date: '2026-11-03', time: '10:00', step: 2, panel: 'details', guest: true, details: { name: 'Guest', countryCode: '+965', phone: '50000099', notes: 'Keep this note' } };
 beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); sessionStorage.clear(); });
 it('resumes all chosen data and typed details in another same-origin tab without auth credentials', () => {
@@ -24,4 +24,16 @@ it('clears both copies, restricts auth returns and expires the receipt independe
   rememberBookingReturn(); expect(customerReturnTo({ search: '' })).toBe('/book');
   saveBookingReceipt({ id: 'booking', reference: 'REF', date: '2026-11-03', time: '10:00', duration: 30, price: 5, services: [], claimToken: 'private-proof' });
   expect(readBookingReceipt().claimToken).toBe('private-proof'); saveBookingReceipt(null); expect(readBookingReceipt()).toBeNull();
+});
+
+
+it('preserves the paid confirmation in the checkout tab when the shared receipt is cleared', () => {
+  const paid = { id: 'booking', reference: 'REF', date: '2026-11-03', time: '10:00', duration: 30, price: 5, services: [], paidOnline: true };
+  saveBookingReceipt(paid);
+  expect(saveOnlineBookingReceipt(paid)).toBe(true);
+  saveBookingReceipt(null);
+  expect(readBookingReceipt()).toBeNull();
+  expect(readOnlineBookingReceipt()).toMatchObject(paid);
+  saveOnlineBookingReceipt(null);
+  expect(readOnlineBookingReceipt()).toBeNull();
 });

@@ -6,7 +6,7 @@ import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { useCustomerFavourites } from '../context/CustomerFavouritesContext';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import { shopWording } from '../utils/customerTerminology';
-import { readBookingDraft, readBookingReturnDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
+import { readBookingDraft, readBookingReturnDraft, saveBookingDraft, readBookingReceipt, saveBookingReceipt, saveOnlineBookingReceipt, rememberBookingReturn, forgetBookingReturn } from '../utils/customerBookingDraft';
 import './CustomerAuth.css';
 import { customerBookingService } from '../services/customerBooking.service';
 import { GCC_COUNTRIES } from '../constants/countries';
@@ -25,7 +25,7 @@ import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
 import { addBookingDays, downloadBookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
-import { BookingPaymentReturn, onlinePaymentLink, pendingPaymentKey, PAYMENT_STORAGE } from '../components/Customer/BookingPaymentReturn';
+import { BookingPaymentReturn, clearPendingPayment, onlinePaymentLink, pendingPaymentKey, PAYMENT_STORAGE } from '../components/Customer/BookingPaymentReturn';
 import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
@@ -439,6 +439,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         language: isArabic ? 'ar' : 'en', bookingPolicy: bookingPolicy || undefined };
       if (payOnline) {
         const capability = crypto.randomUUID();
+        saveOnlineBookingReceipt(null);
         try { sessionStorage.setItem(PAYMENT_STORAGE, capability); }
         catch { throw new Error('UPAYMENTS_CHECK_UNAVAILABLE'); }
         try {
@@ -451,7 +452,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
             navigate('/book?payment=return', { replace: true });
             return;
           }
-          sessionStorage.removeItem(PAYMENT_STORAGE);
+          clearPendingPayment();
           throw failure;
         }
         return;
@@ -557,7 +558,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
               </>}
             </>}
           </section>
-          <div className="cb-success-actions"><BookingShareControls bookingId={receipt.id} receipt={receipt.accountSaved ? undefined : receipt.claimToken} shareUrl={receipt.shareUrl} /><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveBookingDraft(null); window.location.href = '/book'; }}>{tr('anotherBooking')}</button></div>
+          <div className="cb-success-actions"><BookingShareControls bookingId={receipt.id} receipt={receipt.accountSaved ? undefined : receipt.claimToken} shareUrl={receipt.shareUrl} /><button type="button" className="cb-primary" onClick={downloadCalendar}><Download size={18} />{tr('addCalendar')}</button>{safeBookingUrl(receipt.locationUrl) && <a className="cb-secondary" href={safeBookingUrl(receipt.locationUrl)} target="_blank" rel="noreferrer">{tr('directions')}</a>}<button type="button" className="cb-text-button" onClick={() => { saveBookingReceipt(null); saveOnlineBookingReceipt(null); clearPendingPayment(); saveBookingDraft(null); window.location.href = '/book'; }}>{tr('anotherBooking')}</button></div>
         </div> : <>
           <FavouriteFeedback />
           <BookingSection feedback={panel === 'city' && !catalogError ? bookingError : null} id="choose-city" title={tr('titles.city')} summary={cityName(city)} open={panel === 'city'} onEdit={() => editSection('city')} onDone={() => openPanel('shop')} editLabel={tr('edit')} doneLabel={tr('guided.done')} disabled={busy}>

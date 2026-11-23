@@ -8,7 +8,7 @@ const orderPattern = /^[A-Za-z0-9_-]{12,255}$/;
 const returnUrl = pilotSite + '/book?payment=return';
 
 type Data = Record<string, unknown>;
-type Attempt = { id: string; state: string; totalFils: number; create?: boolean; accountSaved: boolean };
+type Attempt = { id: string; state: string; totalFils: number; create?: boolean; accountSaved: boolean; retryableFailure?: boolean };
 type Reference = {
   state: string; sessionId: string | null; providerOrderId: string | null; providerRefundKey: string | null;
   refundState: string | null; refundOrderId: string | null;
@@ -58,15 +58,20 @@ export function bookingPaymentPilot(config: Config) {
       if (!tokenPattern.test(trackId || '') || !orderPattern.test(providerOrderId || '') || !orderPattern.test(providerRefundKey || '')) {
         throw Error('UPAYMENTS_PROVIDER_MISMATCH');
       }
-      return await call('capture', id, {
+      await call('capture', id, {
         sessionId, trackId, providerOrderId, providerRefundKey,
         totalFils: fils(transaction.total_paid_non_kwd), currency: transaction.currency_type,
       });
+      return false;
     }
-    if (['NOT CAPTURED','CANCELED','FAILED'].includes(transaction.result) && transaction.isTerminalStatus === true) {
-      return await call('failed', id);
+    const unsuccessful = ['NOT CAPTURED', 'CANCELED', 'FAILED'].includes(transaction.result);
+    if (unsuccessful && transaction.isTerminalStatus === true) {
+      await call('failed', id);
+      return false;
     }
-    return null;
+    // A fresh checkout also reports NOT CAPTURED. Only a processed attempt
+    // with a provider track ID proves the customer actually tried to pay.
+    return unsuccessful && transaction.status === 'done' && tokenPattern.test(transaction.track_id || '');
   }
 
   async function refund(id: string, reference: Reference) {
@@ -99,15 +104,17 @@ export function bookingPaymentPilot(config: Config) {
     const attempt = await call('read', null, { capability }) as Attempt | null;
     if (!attempt || !['pending', 'expired'].includes(attempt.state)) return attempt;
     const reference = await call('inquire', attempt.id) as Reference;
+    let retryableFailure = false;
     if (reference?.sessionId) {
-      try { await reconcile(attempt.id, reference.sessionId); }
+      try { retryableFailure = await reconcile(attempt.id, reference.sessionId); }
       catch (error) {
         if (attempt.state !== 'expired') throw error;
         // The customer can leave an expired hold. The server still checks for
         // delayed capture and starts a refund if a payment comes through.
       }
     }
-    return await call('read', null, { capability }) as Attempt;
+    const current = await call('read', null, { capability }) as Attempt;
+    return current.state === 'pending' && retryableFailure ? { ...current, retryableFailure } : current;
   }
 
   async function background(req: Request, web: (req: Request) => Promise<Response>) {

@@ -104,7 +104,15 @@ is the enabled Test shop. Choose Omar — Fahaheel 01, Classic haircut
 (KD 5.000) and an available time. In checkout, select **Pay online (Test)** and
 **Continue to payment**. Use [UPayments' published KNET test card](https://developers.upayments.com/reference/test-cards)
 and return in the same browser tab. The confirmation shows **Paid online (Test)**
-after the server verifies capture.
+after the server verifies capture. Reloading the confirmation in that tab
+keeps the receipt, including when another tab starts a booking. The Test
+Worker removes provider query fields from the return URL.
+
+For a negative KNET check, first enter a short card number and verify the
+gateway rejects it inline. Then use the published number with a non-matching
+future expiry such as 09/31 and confirm. When UPayments returns a processed,
+retryable failure, Barber++ shows a retry message and offers **Resume payment**.
+The temporary hold protects the slot until retry, terminal failure or expiry.
 
 The default is **Pay at the shop**. Online payment requires auto-confirmation,
 a positive server quote, an eligible future slot and an enabled settlement

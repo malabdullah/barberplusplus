@@ -115,3 +115,22 @@ test('Apple reconnection document headers match the bounded production exception
     assert.equal(response.headers.get('cache-control'), 'private, no-store');
   }
 });
+
+test('UPayments returns discard gateway parameters and preserve the gated booking route', async () => {
+  for (const query of [
+    '?payment=return?payment_id=synthetic&result=CAPTURED',
+    '?payment=return&result=NOT+CAPTURED&redirect=https://other.example.com',
+  ]) {
+    const url = origin + '/book' + query;
+    assert.equal((await worker.fetch(new Request(url), env)).status, 401);
+    const response = await worker.fetch(new Request(url, {headers:login().headers}), env);
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get('location'), origin + '/book?payment=return');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  }
+  for (const path of ['/book?payment=return', '/book?shop=example', '/dashboard/billing?payment=return?payment_id=synthetic']) {
+    const response = await worker.fetch(new Request(origin + path, {headers:login().headers}), env);
+    assert.equal(response.status, 200);
+  }
+});

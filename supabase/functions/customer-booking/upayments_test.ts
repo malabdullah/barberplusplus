@@ -8,7 +8,7 @@ const session = 'checkout-session-1';
 const hook = pilotProject + '/functions/v1/customer-booking/upayments/webhook/' + order;
 const secret = 'sandbox-hmac-for-testing';
 
-function fixture(options: { currency?: string; result?: string; terminal?: boolean; checkoutHost?: string } = {}) {
+function fixture(options: { currency?: string; result?: string; terminal?: boolean; checkoutHost?: string; processed?: boolean } = {}) {
   const calls: { action: string; data: Record<string, unknown> }[] = [];
   let state = 'pending';
   const pilot = bookingPaymentPilot({ secret, token: 'test-token', rpc: (action, _id, data) => {
@@ -32,7 +32,8 @@ function fixture(options: { currency?: string; result?: string; terminal?: boole
       } }, { status: 201 }));
     }
     return Promise.resolve(Response.json({ status: true, data: { transaction: {
-      merchant_requested_order_id: order, reference: order, notify_url: hook, track_id: 'track-000001',
+      merchant_requested_order_id: order, reference: order, notify_url: hook,
+      track_id: options.processed === false ? '' : 'track-000001', status: options.processed === false ? 'pending' : 'done',
       currency_type: options.currency || 'KWD', total_paid_non_kwd: '5.001',
       isTerminalStatus: options.terminal !== false, result: options.result || 'CAPTURED',
       order_id: 'provider-original-order-id', refund_order_id: 'provider-refund-order-id',
@@ -67,6 +68,9 @@ Deno.test('an unverified callback cannot finalize a booking', async () => {
 Deno.test('a card attempt releases the hold only after terminal failure', async () => {
   const interim = fixture({ result: 'NOT CAPTURED', terminal: false });
   const terminal = fixture({ result: 'CANCELED' });
-  if ((await interim.pilot.check(cap))?.state !== 'pending') throw Error('retryable payment released the hold');
+  const rejected = await interim.pilot.check(cap);
+  if (rejected?.state !== 'pending' || !rejected.retryableFailure) throw Error('processed failure must permit retry without releasing the hold');
+  const untouched = fixture({ result: 'NOT CAPTURED', terminal: false, processed: false });
+  if ((await untouched.pilot.check(cap))?.retryableFailure) throw Error('unopened checkout displayed as a failed attempt');
   if ((await terminal.pilot.check(cap))?.state !== 'failed') throw Error('canceled checkout was not released');
 });
