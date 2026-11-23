@@ -12,15 +12,16 @@ def run(sql, request, record, auth_url, storage_url, service, anon):
         return {'Authorization': 'Bearer ' + token, 'apikey': anon, 'Content-Type': content_type}
     def create_user():
         email = 'delete-' + uuid.uuid4().hex + '@example.test'
-        password = 'Synthetic!' + secrets.token_hex(12)
-        created = request(auth_url + '/admin/users', 'POST', {'email': email, 'password': password, 'email_confirm': True, 'app_metadata': {'role': 'customer'}}, headers(service))
+        created = request(auth_url + '/admin/users', 'POST', {'email': email, 'email_confirm': True, 'app_metadata': {'role': 'customer'}}, headers(service))
         check(created['status'] == 200, 'Synthetic Auth user creation failed')
-        login = request(auth_url + '/token?grant_type=password', 'POST', {'email': email, 'password': password}, headers(anon))
+        link = request(auth_url + '/admin/generate_link', 'POST', {'email': email, 'type': 'magiclink'}, headers(service))
+        check(link['status'] == 200 and link['value'].get('hashed_token'), 'Synthetic Auth proof was not issued')
+        login = request(auth_url + '/verify', 'POST', {'type': 'magiclink', 'token_hash': link['value']['hashed_token']}, headers(anon))
         check(login['status'] == 200, 'Real pinned Auth login failed')
         session = login['value']
         claims = json.loads(base64.urlsafe_b64decode(session['access_token'].split('.')[1] + '==='))
         check(claims.get('role') == 'authenticated', 'Synthetic Auth must issue the standard authenticated database role')
-        return {'id': created['value']['id'], 'email': email, 'password': password, 'session': session, 'claims': claims}
+        return {'id': created['value']['id'], 'email': email, 'session': session, 'claims': claims}
     user, other = create_user(), create_user()
     uid, other_id = user['id'], other['id']
     sid = user['claims']['session_id']
