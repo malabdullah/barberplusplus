@@ -33,7 +33,7 @@ select is(jsonb_array_length(public.customer_booking_discovery('search',current_
   'the saved area places the shop in its canonical city');
 select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.shop_search')::jsonb||'{"city":"Discovery QA City"}')->'items'),0,
   'the old city label cannot list a shop whose saved area is elsewhere');
-select set_config('discovery.input',jsonb_build_object('mode','time','city',current_setting('discovery.city'),'barber_id','fa160000-0000-4000-8000-000000000301','date',current_setting('discovery.day'),'range_start','12:25','range_end','12:25')::text,true);
+select set_config('discovery.input',jsonb_build_object('mode','time','city',current_setting('discovery.city'),'query','Discovery QA Barber','barber_id','fa160000-0000-4000-8000-000000000301','date',current_setting('discovery.day'),'range_start','12:25','range_end','12:25')::text,true);
 select is(jsonb_array_length(public.customer_booking_discovery('search',current_setting('discovery.input')::jsonb||'{"cursor":null}')->'items'),1,'an empty cursor loads the first page');
 select ok(not has_function_privilege('anon','public.customer_booking_discovery(text,jsonb)','EXECUTE'),'anon cannot bypass the Edge gateway');
 select ok(not has_function_privilege('authenticated','private.booking_start_windows(uuid,date,time,time,uuid)','EXECUTE'),'raw schedules stay private');
