@@ -30,13 +30,14 @@ async function message(subject) {
 try {
  const signup=await call('email-signup',{name:'Email Probe Customer',email,password:'Short12!',returnTo:'/book'});assert.equal(signup.status,200,JSON.stringify(signup.data));
  assert.equal((await call('email-login',{email,password:'Short12!'})).status,401,'unconfirmed account cannot login');
- let link=await message('Confirm your Barber++ account');assert.equal(link.type,'signup');
+ let link=await message('Confirm your Barber++ account');assert.equal(link.type,'magiclink');
  if(process.env.PROBE_RESEND==='1') {
   assert.equal((await call('email-resend',{email,returnTo:'/book'})).status,200);
   const resent=await message('Confirm your Barber++ account');assert.equal(resent.type,'magiclink');
   link=resent;
  }
  const verified=await client.auth.verifyOtp(link);assert.ifError(verified.error);assert.equal(verified.data.user.app_metadata.role,'customer');
+ assert.equal((await call('email-login',{email,password:'Short12!'})).status,401,'confirming the email does not install the pre-verification password');
  const reused=await client.auth.verifyOtp(link);assert.ok(reused.error,'used confirmation cannot be reused');
  assert.equal((await call('email-signup',{name:'Other Name',email,password:'Otherpass1!'})).status,200,'duplicate signup remains generic');
  const token=verified.data.session.access_token;const profile=await call('email-ensure',{},token);assert.equal(profile.status,200,JSON.stringify(profile.data));
