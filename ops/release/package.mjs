@@ -10,7 +10,7 @@ mkdirSync(out, { recursive: true, mode: 0o700 });
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 if (process.env.GITHUB_REPOSITORY !== REPOSITORY || process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_SHA !== commit || process.env.GITHUB_EVENT_NAME !== 'push') throw Error('Only a main push may package a production release');
 // git archive includes tracked source only; secret files must never be tracked.
-const paths = ['supabase/functions', 'supabase/migrations', 'supabase/schema.expected.sql', 'scripts/normalize-schema.py', 'ops/release', 'deno.json', 'deno.lock'];
+const paths = ['package.json', 'supabase/functions', 'supabase/migrations', 'supabase/schema.expected.sql', 'scripts/normalize-schema.py', 'ops/release', 'deno.json', 'deno.lock'];
 const tracked = execFileSync('git', ['ls-files', '--', ...paths], { encoding: 'utf8' }).trim().split('\n');
 if (tracked.some(p => /(?:^|\/)\.env(?:\.|$)/.test(p) && !p.endsWith('.example'))) throw Error('Tracked secret file refused');
 const files = tracked.filter(p => !/(?:^|\/)\.env(?:\.|$)/.test(p));
