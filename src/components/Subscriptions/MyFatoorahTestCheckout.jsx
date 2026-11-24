@@ -144,7 +144,7 @@ export default function MyFatoorahTestCheckout({ business, date, money, returnPe
     </div>
     <p>{label('sandbox')}</p>
     {state && <div aria-live="polite">
-      <strong>{label(state === 'paid' && capacityAttempt ? 'additionalPlacesVerified' : `states.${state}`)}</strong>
+      <strong>{label(attempt.paymentOutcome === 'declined' ? 'declined' : state === 'paid' && capacityAttempt ? 'additionalPlacesVerified' : `states.${state}`)}</strong>
       {(state === 'paid' || unresolved) && <dl className="billing-review-rows">
         <div><dt>{label('total')}</dt><dd><bdi>{money(attempt.quote.totalFils)}</bdi></dd></div>
         {capacityAttempt && <div><dt>{label('addedPlaces')}</dt><dd>{attempt.quote.addedPlaces}</dd></div>}

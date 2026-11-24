@@ -4147,6 +4147,7 @@
       "MYFATOORAH_INVALID": "Choose a valid term and enough barber places for your active barbers."
     },
     "paymentMethod": "Payment method",
-    "card": "Credit or debit card"
+    "card": "Credit or debit card",
+    "declined": "Payment declined. You can try again."
   }
 }

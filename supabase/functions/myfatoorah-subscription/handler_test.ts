@@ -109,3 +109,35 @@ Deno.test('gateway and bearer are both required', async () => {
   const handler = createHandler(fixture().config);
   assertEquals((await handler(new Request(testSite + '/myfatoorah-subscription', { method: 'POST', body: '{}' }))).status, 401);
 });
+
+Deno.test('check can recover payment after the browser return was lost', async () => {
+  const f = fixture(); await f.send({ action: 'start' });
+  const fetcher = f.config.fetcher;
+  f.config.fetcher = async (...args: any[]) => {
+    const result = await fetcher(...args); const body = await result.json();
+    if (String(args[0]).includes('/invoices/')) {
+      body.Data.Transactions = [body.Data.Transaction]; delete body.Data.Transaction;
+    }
+    return Response.json(body);
+  };
+  assertEquals((await f.send({ action: 'check' })).status, 200);
+  assertEquals(f.captures, 1);
+  assertEquals(f.calls.filter(c => c.url?.includes('/payments/' + payment)).length, 1);
+});
+Deno.test('no transactions is pending, not paid or failed', async () => {
+  const f = fixture(); await f.send({ action: 'start' });
+  f.config.fetcher = () => Promise.resolve(Response.json({ IsSuccess: false, Message: 'No invoices match this InvoiceId' }));
+  assertEquals((await (await f.send({ action: 'check' })).json()).attempt.state, 'pending');
+  assertEquals(f.captures, 0);
+});
+Deno.test('expired invoice only closes after matching API evidence', async () => {
+  const f = fixture(); await f.send({ action: 'start' });
+  const fetcher = f.config.fetcher;
+  f.config.fetcher = async (...args: any[]) => {
+    const result = await fetcher(...args); const body = await result.json();
+    body.Data.Invoice.Status = 'EXPIRED'; body.Data.Transactions = []; return Response.json(body);
+  };
+  await f.send({ action: 'check' });
+  assertEquals(f.calls.some(c => c.action === 'failed'), true);
+  assertEquals(f.captures, 0);
+});

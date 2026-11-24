@@ -85,7 +85,31 @@ export function createHandler(config: Config) {
   async function check(attempt: Payload, paymentId: unknown) {
     const reference = await config.provider('inquire', attempt.id, {});
     if (!reference) return attempt;
-    if (typeof paymentId !== 'string' || !/^\d{1,100}$/.test(paymentId)) return attempt;
+    if (paymentId != null && (typeof paymentId !== 'string' || !/^\d{1,100}$/.test(paymentId))) {
+      throw new Error('MYFATOORAH_INVALID');
+    }
+    if (!paymentId) {
+      // Recover after a closed payment tab without requiring a redirect or a
+      // browser-supplied success flag. Only query our stored provider invoice.
+      const result = await request('GET', 'invoices/' + reference.sessionId);
+      if (result.status === 200 && result.body?.IsSuccess === false
+        && result.body.Message === 'No invoices match this InvoiceId') return attempt;
+      if (result.status !== 200 || result.body?.IsSuccess !== true) throw new Error('MYFATOORAH_VERIFY_UNAVAILABLE');
+      const data = result.body.Data;
+      if (String(data?.Invoice?.Id) !== reference.sessionId || data.Invoice.ExternalIdentifier !== attempt.id
+        || data.Amount?.BaseCurrency !== 'KWD' || fils(data.Amount.ValueInBaseCurrency) !== attempt.quote.totalFils) {
+        throw new Error('MYFATOORAH_PROVIDER_MISMATCH');
+      }
+      const transactions = Array.isArray(data.Transactions) ? data.Transactions : [];
+      paymentId = transactions.find((t: Payload) => t.Status === 'SUCCESS')?.PaymentId;
+      if (!paymentId && ['EXPIRED', 'CANCELLED'].includes(data.Invoice.Status)) {
+        return await config.provider('failed', attempt.id, {
+          orderId: attempt.id, sessionId: reference.sessionId,
+        });
+      }
+      if (!paymentId) return { ...attempt, paymentOutcome: transactions.some((t: Payload) => t.Status === 'FAILED') ? 'declined' : null };
+      if (typeof paymentId !== 'string' || !/^\d{1,100}$/.test(paymentId)) throw new Error('MYFATOORAH_PROVIDER_MISMATCH');
+    }
     const response = await request('GET', 'payments/' + paymentId);
     if (response.status !== 200 || response.body?.IsSuccess !== true) throw new Error('MYFATOORAH_VERIFY_UNAVAILABLE');
     const { Invoice: invoice, Transaction: transaction, Amount: amount } = response.body.Data || {};
@@ -100,7 +124,7 @@ export function createHandler(config: Config) {
     }
     // A failed card attempt can still be retried at the same hosted invoice.
     // Keep the checkout pending instead of releasing it for a duplicate payment.
-    return attempt;
+    return { ...attempt, paymentOutcome: transaction.Status === 'FAILED' ? 'declined' : null };
   }
 
   return async (req: Request) => {
