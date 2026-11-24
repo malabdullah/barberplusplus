@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { walletAmountFils, walletBooking, walletRpc } from '../services/bWallet.service';
 import { customerBookingService } from '../services/customerBooking.service';
-import { onlinePaymentLink, savePendingPayment } from '../components/Customer/BookingPaymentReturn';
+import { clearPendingPayment, onlinePaymentLink, savePendingPayment } from '../components/Customer/BookingPaymentReturn';
 import { reportMoney } from '../utils/reportFormatting';
 import './CustomerBooking.css';
 import './CustomerAccount.css';
@@ -55,6 +55,7 @@ function PayApproved({ id }) {
       if (['UNAVAILABLE','UPAYMENTS_CHECK_UNAVAILABLE'].includes(failure.message) || failure.name === 'TimeoutError') {
         navigate('/book?payment=return', { replace:true }); return;
       }
+      clearPendingPayment();
       setError(failure.message);
     } finally { running.current = false; setBusy(false); }
   }

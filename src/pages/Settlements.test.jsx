@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render as renderWithLibrary, screen, waitFor, withi
 import { MemoryRouter } from 'react-router-dom';
 const render = element => renderWithLibrary(element, { wrapper: MemoryRouter });
 const { rpc, context } = vi.hoisted(() => ({ rpc: vi.fn(), context: { user: { id: 'manager' } } }));
+vi.mock('../lib/runtimeConfig', () => ({ walletTestEnvironment: true }));
 vi.mock('../services/settlements.service', () => ({ settlementRpc: rpc }));
 vi.mock('../services/settlementExport.service', () => ({ exportSettlement: vi.fn() }));
 vi.mock('../context/AppContext', () => ({ useApp: () => context }));

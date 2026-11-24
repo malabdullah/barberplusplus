@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Plus, RefreshCw, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { walletTestEnvironment } from '../lib/runtimeConfig';
 import { settlementRpc } from '../services/settlements.service';
 import { exportSettlement } from '../services/settlementExport.service';
 import { settlementAmount, settlementDate, settlementNow, settlementPercent } from '../utils/settlementFormatting';
@@ -20,6 +21,7 @@ const listColumns = {
   payouts: ['date', 'amountFils', 'state', 'payeeName', 'reference', 'actions'],
   history: ['date', 'action', 'reason'],
 };
+const managedPayment = receipt => walletTestEnvironment && receipt?.sourceRef?.startsWith('online-booking:');
 const reasonActions = ['save-policy', 'save-beneficiary', 'record-refund', 'hold', 'release-hold', 'reverse-event', 'uncertain-payout', 'fail-payout', 'cancel-payout', 'cancel-statement'];
 export default function Settlements({ admin = false }) {
   const { t, i18n } = useTranslation();
@@ -276,7 +278,7 @@ export default function Settlements({ admin = false }) {
               {button('journal', row)}
               {admin && !row.reversed && moreActions(<>
                 {!row.settledAt && button('settle-receipt', row)}
-                {button('record-fee', row)}{button('record-refund', row)}{button(row.held ? 'release-hold' : 'hold', row)}
+                {button('record-fee', row)}{!managedPayment(row) && button('record-refund', row)}{button(row.held ? 'release-hold' : 'hold', row)}
               </>)}
             </div>)}
           </> : tab === 'statements' ? <>
@@ -350,7 +352,7 @@ export default function Settlements({ admin = false }) {
           {admin && details.state === 'final' && <button type="button" className="btn btn-primary" onClick={() => open('prepare-payout', details)}>{label('prepare-payout')}</button>}
         </div>
       </>}
-      {action === 'journal' && <>{detailRows.map(row => <article className="settlement-journal" key={row.id}><div><strong>{label(row.kind)}</strong><span>{money(row.amountFils)}</span></div><p>{row.externalRef} · {reportDate(row.occurredAt, i18n.language, true)}</p>{row.reason && <p>{row.reason}</p>}{row.reversed ? <span>{label('reversed')}</span> : admin && ['receipt', 'fee', 'refund'].includes(row.kind) && button('reverse-event', { ...row, receiptId: dialog.row.id })}</article>)}{pagination(detailPage, setDetailPage, detailMore)}</>}
+      {action === 'journal' && <>{detailRows.map(row => <article className="settlement-journal" key={row.id}><div><strong>{label(row.kind)}</strong><span>{money(row.amountFils)}</span></div><p>{row.externalRef} · {reportDate(row.occurredAt, i18n.language, true)}</p>{row.reason && <p>{row.reason}</p>}{row.reversed ? <span>{label('reversed')}</span> : admin && ['receipt', 'fee', 'refund'].includes(row.kind) && (row.kind === 'fee' || !managedPayment(dialog.row)) && button('reverse-event', { ...row, receiptId: dialog.row.id })}</article>)}{pagination(detailPage, setDetailPage, detailMore)}</>}
       </>}
     </dialog>
   </main>;

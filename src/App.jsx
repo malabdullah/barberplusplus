@@ -248,7 +248,6 @@ function AppRoutes() {
         <Route path="services" element={<Services />} />
         <Route path="reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
         <Route path="finances" element={<Suspense fallback={null}><Finances /></Suspense>} />
-        {walletTestEnvironment && <Route path="wallet" element={<Suspense fallback={null}><AdminWallet /></Suspense>} />}
         {settlementFeaturesEnabled && <Route path="settlements" element={<Suspense fallback={null}><Settlements /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="billing" element={<Suspense fallback={null}><SubscriptionBilling /></Suspense>} />}
         <Route path="barbers" element={<Barbers />} />
