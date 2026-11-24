@@ -90,6 +90,10 @@ hold and the server can release an unpaid slot or refund a late capture.
   request is interrupted, including when the outcome is uncertain.
 - Top-up states are `creating`, `pending`, `credited`, `failed`, and
   `review`. Credit the visual balance only after fetching the server summary.
+- When `linkExpired` is true, the checkout link is unavailable while the
+  top-up is unresolved. Keep the same ID and use `check`. Show that the
+  payment outcome is being verified and keep new top-ups disabled until the
+  original outcome is confirmed. A missing link alone does not mean failure.
 - Wallet-only and split refunds, and gateway-only refund destination selection,
   use the existing website rules. `refundChoice: true` means a paid gateway-only
   booking can offer a destination choice. `refundToWallet: true` means a paid

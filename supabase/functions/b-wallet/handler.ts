@@ -49,7 +49,7 @@ export function createWalletHandler(config: Config) {
       await config.rpc('capture', id, { session_id: sessionId, track_id: transaction.track_id,
         order_id: transaction.order_id, amount_fils: amount, currency: 'KWD' });
     } else if (['FAILED', 'NOT CAPTURED', 'CANCELED'].includes(transaction.result)) {
-      await config.rpc('fail', id, {});
+      await config.rpc('fail', id, { session_id: sessionId });
     }
   }
 

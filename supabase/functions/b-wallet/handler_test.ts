@@ -54,7 +54,7 @@ Deno.test('wallet callback ignores the supplied status and verifies the provider
     token: 'unit-test-token', secret, allows: () => Promise.resolve(false), identify: () => Promise.resolve(null),
     rpc: (action, attempt, data) => {
       assert.equal(attempt, id);
-      if (action === 'reconcile') return Promise.resolve({ state: credited ? 'credited' : 'pending', sessionId: exampleSession });
+      if (action === 'reconcile') return Promise.resolve({ state: credited ? 'credited' : 'review', sessionId: exampleSession });
       assert.equal(action, 'capture');
       assert.equal(data.amount_fils, 1250);
       captures++;
@@ -80,4 +80,55 @@ Deno.test('wallet callback ignores the supplied status and verifies the provider
   assert.equal((await handler(new Request(callback, { method:'POST', body:raw, headers }))).status, 204);
   assert.equal((await handler(new Request(callback, { method:'POST', body:raw, headers }))).status, 204);
   assert.equal(captures, 1);
+});
+
+Deno.test('expired wallet link stays unresolved until a bound terminal non-capture', async () => {
+  let state = 'review';
+  let terminal: boolean | undefined;
+  let reference = order;
+  let charges = 0;
+  const handler = createWalletHandler({
+    token: 'unit-test-token', secret, allows: () => Promise.resolve(true),
+    identify: () => Promise.resolve(identity),
+    rpc: (action, _id, data) => {
+      if (action === 'read' || action === 'latest') {
+        return Promise.resolve({ id, state, amountFils: '1250', checkoutUrl: null, linkExpired: state === 'review' });
+      }
+      if (action === 'reconcile') return Promise.resolve({ state, sessionId: exampleSession });
+      if (action === 'start') return Promise.resolve({ id, state, amountFils: '1250' });
+      assert.equal(action, 'fail');
+      assert.equal(data.session_id, exampleSession);
+      state = 'failed';
+      return Promise.resolve(null);
+    },
+    fetcher: (url, init) => {
+      if (init?.method === 'POST') charges++;
+      assert.equal(init?.method, 'GET');
+      assert.equal(new URL(String(url)).searchParams.get('session_id'), exampleSession);
+      return Promise.resolve(Response.json({ status: true, data: { transaction: {
+        merchant_requested_order_id: order, reference, notify_url: callback, result: 'NOT CAPTURED',
+        status: terminal ? 'done' : 'PENDING', isTerminalStatus: terminal, total_paid_non_kwd: '1.250',
+      } } }, { status: 201 }));
+    },
+  });
+  const call = (action: string) => handler(new Request(walletSite, {
+    method: 'POST', body: JSON.stringify({
+      action, id: action === 'start' ? '10000000-0000-4000-8000-000000000002' : id, amountFils: 1250,
+    }),
+  }));
+  const { topup } = await (await call('check')).json();
+  assert.deepEqual(topup, { id, state: 'review', amountFils: '1250', checkoutUrl: null, linkExpired: true });
+  assert.equal((await (await call('start')).json()).topup.id, id);
+  assert.equal(charges, 0);
+
+  terminal = true;
+  reference = 'different-order';
+  assert.equal((await call('check')).status, 503);
+  assert.equal(state, 'review');
+
+  reference = order;
+  const result = await call('check');
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).topup.state, 'failed');
+  assert.equal(charges, 0);
 });
