@@ -4077,6 +4077,7 @@
     "sendRequest": "Request appointment",
     "requestSent": "Request sent. We’ll let you know when the barber approves it.",
     "pendingApproval": "Pending barber approval",
+    "approveForPayment": "Approve and request payment",
     "awaitingPayment": "Approved · awaiting payment",
     "payBooking": "Pay for your appointment",
     "payBy": "Approved · pay by {{date}}",

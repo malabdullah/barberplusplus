@@ -137,11 +137,14 @@ const calculateEndTime = (startTime, durationMinutes) => {
 function BookingDetails({ booking, onClose, onStatusChange, services, barberData, existingBookings, onModifyServices }) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
+  const awaitingPayment = booking.status === 'pending' && booking.onlinePaymentState === 'awaiting_payment';
+  const needsApproval = booking.status === 'pending' && booking.onlinePaymentState === 'pending_approval';
+  const waitingForCheckout = needsApproval || awaitingPayment;
   return (
     <div className="booking-details">
       <div className="booking-details-header">
         <div className={`booking-status-badge ${booking.status}`}>
-          {booking.status.replace('-', ' ')}
+          {awaitingPayment ? t('bWallet.awaitingPayment') : needsApproval ? t('bWallet.pendingApproval') : booking.status.replace('-', ' ')}
         </div>
         <button className="booking-close-btn" onClick={onClose}>
           <X size={20} />
@@ -193,13 +196,13 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
         <span className="price">{booking.price} {t('common.currency')}</span>
       </div>
 
-      <ModifyServicesSection
+      {!waitingForCheckout && booking.onlinePaymentState !== 'paid' && <ModifyServicesSection
         booking={booking}
         services={services}
         barberData={barberData}
         existingBookings={existingBookings}
         onSave={onModifyServices}
-      />
+      />}
 
       {booking.notes && (
         <div className="booking-details-notes">
@@ -259,10 +262,12 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
           value={booking.status?.replace('_', '-')}
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
-          {BOOKING_STATUSES.map((status) => (
+          {BOOKING_STATUSES.filter(status => !waitingForCheckout || ['pending', 'cancelled'].includes(status) || (needsApproval && status === 'confirmed')).map(status => (
             <option key={status} value={status}
               disabled={status === 'no-show' && booking.status !== 'no_show' && appointmentDate(booking).getTime() > Date.now()}>
-              {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
+              {t(awaitingPayment && status === 'pending' ? 'bWallet.awaitingPayment'
+                : needsApproval && status === 'confirmed' ? 'bWallet.approveForPayment'
+                  : `bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
         </select>

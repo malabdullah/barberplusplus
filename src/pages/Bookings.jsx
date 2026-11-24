@@ -62,7 +62,9 @@ const STATUS_CONFIG = {
 
 const BookingCard = memo(function BookingCard({ booking, onEdit, onCancel, onComplete }) {
   const { t } = useTranslation();
-  const status = STATUS_CONFIG[(booking.status || 'pending').replace('_', '-')] || STATUS_CONFIG.pending;
+  const status = booking.status === 'pending' && booking.onlinePaymentState === 'awaiting_payment'
+    ? { color: 'warning', labelKey: 'bWallet.awaitingPayment' }
+    : STATUS_CONFIG[(booking.status || 'pending').replace('_', '-')] || STATUS_CONFIG.pending;
 
   return (
     <div className={`booking-card status-${status.color}`} onClick={() => onEdit(booking)}>
@@ -100,12 +102,15 @@ const BookingDetails = memo(function BookingDetails({
   const dateLocale = i18n.language === 'ar' ? ar : enUS;
   const barberData = barbers?.find(b => b.id === booking.barberId);
   const status = (booking.status || 'pending').replace('_', '-');
+  const awaitingPayment = booking.status === 'pending' && booking.onlinePaymentState === 'awaiting_payment';
+  const needsApproval = booking.status === 'pending' && booking.onlinePaymentState === 'pending_approval';
+  const waitingForCheckout = needsApproval || awaitingPayment;
 
   return (
     <div className="booking-details">
       <div className="booking-details-header">
         <div className={`booking-status-badge ${status}`}>
-          {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
+          {t(awaitingPayment ? 'bWallet.awaitingPayment' : needsApproval ? 'bWallet.pendingApproval' : `bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
         </div>
         <button className="booking-close-btn" onClick={onClose} aria-label={t('common.close')}>
           <X size={20} aria-hidden="true" />
@@ -164,13 +169,13 @@ const BookingDetails = memo(function BookingDetails({
         <span className="price">{Number(booking.price).toFixed(3)} {t('common.currency')}</span>
       </div>
 
-      <ModifyServicesSection
+      {!waitingForCheckout && booking.onlinePaymentState !== 'paid' && <ModifyServicesSection
         booking={booking}
         services={services}
         barberData={barberData}
         existingBookings={existingBookings}
         onSave={onModifyServices}
-      />
+      />}
 
       {booking.notes && (
         <div className="booking-details-notes">
@@ -223,7 +228,7 @@ const BookingDetails = memo(function BookingDetails({
         </div>
       )}
 
-      {['pending', 'confirmed'].includes(booking.status)
+      {!waitingForCheckout && ['pending', 'confirmed'].includes(booking.status)
         && booking.date >= getKuwaitDate() && (
           <button className="btn btn-secondary" onClick={onReschedule}>{t('chair.reschedule')}</button>
         )}
@@ -235,10 +240,12 @@ const BookingDetails = memo(function BookingDetails({
           value={status}
           onChange={(e) => onStatusChange(booking.id, e.target.value)}
         >
-          {BOOKING_STATUSES.map((status) => (
+          {BOOKING_STATUSES.filter(status => !waitingForCheckout || ['pending', 'cancelled'].includes(status) || (needsApproval && status === 'confirmed')).map(status => (
             <option key={status} value={status}
               disabled={(status === 'no-show' && appointmentDate(booking).getTime() > Date.now()) || (status === 'completed' && appointmentDate(booking).getTime() + booking.duration * 60000 > Date.now())}>
-              {t(`bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
+              {t(awaitingPayment && status === 'pending' ? 'bWallet.awaitingPayment'
+                : needsApproval && status === 'confirmed' ? 'bWallet.approveForPayment'
+                  : `bookings.status.${status === 'no-show' ? 'noShow' : status}`)}
             </option>
           ))}
         </select>
