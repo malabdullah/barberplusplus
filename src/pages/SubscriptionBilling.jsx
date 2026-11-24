@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import SubscriptionInvoices from '../components/Subscriptions/SubscriptionInvoices';
+import MyFatoorahTestCheckout from '../components/Subscriptions/MyFatoorahTestCheckout';
 import UPaymentsTestCheckout, { showUPaymentsTest } from '../components/Subscriptions/UPaymentsTestCheckout';
 import { useApp } from '../context/AppContext';
 import { billingWriteIntent, subscriptionRpc } from '../services/subscriptionBilling.service';
@@ -221,6 +222,8 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
         </section>
         {showUPaymentsTest && detail.canManage && <UPaymentsTestCheckout key={`upayments:${detail.id}`}
           business={detail} date={date} money={money} returnPending={paymentReturn} onEligible={setUPaymentsBusiness} onPaid={refreshBilling}/>}
+        {showUPaymentsTest && detail.canManage && <MyFatoorahTestCheckout key={`myfatoorah:${detail.id}`}
+          business={detail} date={date} money={money} returnPending={new URLSearchParams(window.location.search).get('myfatoorah')?.split('?')[0] === 'return'} onEligible={setUPaymentsBusiness} onPaid={refreshBilling}/>}
         <div className="manager-billing-disclosures" key={`disclosures:${detail.id}`}>
           <BillingDisclosure title={sp('calculator')}>
             <form className="subscription-form manager-billing-estimate" onSubmit={estimate}>

@@ -1721,7 +1721,7 @@
     },
     "errors": {
       "SHOP_PAYMENT_CHANGED": "This shop changed its payment methods. Review the available options and try again.",
-    "UPAYMENTS_NOT_AVAILABLE": "Online payment is unavailable for this appointment. Choose Pay at the shop or pick another time.",
+      "UPAYMENTS_NOT_AVAILABLE": "Online payment is unavailable for this appointment. Choose Pay at the shop or pick another time.",
       "UPAYMENTS_CHECK_UNAVAILABLE": "The payment page couldn’t open. Check your payment status before trying again.",
       "SELF_BOOKING_NOT_ALLOWED": "You cannot book an appointment with yourself. Choose another barber.",
       "PHONE_CHANGED": "Your phone number needs to be verified again. Review the number and try again.",
@@ -4104,5 +4104,49 @@
     "deletionPending": "Resolve your pending wallet payments, refunds, or paid bookings before deleting your account.",
     "deletionBalance": "Your B-Wallet balance is {{amount}}. You can use it first or clear it when you delete your account.",
     "deletionConsent": "I agree to clear the remaining {{amount}} from B-Wallet."
+  },
+  "myfatoorahTest": {
+    "title": "MyFatoorah checkout",
+    "badge": "Test",
+    "sandbox": "Use MyFatoorah test card details for this simulated payment.",
+    "places": "Barber places",
+    "review": "Review total",
+    "pay": "Pay with MyFatoorah (Test)",
+    "check": "Check payment",
+    "resume": "Return to MyFatoorah",
+    "receipt": "Receipt",
+    "total": "Total",
+    "periodEnd": "Billing period ends",
+    "addPlaces": "Add barber places",
+    "placesInUse": "{{active}} active · {{paid}} paid places",
+    "placesAfterPurchase": "Barber places after purchase",
+    "reviewAdditionalPlaces": "Review additional places",
+    "addedPlaces": "Additional places",
+    "totalPlaces": "Total paid places",
+    "proratedTotal": "Prorated amount due today",
+    "additionalPlacesVerified": "Additional places purchased",
+    "manageBarbers": "Manage barbers",
+    "states": {
+      "paid": "Test payment verified",
+      "pending": "Waiting for payment verification",
+      "creating": "Checking whether checkout opened",
+      "failed": "Payment was declined, cancelled, or expired. You can try again.",
+      "review": "Test payment needs review"
+    },
+    "errors": {
+      "MYFATOORAH_QUOTE_EXPIRED": "This quote expired. Review the additional places again.",
+      "MYFATOORAH_CAPACITY_UNAVAILABLE": "Additional places are unavailable for this billing period. Check your subscription.",
+      "default": "Unable to complete checkout. Check the payment status before trying again.",
+      "MYFATOORAH_QUOTE_CHANGED": "Your quote changed. Review the total again.",
+      "MYFATOORAH_TERM_ACTIVE": "This business already has an active billing period.",
+      "MYFATOORAH_UNRESOLVED": "A payment is already in progress. Check its status.",
+      "MYFATOORAH_VERIFY_UNAVAILABLE": "MyFatoorah hasn’t confirmed the result yet. Check again shortly.",
+      "BILLING_CODE_UNAVAILABLE": "This discount code is unavailable for this checkout.",
+      "BILLING_CODE_USED": "This discount code has already been used.",
+      "MYFATOORAH_ZERO_TOTAL": "This sandbox checkout requires a positive total.",
+      "MYFATOORAH_INVALID": "Choose a valid term and enough barber places for your active barbers."
+    },
+    "paymentMethod": "Payment method",
+    "card": "Credit or debit card"
   }
 }

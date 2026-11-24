@@ -56,6 +56,7 @@ it('uses backend totals and re-reads after a saved preference', async () => {
 });
 it('replaces the checkout after a billing refresh and quotes the edited discount code', async () => {
   fetch.mockImplementation(async (_url, options) => {
+    if (_url.includes('myfatoorah')) return Response.json({ eligible: false });
     const { action, code } = JSON.parse(options.body);
     if (action === 'read') return Response.json({ eligible: true });
     return Response.json({ subtotalFils: 30000, discountFils: code === 'TEST25' ? 7500 : 0, totalFils: code === 'TEST25' ? 22500 : 30000 });
@@ -90,6 +91,7 @@ it('reviews a mid-term capacity purchase and refreshes paid places after verific
   const quote = { quoteId: 'capacity-quote', kind: 'capacity', count: 4, addedPlaces: 1, totalFils: 5001, periodEnd };
   rpc.mockImplementation(async action => action === 'businesses' ? { rows: [active] } : { ...active, paidCapacity: capacity });
   fetch.mockImplementation(async (_url, options) => {
+    if (_url.includes('myfatoorah')) return Response.json({ eligible: false });
     const { action, ...intent } = JSON.parse(options.body);
     switch (action) {
       case 'quote':

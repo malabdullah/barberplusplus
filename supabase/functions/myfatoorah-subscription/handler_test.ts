@@ -1,0 +1,111 @@
+import assert from 'node:assert/strict';
+const assertEquals: typeof assert.deepEqual = assert.deepEqual;
+const assertRejects = assert.rejects;
+import { checkoutUrl, createHandler, fils, testSite } from './handler.ts';
+
+const id = '11111111-1111-4111-8111-111111111111';
+const invoice = '1234567';
+const payment = '07071234567890123456';
+function fixture(overrides: Record<string, unknown> = {}) {
+  let captures = 0;
+  let claimed = false;
+  let attempt: any = { id, state: 'creating', createdAt: new Date().toISOString(),
+    quote: { totalFils: 22500, paymentMethod: 'KNET' } };
+  const calls: any[] = [];
+  const provider = (action: string, _id: string, data: any) => {
+    calls.push({ action, id: _id, data });
+    if (action === 'claim-create') { if (claimed) return Promise.resolve(false); claimed = true; return Promise.resolve(true); }
+    if (action === 'attach') attempt = { ...attempt, state: 'pending', checkoutUrl: data.checkoutUrl };
+    if (action === 'inquire') return Promise.resolve({ sessionId: invoice });
+    if (action === 'capture') { captures++; attempt = { ...attempt, state: 'paid' }; }
+    return Promise.resolve(attempt);
+  };
+  const config: any = { token: 'sandbox-only', allowsStaff: () => Promise.resolve(true), provider,
+    manager: () => Promise.resolve({ eligible: true, attempt }),
+    fetcher: (url: string, options: any) => {
+      calls.push({ url, options });
+      return Promise.resolve(Response.json(options.method === 'POST'
+        ? { IsSuccess: true, Data: { InvoiceId: invoice, PaymentURL: 'https://demo.myfatoorah.com/KWT/ie/demo' } }
+        : { IsSuccess: true, Data: { Invoice: { Id: invoice, Status: 'PAID', ExternalIdentifier: id },
+          Transaction: { Status: 'SUCCESS', PaymentId: payment }, Amount: { BaseCurrency: 'KWD', ValueInBaseCurrency: '22.500' } } }));
+    }, ...overrides };
+  const handler = createHandler(config);
+  return { config, calls, get captures() { return captures; },
+    send: (data: any) => handler(new Request(testSite + '/myfatoorah-subscription', {
+      method: 'POST', headers: { authorization: 'Bearer test-token' },
+      body: JSON.stringify({ businessId: id, ...data }),
+    })) };
+}
+
+Deno.test('fils uses exact three-place KWD amounts', () => {
+  assertEquals([fils('22.500'), fils('1.001'), fils('1.0001'), fils(-1), fils(null)], [22500, 1001, null, null, null]);
+});
+Deno.test('checkout rejects non-sandbox destinations and embedded credentials', async () => {
+  for (const url of ['https://api.myfatoorah.com/pay', 'https://evil.test', 'https://x:y@demo.myfatoorah.com/']) {
+    await assertRejects(async () => checkoutUrl(url));
+  }
+});
+Deno.test('create uses pinned sandbox API, canonical amount and idempotency key', async () => {
+  const f = fixture();
+  assertEquals((await f.send({ action: 'start' })).status, 200);
+  const call = f.calls.find(c => c.url);
+  assertEquals(call.url, 'https://apitest.myfatoorah.com/v3/payments');
+  const body = JSON.parse(call.options.body);
+  assertEquals(body.Order, { Amount: 22.5, Currency: 'KWD', ExternalIdentifier: id });
+  assertEquals(call.options.headers['Idempotency-Key'], 'barber-test-' + id);
+  assertEquals(body.NotificationOption, 'LINK');
+  assertEquals(f.captures, 0);
+});
+Deno.test('a duplicate create cannot issue a second checkout', async () => {
+  const f = fixture();
+  await f.send({ action: 'start' });
+  await f.send({ action: 'start' });
+  assertEquals(f.calls.filter(c => c.url && c.options.method === 'POST').length, 1);
+});
+Deno.test('check captures only API-verified invoice and exact amount', async () => {
+  const f = fixture();
+  await f.send({ action: 'start' });
+  const result = await f.send({ action: 'check', paymentId: payment, attemptId: id });
+  assertEquals(result.status, 200);
+  assertEquals(f.captures, 1);
+  assertEquals(f.calls.find(c => c.action === 'capture').data.totalFils, 22500);
+});
+for (const [label, change] of [
+  ['invoice', (d: any) => { d.Invoice.Id = '999999'; }],
+  ['reference', (d: any) => { d.Invoice.ExternalIdentifier = 'wrong'; }],
+  ['currency', (d: any) => { d.Amount.BaseCurrency = 'USD'; }],
+  ['amount', (d: any) => { d.Amount.ValueInBaseCurrency = '0.001'; }],
+  ['payment', (d: any) => { d.Transaction.PaymentId = '123'; }],
+] as const) {
+  Deno.test('check rejects mismatched ' + label, async () => {
+    const f = fixture();
+    await f.send({ action: 'start' });
+    const fetcher = f.config.fetcher;
+    f.config.fetcher = async (...args: any[]) => {
+      const result = await fetcher(...args); const body = await result.json(); change(body.Data); return Response.json(body);
+    };
+    assertEquals((await f.send({ action: 'check', paymentId: payment })).status, 503);
+    assertEquals(f.captures, 0);
+  });
+}
+Deno.test('declined card stays pending for a same-invoice retry', async () => {
+  const f = fixture(); await f.send({ action: 'start' });
+  const fetcher = f.config.fetcher;
+  f.config.fetcher = async (...args: any[]) => {
+    const result = await fetcher(...args); const body = await result.json();
+    body.Data.Invoice.Status = 'PENDING'; body.Data.Transaction.Status = 'FAILED'; return Response.json(body);
+  };
+  assertEquals((await (await f.send({ action: 'check', paymentId: payment })).json()).attempt.state, 'pending');
+  assertEquals(f.captures, 0);
+});
+Deno.test('return hints cannot authorize another attempt', async () => {
+  const f = fixture(); await f.send({ action: 'start' });
+  assertEquals((await f.send({ action: 'check', paymentId: payment, attemptId: 'other' })).status, 503);
+  assertEquals(f.captures, 0);
+});
+Deno.test('gateway and bearer are both required', async () => {
+  const f = fixture({ allowsStaff: () => Promise.resolve(false) });
+  assertEquals((await f.send({ action: 'read' })).status, 403);
+  const handler = createHandler(fixture().config);
+  assertEquals((await handler(new Request(testSite + '/myfatoorah-subscription', { method: 'POST', body: '{}' }))).status, 401);
+});
