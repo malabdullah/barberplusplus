@@ -6,7 +6,7 @@ import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
-  const token = action.startsWith('discovery-') || action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'online-start' || action === 'online-check' || action === 'claim-booking' ? await customerToken() : '';
+  const token = action.startsWith('discovery-') || action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'online-start' || action === 'online-check' || action === 'online-request-approval' || action === 'online-approval-checkout' || action === 'claim-booking' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -72,6 +72,9 @@ export const customerBookingService = {
   guestProof: data => request('guest-proof', data),
   requestCode: data => request('request-code', data),
   verifyCode: data => request('verify-code', data),
+  requestPaidApproval: data => request('online-request-approval', data),
+  payApproved: (bookingId, walletFils, capability, language) =>
+    request('online-approval-checkout', { bookingId, walletFils, capability, language }),
   startOnlinePayment: (data, capability, walletFils) => request('online-start', { ...data, capability, walletFils }),
   async checkOnlinePayment(capability) {
     const result = await request('online-check', { capability });

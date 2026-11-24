@@ -4009,6 +4009,8 @@
     "testNote": "Issued in the Barber++ Test environment. No real payment was collected."
   },
   "bWallet": {
+    "splitChoice": "B-Wallet + UPayments",
+    "walletAmount": "Amount from B-Wallet (KWD)",
     "walletOnly": "B-Wallet",
     "split": "B-Wallet {{wallet}} + UPayments {{card}}",
     "holdExpired": "Payment expired. Please choose the time again.",
@@ -4064,7 +4066,27 @@
       "WALLET_INVALID_CREDIT": "Enter a positive amount in KWD.",
       "WALLET_TOPUP_PENDING": "Check your existing top-up before starting another.",
       "WALLET_PROVIDER_UNAVAILABLE": "Could not verify payment. Please check its status again.",
-      "WALLET_FORBIDDEN": "You don’t have access to this wallet action."
-    }
+      "WALLET_FORBIDDEN": "You don’t have access to this wallet action.",
+      "WALLET_PENDING_ACTIVITY": "Your wallet has a payment, refund, or paid appointment that still needs attention.",
+      "WALLET_CLEAR_CONFIRMATION_REQUIRED": "Review and confirm the exact balance before clearing your wallet.",
+      "WALLET_INSUFFICIENT_BALANCE": "Your wallet balance changed. Check the balance or choose another payment method.",
+      "WALLET_PAYMENT_WINDOW_CLOSED": "The time to pay has ended.",
+      "WALLET_RETRY_CHANGED": "This appointment already has a payment attempt. Check its status before trying again."
+    },
+    "afterApproval": "Pay online after barber approval",
+    "sendRequest": "Request appointment",
+    "requestSent": "Request sent. We’ll let you know when the barber approves it.",
+    "pendingApproval": "Pending barber approval",
+    "awaitingPayment": "Approved · awaiting payment",
+    "payBooking": "Pay for your appointment",
+    "payBy": "Approved · pay by {{date}}",
+    "payNow": "Pay now",
+    "refundWallet": "The eligible refund will go to B-Wallet.",
+    "refundDestination": "Refund destination",
+    "refundGateway": "Original payment method",
+    "gatewayRefundTiming": "UPayments processes refunds to the original payment method. Eligibility and timing depend on the payment method and your bank.",
+    "deletionPending": "Resolve your pending wallet payments, refunds, or paid bookings before deleting your account.",
+    "deletionBalance": "Your B-Wallet balance is {{amount}}. You can use it first or clear it when you delete your account.",
+    "deletionConsent": "I agree to clear the remaining {{amount}} from B-Wallet."
   }
 }

@@ -21,6 +21,11 @@ Deno.serve(createCustomerAuthHandler({
   androidEnabled:Deno.env.get('ANDROID_CUSTOMER_ENABLED')==='true',
   cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
+    if (action==='wallet-cancel') {
+      const result=await admin.rpc('b_wallet_cancel_service',{p_data:data});
+      if (result.error) throw Error(result.error.message);
+      return result.data;
+    }
     const androidPush=action.startsWith('android-push-');
     const androidApi=Deno.env.get('APP_ENV')==='production'?'customer_android_live_push_api':'customer_android_push_api';
     const result=await admin.rpc(androidPush ? androidApi : action.startsWith('push-') ? 'customer_push_api' : action.startsWith('favourites-') ? 'customer_favourites_api' : 'customer_account_api',{p_action:androidPush?action.slice(8):action,p_data:data});

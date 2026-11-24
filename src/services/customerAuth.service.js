@@ -209,6 +209,9 @@ export const customerAuthService = {
   rescheduleBooking: (booking, date, time) => request('reschedule-booking', {
     bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5), date, time,
   }, true),
+  cancelWalletBooking: (booking, destination) => request('wallet-cancel', {
+    bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5), destination,
+  }, true),
   cancelBooking: booking => request('cancel-booking', {
     bookingId: booking.id, expectedDate: booking.date, expectedTime: booking.time.slice(0, 5),
   }, true),

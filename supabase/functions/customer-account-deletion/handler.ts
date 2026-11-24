@@ -12,7 +12,7 @@ type Dependencies = {
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const receiptPattern = /^[A-Za-z0-9_-]{43}$/;
-const safeErrors = new Set(['AUTH_REQUIRED','LINKED_WORK_ACCOUNT','PROFILE_REQUIRED','ACCOUNT_SCOPE_CONFLICT','TEST_ACCOUNT_ONLY','DELETION_IN_PROGRESS','RATE_LIMITED','RECEIPT_INVALID','INVALID_REQUEST','CODE_EXPIRED','INVALID_CODE','REAUTH_REQUIRED','CONFIRMATION_REQUIRED','EMAIL_UNAVAILABLE','APPLE_NOT_AVAILABLE','APPLE_PROOF_INVALID','APPLE_UNAVAILABLE']);
+const safeErrors = new Set(['AUTH_REQUIRED','LINKED_WORK_ACCOUNT','PROFILE_REQUIRED','ACCOUNT_SCOPE_CONFLICT','TEST_ACCOUNT_ONLY','DELETION_IN_PROGRESS','RATE_LIMITED','RECEIPT_INVALID','INVALID_REQUEST','CODE_EXPIRED','INVALID_CODE','REAUTH_REQUIRED','CONFIRMATION_REQUIRED','EMAIL_UNAVAILABLE','APPLE_NOT_AVAILABLE','APPLE_PROOF_INVALID','APPLE_UNAVAILABLE','WALLET_PENDING_ACTIVITY','WALLET_CLEAR_CONFIRMATION_REQUIRED']);
 export async function digest(value: string) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(v => v.toString(16).padStart(2, '0')).join('');
 }
@@ -63,7 +63,7 @@ export function createDeletionHandler(deps: Dependencies) {
     if (req.method !== 'POST') return reply(405, { error: 'METHOD_NOT_ALLOWED' });
     try {
       const value = await body(req); const action = String(value.action || '');
-      const allowed: Record<string, string[]> = { 'apple-status': ['platform'], 'apple-register': ['platform','identityToken','rawNonce','authorizationCode','providerRefreshToken'], preview: [], start: ['id','language'], resend: ['id','receipt','language'], verify: ['id','receipt','code'], password: ['id','receipt','password'], confirm: ['id','receipt','digest','confirmCancellation'], status: ['id','receipt'], retry: ['id','receipt'] };
+      const allowed: Record<string, string[]> = { 'apple-status': ['platform'], 'apple-register': ['platform','identityToken','rawNonce','authorizationCode','providerRefreshToken'], preview: [], start: ['id','language'], resend: ['id','receipt','language'], verify: ['id','receipt','code'], password: ['id','receipt','password'], confirm: ['id','receipt','digest','confirmCancellation','walletBalanceFils'], status: ['id','receipt'], retry: ['id','receipt'] };
       if (!allowed[action] || Object.keys(value).some(key => key !== 'action' && !allowed[action].includes(key))) return reply(400, { error: 'INVALID_REQUEST' });
       if (deps.newRequestsEnabled === false && !['status','retry'].includes(action)) return reply(503, { error: 'NOT_ENABLED' });
       const authenticated = !['status','retry'].includes(action);
@@ -111,7 +111,12 @@ export function createDeletionHandler(deps: Dependencies) {
         return reply(result.error ? 400 : 200, result);
       }
       if (value.confirmCancellation !== true || !/^[0-9a-f]{64}$/.test(String(value.digest || ''))) return reply(400, { error: 'CONFIRMATION_REQUIRED' });
-      const result = await deps.rpc('confirm', { ...scope, digest: value.digest, confirmCancellation: true });
+      if (value.walletBalanceFils !== undefined && (deps.appUrl !== 'https://barber-test.alabdullah-cs.workers.dev'
+        || typeof value.walletBalanceFils !== 'string' || !/^[1-9]\d{0,15}$/.test(value.walletBalanceFils))) {
+        return reply(400,{error:'INVALID_REQUEST'});
+      }
+      const result = await deps.rpc('confirm', { ...scope, digest: value.digest, confirmCancellation: true,
+        ...(value.walletBalanceFils === undefined ? {} : {walletBalanceFils:value.walletBalanceFils}) });
       if (result.state === 'cleanup_pending') deps.retain(deps.process(id));
       return reply(result.state === 'cleanup_pending' ? 202 : 200, result);
     } catch (error) {

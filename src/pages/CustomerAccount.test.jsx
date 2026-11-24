@@ -10,6 +10,8 @@ import CustomerAccount from './CustomerAccount';
 import { customerAuthService } from '../services/customerAuth.service';
 import { customerBookingService } from '../services/customerBooking.service';
 const auth = vi.hoisted(() => ({ updateProfile: vi.fn(), logout: vi.fn(), customer: { id: 'customer', name: 'Test Customer', email: 'customer@example.test', phone: '', countryCode: '+965' } }));
+vi.mock('../lib/runtimeConfig', () => ({ walletTestEnvironment: false }));
+vi.mock('../services/bWallet.service', () => ({ walletRpc: vi.fn(), walletBooking: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ loading: false, ...auth }) }));
 vi.mock('../services/customerAuth.service', () => ({ customerAuthService: { bookings: vi.fn() } }));
 vi.mock('../services/customerBooking.service', () => ({ customerBookingService: { getCatalog: vi.fn() } }));

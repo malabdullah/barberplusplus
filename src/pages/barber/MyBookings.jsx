@@ -101,6 +101,7 @@ function UnavailabilityBlock({ block }) {
 }
 
 function BookingCard({ booking, onEdit }) {
+  const { t } = useTranslation();
   const statusConfig = {
     confirmed: { color: 'success', label: 'Confirmed' },
     pending: { color: 'warning', label: 'Pending' },
@@ -109,7 +110,8 @@ function BookingCard({ booking, onEdit }) {
     'no-show': { color: 'error', label: 'No Show' },
   };
 
-  const status = statusConfig[booking.status] || statusConfig.pending;
+  const status = booking.onlinePaymentState === 'awaiting_payment' && booking.status==='pending'
+    ? { color:'warning', label:t('bWallet.awaitingPayment') } : statusConfig[booking.status] || statusConfig.pending;
 
   return (
     <div className={`booking-card status-${status.color}`} onClick={() => onEdit(booking)}>

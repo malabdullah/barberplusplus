@@ -78,6 +78,7 @@ const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth')
 const CustomerPassword = lazy(() => import('./pages/CustomerPassword'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
+const WalletBookingPayment = lazy(() => import('./pages/WalletBookingPayment'));
 const CustomerWallet = lazy(() => import('./pages/CustomerWallet'));
 const AdminWallet = lazy(() => import('./pages/admin/AdminWallet'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
@@ -180,6 +181,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
+      {walletTestEnvironment && <Route path="/customer/wallet/pay" element={<Suspense fallback={null}><WalletBookingPayment /></Suspense>} />}
       {walletTestEnvironment && <Route path="/customer/wallet" element={<Suspense fallback={null}><CustomerWallet /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/delete-account" element={<Suspense fallback={null}><CustomerDeleteAccount /></Suspense>} />}

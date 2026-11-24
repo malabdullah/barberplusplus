@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, CheckCircle2, ChevronRight, Loader2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import UpcomingBookingActions from '../components/Customer/UpcomingBookingActions';
@@ -120,6 +120,7 @@ export default function CustomerAccount() {
   const now = Date.now();
   const appointments = bookings.filter(booking => isPastAppointment(booking, now) === showPast)
     .sort((a, b) => (appointmentDate(a) - appointmentDate(b)) * (showPast ? -1 : 1));
+  const location = useLocation();
   const [walletOwner, setWalletOwner] = useState(null);
   useEffect(() => {
     if (!walletTestEnvironment || !customer?.id) return;
@@ -167,6 +168,7 @@ export default function CustomerAccount() {
               <p>{t('bookingPolicy.shopCancelled', { shop: shopWording((arabic && item.shop_name_ar) || item.shop_name), date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(appointmentDate(item)) })}</p>
               <p>{t('bookingPolicy.customerReason', { reason: item.staff_cancellation.reason })}</p>
             </div>)}
+          {location.state?.paidRequestSent && <p role="status" className="ca-profile-saved">{t('bWallet.requestSent')}</p>}
           {appointmentMessage && <p className="ca-profile-saved" role="status">{appointmentMessage}</p>}
           {listLoading ? <p className="ca-appointments-state ca-loading" role="status"><Loader2 className="cb-spinner" size={22} aria-hidden="true" />{tr('loading')}</p> : listError ? <div className="cb-alert" role="alert">{tr('bookingsError')}<button type="button" onClick={() => setRetry(value => value + 1)}>{tr('retry')}</button></div> : !appointments.length ? <div className="ca-appointments-empty"><CalendarDays size={32} aria-hidden="true" /><h3>{tr(showPast ? 'account.noPastTitle' : 'account.noAppointmentsTitle')}</h3><p>{tr(showPast ? 'account.noPastDescription' : 'noAppointments')}</p><Link className="cb-text-button" to="/book">{tr('account.findShop')}<ChevronRight size={18} aria-hidden="true" /></Link></div> : <div className="ca-booking-list">{appointments.map(booking => {
             const date = appointmentDate(booking);
@@ -177,7 +179,7 @@ export default function CustomerAccount() {
               <div className="ca-booking-copy"><div className="ca-booking-heading"><h3>{shopWording(arabic && booking.shop_name_ar || booking.shop_name)}</h3><span className="ca-status" data-status={booking.status}>{t(`bookings.status.${booking.status === 'no_show' ? 'noShow' : booking.status}`)}</span></div>
                 <p>{arabic && booking.barber_name_ar || booking.barber_name}</p>{booking.package && <p className="package-badge">{arabic && booking.package.name_ar || booking.package.name}</p>}<p>{(booking.services || []).map(item => arabic && item.name_ar || item.name).join(arabic ? '، ' : ', ')}</p>
                 <div className="ca-booking-meta"><time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', ...dateOptions }).format(date)}</time><strong>{new Intl.NumberFormat(locale, { style: 'currency', currency: 'KWD' }).format(booking.price)}</strong></div>
-                {!showPast && <UpcomingBookingActions booking={booking} onChange={updateAppointment} onRefresh={() => setRetry(value => value + 1)} />}
+                {!showPast && <UpcomingBookingActions booking={booking} walletEnabled={walletOwner === customer.id} onChange={updateAppointment} onRefresh={() => setRetry(value => value + 1)} />}
                 {showPast && booking.staff_cancellation && <p>{t('bookingPolicy.customerReason', { reason: booking.staff_cancellation.reason })}</p>}
                 {canRate && <BookingRating bookingId={booking.id} shopRating={booking.shop_rating} barberRating={booking.barber_rating} onSaved={updateRating} />}
                 {showPast && <div className="ca-rebook-action"><button type="button" className="cb-secondary" disabled={busy || Boolean(rebookingId)} onClick={() => repeatBooking(booking)}>{rebookingId === booking.id ? <Loader2 className="cb-spinner" size={17} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}{tr('account.bookAgain')}</button><BookingShareControls bookingId={booking.id} />{rebookErrorId === booking.id && <p role="alert" className="cb-alert">{tr('account.rebookError')}</p>}</div>}

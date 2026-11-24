@@ -4054,6 +4054,8 @@
     "testNote": "صدرت في البيئة التجريبية ولم يُحصّل أي مبلغ فعلي."
   },
   "bWallet": {
+    "splitChoice": "B-Wallet + UPayments",
+    "walletAmount": "المبلغ من B-Wallet (د.ك)",
     "walletOnly": "محفظة B",
     "split": "محفظة B {{wallet}} + UPayments {{card}}",
     "holdExpired": "انتهت مهلة الدفع.",
@@ -4108,7 +4110,27 @@
       "WALLET_INVALID_CREDIT": "أدخل مبلغاً موجباً بالدينار الكويتي.",
       "WALLET_TOPUP_PENDING": "تحقق من عملية الشحن الحالية قبل بدء عملية أخرى.",
       "WALLET_PROVIDER_UNAVAILABLE": "تعذر التحقق من الدفع. يرجى التحقق من حالته مجدداً.",
-      "WALLET_FORBIDDEN": "ليست لديك صلاحية لهذا الإجراء."
-    }
+      "WALLET_FORBIDDEN": "ليست لديك صلاحية لهذا الإجراء.",
+      "WALLET_PENDING_ACTIVITY": "هناك عملية دفع أو استرداد أو موعد مدفوع بحاجة إلى متابعة.",
+      "WALLET_CLEAR_CONFIRMATION_REQUIRED": "راجع الرصيد وأكده قبل تصفير المحفظة.",
+      "WALLET_INSUFFICIENT_BALANCE": "تغيّر رصيد المحفظة. تحقق من رصيدك أو اختر طريقة دفع أخرى.",
+      "WALLET_PAYMENT_WINDOW_CLOSED": "انتهت مهلة الدفع.",
+      "WALLET_RETRY_CHANGED": "توجد محاولة دفع لهذا الموعد. تحقق من حالتها قبل إعادة المحاولة."
+    },
+    "afterApproval": "الدفع الإلكتروني بعد موافقة الحلاق",
+    "sendRequest": "إرسال طلب الموعد",
+    "requestSent": "تم إرسال الطلب. سنخبرك عند موافقة الحلاق.",
+    "pendingApproval": "بانتظار موافقة الحلاق",
+    "awaitingPayment": "تمت الموافقة · بانتظار الدفع",
+    "payBooking": "دفع قيمة الموعد",
+    "payBy": "تمت الموافقة · ادفع قبل {{date}}",
+    "payNow": "ادفع الآن",
+    "refundWallet": "سيُضاف المبلغ القابل للاسترداد إلى محفظة B.",
+    "refundDestination": "وجهة الاسترداد",
+    "refundGateway": "طريقة الدفع الأصلية",
+    "gatewayRefundTiming": "تعالج UPayments الاسترداد إلى طريقة الدفع الأصلية. تعتمد الأهلية والمدة على طريقة الدفع والبنك.",
+    "deletionPending": "أكمل مدفوعات المحفظة أو الاستردادات أو الحجوزات المدفوعة المعلقة قبل حذف حسابك.",
+    "deletionBalance": "رصيد محفظة B هو {{amount}}. يمكنك استخدامه أولاً أو تصفيره عند حذف الحساب.",
+    "deletionConsent": "أوافق على تصفير الرصيد المتبقي وقدره {{amount}} من محفظة B."
   }
 }

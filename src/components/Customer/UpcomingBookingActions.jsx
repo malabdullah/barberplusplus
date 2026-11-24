@@ -1,6 +1,8 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CalendarPlus, MoreHorizontal, RotateCcw } from 'lucide-react';
+import { walletBooking } from '../../services/bWallet.service';
 import { customerAuthService } from '../../services/customerAuth.service';
 import { downloadBookingCalendar, getKuwaitDate, safeBookingUrl } from '../../utils/customerBooking';
 import { appointmentDate } from '../../utils/customerRebooking';
@@ -9,11 +11,13 @@ import { shopWording } from '../../utils/customerTerminology';
 
 const actionErrors = ['PACKAGE_DATE_UNAVAILABLE', 'BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED', 'INVALID_DATE', 'INVALID_SELECTION', 'SLOT_UNAVAILABLE', 'AUTH_REQUIRED'];
 
-export default function UpcomingBookingActions({ booking, onChange, onRefresh }) {
+export default function UpcomingBookingActions({ booking, onChange, onRefresh, walletEnabled = false }) {
   const { t, i18n } = useTranslation();
   const tr = (key, values) => t(`customerAuth.appointmentActions.${key}`, values);
   const locale = i18n.resolvedLanguage;
   const arabic = locale?.startsWith('ar');
+  const [payment, setPayment] = useState(null);
+  const [destination, setDestination] = useState('gateway');
   const [action, setAction] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -59,9 +63,18 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     return () => { active = false; };
   }, [action, booking.id, date, reload]);
 
+  useEffect(() => {
+    if (!walletEnabled) return;
+    let active = true;
+    walletBooking('view',booking.id).then(detail => { if (active) setPayment(detail); }).catch(() => {});
+    return () => { active = false; };
+  }, [walletEnabled,booking.id,booking.status]);
+
+
   function open(next) {
     setError(''); setMessage(''); setDate(booking.date); setTime(bookedTime); setAvailability(null);
     setLoading(next === 'reschedule');
+    setDestination(payment?.refundToWallet ? 'wallet' : 'gateway');
     setAction(next);
   }
 
@@ -83,7 +96,9 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
     setBusy(true); setError('');
     try {
       const changed = action === 'cancel'
-        ? await customerAuthService.cancelBooking(booking)
+        ? payment?.refundToWallet || payment?.refundChoice
+          ? await customerAuthService.cancelWalletBooking(booking,destination)
+          : await customerAuthService.cancelBooking(booking)
         : await customerAuthService.rescheduleBooking(booking, date, time);
       onChange(changed, action === 'cancel' ? tr('cancelled') : tr('rescheduled'));
       setAction('');
@@ -101,14 +116,19 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
   });
   const unavailable = ['BOOKING_NOT_MANAGEABLE', 'BOOKING_CUTOFF_PASSED', 'BOOKING_CHANGED'].includes(error);
 
+  const waiting = payment?.state === 'pending_approval' || payment?.state === 'awaiting_payment';
+  const canPay = payment?.state === 'awaiting_payment' && Date.parse(payment.payBy)>Date.now();
   return <div className="ca-upcoming-actions">
+    {waiting && <p role="status">{payment.state === 'pending_approval' ? t('bWallet.pendingApproval')
+      : canPay ? t('bWallet.payBy',{date:formatDate(new Date(payment.payBy))}) : t('bWallet.holdExpired')}</p>}
+    {canPay && <Link className="cb-primary" to={`/customer/wallet/pay?booking=${booking.id}`}>{t('bWallet.payNow')}</Link>}
     {directions && <a className="cb-secondary" href={directions} target="_blank" rel="noreferrer">{tr('directions')}</a>}
-    {canMove && <button className="cb-secondary" type="button" onClick={() => open('reschedule')}><RotateCcw size={17} aria-hidden="true" />{tr('reschedule')}</button>}
+    {canMove && !waiting && <button className="cb-secondary" type="button" onClick={() => open('reschedule')}><RotateCcw size={17} aria-hidden="true" />{tr('reschedule')}</button>}
     <details className="ca-upcoming-more">
       <summary className="cb-secondary"><MoreHorizontal size={18} aria-hidden="true" />{tr('more')}</summary>
       <div className="ca-upcoming-menu">
-        {booking.duration > 0 && <button type="button" onClick={calendar}><CalendarPlus size={17} aria-hidden="true" />{t('customerBooking.addCalendar')}</button>}
-        <BookingShareControls bookingId={booking.id} menuItem />
+        {booking.duration > 0 && !waiting && <button type="button" onClick={calendar}><CalendarPlus size={17} aria-hidden="true" />{t('customerBooking.addCalendar')}</button>}
+        {!waiting && <BookingShareControls bookingId={booking.id} menuItem />}
         {canCancel && <button type="button" className="ca-upcoming-danger" onClick={() => open('cancel')}>{tr('cancel')}</button>}
       </div>
     </details>
@@ -127,6 +147,13 @@ export default function UpcomingBookingActions({ booking, onChange, onRefresh })
           <h3 id={id}>{tr(action === 'cancel' ? 'cancelTitle' : 'reschedule')}</h3>
           <p>{appointment}</p>
           {action === 'cancel' && <p>{tr('cutoff', { date: formatDate(cutoff) })}</p>}
+          {action === 'cancel' && payment?.refundToWallet && <p>{t('bWallet.refundWallet')}</p>}
+          {action === 'cancel' && payment?.refundChoice && <fieldset className="cb-payment-method" disabled={busy}>
+            <legend>{t('bWallet.refundDestination')}</legend>
+            <label><input type="radio" name="refund-destination" checked={destination==='gateway'} onChange={() => setDestination('gateway')} />{t('bWallet.refundGateway')}</label>
+            <label><input type="radio" name="refund-destination" checked={destination==='wallet'} onChange={() => setDestination('wallet')} />{t('bWallet.walletOnly')}</label>
+            <p>{destination==='gateway' ? t('bWallet.gatewayRefundTiming') : t('bWallet.refundWallet')}</p>
+          </fieldset>}
           {action === 'reschedule' && <>
             {!!services.length && <p>{services.map(service => service.name).join(arabic ? '، ' : ', ')}</p>}
             <p>{tr('rescheduleInfo')}</p>

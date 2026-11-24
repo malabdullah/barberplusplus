@@ -10,6 +10,8 @@ import { clearDeletedBrowserAccount, deletionReceipt, saveDeletionReceipt } from
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
 import './CustomerDeleteAccount.css';
 
+import { reportMoney } from '../utils/reportFormatting';
+
 export default function CustomerDeleteAccount() {
   const { t, i18n } = useTranslation(); const tr = (key, values) => t(`customerDeletion.${key}`, values);
   const [preview, setPreview] = useState(null); const [operation, setOperation] = useState(deletionReceipt);
@@ -17,6 +19,7 @@ export default function CustomerDeleteAccount() {
   const [code, setCode] = useState(''); const [password, setPassword] = useState(''); const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [resendAt, setResendAt] = useState(0);
   const [clock, setClock] = useState(Date.now()); const alive = useRef(true); const owner = useRef(''); const generation = useRef(0);
+  const [walletClear, setWalletClear] = useState(false);
   const [appleSkipped, setAppleSkipped] = useState(false);
   const appleAbort = useRef(null);
   const operationRef = useRef(operation); operationRef.current = operation;
@@ -82,9 +85,9 @@ export default function CustomerDeleteAccount() {
   const confirm = () => run(async current => {
     const saved = update({ ...operation, phase: 'confirming' });
     try {
-      const value = await deletionRequest('confirm', { id: saved.id, receipt: saved.receipt, digest: preview.digest, confirmCancellation: true });
+      const value = await deletionRequest('confirm', { id: saved.id, receipt: saved.receipt, digest: preview.digest, confirmCancellation: true, ...(walletClear ? {walletBalanceFils:preview.walletBalanceFils} : {}) });
       if (!current()) return;
-      if (value.state === 'review_required') { setPreview(previous => ({ ...previous, ...value })); setConfirmed(false); setState('verified'); setError('REVIEW_REQUIRED'); update({ ...saved, phase: 'proof' }); }
+      if (value.state === 'review_required') { setPreview(previous => ({ ...previous, ...value })); setConfirmed(false); setWalletClear(false); setState('verified'); setError('REVIEW_REQUIRED'); update({ ...saved, phase: 'proof' }); }
       else receive(value, saved);
     } catch (failure) {
       // A lost response never starts a fresh operation. Check the saved receipt.
@@ -109,8 +112,11 @@ export default function CustomerDeleteAccount() {
   });
   const legacyApple = preview?.providers?.includes('apple') && preview.appleRevocation !== 'registered';
   const needsAppleChoice = legacyApple && !appleSkipped;
+  const hasWalletBalance = Number(preview?.walletBalanceFils) > 0;
+  const walletPending = Number(preview?.walletPending) > 0;
+  const balanceLabel = hasWalletBalance ? reportMoney(preview.walletBalanceFils, i18n.language) : '';
   return <CustomerAuthLayout title={tr(state === 'complete' ? 'completeTitle' : 'title')} backTo={['complete', 'cleanup_pending', 'uncertain'].includes(state) ? '/' : '/customer/account'} backLabel={t('common.back')}>
-    {error && <p className="cb-alert" role="alert">{t(`customerDeletion.errors.${error}`, { defaultValue: tr('errors.UNAVAILABLE') })}</p>}
+    {error && <p className="cb-alert" role="alert">{error.startsWith('WALLET_') ? t(`bWallet.errors.${error}`) : t(`customerDeletion.errors.${error}`, { defaultValue: tr('errors.UNAVAILABLE') })}</p>}
     {state === 'loading' ? <p role="status"><Loader2 className="cb-spinner" size={20} />{t('common.loading')}</p> : state === 'complete' ? <div className="ca-result"><CheckCircle2 size={34} aria-hidden="true" /><p role="status">{tr('complete')}</p>{operation?.appleManualRevocation && <p>{tr('appleHelp')} <a href="https://account.apple.com" target="_blank" rel="noopener noreferrer">{tr('appleSettings')}</a></p>}<Link className="cb-primary ca-submit" to="/">{tr('home')}</Link></div> : ['cleanup_pending', 'uncertain'].includes(state) ? <div role="status"><p>{tr(state === 'uncertain' ? 'uncertain' : 'pending')}</p><button className="cb-secondary ca-submit" disabled={busy} onClick={retry}>{tr('checkStatus')}</button></div> : state === 'switched' ? <p role="status">{tr('switched')}</p> : preview && <>
       <p>{tr('effect')}</p>
       {preview.providers?.length > 0 && <p>{tr('providers', { providers: preview.providers.map(provider => ({ apple: 'Apple', google: 'Google', email: t('customerAuth.email.label'), phone: 'SMS' })[provider] || provider).join(' · ') })}</p>}
@@ -118,15 +124,17 @@ export default function CustomerDeleteAccount() {
       {preview.upcoming?.length > 0 && <ul className="ca-deletion-bookings">{preview.upcoming.map(booking => <li key={booking.id}><strong>{i18n.dir() === 'rtl' && booking.shopAr || booking.shop}</strong><span>{i18n.dir() === 'rtl' && booking.barberAr || booking.barber}</span><bdi>{new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kuwait' }).format(new Date(`${booking.date}T${booking.time}+03:00`))}</bdi></li>)}</ul>}
       {preview.hasMore && <p>{tr('moreAppointments')}</p>}
       <p>{tr('history')}</p>
+      {walletPending && <p className="cb-alert" role="status">{t('bWallet.deletionPending')}</p>}
+      {hasWalletBalance && <p>{t('bWallet.deletionBalance', {amount:balanceLabel})} <Link to="/customer/wallet">{t('bWallet.title')}</Link></p>}
       {legacyApple && <section className="ca-deletion-apple" aria-label={tr('appleTitle')}>
         <h2>{tr('appleTitle')}</h2><p>{tr('appleIntro')}</p>
         {!appleSkipped && <div className="ca-deletion-apple-actions"><button className="cb-secondary ca-deletion-apple-connect" disabled={busy} onClick={connectApple}>{tr('appleConnect')}</button><button className="cb-text-button" disabled={busy} onClick={() => { setAppleSkipped(true); setError(''); }}>{tr('appleSkip')}</button></div>}
       </section>}
-      {state === 'preview' ? <button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !preview.methods?.length} onClick={start}><Trash2 size={18} aria-hidden="true" />{tr('continue')}</button> : state === 'awaiting_code' ? <form onSubmit={verify}>
+      {state === 'preview' ? <button className="cb-secondary ca-submit ca-delete-action" disabled={busy || walletPending || !preview.methods?.length} onClick={start}><Trash2 size={18} aria-hidden="true" />{tr('continue')}</button> : state === 'awaiting_code' ? <form onSubmit={verify}>
         {preview.methods?.length > 1 && <label className="ca-field">{tr('method')}<select className="cb-input" value={method} onChange={event => { setMethod(event.target.value); setPassword(''); setCode(''); }}>{preview.methods.map(item => <option key={item} value={item}>{tr(item)}</option>)}</select></label>}
         {method === 'password' ? <label className="ca-field">{tr('password')}<input className="cb-input" type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={event => setPassword(event.target.value)} /></label> : <><p>{tr('codeSent', { destination: preview.destination })}</p><label className="ca-field">{tr('code')}<input className="cb-input" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></label><button className="cb-text-button" type="button" disabled={busy || clock < resendAt} onClick={resend}>{tr('resend')}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)})` : ''}</button></>}
         <button className="cb-primary ca-submit" disabled={busy}>{tr('verify')}</button>
-      </form> : state === 'verified' ? <><label className="ca-deletion-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={busy || needsAppleChoice} />{tr('confirm')}</label><button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !confirmed || needsAppleChoice} onClick={confirm}><Trash2 size={18} aria-hidden="true" />{tr('delete')}</button></> : null}
+      </form> : state === 'verified' ? <><label className="ca-deletion-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={busy || needsAppleChoice} />{tr('confirm')}</label>{hasWalletBalance && <label className="ca-deletion-confirm"><input type="checkbox" checked={walletClear} disabled={busy || walletPending} onChange={event => setWalletClear(event.target.checked)} />{t('bWallet.deletionConsent',{amount:balanceLabel})}</label>}<button className="cb-secondary ca-submit ca-delete-action" disabled={busy || !confirmed || needsAppleChoice || walletPending || hasWalletBalance && !walletClear} onClick={confirm}><Trash2 size={18} aria-hidden="true" />{tr('delete')}</button></> : null}
     </>}
     {error === 'AUTH_REQUIRED' && <Link className="cb-primary ca-submit" to="/customer/sign-in">{t('customerAuth.signIn')}</Link>}
     <Link className="cb-text-button" to="/support?audience=customer">{t('settings.contactSupport')}</Link>

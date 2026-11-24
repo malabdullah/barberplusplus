@@ -161,6 +161,18 @@ export function createCustomerAuthHandler(deps: Dependencies) {
         if(action!=='favourites-list' && (!['shop','barber'].includes(String(body.kind)) || !uuid.test(String(body.targetId))))return reply(400,{error:'INVALID_REQUEST'});
         return reply(200,{favourites:await deps.rpc(action,{...identity,kind:body.kind,target_id:body.targetId})});
       }
+      if (action === 'wallet-cancel') {
+        if (deps.environment !== 'cloud-test' || deps.appUrl !== 'https://barber-test.alabdullah-cs.workers.dev'
+          || deps.cloudTestProjectRef !== 'qvkucvcjmojjbphlzlks') return reply(404,{error:'NOT_AVAILABLE'});
+        const identity = await deps.identity(req.headers.get('authorization')?.replace(/^Bearer /i, '') || '');
+        if (!identity) return reply(401,{error:'AUTH_REQUIRED'});
+        const { bookingId, expectedDate, expectedTime, destination } = body;
+        if (typeof bookingId !== 'string' || !uuid.test(bookingId)
+          || typeof expectedDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(expectedDate)
+          || typeof expectedTime !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(expectedTime)
+          || !['wallet','gateway'].includes(String(destination))) return reply(400,{error:'INVALID_REQUEST'});
+        return reply(200,await deps.rpc(action,{...identity,booking_id:bookingId,expected_date:expectedDate,expected_time:expectedTime,destination}));
+      }
       if (['appointment-slots', 'reschedule-booking', 'cancel-booking'].includes(action)) {
         const identity = await deps.identity(req.headers.get('authorization')?.replace(/^Bearer /i, '') || '');
         if (!identity) return reply(401, { error: 'AUTH_REQUIRED' });

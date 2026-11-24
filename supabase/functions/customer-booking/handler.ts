@@ -28,6 +28,8 @@ type Dependencies = {
   paymentPilot?: {
     start: (data: Body, capability: string, walletFils?: number) => Promise<unknown>;
     check: (capability: string, identity?: Body) => Promise<PaymentAttempt | null>;
+    requestApproval?: (data: Body) => Promise<unknown>;
+    approvalCheckout?: (id: string, capability: string, walletFils: number, identity: Body, language: string) => Promise<unknown>;
     slots: (data: Body) => Promise<unknown>;
   };
 };
@@ -97,6 +99,22 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
       const pilot = req.headers.get('x-barber-test-web') === '1' ? deps.paymentPilot : undefined;
       const online = body.action === 'online-start';
+      const requestApproval = body.action === 'online-request-approval';
+      if (body.action === 'online-approval-checkout') {
+        if (!pilot?.approvalCheckout) return reply(404, { error:'NOT_AVAILABLE' });
+        if (!uuid.test(String(body.bookingId)) || !uuid.test(String(body.capability)) || !proofWalletAmount(body.walletFils)) {
+          return reply(400, { error:'WALLET_INVALID' });
+        }
+        const bearer = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+        const owner = bearer && deps.customer ? await deps.customer(bearer) : null;
+        if (!owner) return reply(401, { error:'AUTH_REQUIRED' });
+        return reply(200, { attempt: await pilot.approvalCheckout(String(body.bookingId), String(body.capability), body.walletFils,
+          { account_user_id:owner.id, session_id:owner.session_id }, body.language === 'ar' ? 'ar' : 'en') });
+      }
+      if (requestApproval) {
+        if (!pilot?.requestApproval) return reply(404, { error:'NOT_AVAILABLE' });
+        body.action = 'book';
+      }
       if (online || body.action === 'online-check') {
         if (!pilot) return reply(404, { error: 'NOT_AVAILABLE' });
         if (typeof body.capability !== 'string' || !uuid.test(body.capability)) return reply(400, { error: 'INVALID_REQUEST' });
@@ -352,6 +370,10 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (proof.guest_contact === 'email') Object.assign(data, { guest_contact:'email',email:proof.email,language:proof.language });
         else data.language = body.language === 'ar' ? 'ar' : 'en';
       }
+      if (requestApproval) {
+        if (!data.account_user_id || !pilot?.requestApproval) return reply(401, { error:'AUTH_REQUIRED' });
+        return reply(200, { attempt: await pilot.requestApproval(data) });
+      }
       if (online && pilot) {
         if (body.walletFils !== undefined && (!proofWalletAmount(body.walletFils) || !data.account_user_id)) {
           return reply(400, { error:'WALLET_INVALID' });
@@ -393,7 +415,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
       if (/ATTEMPT_CLOSED/.test(message)) return reply(409, { error: 'ATTEMPT_CLOSED' });
-      const walletError = message.match(/WALLET_(?:INVALID|DISABLED|FORBIDDEN|INSUFFICIENT_BALANCE|HOLD_EXPIRED)/)?.[0];
+      const walletError = message.match(/WALLET_(?:INVALID|DISABLED|FORBIDDEN|INSUFFICIENT_BALANCE|HOLD_EXPIRED|PAYMENT_WINDOW_CLOSED|RETRY_CHANGED)/)?.[0];
       if (walletError) return reply(walletError === 'WALLET_FORBIDDEN' ? 403 : 409, { error: walletError });
       if (/UPAYMENTS_NOT_AVAILABLE/.test(message)) return reply(409, { error: 'UPAYMENTS_NOT_AVAILABLE' });
       if (/UPAYMENTS_FORBIDDEN/.test(message)) return reply(403, { error: 'FORBIDDEN' });

@@ -24,6 +24,19 @@ export function bookingPaymentPilot(config: Config) {
 
   async function start(data: Data, capability: string, walletFils?: number) {
     const attempt = await call('start', String(data.id), { booking: data, capability, ...(walletFils === undefined ? {} : { wallet_fils: walletFils }) }) as Attempt;
+    return checkout(attempt, String(data.language || 'en'));
+  }
+
+  function requestApproval(data: Data) {
+    return call('request-approval', String(data.id), { booking: data });
+  }
+
+  async function approvalCheckout(id: string, capability: string, walletFils: number, identity: Data, language: string) {
+    const attempt = await call('approval-checkout', id, { ...identity, capability, wallet_fils: walletFils }) as Attempt;
+    return checkout(attempt, language);
+  }
+
+  async function checkout(attempt: Attempt, language: string) {
     if (!attempt.create) return attempt;
 
     const externalFils = attempt.externalFils ?? attempt.totalFils;
@@ -32,7 +45,7 @@ export function bookingPaymentPilot(config: Config) {
     const response = await request('POST', 'charge', JSON.stringify({
       order: { id: order, reference: order, currency: 'KWD', amount: externalFils / 1000,
         description: 'Barber++ Test appointment' },
-      reference: { id: order }, tokens: {}, language: data.language === 'ar' ? 'ar' : 'en',
+      reference: { id: order }, tokens: {}, language: language === 'ar' ? 'ar' : 'en',
       returnUrl, cancelUrl: returnUrl, notificationUrl: callback + order, paymentLinkExpiryInMinutes: 5,
     }));
     if ([400,401,403,422].includes(response.http) && response.body?.status === false) {
@@ -151,5 +164,5 @@ export function bookingPaymentPilot(config: Config) {
     }
   }
 
-  return { start, check, slots: (data: Data) => call('slots', null, data), background };
+  return { start, check, requestApproval, approvalCheckout, slots: (data: Data) => call('slots', null, data), background };
 }

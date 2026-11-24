@@ -13,6 +13,8 @@ import { rebookingDraft } from '../utils/customerRebooking';
 import { readBookingDraft, rememberBookingReturn, saveBookingDraft } from '../utils/customerBookingDraft';
 
 const favouritesState = vi.hoisted(() => ({ items: [] }));
+vi.mock('../lib/runtimeConfig', () => ({ walletTestEnvironment: false }));
+vi.mock('../services/bWallet.service', () => ({ walletRpc: vi.fn(), walletBooking: vi.fn(), walletAmountFils: () => null }));
 vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: () => ({ items: favouritesState.items, loading: false, busy: false, toggle: vi.fn() }) }));
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
 vi.mock('../context/CustomerAuthContext', () => ({ useCustomerAuth: () => ({ customer: customerState.customer, loading: false, refresh: vi.fn(), updateProfile: customerState.updateProfile }) }));

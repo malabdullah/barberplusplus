@@ -43,6 +43,8 @@ const toFrontend = (booking) => {
     duration: booking.duration,
     price: parseFloat(booking.price),
     status: booking.status,
+    onlinePaymentState: booking.online_payment_state,
+    onlinePaymentDueAt: booking.online_payment_due_at,
     notes: booking.notes,
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
