@@ -6,7 +6,7 @@ import { functionFetch } from '../lib/functionFetch';
 
 const request = async (action, body = {}) => {
   if (!customerFeaturesEnabled) throw new Error('NOT_AVAILABLE');
-  const token = action.startsWith('discovery-') || action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'online-start' || action === 'claim-booking' ? await customerToken() : '';
+  const token = action.startsWith('discovery-') || action === 'phone-confirm' || action === 'account-proof' || action === 'book' || action === 'online-start' || action === 'online-check' || action === 'claim-booking' ? await customerToken() : '';
   const response = await functionFetch(`${appConfig.supabaseUrl}/functions/v1/customer-booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: appConfig.supabasePublishableKey, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -72,7 +72,7 @@ export const customerBookingService = {
   guestProof: data => request('guest-proof', data),
   requestCode: data => request('request-code', data),
   verifyCode: data => request('verify-code', data),
-  startOnlinePayment: (data, capability) => request('online-start', { ...data, capability }),
+  startOnlinePayment: (data, capability, walletFils) => request('online-start', { ...data, capability, walletFils }),
   async checkOnlinePayment(capability) {
     const result = await request('online-check', { capability });
     return { ...result, receipt: result.receipt ? mapReceipt(result.receipt) : null };

@@ -4054,6 +4054,9 @@
     "testNote": "صدرت في البيئة التجريبية ولم يُحصّل أي مبلغ فعلي."
   },
   "bWallet": {
+    "walletOnly": "محفظة B",
+    "split": "محفظة B {{wallet}} + UPayments {{card}}",
+    "holdExpired": "انتهت مهلة الدفع.",
     "title": "محفظة B",
     "back": "العودة إلى حسابي",
     "available": "الرصيد المتاح",

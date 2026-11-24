@@ -4009,6 +4009,9 @@
     "testNote": "Issued in the Barber++ Test environment. No real payment was collected."
   },
   "bWallet": {
+    "walletOnly": "B-Wallet",
+    "split": "B-Wallet {{wallet}} + UPayments {{card}}",
+    "holdExpired": "Payment expired. Please choose the time again.",
     "title": "B-Wallet",
     "back": "Back to my account",
     "available": "Available balance",

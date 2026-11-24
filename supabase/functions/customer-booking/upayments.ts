@@ -8,7 +8,7 @@ const orderPattern = /^[A-Za-z0-9_-]{12,255}$/;
 const returnUrl = pilotSite + '/book?payment=return';
 
 type Data = Record<string, unknown>;
-type Attempt = { id: string; state: string; totalFils: number; create?: boolean; accountSaved: boolean; retryableFailure?: boolean };
+type Attempt = { id: string; state: string; totalFils: number; externalFils?: number; create?: boolean; accountSaved: boolean; retryableFailure?: boolean };
 type Reference = {
   state: string; sessionId: string | null; providerOrderId: string | null; providerRefundKey: string | null;
   refundState: string | null; refundOrderId: string | null;
@@ -22,13 +22,15 @@ export function bookingPaymentPilot(config: Config) {
   const request = sandboxRequester(config);
   const call = (action: string, id: string | null, data: Data = {}) => config.rpc(action, id, data);
 
-  async function start(data: Data, capability: string) {
-    const attempt = await call('start', String(data.id), { booking: data, capability }) as Attempt;
+  async function start(data: Data, capability: string, walletFils?: number) {
+    const attempt = await call('start', String(data.id), { booking: data, capability, ...(walletFils === undefined ? {} : { wallet_fils: walletFils }) }) as Attempt;
     if (!attempt.create) return attempt;
 
+    const externalFils = attempt.externalFils ?? attempt.totalFils;
+    if (externalFils === 0) return await call('wallet-capture', attempt.id);
     const order = attempt.id.replaceAll('-', '');
     const response = await request('POST', 'charge', JSON.stringify({
-      order: { id: order, reference: order, currency: 'KWD', amount: attempt.totalFils / 1000,
+      order: { id: order, reference: order, currency: 'KWD', amount: externalFils / 1000,
         description: 'Barber++ Test appointment' },
       reference: { id: order }, tokens: {}, language: data.language === 'ar' ? 'ar' : 'en',
       returnUrl, cancelUrl: returnUrl, notificationUrl: callback + order, paymentLinkExpiryInMinutes: 5,
@@ -83,12 +85,13 @@ export function bookingPaymentPilot(config: Config) {
         await call('refunded', id, { refundOrderId: reference.refundOrderId });
       }
       if (row && ['Failed','Rejected','Cancelled','Canceled'].includes(row.status)) await call('refund-review', id);
-    } else if (reference.refundState === null && reference.providerRefundKey && await call('claim-refund', id) === true) {
+    } else if (reference.refundState === null && await call('claim-refund', id) === true) {
       // A transport failure is ambiguous. Never retry the POST automatically.
       try {
-        const inquiry = await call('inquire', id) as Reference & { totalFils: number };
+        const inquiry = await call('inquire', id) as Reference & { totalFils: number; externalFils?: number };
+        if (!reference.providerRefundKey) throw Error('UPAYMENTS_PROVIDER_MISMATCH');
         const result = await request('POST', 'create-refund', JSON.stringify({
-          orderId: reference.providerRefundKey, totalPrice: inquiry.totalFils / 1000, reference: id.replaceAll('-', ''),
+          orderId: reference.providerRefundKey, totalPrice: (inquiry.externalFils ?? inquiry.totalFils) / 1000, reference: id.replaceAll('-', ''),
         }));
         const refundOrderId = result.body?.data?.orderId;
         if (result.http === 201 && result.body?.status === true && orderPattern.test(refundOrderId || '')) {
@@ -100,8 +103,8 @@ export function bookingPaymentPilot(config: Config) {
     }
   }
 
-  async function check(capability: string) {
-    const attempt = await call('read', null, { capability }) as Attempt | null;
+  async function check(capability: string, identity: Data = {}) {
+    const attempt = await call('read', null, { capability, ...identity }) as Attempt | null;
     if (!attempt || !['pending', 'expired'].includes(attempt.state)) return attempt;
     const reference = await call('inquire', attempt.id) as Reference;
     let retryableFailure = false;
@@ -113,7 +116,7 @@ export function bookingPaymentPilot(config: Config) {
         // delayed capture and starts a refund if a payment comes through.
       }
     }
-    const current = await call('read', null, { capability }) as Attempt;
+    const current = await call('read', null, { capability, ...identity }) as Attempt;
     return current.state === 'pending' && retryableFailure ? { ...current, retryableFailure } : current;
   }
 

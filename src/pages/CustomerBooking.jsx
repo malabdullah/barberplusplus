@@ -25,6 +25,8 @@ import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
 import { addBookingDays, downloadBookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
+import { walletTestEnvironment } from '../lib/runtimeConfig';
+import { walletRpc } from '../services/bWallet.service';
 import { BookingPaymentReturn, clearPendingPayment, onlinePaymentLink, pendingPaymentKey, savePendingPayment } from '../components/Customer/BookingPaymentReturn';
 import './CustomerBooking.css';
 
@@ -93,6 +95,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [confirmationRequired, setConfirmationRequired] = useState(false);
   const [onlineAvailable, setOnlineAvailable] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('shop');
+  const [walletAvailable, setWalletAvailable] = useState(false);
+  const [balance, setBalance] = useState(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotRetry, setSlotRetry] = useState(0);
   const [slotError, setSlotError] = useState(false);
@@ -307,7 +311,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   useEffect(() => {
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
-    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setSlotError(false);
+    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setWalletAvailable(false); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
       .then(async result => { if (active && !pageLeaving.current) {
         if (!packageOfferId && Number.isFinite(result.duration) && result.duration !== duration) { setTime(''); setError('PRICE_CHANGED'); await recoverUnavailableSelection(() => active, true); return; }
@@ -316,7 +320,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
           await recoverUnavailableSelection(() => active, true);
           return;
         }
-        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setWalletAvailable(result.wallet_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active || pageLeaving.current) return;
         setError(failure.message);
@@ -444,7 +448,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
         try { savePendingPayment(capability); }
         catch { throw new Error('UPAYMENTS_CHECK_UNAVAILABLE'); }
         try {
-          const { attempt } = await customerBookingService.startOnlinePayment(booking, capability);
+          const { attempt } = await customerBookingService.startOnlinePayment(booking, capability, canUseWallet && customer ? selectedWalletFils : undefined);
           const link = onlinePaymentLink(attempt?.checkoutUrl);
           if (link) window.location.assign(link);
           else navigate('/book?payment=return', { replace: true });
@@ -481,7 +485,22 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const finalDetails = panel === 'details';
   const canPayOnline = onlineAvailable && !confirmationRequired && Boolean(time)
     && Date.parse(`${date}T${time}:00+03:00`) > Date.now() + 8 * 60_000;
-  const payOnline = canPayOnline && paymentMethod === 'online';
+  const customerId = customer?.id;
+  useEffect(() => {
+    if (!walletTestEnvironment || !walletAvailable || panel !== 'details' || !customerId) return;
+    let active = true;
+    walletRpc('summary').then(summary => {
+      if (active && summary.acceptPayments) setBalance({ owner: customerId, fils: Number(summary.balanceFils) });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [walletAvailable, customerId, panel]);
+  const totalFils = Math.round(price * 1000);
+  const canUseWallet = walletTestEnvironment && canPayOnline && walletAvailable && balance?.owner === customerId;
+  const fullWallet = canUseWallet && balance.fils >= totalFils;
+  const splitWallet = canUseWallet && balance.fils > 0 && balance.fils < totalFils;
+  const payOnline = canPayOnline && (paymentMethod === 'online'
+    || (paymentMethod === 'wallet' && fullWallet) || (paymentMethod === 'split' && splitWallet));
+  const selectedWalletFils = paymentMethod === 'wallet' ? totalFils : paymentMethod === 'split' ? balance?.fils : 0;
   const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length && !packagesLoading && !packageInvalid) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
   const phoneCheckPending = accountPhoneKey && accountPhoneCheck?.key !== accountPhoneKey;
   const showPhoneVerification = Boolean(customer) && phoneConfig && !verification
@@ -642,7 +661,12 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                 {canPayOnline && (customer || guest) ? <fieldset className="cb-payment-method">
                   <legend>{tr('onlinePayment.method')}</legend>
                   <label><input type="radio" name="payment-method" value="shop" checked={!payOnline} disabled={busy} onChange={() => setPaymentMethod('shop')} />{tr('payAtShop')}</label>
-                  <label><input type="radio" name="payment-method" value="online" checked={payOnline} disabled={busy} onChange={() => setPaymentMethod('online')} />{tr('onlinePayment.option')}</label>
+                  <label><input type="radio" name="payment-method" value="online" checked={payOnline && paymentMethod === 'online'} disabled={busy} onChange={() => setPaymentMethod('online')} />{tr('onlinePayment.option')}</label>
+                  {fullWallet && <label><input type="radio" name="payment-method" value="wallet" checked={paymentMethod === 'wallet'} disabled={busy} onChange={() => setPaymentMethod('wallet')} />{t('bWallet.walletOnly')}</label>}
+                  {splitWallet && <label><input type="radio" name="payment-method" value="split" checked={paymentMethod === 'split'} disabled={busy} onChange={() => setPaymentMethod('split')} />{t('bWallet.split', {
+                    wallet: new Intl.NumberFormat(i18n.language, {style:'currency',currency:'KWD'}).format(balance.fils / 1000),
+                    card: new Intl.NumberFormat(i18n.language, {style:'currency',currency:'KWD'}).format((totalFils-balance.fils) / 1000),
+                  })}</label>}
                 </fieldset> : <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>}
               </>}
           </BookingSection>

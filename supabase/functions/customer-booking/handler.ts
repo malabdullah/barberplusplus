@@ -26,8 +26,8 @@ type Dependencies = {
   recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
   paymentPilot?: {
-    start: (data: Body, capability: string) => Promise<unknown>;
-    check: (capability: string) => Promise<PaymentAttempt | null>;
+    start: (data: Body, capability: string, walletFils?: number) => Promise<unknown>;
+    check: (capability: string, identity?: Body) => Promise<PaymentAttempt | null>;
     slots: (data: Body) => Promise<unknown>;
   };
 };
@@ -37,6 +37,10 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 const decode = (value: string) => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0));
+
+function proofWalletAmount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 1000000000;
+}
 
 export function createCustomerBookingHandler(deps: Dependencies) {
   const runtime = customerRuntime(deps);
@@ -97,7 +101,9 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (!pilot) return reply(404, { error: 'NOT_AVAILABLE' });
         if (typeof body.capability !== 'string' || !uuid.test(body.capability)) return reply(400, { error: 'INVALID_REQUEST' });
         if (!online) {
-          const attempt = await pilot.check(body.capability);
+          const bearer = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
+          const owner = bearer && deps.customer ? await deps.customer(bearer) : null;
+          const attempt = await pilot.check(body.capability, owner ? { account_user_id:owner.id, session_id:owner.session_id } : {});
           if (attempt?.state !== 'paid' || !deps.recover) return reply(200, { attempt });
           // Only the unguessable, hashed browser capability grants receipt access.
           const receipt = await deps.recover({ purpose: 'receipt', id: attempt.id, name: '', phone: '', country_code: '', expires: 0 });
@@ -346,7 +352,12 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (proof.guest_contact === 'email') Object.assign(data, { guest_contact:'email',email:proof.email,language:proof.language });
         else data.language = body.language === 'ar' ? 'ar' : 'en';
       }
-      if (online && pilot) return reply(200, { attempt: await pilot.start(data, String(body.capability)) });
+      if (online && pilot) {
+        if (body.walletFils !== undefined && (!proofWalletAmount(body.walletFils) || !data.account_user_id)) {
+          return reply(400, { error:'WALLET_INVALID' });
+        }
+        return reply(200, { attempt: await pilot.start(data, String(body.capability), body.walletFils as number | undefined) });
+      }
       if (body.action === 'slots' && pilot) return reply(200, await pilot.slots(data));
       let result;
       try { result = await deps.booking(String(body.action), data); }
@@ -382,6 +393,8 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });
       if (/ATTEMPT_CLOSED/.test(message)) return reply(409, { error: 'ATTEMPT_CLOSED' });
+      const walletError = message.match(/WALLET_(?:INVALID|DISABLED|FORBIDDEN|INSUFFICIENT_BALANCE|HOLD_EXPIRED)/)?.[0];
+      if (walletError) return reply(walletError === 'WALLET_FORBIDDEN' ? 403 : 409, { error: walletError });
       if (/UPAYMENTS_NOT_AVAILABLE/.test(message)) return reply(409, { error: 'UPAYMENTS_NOT_AVAILABLE' });
       if (/UPAYMENTS_FORBIDDEN/.test(message)) return reply(403, { error: 'FORBIDDEN' });
       if (/UPAYMENTS_/.test(message)) return reply(503, { error: 'UPAYMENTS_CHECK_UNAVAILABLE' });
