@@ -59,7 +59,17 @@ retry with the exact original proof and booking payload. If abandoning the
 attempt, or if the proof or original session expired, call `resolve-booking`
 with the original proof and account. Start a new attempt only after the server
 reports `found: false, closed: true` or the original booking is known to be
-terminal.
+terminal. This recovery applies to manual approval before the payment attempt.
+
+Once `online-start` or `online-approval-checkout` begins, use `online-check`
+with the original capability. A null attempt is only a point-in-time result.
+Retry the original request unchanged while its original proof and session
+remain valid where required. Retain uncertain attempts through browser cancel,
+network errors and session refresh. Discard a first request only after a
+verified pre-payment rejection. An attempt in `review` needs reconciliation
+before starting another payment. Call `resolve-booking` only for unpaid booking
+submission recovery. It can close a booking ID while a provider payment for
+that ID is still pending, diverting the payment into a refund or review.
 
 Booking payment attempts include `id`, `state`, `totalFils`,
 `externalFils`, `holdUntil`, `checkoutUrl`, `refundState` and
