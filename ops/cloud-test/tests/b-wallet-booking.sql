@@ -60,6 +60,14 @@ begin
         and (select status='pending' and online_payment_state='pending_approval' from public.bookings where id=booking)
         and not exists(select 1 from upayments_test.booking_attempts where id=booking),'booking awaits approval without payment');
       perform set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'session_id',admin_session,'aal','aal2','role','authenticated')::text,true);
+      if scenario='approval-paid' then
+        begin
+          update public.bookings set status='confirmed',price=price+1 where id=booking;
+          raise exception 'approval unexpectedly changed the quoted price';
+        exception when raise_exception then
+          perform pg_temp.wallet_check(sqlerrm='WALLET_PAYMENT_REQUIRED','approval cannot rewrite the frozen quote');
+        end;
+      end if;
       perform public.confirm_pending_booking(booking);
       perform pg_temp.wallet_check((select status='pending' and online_payment_state='awaiting_payment' and online_payment_due_at>clock_timestamp()
         from public.bookings where id=booking),'staff approval requests payment and reserves slot');
@@ -71,6 +79,12 @@ begin
         perform set_config('barber.b_wallet_operation','',true);
         perform private.b_wallet_expire_approvals();
         perform pg_temp.wallet_check((select status='cancelled' and online_payment_state='expired' from public.bookings where id=booking),'unpaid slot released at deadline');
+        begin
+          update public.bookings set status='confirmed' where id=booking;
+          raise exception 'expired appointment unexpectedly reopened';
+        exception when raise_exception then
+          perform pg_temp.wallet_check(sqlerrm='WALLET_PAYMENT_REQUIRED','stale confirmation cannot revive expired appointment');
+        end;
         continue;
       end if;
       attempt:=public.upayments_test_booking('approval-checkout',booking,auth_scope||jsonb_build_object('capability',cap,'wallet_fils',tender));

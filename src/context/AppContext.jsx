@@ -942,8 +942,10 @@ export function AppProvider({ children }) {
 
   const updateBooking = useCallback(async (bookingId, updates) => {
     try {
+      const statusOnlyConfirmation = updates.status === 'confirmed' && Object.keys(updates).length === 1;
+      const branch = statusOnlyConfirmation ? {} : { branchId: updates.branchId || bookings.find(booking => booking.id === bookingId)?.branchId };
       const updated = await (updates.customerName !== undefined ? bookingsService.saveAppointment : bookingsService.update)(bookingId, {
-        branchId: updates.branchId || bookings.find(booking => booking.id === bookingId)?.branchId,
+        ...branch,
         ...updates,
         modifiedByType: userRole,
         modifiedByUserId: user?.id,
