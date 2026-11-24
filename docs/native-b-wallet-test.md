@@ -40,14 +40,26 @@ price, the policy quote, language, and the verified proof.
 | Auto-confirm off and pay online | `online-request-approval` with the normal signed booking payload. Returns `attempt.state = approval_requested`. No payment or debit occurs until approval. |
 | Approved, awaiting payment | `online-approval-checkout` with `{bookingId, capability, walletFils, language}`. The server validates ownership and the current payment deadline. |
 | Check a payment, including a browser return | `online-check` with the same `capability` and the current account Bearer token. |
-| Open appointment details | Supabase RPC `b_wallet_booking` with `{p_action:"view",p_id:bookingId,p_data:{}}`. Returns `state`, `payBy`, `totalFils`, and refund information for an owned appointment. |
-| Cancel a paid booking | Existing `customer-auth` action `wallet-cancel`. Match the website payload and cancellation policy in `src/services/customerAuth.service.js`. |
+| Open appointment details | Supabase RPC `b_wallet_booking` with `{p_action:"view",p_id:bookingId,p_data:{}}`. Returns `state`, nullable `payBy`, `totalFils` as a decimal string, and nullable `refundState`, `refundChoice`, and `refundToWallet` for an owned appointment. |
+| Cancel a paid booking | `customer-auth` action `wallet-cancel` with `{bookingId, expectedDate, expectedTime, destination}`. Send the booked date (`YYYY-MM-DD`), Kuwait time (`HH:MM`), and `wallet` or `gateway`. The server enforces the shop cutoff. Refresh the booking after `BOOKING_CHANGED`, `BOOKING_CUTOFF_PASSED`, or `BOOKING_NOT_MANAGEABLE`. |
 
 Keep the UUID capability and pending action in secure, account-scoped storage
 before opening checkout. On retry, reuse the same payload and capability. A
 signed-in owner remains required for lookup. Scope pending tracking to backend
 and account, and clear it on sign-out. Do not act on history owned by another
 account. Never copy the capability into a URL or log.
+
+If a manual approval request is interrupted, send `recover-booking` with the
+original `verification` proof and current Bearer token for the same account.
+The proof binds the booking ID, and recovery remains available for 24 hours
+after proof expiry. If `found` is true, use the receipt ID to look up payment
+state through `b_wallet_booking`. If `found` is false, the original request
+may still be in flight. While the proof and its original session are valid,
+retry with the exact original proof and booking payload. If abandoning the
+attempt, or if the proof or original session expired, call `resolve-booking`
+with the original proof and account. Start a new attempt only after the server
+reports `found: false, closed: true` or the original booking is known to be
+terminal.
 
 Booking payment attempts include `id`, `state`, `totalFils`,
 `externalFils`, `holdUntil`, `checkoutUrl`, `refundState` and
@@ -69,7 +81,11 @@ hold and the server can release an unpaid slot or refund a late capture.
 - Top-up states are `creating`, `pending`, `credited`, `failed`, and
   `review`. Credit the visual balance only after fetching the server summary.
 - Wallet-only and split refunds, and gateway-only refund destination selection,
-  use the existing website rules. A provider refund can remain pending.
+  use the existing website rules. `refundChoice: true` means a paid gateway-only
+  booking can offer a destination choice. `refundToWallet: true` means a paid
+  wallet-only or split booking refunds to the wallet. These fields describe
+  refund routing. The server determines cancellation eligibility. A provider
+  refund can remain pending.
 
 ## Return link and device checks
 
