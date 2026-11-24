@@ -13,7 +13,8 @@ do $test$
 declare
   user_id_value uuid := gen_random_uuid(); session_id_value uuid := gen_random_uuid(); customer_id_value uuid := gen_random_uuid();
   admin_id uuid := gen_random_uuid(); admin_session uuid := gen_random_uuid(); factor_id uuid := gen_random_uuid();
-  shop uuid; worker uuid; service uuid; wallet uuid; today date := (now() at time zone 'Asia/Kuwait')::date;
+  shop uuid; manager_id_value uuid; payment_mode text; auto_confirm boolean; payment_action text; methods jsonb;
+  worker uuid; service uuid; wallet uuid; today date := (now() at time zone 'Asia/Kuwait')::date;
   auth_scope jsonb; basket jsonb; quoted jsonb; booking uuid; cap uuid; attempt jsonb;
   amount bigint; tender bigint; elapsed integer; selected_slot text; chosen_date date;
   scenario text; receipt_event uuid; claim jsonb; p_amount bigint; preview jsonb; before_refund bigint;
@@ -31,6 +32,9 @@ begin
     from upayments_test.booking_fixture f join public.barbers b on b.branch_id=f.shop_id
     join public.services s on s.branch_id=f.shop_id and s.id=any(b.service_ids)
     where f.enabled and b.status='active' and s.status='active' and s.price>0 order by s.price,s.id limit 1;
+  select manager_id into strict manager_id_value from public.branches where id=shop;
+  insert into upayments_test.shop_payment_methods(shop_id,method) values(shop,'both')
+    on conflict(shop_id) do update set method=excluded.method;
   update private.b_wallet_settings set enabled=true,accept_new_payments=true;
   auth_scope := jsonb_build_object('account_user_id',user_id_value,'session_id',session_id_value);
   wallet := private.b_wallet_lock(customer_id_value);
@@ -147,6 +151,99 @@ begin
     perform pg_temp.wallet_check(p_amount-before_refund=amount,'full refund credited exactly once for '||scenario);
     perform pg_temp.wallet_check((select refund_state='refunded' from upayments_test.booking_attempts where id=booking),'settlement refund final for '||scenario);
   end loop;
+  -- Check all three modes with both barber settings. Provider captures in
+  -- this matrix use wallet balance, so no outside service is called.
+  foreach payment_mode in array array['at_shop','online','both'] loop
+    perform set_config('request.jwt.claims',jsonb_build_object('sub',manager_id_value,'role','authenticated')::text,true);
+    methods:=public.manage_test_shop_payment_methods(shop,payment_mode);
+    perform pg_temp.wallet_check(methods->>'method'=payment_mode and methods->>'onlineAvailable'='true',
+      'assigned manager saved '||payment_mode);
+
+    foreach auto_confirm in array array[true,false] loop
+      perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+      update public.barbers set auto_confirm_bookings=auto_confirm where id=worker;
+      for elapsed in 2..8 loop
+        chosen_date:=today+elapsed;
+        basket:=auth_scope||jsonb_build_object('branch_id',shop,'barber_id',worker,
+          'service_ids',jsonb_build_array(service),'date',chosen_date);
+        quoted:=public.upayments_test_booking('slots',null,basket);
+        selected_slot:=quoted->'slots'->>0;
+        exit when selected_slot is not null;
+      end loop;
+      perform pg_temp.wallet_check(selected_slot is not null
+        and (quoted->>'pay_at_shop')::boolean=(payment_mode<>'online')
+        and (quoted->>'online_payment')::boolean=(payment_mode<>'at_shop' and auto_confirm)
+        and (quoted->>'wallet_payment')::boolean=(payment_mode<>'at_shop')
+        and (quoted->>'confirmation_required')::boolean=(not auto_confirm),
+        'checkout choices for '||payment_mode||' auto-confirm '||auto_confirm);
+      booking:=gen_random_uuid(); cap:=gen_random_uuid();
+      amount:=round((quoted->>'price')::numeric*1000)::bigint;
+      basket:=basket||jsonb_build_object('id',booking,'time',selected_slot,'name','Wallet checkout QA',
+        'country_code','+965','email',user_id_value||'@example.test','language','en','expected_price',quoted->>'price',
+        'expected_duration',quoted->>'duration','booking_policy',quoted->'booking_policy');
+      payment_action:=case when auto_confirm then 'start' else 'request-approval' end;
+
+      if payment_mode='at_shop' then
+        begin
+          perform public.upayments_test_booking(payment_action,booking,jsonb_build_object('booking',basket,'capability',cap,'wallet_fils',amount));
+          raise exception 'online payment unexpectedly started';
+        exception when raise_exception then
+          perform pg_temp.wallet_check(sqlerrm='SHOP_PAYMENT_CHANGED','disabled online payment rejected');
+        end;
+      elsif payment_mode='online' then
+        begin
+          perform public.upayments_test_booking('book-at-shop',booking,basket);
+          raise exception 'pay at shop unexpectedly started';
+        exception when raise_exception then
+          perform pg_temp.wallet_check(sqlerrm='SHOP_PAYMENT_CHANGED','disabled pay at shop rejected');
+        end;
+      end if;
+
+      if payment_mode<>'online' then
+        attempt:=public.upayments_test_booking('book-at-shop',booking,basket);
+        perform pg_temp.wallet_check(attempt->>'status'=case when auto_confirm then 'confirmed' else 'pending' end,
+          'pay at shop initial state for '||payment_mode||' auto-confirm '||auto_confirm);
+        if not auto_confirm then
+          perform set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'session_id',admin_session,'aal','aal2','role','authenticated')::text,true);
+          perform public.confirm_pending_booking(booking);
+          perform pg_temp.wallet_check((select status='confirmed' and online_payment_state is null from public.bookings where id=booking),
+            'pay at shop confirms without payment after approval');
+          perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+        end if;
+        continue when payment_mode='at_shop';
+        quoted:=public.upayments_test_booking('slots',null,basket);
+        selected_slot:=quoted->'slots'->>0;
+        perform pg_temp.wallet_check(selected_slot is not null,'second slot for both methods');
+        booking:=gen_random_uuid();
+        basket:=basket||jsonb_build_object('id',booking,'time',selected_slot);
+      end if;
+
+      attempt:=public.upayments_test_booking(payment_action,booking,jsonb_build_object('booking',basket,'capability',cap,'wallet_fils',amount));
+      if not auto_confirm then
+        perform pg_temp.wallet_check((select online_payment_state='pending_approval' from public.bookings where id=booking)
+          and not exists(select 1 from upayments_test.booking_attempts where id=booking),'requires approval before any payment');
+        perform set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'session_id',admin_session,'aal','aal2','role','authenticated')::text,true);
+        perform public.confirm_pending_booking(booking);
+        perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+        perform pg_temp.wallet_check((select status='pending' and online_payment_state='awaiting_payment' from public.bookings where id=booking),
+          'online appointment awaits payment after approval');
+        attempt:=public.upayments_test_booking('approval-checkout',booking,auth_scope||jsonb_build_object('capability',cap,'wallet_fils',amount));
+      end if;
+      perform pg_temp.wallet_check(attempt->>'state'='creating','online payment starts after checkout or approval');
+      attempt:=public.upayments_test_booking('wallet-capture',booking,'{}');
+      perform pg_temp.wallet_check(attempt->>'state'='paid'
+        and (select status='confirmed' from public.bookings where id=booking),
+        'online payment confirms '||payment_mode||' auto-confirm '||auto_confirm);
+    end loop;
+  end loop;
+
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',user_id_value,'role','authenticated')::text,true);
+  begin
+    perform public.manage_test_shop_payment_methods(shop,'at_shop');
+    raise exception 'unprivileged user unexpectedly saved payment methods';
+  exception when insufficient_privilege then
+    perform pg_temp.wallet_check(sqlerrm='SHOP_PAYMENT_FORBIDDEN','customer cannot change shop payment methods');
+  end;
   preview:=private.deletion_preview(array[customer_id_value]);
   perform pg_temp.wallet_check(preview ? 'walletBalanceFils' and preview ? 'walletPending','wallet state is included in deletion preview');
   begin

@@ -32,7 +32,7 @@ import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
 const PANELS = ['city', 'shop', 'barber', 'services', 'time', 'details'];
-const ERROR_CODES = ['BILLING_BOOKING_UNAVAILABLE', 'SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED', 'BOOKING_RATE_LIMIT', 'EMAIL_REQUIRED', 'UPAYMENTS_NOT_AVAILABLE', 'UPAYMENTS_CHECK_UNAVAILABLE'];
+const ERROR_CODES = ['BILLING_BOOKING_UNAVAILABLE', 'SELF_BOOKING_NOT_ALLOWED', 'INVALID_DETAILS', 'INVALID_CODE', 'VERIFICATION_REQUIRED', 'SLOT_UNAVAILABLE', 'INVALID_DATE', 'INVALID_SELECTION', 'BOOKING_UNAVAILABLE', 'BOOKING_POLICY_CHANGED', 'PHONE_IN_USE', 'PHONE_TEST_NUMBER', 'PHONE_RATE_LIMIT', 'PHONE_UNAVAILABLE', 'PHONE_CHANGED', 'BOOKING_RATE_LIMIT', 'EMAIL_REQUIRED', 'UPAYMENTS_NOT_AVAILABLE', 'UPAYMENTS_CHECK_UNAVAILABLE', 'SHOP_PAYMENT_CHANGED'];
 
 
 function BookingSection({ id, title, summary, open, onEdit, onDone, editLabel, doneLabel, feedback, children, disabled }) {
@@ -94,7 +94,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [bookingPolicy, setBookingPolicy] = useState(null);
   const [confirmationRequired, setConfirmationRequired] = useState(false);
   const [onlineAvailable, setOnlineAvailable] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('shop');
+  const [payAtShopAllowed, setPayAtShopAllowed] = useState(true);
+  const [paymentSelection, setPaymentMethod] = useState('shop');
   const [walletAvailable, setWalletAvailable] = useState(false);
   const [balance, setBalance] = useState(null);
   const [splitAmount, setSplitAmount] = useState('');
@@ -312,7 +313,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   useEffect(() => {
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
-    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setWalletAvailable(false); setSlotError(false);
+    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setWalletAvailable(false); setPayAtShopAllowed(true); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
       .then(async result => { if (active && !pageLeaving.current) {
         if (!packageOfferId && Number.isFinite(result.duration) && result.duration !== duration) { setTime(''); setError('PRICE_CHANGED'); await recoverUnavailableSelection(() => active, true); return; }
@@ -321,7 +322,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
           await recoverUnavailableSelection(() => active, true);
           return;
         }
-        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setWalletAvailable(result.wallet_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setPayAtShopAllowed(result.pay_at_shop !== false); setWalletAvailable(result.wallet_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active || pageLeaving.current) return;
         setError(failure.message);
@@ -409,7 +410,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const confirmBooking = async event => {
     event.preventDefault();
     if (busy || !appointmentReady || panel !== 'details' || accountLoading || (!customer && !guest)) return;
-    if (!validGuestDetails()) return;
+    if (!validGuestDetails() || paymentUnavailable) return;
     setBusy(true); setError('');
     try {
       const policy = await customerBookingService.checkoutPolicy();
@@ -479,7 +480,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       setError(failure.message);
       if (failure.message === 'PRICE_CHANGED') { setTime(''); await recoverUnavailableSelection(() => true, true); }
       if (failure.message === 'SLOT_UNAVAILABLE') { setTime(''); openPanel('time'); setSlotRetry(value => value + 1); }
-      if (failure.message === 'BOOKING_POLICY_CHANGED') setSlotRetry(value => value + 1);
+      if (['BOOKING_POLICY_CHANGED', 'SHOP_PAYMENT_CHANGED'].includes(failure.message)) setSlotRetry(value => value + 1);
       if (failure.message === 'INVALID_SELECTION') await recoverUnavailableSelection();
       if (failure.message === 'PHONE_VERIFICATION_REQUIRED' || failure.message === 'PHONE_CHANGED') {
         setVerification(''); setPhoneSession(null); setPhoneCode('');
@@ -508,11 +509,18 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const splitWallet = canUseWallet && balance.fils > 0 && totalFils > 1;
   const splitFils = walletAmountFils(splitAmount);
   const validSplit = splitFils > 0 && splitFils < totalFils && splitFils <= (balance?.fils ?? 0);
+  const onlineOnly = !payAtShopAllowed;
+  const needsOnlineAccount = onlineOnly && confirmationRequired && !customer;
+  const chosenWalletAvailable = (paymentSelection === 'wallet' && fullWallet) || (paymentSelection === 'split' && splitWallet);
+  const paymentMethod = onlineOnly
+    ? confirmationRequired ? 'after-approval' : chosenWalletAvailable ? paymentSelection : 'online'
+    : paymentSelection;
   const payOnline = canPayOnline && (paymentMethod === 'online'
     || (paymentMethod === 'wallet' && fullWallet) || (paymentMethod === 'split' && splitWallet));
   const canRequestOnlineApproval = walletTestEnvironment && walletAvailable && Boolean(customer && confirmationRequired && time)
     && Date.parse(`${date}T${time}:00+03:00`) > Date.now() + 8 * 60_000;
   const requestOnlineApproval = canRequestOnlineApproval && paymentMethod === 'after-approval';
+  const paymentUnavailable = onlineOnly && !payOnline && !requestOnlineApproval;
   const selectedWalletFils = paymentMethod === 'wallet' ? totalFils : paymentMethod === 'split' ? splitFils : 0;
   const canContinue = panel === 'city' ? Boolean(city) : panel === 'shop' ? Boolean(branch) : panel === 'barber' ? Boolean(barber) : panel === 'services' ? Boolean(selectedServices.length && !packagesLoading && !packageInvalid) : appointmentReady && !accountLoading && (!finalDetails || Boolean(customer) || guest);
   const phoneCheckPending = accountPhoneKey && accountPhoneCheck?.key !== accountPhoneKey;
@@ -623,11 +631,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
               {time && date && <>
                 {!customer && !accountLoading && <section className="cb-account-choice" aria-labelledby="booking-account-choice-title">
                   <h3 id="booking-account-choice-title">{tr('accountChoice.title')}</h3><p>{tr('accountChoice.hint')}</p>
-                  <div className="cb-account-choice-actions"><Link className="cb-primary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{t('customerAuth.signIn')}</Link><button className="cb-secondary" type="button" onClick={() => { setGuest(true); setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0); }} aria-pressed={guest}>{tr('accountChoice.guest')}</button></div>
-                  {guest && <p className="cb-helper">{tr('accountChoice.guestHint')}</p>}
+                  <div className="cb-account-choice-actions"><Link className="cb-primary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{t('customerAuth.signIn')}</Link>{!needsOnlineAccount && <button className="cb-secondary" type="button" onClick={() => { setGuest(true); setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0); }} aria-pressed={guest}>{tr('accountChoice.guest')}</button>}</div>
+                  {needsOnlineAccount ? <p className="cb-helper">{t('shopPayment.signInForApproval')}</p> : guest && <p className="cb-helper">{tr('accountChoice.guestHint')}</p>}
                 </section>}
                 <section className="cb-confirm-summary" aria-label={tr('three.bookingSummary')}>{renderSummary()}</section>
-                {(customer || guest) && !accountLoading && <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
+                {(customer || (guest && !needsOnlineAccount)) && !accountLoading && <form ref={formRef} className="cb-details" onSubmit={confirmBooking} id="booking-confirm-form" noValidate>
                   <fieldset className="cb-details-fields" disabled={busy}>
                     {customer ? <>
                       <div className="cb-verified-details"><div><strong>{customer.name}</strong><br /><bdi>{customer.email}</bdi>{customer.phone && <><br /><bdi>{customer.countryCode} {customer.phone}</bdi></>}</div><Link to="/customer/account">{t('customerAuth.manageAccount')}</Link></div><p className="cb-helper">{t('customerAuth.accountDetails')}</p>
@@ -655,7 +663,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                       {inlinePhoneError && bookingError}
                       <div className="cb-account-choice-actions cb-phone-verification-actions">
                         {bookingSubmit(tr(activePhoneSession ? (payOnline ? 'onlinePayment.verifyAndPay' : 'phoneVerification.verifyAndBook') : 'phoneVerification.send'),
-                          Boolean(hasUnsupportedSavedNumber || (activePhoneSession && phoneCode.length !== 6)))}
+                          Boolean(paymentUnavailable || hasUnsupportedSavedNumber || (activePhoneSession && phoneCode.length !== 6)))}
                         {activePhoneSession && <button className="cb-secondary" type="button" disabled={resendIn > 0}
                           onClick={resendPhoneCode}>{resendIn > 0 ? tr('phoneVerification.wait', { count: resendIn }) : tr('phoneVerification.resend')}</button>}
                       </div>
@@ -673,16 +681,18 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
                 </div>}
                 {canRequestOnlineApproval && <fieldset className="cb-payment-method">
                   <legend>{tr('onlinePayment.method')}</legend>
-                  <label><input type="radio" name="payment-method" checked={!requestOnlineApproval} disabled={busy} onChange={() => setPaymentMethod('shop')} />{tr('payAtShop')}</label>
+                  {payAtShopAllowed && <label><input type="radio" name="payment-method" checked={!requestOnlineApproval} disabled={busy} onChange={() => setPaymentMethod('shop')} />{tr('payAtShop')}</label>}
                   <label><input type="radio" name="payment-method" checked={requestOnlineApproval} disabled={busy} onChange={() => setPaymentMethod('after-approval')} />{t('bWallet.afterApproval')}</label>
                 </fieldset>}
                 {canPayOnline && (customer || guest) ? <fieldset className="cb-payment-method">
                   <legend>{tr('onlinePayment.method')}</legend>
-                  <label><input type="radio" name="payment-method" value="shop" checked={!payOnline} disabled={busy} onChange={() => setPaymentMethod('shop')} />{tr('payAtShop')}</label>
+                  {payAtShopAllowed && <label><input type="radio" name="payment-method" value="shop" checked={!payOnline} disabled={busy} onChange={() => setPaymentMethod('shop')} />{tr('payAtShop')}</label>}
                   <label><input type="radio" name="payment-method" value="online" checked={payOnline && paymentMethod === 'online'} disabled={busy} onChange={() => setPaymentMethod('online')} />{tr('onlinePayment.option')}</label>
                   {fullWallet && <label><input type="radio" name="payment-method" value="wallet" checked={paymentMethod === 'wallet'} disabled={busy} onChange={() => setPaymentMethod('wallet')} />{t('bWallet.walletOnly')}</label>}
                   {splitWallet && <label><input type="radio" name="payment-method" value="split" checked={paymentMethod === 'split'} disabled={busy} onChange={() => { setPaymentMethod('split'); setSplitAmount((Math.min(balance.fils,totalFils-1)/1000).toFixed(3)); }} />{t('bWallet.splitChoice')}</label>}
-                </fieldset> : !canRequestOnlineApproval && <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>}
+                </fieldset> : !canRequestOnlineApproval && (payAtShopAllowed
+                  ? <p className="cb-payment"><Store size={20} aria-hidden="true" /><span>{tr('payAtShop')}</span></p>
+                  : !canPayOnline && !needsOnlineAccount && <p className="cb-alert" role="status">{t('shopPayment.onlineUnavailable')}</p>)}
                 {splitWallet && paymentMethod==='split' && <div>
                   <label className="cb-field-label" htmlFor="booking-wallet-amount">{t('bWallet.walletAmount')}</label>
                   <input className="cb-input" id="booking-wallet-amount" inputMode="decimal" maxLength={10} value={splitAmount} onChange={event => setSplitAmount(event.target.value)} />
@@ -694,11 +704,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
               </>}
           </BookingSection>
         </>}
-        {!catalogLoading && !receipt && (!finalDetails || ((customer || guest) && !showPhoneVerification)) && <footer className="cb-actions">
+        {!catalogLoading && !receipt && (!finalDetails || ((customer || (guest && !needsOnlineAccount)) && !showPhoneVerification)) && <footer className="cb-actions">
           <div className="cb-action-context" aria-live="polite">{selectedServices.length ? totalLabel : branch ? tr('branchSelected', { name: name(branch) }) : cityName(city)}</div>
           <div className="cb-action-buttons">
             {finalDetails
-              ? bookingSubmit(requestOnlineApproval ? t('bWallet.sendRequest') : tr(phoneCheckPending || !checkoutPolicy ? 'phoneVerification.checking' : payOnline ? 'onlinePayment.continue' : 'confirm'), Boolean(phoneCheckPending || !checkoutPolicy))
+              ? bookingSubmit(requestOnlineApproval ? t('bWallet.sendRequest') : tr(phoneCheckPending || !checkoutPolicy ? 'phoneVerification.checking' : payOnline ? 'onlinePayment.continue' : 'confirm'), Boolean(paymentUnavailable || phoneCheckPending || !checkoutPolicy))
               : <button id="booking-next" type="button" className="cb-primary" disabled={!canContinue || busy || catalogError}
                 onClick={() => openPanel(PANELS[panelIndex + 1])}>{nextLabel}<ArrowRight size={20} className="cb-directional" /></button>}
           </div>

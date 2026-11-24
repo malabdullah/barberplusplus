@@ -187,9 +187,11 @@ const web = createCustomerBookingHandler({
   },
   },
   booking: async (action, data) => {
-    const result = await admin.rpc(bookingRPC(action), { p_action: action, p_data: data });
+    const result = await admin.rpc(action === 'book-at-shop' ? 'upayments_test_booking' : bookingRPC(action), {
+      p_action: action, p_data: data, ...(action === 'book-at-shop' ? { p_id: data.id } : {}),
+    });
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
-    return action === 'book' ? { ...result.data, shareUrl: await bookingShareUrl(result.data.id) } : result.data;
+    return ['book', 'book-at-shop'].includes(action) ? { ...result.data, shareUrl: await bookingShareUrl(result.data.id) } : result.data;
   },
 });
 Deno.serve(req => pilot ? pilot.background(req, web) : web(req));

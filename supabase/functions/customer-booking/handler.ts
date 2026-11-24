@@ -381,14 +381,15 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, { attempt: await pilot.start(data, String(body.capability), body.walletFils as number | undefined) });
       }
       if (body.action === 'slots' && pilot) return reply(200, await pilot.slots(data));
+      const bookingAction = pilot && body.action === 'book' ? 'book-at-shop' : String(body.action);
       let result;
-      try { result = await deps.booking(String(body.action), data); }
+      try { result = await deps.booking(bookingAction, data); }
       catch (failure) {
         // These SQLSTATEs guarantee transaction rollback. Retry the entire RPC
         // once with the same signed booking ID; other errors remain unchanged.
         // https://www.postgresql.org/docs/16/mvcc-serialization-failure-handling.html
         if (body.action !== 'book' || !(failure instanceof Error) || !/^(40P01|40001)\b/.test(failure.message)) throw failure;
-        result = await deps.booking('book', data);
+        result = await deps.booking(bookingAction, data);
       }
       if (body.action === 'book') {
         const proof = await verify(body.verification, 'verified');
@@ -411,6 +412,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       if (packageFailure) return reply(409, { error: packageFailure });
       if (/BILLING_BOOKING_UNAVAILABLE/.test(message)) return reply(409, { error: 'BOOKING_UNAVAILABLE', reason: 'SHOP_ACCESS_REQUIRED' });
       if (/SELF_BOOKING_NOT_ALLOWED/.test(message)) return reply(409, { error: 'SELF_BOOKING_NOT_ALLOWED' });
+      if (/SHOP_PAYMENT_CHANGED/.test(message)) return reply(409, { error: 'SHOP_PAYMENT_CHANGED' });
       if (/BOOKING_POLICY_CHANGED/.test(message)) return reply(409, { error: 'BOOKING_POLICY_CHANGED' });
       if (message === 'PHONE_RATE_LIMIT') return reply(429, { error: message });
       if (message === 'PHONE_UNAVAILABLE') return reply(503, { error: message });

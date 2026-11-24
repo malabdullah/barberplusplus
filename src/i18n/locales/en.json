@@ -1720,7 +1720,8 @@
       "verifyAndBook": "Verify and book"
     },
     "errors": {
-      "UPAYMENTS_NOT_AVAILABLE": "Online payment is unavailable for this appointment. Choose Pay at the shop or pick another time.",
+      "SHOP_PAYMENT_CHANGED": "This shop changed its payment methods. Review the available options and try again.",
+    "UPAYMENTS_NOT_AVAILABLE": "Online payment is unavailable for this appointment. Choose Pay at the shop or pick another time.",
       "UPAYMENTS_CHECK_UNAVAILABLE": "The payment page couldn’t open. Check your payment status before trying again.",
       "SELF_BOOKING_NOT_ALLOWED": "You cannot book an appointment with yourself. Choose another barber.",
       "PHONE_CHANGED": "Your phone number needs to be verified again. Review the number and try again.",
@@ -4007,6 +4008,20 @@
     "total": "Invoice total",
     "test": "TEST INVOICE",
     "testNote": "Issued in the Barber++ Test environment. No real payment was collected."
+  },
+  "shopPayment": {
+    "title": "Booking payment methods",
+    "method": "Accepted payment methods",
+    "at_shop": "Pay at the shop only",
+    "online": "Pay online only",
+    "both": "Pay at the shop or online",
+    "save": "Save payment methods",
+    "saved": "Payment methods saved.",
+    "notEnabled": "Online payments are unavailable for this shop.",
+    "loadError": "Could not load payment methods.",
+    "saveError": "Could not save payment methods.",
+    "signInForApproval": "Sign in to pay online after the barber approves your request.",
+    "onlineUnavailable": "Online payment is unavailable for this time. Choose another time."
   },
   "bWallet": {
     "splitChoice": "B-Wallet + UPayments",
