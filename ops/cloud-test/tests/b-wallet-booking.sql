@@ -16,7 +16,7 @@ declare
   shop uuid; worker uuid; service uuid; wallet uuid; today date := (now() at time zone 'Asia/Kuwait')::date;
   auth_scope jsonb; basket jsonb; quoted jsonb; booking uuid; cap uuid; attempt jsonb;
   amount bigint; tender bigint; elapsed integer; selected_slot text; chosen_date date;
-  scenario text; claim jsonb; p_amount bigint; preview jsonb; before_refund bigint;
+  scenario text; receipt_event uuid; claim jsonb; p_amount bigint; preview jsonb; before_refund bigint;
 begin
   insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values
     (user_id_value,user_id_value||'@example.test',now(),'{"role":"customer"}'),
@@ -96,6 +96,24 @@ begin
     perform pg_temp.wallet_check(attempt->>'state'='paid' and
       (select status='confirmed' and online_payment_state='paid' from public.bookings where id=booking),'confirmed only after full payment for '||scenario);
     perform pg_temp.wallet_check((select count(*)=1 and sum(amount_fils)=amount from private.settlement_receipts where booking_id=booking),'one gross shop receipt for '||scenario);
+    if scenario='wallet-only' then
+      select j.id into strict receipt_event from private.settlement_journals j
+        join private.settlement_receipts r on r.id=j.receipt_id where r.booking_id=booking and j.kind='receipt';
+      begin
+        insert into private.settlement_journals(shop_id,receipt_id,kind,amount_fils,created_by,occurred_at)
+          select shop,id,'refund',amount,admin_id,now() from private.settlement_receipts where booking_id=booking;
+        raise exception 'unexpected manual refund';
+      exception when raise_exception then
+        perform pg_temp.wallet_check(sqlerrm='SETTLEMENT_WALLET_MANAGED','manual settlement refund cannot bypass wallet funding');
+      end;
+      begin
+        insert into private.settlement_journals(shop_id,receipt_id,kind,amount_fils,created_by,occurred_at,reverses_id)
+          select shop,id,'reversal',-amount,admin_id,now(),receipt_event from private.settlement_receipts where booking_id=booking;
+        raise exception 'unexpected reversal';
+      exception when raise_exception then
+        perform pg_temp.wallet_check(sqlerrm='SETTLEMENT_WALLET_MANAGED','manual settlement reversal cannot bypass wallet funding');
+      end;
+    end if;
     if tender>0 then
       perform pg_temp.wallet_check((select count(*)=1 and sum(amount_fils)=-tender from private.b_wallet_movements where reference=booking and kind='spend'),'one wallet debit for '||scenario);
     end if;
@@ -125,5 +143,6 @@ begin
   end;
 end
 $test$;
+set constraints all immediate;
 select count(*) as assertions, array_agg(label order by label) as passed from wallet_booking_checks;
 rollback;
