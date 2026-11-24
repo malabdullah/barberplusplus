@@ -2,7 +2,9 @@
 
 This contract is for Barber++ Test only. Its Supabase project is
 `qvkucvcjmojjbphlzlks`. The app uses its existing approved Test API transport
-and gate. Requests to `customer-booking` and `b-wallet` opt in with
+and gate. The gated website proxy forwards the explicit marker for these two
+functions. Ordinary web requests continue to receive the website marker.
+Requests to `customer-booking` and `b-wallet` opt in with
 `X-Barber-Native-Wallet: 1`. This is a compatibility marker. It does not replace
 the gate or the current customer's Supabase access token. Do not send the
 website marker, Test or Auth headers, or app credentials to the payment browser.

@@ -146,3 +146,28 @@ test('payment app opener is neutral and links across origins without bypassing t
   assert.equal((await worker.fetch(new Request(origin+'/payments/open-app?status=paid'),env)).status,401);
   assert.equal((await worker.fetch(new Request(origin+'/customer/account'),env)).status,401);
 });
+
+test('native wallet marker is forwarded only to its gated functions', async () => {
+  const original = globalThis.fetch;
+  const passed = [];
+  globalThis.fetch = (_url, options) => {
+    passed.push([options.headers.get('x-barber-test-web'),options.headers.get('x-barber-native-wallet')]);
+    assert.equal(options.headers.get('x-cloud-test-key'),env.CLOUD_TEST_ACCESS_KEY);
+    return Promise.resolve(Response.json({ok:true}));
+  };
+  async function call(name, marker, signedIn=true) {
+    return worker.fetch(new Request(origin+'/test-api/'+name,{method:'POST',headers:{
+      ...(signedIn?{authorization:login().headers.get('authorization')}:{}),
+      ...(marker?{'x-barber-native-wallet':marker}:{}),
+    }}),env);
+  }
+  try {
+    assert.equal((await call('customer-booking','1',false)).status,401);
+    await call('customer-booking',null);
+    await call('customer-booking','1');
+    await call('customer-booking','bogus');
+    await call('b-wallet','1');
+    await call('customer-auth','1');
+    assert.deepEqual(passed,[['1',null],[null,'1'],['1',null],[null,'1'],[null,null]]);
+  } finally { globalThis.fetch=original; }
+});

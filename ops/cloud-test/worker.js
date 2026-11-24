@@ -72,7 +72,9 @@ export default {
       if (!functions.has(name) || !['GET', 'POST', 'OPTIONS'].includes(request.method)
         || name === 'get-kuwait-governorates' && request.method !== 'GET') return new Response('Not found', {status:404});
       const headers = new Headers({'apikey':env.SUPABASE_PUBLISHABLE_KEY,'x-cloud-test-key':env.CLOUD_TEST_ACCESS_KEY,'Origin':env.APP_URL});
-      if (name === 'customer-booking') headers.set('x-barber-test-web', '1');
+      const walletNative = ['customer-booking','b-wallet'].includes(name) && request.headers.get('x-barber-native-wallet') === '1';
+      if (walletNative) headers.set('x-barber-native-wallet', '1');
+      else if (name === 'customer-booking') headers.set('x-barber-test-web', '1');
       for (const field of ['authorization', 'content-type']) {
         const value = request.headers.get(field);
         if (value && !(field === 'authorization' && value.startsWith('Basic '))) headers.set(field, value);
