@@ -337,3 +337,50 @@ Deno.test('hosted web still enforces shop payment policy when the sandbox adapte
   assert((await call({ action: 'slots', ...selection }, false)).status === 200);
   assert(actions.join(',') === 'shop-payment-slots,book-at-shop,slots');
 });
+
+Deno.test('native wallet opt-in uses the existing gate, preserves legacy checkout and binds checks to a real customer', async () => {
+  const appUrl = 'https://app.example.test';
+  const ref = 'abcdefghijklmnopqrst';
+  const cloudAccessKey = 'test-gateway-secret-with-enough-characters';
+  const customerId = '42cc5622-58de-4763-9cc4-99cb92954204';
+  const sessionId = 'afe98dac-8228-4f94-8680-2835692d6a3b';
+  const capability = '44ca29a4-b646-4836-a62c-367463ef4307';
+  let checks = 0;
+  let starts = 0;
+  const handler = make({
+    environment: 'cloud-test', appUrl, publicUrl: 'https://' + ref + '.supabase.co',
+    cloudTestProjectRef: ref, cloudAccessKey, shopPaymentPolicy: true, checkoutPolicy: () => Promise.resolve('email_only'),
+    customer: (token: string) => Promise.resolve(token === 'owner'
+      ? { id:customerId,session_id:sessionId,name:'Test Customer',phone:'',countryCode:'+965',email:'customer@example.test' } : null),
+    paymentPilot: {
+      slots: () => Promise.resolve({ slots: [], pay_at_shop: false }),
+      start: (_data: unknown,_id: string,_fils: number,native: boolean) => {
+        assert(native === true);
+        starts++;
+        return Promise.resolve({ state: 'pending' });
+      },
+      check: (_uuid: string, identity: Record<string, unknown>) => {
+        assert(identity.account_user_id === customerId && identity.session_id === sessionId);
+        checks++;
+        return Promise.resolve({state:'pending',accountSaved:true});
+      },
+    },
+  });
+  const call = (body: unknown, marker = true, gate = true, token?: string) => handler(new Request(appUrl, {
+    method:'POST', headers:{Origin:appUrl,...(gate?{'x-cloud-test-key':cloudAccessKey}:{}),
+      ...(marker?{'x-barber-native-wallet':'1'}:{}),...(token?{Authorization:'Bearer '+token}:{})},
+    body: JSON.stringify(body),
+  }));
+  assert((await call({action:'slots',...selection},true,false)).status === 403);
+  assert((await (await call({action:'slots',...selection})).json()).pay_at_shop === false);
+  assert((await (await call({action:'slots',...selection},false)).json()).pay_at_shop === undefined);
+  assert((await call({action:'online-check',capability},false,true,'owner')).status === 404);
+  assert((await call({action:'online-check',capability})).status === 401);
+  assert((await call({action:'online-check',capability},true,true,'owner')).status === 200);
+  assert(checks === 1);
+  const {verification: guest} = await (await call({action:'guest-proof',name:'Guest Customer',email:'guest@example.test',contactMode:'email'})).json();
+  assert((await call({action:'online-start',...selection,capability,walletFils:0,verification:guest})).status === 401);
+  const {verification} = await (await call({action:'account-proof'},true,true,'owner')).json();
+  assert((await call({action:'online-start',...selection,capability,walletFils:0,verification},true,true,'owner')).status === 200);
+  assert(starts === 1);
+});

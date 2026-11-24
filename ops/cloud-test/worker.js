@@ -42,6 +42,16 @@ export default {
       result.headers.set('Referrer-Policy', 'no-referrer');
       return result;
     }
+    // The payment return may stay in Safari or Chrome. A user-tapped
+    // cross-origin App Link can reopen the Test app without any payment data.
+    if (url.pathname === '/payments/open-app' && ['GET', 'HEAD'].includes(request.method)
+        && !url.search && !url.hash) {
+      return new Response(request.method === 'HEAD' ? null : '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Open Barber++ Test</title><main><h1>Open Barber++ Test</h1><p>The app checks the payment when it opens.</p><a href="https://barber-open-test.alabdullah-cs.workers.dev/payments/return">Open the Test app</a> · <a href="/customer/account">Use the Test website</a></main></html>', {headers:{
+        'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
+        'Content-Security-Policy':"default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        'X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow, noarchive',
+      }});
+    }
     const cookie = Array.from(await digest(`barber-test-session:${env.TEST_ACCESS_PASSWORD}`), x => x.toString(16).padStart(2, '0')).join('');
     const suppliedCookie = request.headers.get('cookie')?.match(/(?:^|;\s*)barber_test_access=([^;]*)/)?.[1] || '';
     const basic = `Basic ${btoa(`tester:${env.TEST_ACCESS_PASSWORD}`)}`;

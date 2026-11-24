@@ -1,3 +1,4 @@
+import { nativeWalletReturnUrl, requestsNativeWallet } from '../_shared/native-wallet-test.ts';
 import { authorizedWebhook, bodyText, fils, sandboxRequester } from '../_shared/upayments-sandbox.ts';
 
 export const walletProject = 'https://qvkucvcjmojjbphlzlks.supabase.co';
@@ -52,16 +53,17 @@ export function createWalletHandler(config: Config) {
     }
   }
 
-  async function start(id: string, amount: number, identity: Identity, language: string) {
+  async function start(id: string, amount: number, identity: Identity, language: string, native: boolean) {
     const topup = await config.rpc('start', id, { ...identity, amount_fils: amount }) as Topup;
     if (!topup.create) return topup;
     const order = orderFor(topup.id);
+    const callbackUrl = native ? nativeWalletReturnUrl : returnUrl;
     try {
       const response = await request('POST', 'charge', JSON.stringify({
         order: { id: order, reference: order, currency: 'KWD', amount: Number(topup.amountFils) / 1000,
           description: 'Barber++ Test B-Wallet top-up' },
         reference: { id: order }, tokens: {}, language,
-        returnUrl, cancelUrl: returnUrl, notificationUrl: hookUrl + order, paymentLinkExpiryInMinutes: 5,
+        returnUrl: callbackUrl, cancelUrl: callbackUrl, notificationUrl: hookUrl + order, paymentLinkExpiryInMinutes: 5,
       }));
       if ([400, 401, 403, 422].includes(response.http) && response.body?.status === false) {
         return await config.rpc('fail', topup.id, {});
@@ -114,7 +116,7 @@ export function createWalletHandler(config: Config) {
       if (body.action !== 'start' || !Number.isSafeInteger(body.amountFils) || body.amountFils < 1000 || body.amountFils > 100000) {
         return json(400, { error: 'WALLET_INVALID_TOPUP' });
       }
-      return json(200, { topup: await start(body.id, body.amountFils, identity, body.language === 'ar' ? 'ar' : 'en') });
+      return json(200, { topup: await start(body.id, body.amountFils, identity, body.language === 'ar' ? 'ar' : 'en', requestsNativeWallet(req)) });
     } catch (failure) {
       const message = failure instanceof Error ? failure.message : '';
       if (['WALLET_FORBIDDEN','WALLET_DISABLED'].includes(message)) return json(403, { error: message });

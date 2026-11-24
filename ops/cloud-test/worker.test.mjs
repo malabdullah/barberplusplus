@@ -134,3 +134,15 @@ test('UPayments returns discard gateway parameters and preserve the gated bookin
     assert.equal(response.status, 200);
   }
 });
+
+test('payment app opener is neutral and links across origins without bypassing the account gate', async () => {
+  const r=await worker.fetch(new Request(origin+'/payments/open-app'),env);
+  const html=await r.text();
+  assert.equal(r.status,200);
+  assert.match(html,/https:\/\/barber-open-test\.alabdullah-cs\.workers\.dev\/payments\/return"/);
+  assert.equal(r.headers.get('referrer-policy'),'no-referrer');
+  assert.equal(r.headers.get('cache-control'),'no-store');
+  assert.equal(r.headers.get('set-cookie'),null);
+  assert.equal((await worker.fetch(new Request(origin+'/payments/open-app?status=paid'),env)).status,401);
+  assert.equal((await worker.fetch(new Request(origin+'/customer/account'),env)).status,401);
+});

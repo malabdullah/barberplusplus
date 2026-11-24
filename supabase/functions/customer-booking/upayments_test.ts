@@ -1,4 +1,4 @@
-import { bookingPaymentPilot, pilotProject } from './upayments.ts';
+import { bookingPaymentPilot, pilotProject, pilotSite } from './upayments.ts';
 import { sign } from '../_shared/upayments-sandbox.ts';
 
 const id = '44ca29a4-b646-4836-a62c-367463ef4307';
@@ -10,6 +10,7 @@ const secret = 'sandbox-hmac-for-testing';
 
 function fixture(options: { currency?: string; result?: string; terminal?: boolean; checkoutHost?: string; processed?: boolean } = {}) {
   const calls: { action: string; data: Record<string, unknown> }[] = [];
+  const returnUrls: string[] = [];
   let state = 'pending';
   const pilot = bookingPaymentPilot({ secret, token: 'test-token', rpc: (action, _id, data) => {
     calls.push({ action, data });
@@ -26,6 +27,8 @@ function fixture(options: { currency?: string; result?: string; terminal?: boole
     if (new URL(String(url)).origin !== 'https://sandboxapi.upayments.com') throw Error('Unexpected provider');
     if (request?.method === 'POST') {
       const data = JSON.parse(String(request.body));
+      if (data.returnUrl !== data.cancelUrl) throw Error('Inconsistent return URL');
+      returnUrls.push(data.returnUrl);
       if (data.customer || data.order.amount !== 5.001 || data.notificationUrl !== hook) throw Error('Invalid charge request');
       return Promise.resolve(Response.json({ status: true, data: {
         link: 'https://' + (options.checkoutHost || 'sandbox.upayments.com') + '?session_id=' + session,
@@ -39,7 +42,7 @@ function fixture(options: { currency?: string; result?: string; terminal?: boole
       order_id: 'provider-original-order-id', refund_order_id: 'provider-refund-order-id',
     } } }, { status: 201 }));
   } });
-  return { pilot, calls };
+  return { pilot, calls, returnUrls };
 }
 
 Deno.test('payment capability and server-verified exact capture drive receipt status', async () => {
@@ -73,4 +76,14 @@ Deno.test('a card attempt releases the hold only after terminal failure', async 
   const untouched = fixture({ result: 'NOT CAPTURED', terminal: false, processed: false });
   if ((await untouched.pilot.check(cap))?.retryableFailure) throw Error('unopened checkout displayed as a failed attempt');
   if ((await terminal.pilot.check(cap))?.state !== 'failed') throw Error('canceled checkout was not released');
+});
+
+Deno.test('web and native payments keep independent destination URLs', async () => {
+  const { pilot, returnUrls } = fixture();
+  await pilot.start({ id }, cap);
+  await pilot.start({ id }, cap, 0, true);
+  if (returnUrls[0] !== pilotSite + '/book?payment=return' ||
+      returnUrls[1] !== 'https://barber-open-test.alabdullah-cs.workers.dev/payments/provider-return') {
+    throw Error('Wrong payment return destination');
+  }
 });

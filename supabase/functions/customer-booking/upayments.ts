@@ -1,3 +1,4 @@
+import { nativeWalletReturnUrl } from '../_shared/native-wallet-test.ts';
 import { authorizedWebhook, bodyText, fils, sandboxRequester } from '../_shared/upayments-sandbox.ts';
 
 export const pilotProject = 'https://qvkucvcjmojjbphlzlks.supabase.co';
@@ -22,31 +23,32 @@ export function bookingPaymentPilot(config: Config) {
   const request = sandboxRequester(config);
   const call = (action: string, id: string | null, data: Data = {}) => config.rpc(action, id, data);
 
-  async function start(data: Data, capability: string, walletFils?: number) {
+  async function start(data: Data, capability: string, walletFils?: number, native = false) {
     const attempt = await call('start', String(data.id), { booking: data, capability, ...(walletFils === undefined ? {} : { wallet_fils: walletFils }) }) as Attempt;
-    return checkout(attempt, String(data.language || 'en'));
+    return checkout(attempt, String(data.language || 'en'), native);
   }
 
   function requestApproval(data: Data) {
     return call('request-approval', String(data.id), { booking: data });
   }
 
-  async function approvalCheckout(id: string, capability: string, walletFils: number, identity: Data, language: string) {
+  async function approvalCheckout(id: string, capability: string, walletFils: number, identity: Data, language: string, native = false) {
     const attempt = await call('approval-checkout', id, { ...identity, capability, wallet_fils: walletFils }) as Attempt;
-    return checkout(attempt, language);
+    return checkout(attempt, language, native);
   }
 
-  async function checkout(attempt: Attempt, language: string) {
+  async function checkout(attempt: Attempt, language: string, native: boolean) {
     if (!attempt.create) return attempt;
 
     const externalFils = attempt.externalFils ?? attempt.totalFils;
     if (externalFils === 0) return await call('wallet-capture', attempt.id);
     const order = attempt.id.replaceAll('-', '');
+    const callbackUrl = native ? nativeWalletReturnUrl : returnUrl;
     const response = await request('POST', 'charge', JSON.stringify({
       order: { id: order, reference: order, currency: 'KWD', amount: externalFils / 1000,
         description: 'Barber++ Test appointment' },
       reference: { id: order }, tokens: {}, language: language === 'ar' ? 'ar' : 'en',
-      returnUrl, cancelUrl: returnUrl, notificationUrl: callback + order, paymentLinkExpiryInMinutes: 5,
+      returnUrl: callbackUrl, cancelUrl: callbackUrl, notificationUrl: callback + order, paymentLinkExpiryInMinutes: 5,
     }));
     if ([400,401,403,422].includes(response.http) && response.body?.status === false) {
       return await call('failed', attempt.id);

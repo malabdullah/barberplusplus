@@ -1,4 +1,5 @@
 import { customerRuntime } from '../_shared/customer-runtime.ts';
+import { requestsNativeWallet } from '../_shared/native-wallet-test.ts';
 import type { GooglePhoneConfig } from './google-phone.ts';
 type Body = Record<string, unknown>;
 type PaymentAttempt = { id: string; state: string; accountSaved: boolean };
@@ -27,10 +28,10 @@ type Dependencies = {
   booking: (action: string, data: Body) => Promise<unknown>;
   shopPaymentPolicy?: boolean;
   paymentPilot?: {
-    start: (data: Body, capability: string, walletFils?: number) => Promise<unknown>;
+    start: (data: Body, capability: string, walletFils?: number, native?: boolean) => Promise<unknown>;
     check: (capability: string, identity?: Body) => Promise<PaymentAttempt | null>;
     requestApproval?: (data: Body) => Promise<unknown>;
-    approvalCheckout?: (id: string, capability: string, walletFils: number, identity: Body, language: string) => Promise<unknown>;
+    approvalCheckout?: (id: string, capability: string, walletFils: number, identity: Body, language: string, native?: boolean) => Promise<unknown>;
     slots: (data: Body) => Promise<unknown>;
   };
 };
@@ -78,7 +79,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
     // traffic and environments without explicit phone settings stay compatible.
     const configuredPhone = deps.environment === 'cloud-test' && req.headers.get('x-barber-test-web') !== '1' ? undefined : deps.phone;
     const originAllowed = await runtime.allows(req);
-    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Origin': originAllowed && origin ? origin : deps.appUrl, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-barber-native-wallet', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
     if (!enabled) return reply(404, { error: 'NOT_AVAILABLE' });
     if (!originAllowed) return reply(403, { error: 'FORBIDDEN' });
@@ -99,8 +100,13 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
       const testWebsite = req.headers.get('x-barber-test-web') === '1';
-      const pilot = testWebsite ? deps.paymentPilot : undefined;
-      const applyShopPolicy = testWebsite && deps.shopPaymentPolicy;
+      // The version marker opts in to Test behavior after the existing Test
+      // gate has authenticated the request. It grants no account access.
+      const nativeWallet = !testWebsite && deps.environment === 'cloud-test'
+        && deps.shopPaymentPolicy === true && requestsNativeWallet(req);
+      const paymentClient = testWebsite || nativeWallet;
+      const pilot = paymentClient ? deps.paymentPilot : undefined;
+      const applyShopPolicy = paymentClient && deps.shopPaymentPolicy;
       const online = body.action === 'online-start';
       const requestApproval = body.action === 'online-request-approval';
       if (body.action === 'online-approval-checkout') {
@@ -112,7 +118,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         const owner = bearer && deps.customer ? await deps.customer(bearer) : null;
         if (!owner) return reply(401, { error:'AUTH_REQUIRED' });
         return reply(200, { attempt: await pilot.approvalCheckout(String(body.bookingId), String(body.capability), body.walletFils,
-          { account_user_id:owner.id, session_id:owner.session_id }, body.language === 'ar' ? 'ar' : 'en') });
+          { account_user_id:owner.id, session_id:owner.session_id }, body.language === 'ar' ? 'ar' : 'en', nativeWallet || undefined) });
       }
       if (requestApproval) {
         if (!pilot?.requestApproval) return reply(404, { error:'NOT_AVAILABLE' });
@@ -124,6 +130,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         if (!online) {
           const bearer = req.headers.get('authorization')?.replace(/^Bearer /i, '') || '';
           const owner = bearer && deps.customer ? await deps.customer(bearer) : null;
+          if (nativeWallet && !owner) return reply(401, { error: 'AUTH_REQUIRED' });
           const attempt = await pilot.check(body.capability, owner ? { account_user_id:owner.id, session_id:owner.session_id } : {});
           if (attempt?.state !== 'paid' || !deps.recover) return reply(200, { attempt });
           // Only the unguessable, hashed browser capability grants receipt access.
@@ -378,10 +385,11 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, { attempt: await pilot.requestApproval(data) });
       }
       if (online && pilot) {
-        if (body.walletFils !== undefined && (!proofWalletAmount(body.walletFils) || !data.account_user_id)) {
+        if (nativeWallet && !data.account_user_id) return reply(401, { error: 'AUTH_REQUIRED' });
+        if ((nativeWallet || body.walletFils !== undefined) && (!proofWalletAmount(body.walletFils) || !data.account_user_id)) {
           return reply(400, { error:'WALLET_INVALID' });
         }
-        return reply(200, { attempt: await pilot.start(data, String(body.capability), body.walletFils as number | undefined) });
+        return reply(200, { attempt: await pilot.start(data, String(body.capability), body.walletFils as number | undefined, nativeWallet || undefined) });
       }
       if (body.action === 'slots' && pilot) return reply(200, await pilot.slots(data));
       if (applyShopPolicy && !pilot && body.action === 'slots') {

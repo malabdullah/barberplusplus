@@ -15,6 +15,7 @@ export default {
       return reply(200, JSON.stringify({ applinks: { details: [{ appIDs: [associations.iosAppId], components: [
         { '/': '/book', '?': { shop: '*' } }, { '/': '/book', '?': { barber: '*' } },
         { '/': '/auth/email', '?': { client: 'ios', state: '*' } },
+        { '/': '/payments/return' },
       ] }] } }));
     }
     if (url.pathname === '/.well-known/assetlinks.json' && !url.search) {
@@ -25,6 +26,17 @@ export default {
       return reply(200, JSON.stringify(fingerprints.length ? [{ relation: ['delegate_permission/common.handle_all_urls'], target: {
         namespace: 'android_app', package_name: associations.androidPackage, sha256_cert_fingerprints: fingerprints,
       } }] : []));
+    }
+    // Provider parameters are never passed to the app or treated as payment
+    // evidence. The clean app link is a signal to check the signed-in account.
+    if (url.pathname === '/payments/provider-return' && !url.hash) {
+      headers.Location = HANDOFF_ORIGIN + '/payments/return';
+      return reply(303);
+    }
+    if (url.pathname === '/payments/return' && !url.search && !url.hash) {
+      headers['Content-Type'] = 'text/html; charset=utf-8';
+      headers['Content-Security-Policy'] = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'";
+      return reply(200, '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Check payment | Barber++ Test</title><main><h1>Check your payment</h1><p>Return to Barber++ Test to check your payment status.</p><a href="' + TEST_ORIGIN + '/payments/open-app">Open Barber++ Test app</a> · <a href="' + TEST_ORIGIN + '/customer/account">Open the Test website</a></main></html>');
     }
     const signup = signupFallback(url, HANDOFF_ORIGIN, TEST_ORIGIN);
     if (signup !== null) {
