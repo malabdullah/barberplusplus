@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { readBookingReceipt, readOnlineBookingReceipt, saveBookingReceipt, saveOnlineBookingReceipt } from '../../utils/customerBookingDraft';
+import { bookingSessionOwner, readBookingReceipt, readOnlineBookingReceipt, saveBookingReceipt, saveOnlineBookingReceipt } from '../../utils/customerBookingDraft';
 import { customerBookingService } from '../../services/customerBooking.service';
 
-export const PAYMENT_STORAGE = 'barber-test-online-booking-payment';
+const PAYMENT_STORAGE = 'barber-test-online-booking-payment';
+export function savePendingPayment(capability) {
+  sessionStorage.setItem(PAYMENT_STORAGE, JSON.stringify({ capability, owner: bookingSessionOwner() }));
+}
 export function pendingPaymentKey() {
-  try { return sessionStorage.getItem(PAYMENT_STORAGE); }
+  try {
+    const item = JSON.parse(sessionStorage.getItem(PAYMENT_STORAGE));
+    return item?.owner === bookingSessionOwner() && /^[a-f0-9-]{36}$/i.test(item?.capability) ? item.capability : null;
+  }
   catch { return null; }
 }
 export function clearPendingPayment() {

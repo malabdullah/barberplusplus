@@ -11,6 +11,40 @@ bundle = module('bundle')
 backup = module('backup_policy')
 
 
+class IndependentBackendReleaseVerification(unittest.TestCase):
+    def test_current_main_bundle_is_verified_with_repo_workflow_and_source_constraints(self):
+        commit = 'a' * 40
+        artifact = b'synthetic release'
+        attestation = {'attestations': [{'bundle': {'synthetic': True}}]}
+        received = mock.MagicMock()
+        received.__enter__.return_value = io.BytesIO(json.dumps(attestation).encode())
+        opener = mock.Mock()
+        opener.open.return_value = received
+        calls = []
+
+        def command(args):
+            calls.append(args)
+            if args[0] == 'git':
+                return commit + ' refs/heads/main'
+            self.assertEqual(pathlib.Path(args[3]).read_bytes(), artifact)
+            self.assertEqual(json.loads(pathlib.Path(args[5]).read_text()), attestation['attestations'][0]['bundle'])
+            return 'verified'
+
+        with mock.patch.object(b.urllib.request, 'build_opener', return_value=opener):
+            b.verify_backend_release(artifact, commit, command)
+
+        self.assertTrue(opener.open.call_args.args[0].full_url.endswith('/attestations/sha256:' + b.digest(artifact)))
+        self.assertEqual(calls[1][6:], ['--repo', b.REPOSITORY, '--signer-workflow', b.REPOSITORY + '/' + b.WORKFLOW,
+                                     '--source-ref', b.MAIN_REF, '--source-digest', commit, '--deny-self-hosted-runners'])
+
+    def test_stale_commit_fails_before_receiving_attestation(self):
+        command = mock.Mock(return_value='b' * 40 + ' refs/heads/main')
+        with mock.patch.object(b.urllib.request, 'build_opener') as opener:
+            with self.assertRaisesRegex(ValueError, 'not current main'):
+                b.verify_backend_release(b'synthetic release', 'a' * 40, command)
+            opener.assert_not_called()
+
+
 class DokployAcknowledgement(unittest.TestCase):
     def client(self):
         client = c.Controller.__new__(c.Controller); client.key = 'synthetic-management-key'

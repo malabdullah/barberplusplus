@@ -33,7 +33,7 @@ export async function customerPasswordAction(c: Context): Promise<{ status: numb
   if (!methods.has(c.action)) return null;
   const reply = (status: number, body: Data) => ({status,body});
   const limited = async (key: string, max=5) => {
-    if (!await c.limit(`password:${c.action}:${key}`,max) || !await c.limit(`password-ip:${c.action}:${c.ip}`,100)) throw Error('RATE_LIMITED');
+    if (!await c.limit(`password-ip:${c.action}:${c.ip}`,100) || !await c.limit(`password:${c.action}:${key}`,max)) throw Error('RATE_LIMITED');
   };
   if (c.action==='password-native-delivery') {
     if (!nativeScheme(c.environment,c.appUrl) || !uuid.test(String(c.body.requestId)) || !uuid.test(String(c.body.nativeState)) || typeof c.body.tokenHash!=='string') throw Error('INVALID_CODE');

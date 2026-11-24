@@ -25,7 +25,7 @@ import FavouriteButton from '../components/Customer/FavouriteButton';
 import FavouriteFeedback from '../components/Customer/FavouriteFeedback';
 import { validatePhoneNumber } from '../utils/validation';
 import { addBookingDays, downloadBookingCalendar, getBarberServices, getKuwaitDate, safeBookingUrl, searchBranches } from '../utils/customerBooking';
-import { BookingPaymentReturn, clearPendingPayment, onlinePaymentLink, pendingPaymentKey, PAYMENT_STORAGE } from '../components/Customer/BookingPaymentReturn';
+import { BookingPaymentReturn, clearPendingPayment, onlinePaymentLink, pendingPaymentKey, savePendingPayment } from '../components/Customer/BookingPaymentReturn';
 import './CustomerBooking.css';
 
 const EMPTY_CATALOG = { branches: [], barbers: [], services: [] };
@@ -269,6 +269,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     if (receipt) saveBookingDraft(null);
     else if (draftRestored && city) saveBookingDraft({
       bookingMode: draft?.bookingMode, rangeStart: draft?.rangeStart, rangeEnd: draft?.rangeEnd,
+      locationCities: draft?.locationCities, locationGovernorateId: draft?.locationGovernorateId,
       city, branchId, barberId, serviceIds, packageOfferId, packageOffer: selectedPackage, date, time, panel, query,
       step: Math.floor(PANELS.indexOf(panel) / 2),
       rebooking: Boolean(draft?.rebooking), favourite: Boolean(draft?.favourite), rebookNotice, guest, details,
@@ -440,7 +441,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       if (payOnline) {
         const capability = crypto.randomUUID();
         saveOnlineBookingReceipt(null);
-        try { sessionStorage.setItem(PAYMENT_STORAGE, capability); }
+        try { savePendingPayment(capability); }
         catch { throw new Error('UPAYMENTS_CHECK_UNAVAILABLE'); }
         try {
           const { attempt } = await customerBookingService.startOnlinePayment(booking, capability);
@@ -459,7 +460,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
       }
       const result = await customerBookingService.book(booking);
       const confirmed = { ...result, accountSaved: Boolean(customer) };
-      saveBookingReceipt(confirmed); setReceipt(confirmed);
+      saveBookingReceipt(confirmed, customer ? undefined : details.email); setReceipt(confirmed);
     } catch (failure) {
       if (failure.message === 'PHONE_CANCELLED') return;
       if (packageErrors.includes(failure.message)) { setPackageRetry(value => value + 1); setSlotRetry(value => value + 1); openPanel('services'); }
@@ -548,7 +549,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
             {receipt.accountSaved ? <><p role="status"><CheckCircle2 size={20} aria-hidden="true" />{tr('accountChoice.saved')}</p><Link className="cb-text-button" to="/customer/account">{t('customerAuth.myAccount')}</Link></> : <>
               <h2>{tr('accountChoice.saveTitle')}</h2><p>{tr('accountChoice.saveHint')}</p>
               {claimError && <p className="cb-alert" role="alert">{tr(`accountChoice.${claimError === 'CLAIM_UNAVAILABLE' ? 'claimMismatch' : 'claimFailed'}`)}</p>}
-              {!customer ? <Link className="cb-secondary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={rememberBookingReturn}>{tr('accountChoice.signInSave')}</Link> : <>
+              {!customer ? <Link className="cb-secondary" to="/customer/sign-in?next=book" state={{ returnTo: '/book' }} onClick={() => rememberBookingReturn({ claimGuestReceipt: true })}>{tr('accountChoice.signInSave')}</Link> : <>
                 <button className="cb-secondary" type="button" disabled={claimBusy || accountLoading || !receipt.claimToken} onClick={async () => {
                   setClaimBusy(true); setClaimError('');
                   try { await customerBookingService.claim(receipt.claimToken); const saved = { ...receipt, accountSaved: true, claimToken: undefined }; saveBookingReceipt(saved); setReceipt(saved); }
@@ -662,10 +663,11 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
 
 export default function CustomerBooking() {
   const location = useLocation();
+  const { bookingOwner } = useCustomerAuth();
   if (new URLSearchParams(location.search).get('payment') === 'return' || pendingPaymentKey()) {
-    return <BookingPaymentReturn checkout={CustomerBookingCheckout} />;
+    return <BookingPaymentReturn key={bookingOwner || 'guest'} checkout={CustomerBookingCheckout} />;
   }
   const target = parseBookingEntry(location.search);
-  if (target) return <BookingEntry key={location.search} target={target} />;
-  return <BookingFinder checkout={CustomerBookingCheckout} />;
+  if (target) return <BookingEntry key={`${bookingOwner || 'guest'}:${location.search}`} target={target} />;
+  return <BookingFinder key={bookingOwner || 'guest'} checkout={CustomerBookingCheckout} />;
 }

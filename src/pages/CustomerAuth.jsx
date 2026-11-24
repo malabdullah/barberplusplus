@@ -32,7 +32,7 @@ function CustomerEmailAuth({ mode }) {
     event.preventDefault(); if (busy) return;
     if (!reset && (form.email.trim().length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(form.email.trim()))) { setError('INVALID_DETAILS'); return; }
     if (signup && (form.name.trim().length < 2 || form.name.trim().length > 120)) { setError('INVALID_DETAILS'); return; }
-    if (signup || reset) {
+    if (reset) {
       if (!validatePassword(form.password, { minLength: 8 }).valid || new TextEncoder().encode(form.password).length > 72) { setError('WEAK_PASSWORD'); return; }
       if (form.password !== form.confirmPassword) { setError('PASSWORD_MISMATCH'); return; }
     }
@@ -40,7 +40,7 @@ function CustomerEmailAuth({ mode }) {
     try {
       if (mode === 'sign-in') { await login(form); navigate(returnTo, { replace: true }); }
       else if (signup || recovery) {
-        const delivery = signup ? await customerAuthService.requestSignup({ ...form, returnTo }) : await customerAuthService.requestRecovery({ ...form, returnTo });
+        const delivery = signup ? await customerAuthService.requestSignup({ name: form.name, email: form.email, returnTo }) : await customerAuthService.requestRecovery({ ...form, returnTo });
         const pending = { email: form.email.trim().toLowerCase(), purpose: signup ? 'signup' : 'recovery', returnTo, sentAt: Date.now(), ...(delivery?.requestId ? { requestId: delivery.requestId } : {}) };
         rememberEmail(pending); setForm(current => ({ ...current, password: '', confirmPassword: '' }));
         navigate(`/customer/verify-email?purpose=${pending.purpose}`, { state: pending });
@@ -56,13 +56,13 @@ function CustomerEmailAuth({ mode }) {
   return <CustomerAuthLayout title={tr(resetDone ? 'email.passwordUpdatedTitle' : `titles.${mode}`)} intro={resetDone ? undefined : tr(`email.intros.${mode}`)} returnTo={returnTo} backToBooking={mode === 'sign-in'}>
     {readFavouriteIntent() && <p className="cf-auth-hint" role="status">{t('customerFavourites.signInHint')}</p>}
     {(mode === 'sign-in' || signup) && <CustomerSocialButtons returnTo={returnTo} disabled={busy || loading} />}
-    {mode === 'sign-in' && location.state?.emailVerified === true && <p className="ca-result" role="status">{tr('email.verifiedStatus')}</p>}
+    {mode === 'sign-in' && location.state?.emailVerified === true && <p className="ca-result" role="status">{tr('email.verifiedStatus')} {tr('email.choosePasswordIfNeeded')}</p>}
     {error && <p className="cb-alert" role="alert">{tr(`errors.${errors.includes(error) ? error : 'UNAVAILABLE'}`)}</p>}
     {resetDone ? <div className="ca-result"><ShieldCheck className="ca-state-icon" size={36} aria-hidden="true" /><p role="status">{tr('resetSuccess')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/sign-in', returnTo)} state={{ returnTo }}>{tr('signIn')}</Link></div> : reset && !location.state?.recovery ? <div className="ca-result"><p className="cb-alert" role="alert">{tr('email.invalidLink')}</p><Link className="cb-primary ca-submit" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo }}>{tr('email.requestNewLink')}</Link></div> : <form onSubmit={submit} noValidate><fieldset className="cb-details-fields" disabled={busy || loading}>
       {signup && <div className="ca-field"><label className="cb-field-label" htmlFor="customer-auth-name">{tr('name')}</label><input className="cb-input" id="customer-auth-name" autoComplete="name" value={form.name} maxLength={120} onChange={event => update('name', event.target.value)} required /></div>}
       {!reset && <div className="ca-field"><label className="cb-field-label" htmlFor="customer-auth-email">{tr('email.label')}</label><input className="cb-input" id="customer-auth-email" type="email" dir="ltr" autoComplete="email" value={form.email} maxLength={254} onChange={event => update('email', event.target.value)} required /></div>}
-      {(mode === 'sign-in' || signup || reset) && <>{passwordField('password', tr(reset ? 'newPassword' : 'password'))}{(signup || reset) && <>{passwordField('confirmPassword', tr('confirmPassword'))}<p className="cb-helper ca-password-hint">{tr('passwordRules')}</p></>}</>}
-      {mode === 'sign-in' && <Link className="cb-text-button ca-forgot" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo }}>{tr('forgotPassword')}</Link>}
+      {(mode === 'sign-in' || reset) && <>{passwordField('password', tr(reset ? 'newPassword' : 'password'))}{reset && <>{passwordField('confirmPassword', tr('confirmPassword'))}<p className="cb-helper ca-password-hint">{tr('passwordRules')}</p></>}</>}
+      {mode === 'sign-in' && <Link className="cb-text-button ca-forgot" to={customerAuthPath('/customer/forgot-password', returnTo)} state={{ returnTo, email: form.email }}>{tr(location.state?.emailVerified ? 'email.choosePassword' : 'forgotPassword')}</Link>}
       <button type="submit" className="cb-primary ca-submit" disabled={busy || loading}>{busy && <Loader2 size={18} className="cb-spinner" aria-hidden="true" />}{tr(mode === 'sign-in' ? 'signIn' : signup ? 'createAccount' : recovery ? 'email.sendRecovery' : 'resetPassword')}</button>
     </fieldset></form>}
     {mode === 'sign-in' && <p className="ca-switch">{tr('noAccount')} <Link to={customerAuthPath('/customer/sign-up', returnTo)} state={{ returnTo }}>{tr('createAccount')}</Link></p>}

@@ -2,10 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import { appConfig } from './runtimeConfig';
 import { functionFetch } from './functionFetch';
 import { migrateAccountSession } from './accountSession';
+import { configureBookingSession } from '../utils/customerBookingDraft';
 
 export const supabaseUrl = appConfig.supabaseUrl;
 export const ACCOUNT_AUTH_STORAGE_KEY = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
-if (typeof window !== 'undefined') migrateAccountSession(window.localStorage, ACCOUNT_AUTH_STORAGE_KEY);
+if (typeof window !== 'undefined') {
+  migrateAccountSession(window.localStorage, ACCOUNT_AUTH_STORAGE_KEY);
+  configureBookingSession(ACCOUNT_AUTH_STORAGE_KEY);
+}
 
 export const supabase = createClient(
   supabaseUrl,

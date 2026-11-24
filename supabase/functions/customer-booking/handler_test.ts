@@ -235,6 +235,32 @@ Deno.test('discovery validates ranges and pagination and derives identity from t
   assert((await invalid(rejectedReq)).status === 401);
 });
 
+Deno.test('discovery accepts a paired multi-city filter only for search and retains legacy city requests', async () => {
+  const calls: Record<string, unknown>[] = [];
+  const handler = make({ discovery: async (_action: string, data: Record<string, unknown>) => {
+    calls.push(data); return { items: [], nextCursor: null };
+  } });
+  const search = { action: 'discovery-search', mode: 'barber' };
+  const cursor = { context: 'existing', rank: 1, name: 'bench', id: selection.barberId };
+  assert((await handler(request({ ...search, city: 'Sharq', cursor }))).status === 200);
+  assert(calls[0].city === 'Sharq' && !('cities' in calls[0]) && !('governorate_id' in calls[0]));
+  assert((await handler(request({ ...search, cities: ['Mirqab', ' Sharq ', 'Sharq'], governorateId: 1, cursor }))).status === 200);
+  assert(JSON.stringify(calls[1].cities) === JSON.stringify(['Mirqab', 'Sharq']));
+  assert(calls[1].governorate_id === 1 && JSON.stringify(calls[1].cursor) === JSON.stringify(cursor));
+  for (const invalid of [
+    { cities: ['Sharq'] }, { governorateId: 1 }, { cities: [], governorateId: 1 },
+    { cities: [1], governorateId: 1 }, { cities: [' '], governorateId: 1 },
+    { cities: ['a'.repeat(121)], governorateId: 1 }, { cities: Array(65).fill('Sharq'), governorateId: 1 },
+    { cities: ['Sharq'], governorateId: 0 }, { cities: ['Sharq'], governorateId: 1.5 },
+    { cities: ['Sharq'], governorateId: '1' }, { cities: ['Sharq'], governorateId: 2147483648 },
+    { cities: ['Sharq'], governorateId: 1, city: 'Mirqab' },
+    { cities: ['Sharq'], governorateId: 1, action: 'discovery-filters' },
+  ]) {
+    assert((await handler(request({ ...search, ...invalid }))).status === 400);
+  }
+  assert(calls.length === 2);
+});
+
 Deno.test('package catalogue validates provider IDs and the optional date before querying', async () => {
   const calls: unknown[] = [];
   const handler = make({ packages: async (...args: unknown[]) => { calls.push(args); return [{ id: 'offer' }]; } });

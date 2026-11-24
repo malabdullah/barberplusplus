@@ -2,10 +2,9 @@
 """Compile all application workers on the pinned production Linux runtime.
 
 Uses only synthetic settings. It has no database, production mounts or published
-network port on Linux. Internet access is used for pinned public module imports.
+network port. Workers must start with internet access disabled.
 """
-import argparse, hashlib, json, pathlib, shutil, subprocess, sys, tempfile, time
-import urllib.request, urllib.error, uuid
+import argparse, hashlib, json, pathlib, shutil, subprocess, tempfile, time, uuid
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--source', default='.'); args = parser.parse_args()
@@ -24,6 +23,7 @@ def main():
         temp = pathlib.Path(temporary)
         source = temp / 'functions'
         shutil.copytree(root / 'supabase/functions', source, ignore=shutil.ignore_patterns('.env*', '*_test.ts', 'node_modules', '.cache'))
+        subprocess.run(['node', 'ops/release/bundle-functions.mjs', str(root), str(source)], check=True)
         probe = temp / 'probe'; probe.mkdir()
         program = r'''
 const names = new Set(NAMES);
@@ -56,11 +56,8 @@ Deno.serve(async (request) => {
   }
 });
 '''.replace('NAMES', json.dumps(names))
-        # Docker Desktop bridge addresses are not host-routable. Keep requests
-        # inside the same synthetic container instead of publishing a host port.
-        internal_probe = sys.platform == 'darwin'
-        if internal_probe:
-            program += r'''
+        # The networkless container can still reach its own loopback.
+        program += r'''
 (async () => {
   try {
     const results = [];
@@ -89,52 +86,20 @@ Deno.serve(async (request) => {
 '''
         (probe / 'index.ts').write_text(program)
         try:
-            run(['docker', 'run', '-d', '--name', name, '--platform', 'linux/amd64', '--memory', '768m', '--cpus', '1', '--mount', 'type=bind,src=' + str(source) + ',dst=/functions,readonly', '--mount', 'type=bind,src=' + str(probe) + ',dst=/probe,readonly', image, 'start', '--main-service', '/probe', '--port', '9000', '--max-parallelism', '2'])
+            run(['docker', 'run', '-d', '--name', name, '--platform', 'linux/amd64', '--network', 'none', '--memory', '768m', '--cpus', '1', '--mount', 'type=bind,src=' + str(source) + ',dst=/functions,readonly', '--mount', 'type=bind,src=' + str(probe) + ',dst=/probe,readonly', image, 'start', '--main-service', '/probe', '--port', '9000', '--max-parallelism', '2'])
             created = True
             actual = json.loads(run(['docker', 'inspect', name]))[0]
             if actual['NetworkSettings']['Ports'] and any(actual['NetworkSettings']['Ports'].values()): raise ValueError('Compatibility runtime must not publish ports')
-            if internal_probe:
-                for _ in range(240):
-                    output = run(['docker', 'logs', name])
-                    matches = [line.split('BARBER_COMPAT_RESULT=',1)[1] for line in output.splitlines() if 'BARBER_COMPAT_RESULT=' in line]
-                    if matches:
-                        result = json.loads(matches[-1])
-                        if result['status'] != 'PASS': raise RuntimeError(result.get('error','Internal rehearsal failed'))
-                        print(json.dumps({**result,'image':image,'platform':'linux/amd64','readOnlyHandlerExecution':'PASS','productionCredentials':False,'publishedPorts':0,'transport':'container-loopback'}))
-                        return
-                    time.sleep(1)
-                raise RuntimeError('Internal runtime rehearsal timed out')
-            addresses = [network['IPAddress'] for network in actual['NetworkSettings']['Networks'].values() if network.get('IPAddress')]
-            if len(addresses) != 1: raise ValueError('Expected one isolated compatibility network address')
-            address = addresses[0]
-            base = 'http://' + address + ':9000/'
-            results = []
-            for function in names:
-                last = None
-                for attempt in range(12):
-                    try:
-                        request = urllib.request.Request(base + function, method='OPTIONS', headers={'Origin':'http://localhost:5173'})
-                        with urllib.request.urlopen(request, timeout=75) as response: result = json.load(response)
-                        # The test mailbox must compile but stay unavailable
-                        # outside cloud-test. Require that exact closed state;
-                        # do not accept 404 for ordinary application workers.
-                        expected = [503] if function == 'customer-account-deletion' else [503] if function == 'customer-android-push-dispatch' else [404] if function == 'cloud-test-inbox' else [403] if function in ('customer-push-dispatch','customer-booking-email','admin-push-dispatch') else [200, 204, 401, 405]
-                        if result['status'] not in expected: raise ValueError('Unexpected synthetic handler response: ' + str(result['status']))
-                        if function == 'customer-account-deletion' and result.get('closedError') != 'NOT_ENABLED': raise ValueError('Deletion must fail closed before any configured backend access')
-                        results.append(result); last = None; break
-                    except urllib.error.HTTPError as error:
-                        # This disposable runtime contains synthetic settings
-                        # only; report its bounded compiler diagnostic.
-                        last = error.read(1600).decode(errors='replace')
-                        break
-                    except (OSError, ValueError) as error:
-                        last = error
-                        if attempt >= 2: break
-                        time.sleep(1)
-                if last: raise RuntimeError('Production worker failed compatibility: ' + function + ': ' + str(last))
-            with urllib.request.urlopen(base + 'get-kuwait-governorates?behavior=get', timeout=30) as response: behavior = json.load(response)
-            assert behavior['status'] == 200
-            print(json.dumps({'status':'PASS','image':image,'platform':'linux/amd64','workers':results,'readOnlyHandlerExecution':'PASS','productionCredentials':False,'publishedPorts':0}))
+            for _ in range(240):
+                output = run(['docker', 'logs', name])
+                matches = [line.split('BARBER_COMPAT_RESULT=',1)[1] for line in output.splitlines() if 'BARBER_COMPAT_RESULT=' in line]
+                if matches:
+                    result = json.loads(matches[-1])
+                    if result['status'] != 'PASS': raise RuntimeError(result.get('error','Internal rehearsal failed'))
+                    print(json.dumps({**result,'image':image,'platform':'linux/amd64','readOnlyHandlerExecution':'PASS','productionCredentials':False,'publishedPorts':0,'transport':'container-loopback'}))
+                    return
+                time.sleep(1)
+            raise RuntimeError('Internal runtime rehearsal timed out')
         finally:
             if created: run(['docker', 'rm', '-f', name], check=False)
 

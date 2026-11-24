@@ -1,6 +1,6 @@
 import { withCloudTestGateway } from '../_shared/test-boundary.ts';
 import "jsr:@supabase/functions-js@2.89.0/edge-runtime.d.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2.89.0';
 import { getAppUrl } from '../_shared/environment.ts';
 import { createAdminPasswordResetHandler } from './handler.ts';
 

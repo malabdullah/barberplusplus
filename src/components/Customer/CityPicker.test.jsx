@@ -70,3 +70,27 @@ it('supports Arabic city and governorate names while preserving the city value',
   fireEvent.click(screen.getByRole('option', { name: 'السالمية' }));
   expect(onChange).toHaveBeenCalledExactlyOnceWith('Salmiya');
 });
+
+it('keeps the picker open while customers select and remove multiple cities', () => {
+  const capital = { ...groups[0], cities: ['Kuwait City', 'Mirqab'] };
+  function Picker() {
+    const [selected, setSelected] = React.useState([]);
+    return <CityPicker groups={[capital]} selectedCities={selected}
+      onChange={city => setSelected(previous => previous.includes(city)
+        ? previous.filter(value => value !== city) : [...previous, city])}
+      cityName={city => city} governorateName={group => group.name} />;
+  }
+  render(<I18nextProvider i18n={i18n}><Picker /></I18nextProvider>);
+  const input = screen.getByRole('combobox', { name: 'Cities' });
+  fireEvent.focus(input);
+  expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true');
+  fireEvent.keyDown(input, { key: 'Enter' });
+  fireEvent.click(screen.getByRole('option', { name: 'Mirqab' }));
+  expect(screen.getAllByRole('option', { selected: true })).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  expect(input).toHaveValue('Kuwait City, Mirqab');
+  fireEvent.click(input);
+  fireEvent.click(screen.getByRole('option', { name: 'Kuwait City' }));
+  fireEvent.keyDown(input, { key: 'Escape' });
+  expect(input).toHaveValue('Mirqab');
+});
