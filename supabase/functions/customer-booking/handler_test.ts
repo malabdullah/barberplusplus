@@ -308,3 +308,32 @@ Deno.test('subscription expiry is a stable recoverable booking error without int
   assert(response.status === 409);
   assert(JSON.stringify(await response.json()) === JSON.stringify({ error: 'BOOKING_UNAVAILABLE', reason: 'SHOP_ACCESS_REQUIRED' }));
 });
+
+Deno.test('hosted web still enforces shop payment policy when the sandbox adapter is unavailable', async () => {
+  const appUrl = 'https://app.example.test';
+  const ref = 'abcdefghijklmnopqrst';
+  const cloudAccessKey = 'test-gateway-secret-with-enough-characters';
+  const actions: string[] = [];
+  const handler = make({
+    environment: 'cloud-test', appUrl, publicUrl: 'https://' + ref + '.supabase.co',
+    cloudTestProjectRef: ref, cloudAccessKey, shopPaymentPolicy: true,
+    booking: async (action: string, data: Record<string, unknown>) => {
+      actions.push(action);
+      if (action === 'book-at-shop') throw Error('P0001 SHOP_PAYMENT_CHANGED');
+      if (action === 'shop-payment-slots') return { pay_at_shop: false, online_payment: true, wallet_payment: true };
+      return { id: data.id, slots: [] };
+    },
+  });
+  const call = (body: unknown, web = true) => handler(new Request(appUrl, {
+    method: 'POST',
+    headers: { Origin: appUrl, 'x-cloud-test-key': cloudAccessKey, ...(web ? { 'x-barber-test-web': '1' } : {}) },
+    body: JSON.stringify(body),
+  }));
+  const quote = await (await call({ action: 'slots', ...selection })).json();
+  assert(quote.pay_at_shop === false && quote.online_payment === false && quote.wallet_payment === false);
+  const { verification } = await (await call({ action: 'guest-proof', name: 'Guest Customer', phone: '50000099', countryCode: '+965' })).json();
+  const blocked = await call({ action: 'book', ...selection, verification });
+  assert(blocked.status === 409 && (await blocked.json()).error === 'SHOP_PAYMENT_CHANGED');
+  assert((await call({ action: 'slots', ...selection }, false)).status === 200);
+  assert(actions.join(',') === 'shop-payment-slots,book-at-shop,slots');
+});

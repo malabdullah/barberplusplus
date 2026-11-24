@@ -25,6 +25,7 @@ type Dependencies = {
   close?: (id: string) => Promise<{ found: boolean; closed: boolean }>;
   recover?: (proof: Proof) => Promise<Record<string, unknown> | null>;
   booking: (action: string, data: Body) => Promise<unknown>;
+  shopPaymentPolicy?: boolean;
   paymentPilot?: {
     start: (data: Body, capability: string, walletFils?: number) => Promise<unknown>;
     check: (capability: string, identity?: Body) => Promise<PaymentAttempt | null>;
@@ -97,7 +98,9 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       let body: Body;
       try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return reply(400, { error: 'INVALID_REQUEST' }); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) return reply(400, { error: 'INVALID_REQUEST' });
-      const pilot = req.headers.get('x-barber-test-web') === '1' ? deps.paymentPilot : undefined;
+      const testWebsite = req.headers.get('x-barber-test-web') === '1';
+      const pilot = testWebsite ? deps.paymentPilot : undefined;
+      const applyShopPolicy = testWebsite && deps.shopPaymentPolicy;
       const online = body.action === 'online-start';
       const requestApproval = body.action === 'online-request-approval';
       if (body.action === 'online-approval-checkout') {
@@ -381,7 +384,11 @@ export function createCustomerBookingHandler(deps: Dependencies) {
         return reply(200, { attempt: await pilot.start(data, String(body.capability), body.walletFils as number | undefined) });
       }
       if (body.action === 'slots' && pilot) return reply(200, await pilot.slots(data));
-      const bookingAction = pilot && body.action === 'book' ? 'book-at-shop' : String(body.action);
+      if (applyShopPolicy && !pilot && body.action === 'slots') {
+        const quote = await deps.booking('shop-payment-slots', data) as Body;
+        return reply(200, { ...quote, online_payment: false, wallet_payment: false });
+      }
+      const bookingAction = (pilot || applyShopPolicy) && body.action === 'book' ? 'book-at-shop' : String(body.action);
       let result;
       try { result = await deps.booking(bookingAction, data); }
       catch (failure) {

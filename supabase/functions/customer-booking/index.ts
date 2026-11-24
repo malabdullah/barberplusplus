@@ -35,8 +35,8 @@ type RecoveryRow = {
 };
 const sandboxToken = Deno.env.get('UPAYMENTS_SANDBOX_TOKEN') || '';
 const sandboxSecret = Deno.env.get('UPAYMENTS_SANDBOX_HMAC') || '';
-const pilot = cloudTest && Deno.env.get('SUPABASE_URL') === pilotProject && Deno.env.get('APP_URL') === pilotSite
-  && sandboxToken && sandboxSecret ? bookingPaymentPilot({
+const shopPaymentPolicy = cloudTest && Deno.env.get('SUPABASE_URL') === pilotProject && Deno.env.get('APP_URL') === pilotSite;
+const pilot = shopPaymentPolicy && sandboxToken && sandboxSecret ? bookingPaymentPilot({
     token: sandboxToken, secret: sandboxSecret,
     rpc: async (action, id, data) => {
       const result = await admin.rpc('upayments_test_booking', { p_action: action, p_id: id, p_data: data });
@@ -53,6 +53,7 @@ const web = createCustomerBookingHandler({
   publicUrl: Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',
   secret,
   phone,
+  shopPaymentPolicy,
   paymentPilot: pilot,
   checkoutPolicy: async () => {
     const result = await admin.rpc('customer_checkout_policy');
@@ -187,8 +188,10 @@ const web = createCustomerBookingHandler({
   },
   },
   booking: async (action, data) => {
-    const result = await admin.rpc(action === 'book-at-shop' ? 'upayments_test_booking' : bookingRPC(action), {
-      p_action: action, p_data: data, ...(action === 'book-at-shop' ? { p_id: data.id } : {}),
+    const shopPayment = ['book-at-shop', 'shop-payment-slots'].includes(action);
+    const result = await admin.rpc(shopPayment ? 'upayments_test_booking' : bookingRPC(action), {
+      p_action: action === 'shop-payment-slots' ? 'slots' : action,
+      p_data: data, ...(shopPayment ? { p_id: data.id ?? null } : {}),
     });
     if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
     return ['book', 'book-at-shop'].includes(action) ? { ...result.data, shareUrl: await bookingShareUrl(result.data.id) } : result.data;
