@@ -13,7 +13,8 @@ import { rebookingDraft } from '../utils/customerRebooking';
 import { readBookingDraft, rememberBookingReturn, saveBookingDraft } from '../utils/customerBookingDraft';
 
 const favouritesState = vi.hoisted(() => ({ items: [] }));
-vi.mock('../lib/runtimeConfig', () => ({ walletTestEnvironment: false }));
+const runtime = vi.hoisted(() => ({ walletTestEnvironment: false }));
+vi.mock('../lib/runtimeConfig', () => runtime);
 vi.mock('../services/bWallet.service', () => ({ walletRpc: vi.fn(), walletBooking: vi.fn(), walletAmountFils: () => null }));
 vi.mock('../context/CustomerFavouritesContext', () => ({ useCustomerFavourites: () => ({ items: favouritesState.items, loading: false, busy: false, toggle: vi.fn() }) }));
 const customerState = vi.hoisted(() => ({ customer: null, updateProfile: vi.fn() }));
@@ -32,6 +33,7 @@ beforeEach(async () => {
   vi.resetAllMocks();
   sessionStorage.clear(); localStorage.clear();
   customerState.customer = null;
+  runtime.walletTestEnvironment = false;
   favouritesState.items = [];
   customerState.updateProfile.mockResolvedValue({});
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -66,7 +68,7 @@ it('places available cities inside translated governorate headings', async () =>
   await waitFor(() => expect(screen.getByRole('group', { name: 'العاصمة' })).toContainElement(screen.getByRole('option', { name: 'مدينة الكويت' })));
   expect(screen.getByRole('group', { name: 'حولي' })).toContainElement(screen.getByRole('option', { name: 'السالمية' }));
 });
-async function chooseAppointment() {
+async function chooseAppointment(date) {
   changeCity('Kuwait City');
   expect(screen.queryByText('Salmiya shop')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('radio', { name: /Seafront/ }));
@@ -78,6 +80,7 @@ async function chooseAppointment() {
   expect(screen.getByLabelText('Select a date')).not.toBeVisible();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Continue to date & time', exact: true })).toBeEnabled());
   click('Continue to date & time');
+  if (date) fireEvent.change(screen.getByLabelText('Select a date'), { target: { value: date } });
   expect(heading()).toHaveTextContent('Book your appointment');
   expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('radio', { name: /10:00/ }));
@@ -107,6 +110,17 @@ describe('one-page guest booking', () => {
     await screen.findByText('TESTREF');
     expect(customerBookingService.guestProof).toHaveBeenCalledTimes(1);
     expect(customerBookingService.book).toHaveBeenCalledWith(expect.objectContaining({ branchId: 'branch', barberId: 'omar', serviceIds: ['hair'], verification: 'verified', time: '10:00' }));
+  });
+  it.each([true, false])('opens guest checkout when online payment is available, with pay at shop allowed %s', async payAtShop => {
+    runtime.walletTestEnvironment = true;
+    customerBookingService.getSlots.mockResolvedValue({
+      slots: ['10:00'], online_payment: true, wallet_payment: true, pay_at_shop: payAtShop,
+    });
+    await chooseAppointment(addBookingDays(getKuwaitDate(), 2));
+    expect(screen.getByRole('radio', { name: 'Pay online (Test)' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'B-Wallet', exact: true })).not.toBeInTheDocument();
+    if (payAtShop) expect(screen.getByRole('radio', { name: 'Pay at the shop' })).toBeChecked();
+    else expect(screen.getByRole('radio', { name: 'Pay online (Test)' })).toBeChecked();
   });
   it('resets the branch and appointment when changing city, and supports search and empty results', async () => {
     await chooseAppointment(); click('Edit: Shop');

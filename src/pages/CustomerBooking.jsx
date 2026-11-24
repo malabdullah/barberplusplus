@@ -504,7 +504,8 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     return () => { active = false; };
   }, [walletAvailable, customerId, panel]);
   const totalFils = Math.round(price * 1000);
-  const canUseWallet = walletTestEnvironment && canPayOnline && walletAvailable && balance?.owner === customerId;
+  const canUseWallet = walletTestEnvironment && canPayOnline && walletAvailable
+    && Boolean(customerId && balance && balance.owner === customerId);
   const fullWallet = canUseWallet && balance.fils >= totalFils;
   const splitWallet = canUseWallet && balance.fils > 0 && totalFils > 1;
   const splitFils = walletAmountFils(splitAmount);
