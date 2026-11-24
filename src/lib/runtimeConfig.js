@@ -23,3 +23,6 @@ export const customerFeaturesEnabled = isTest || appConfig.environment === 'prod
 export const subscriptionFeaturesEnabled = isTest || appConfig.environment === 'production';
 
 export const settlementFeaturesEnabled = isTest || appConfig.environment === 'production';
+
+export const walletTestEnvironment = appConfig.environment === 'cloud-test'
+  && appConfig.cloudTestProjectRef === 'qvkucvcjmojjbphlzlks';

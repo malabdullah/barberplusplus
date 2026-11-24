@@ -4007,5 +4007,61 @@
     "total": "Invoice total",
     "test": "TEST INVOICE",
     "testNote": "Issued in the Barber++ Test environment. No real payment was collected."
+  },
+  "bWallet": {
+    "title": "B-Wallet",
+    "back": "Back to my account",
+    "available": "Available balance",
+    "held": "{{amount}} held for checkout",
+    "expires": "{{amount}} expires {{date}}",
+    "topup": "Top up B-Wallet",
+    "amount": "Amount (KWD)",
+    "continue": "Continue to UPayments (Test)",
+    "newExpiry_one": "New credits expire in {{count}} month.",
+    "newExpiry_other": "New credits expire in {{count}} months.",
+    "history": "Transaction history",
+    "empty": "No transactions yet.",
+    "loading": "Loading B-Wallet…",
+    "more": "Load more",
+    "check": "Check payment",
+    "resume": "Resume payment",
+    "settings": "Credit expiry",
+    "months": "Standard expiry (months)",
+    "reason": "Reason",
+    "lookup": "Find transactions",
+    "searchBy": "Search by",
+    "customerId": "Customer ID",
+    "reference": "Transaction reference",
+    "goodwill": "Goodwill credit",
+    "review": "Review credit",
+    "issueCredit": "Issue credit",
+    "creditPreview": "Add {{amount}} to customer {{customer}}.",
+    "creditIssued": "Credit added.",
+    "settingsSaved": "Expiry settings saved.",
+    "kind": {
+      "top_up": "Top-up",
+      "goodwill": "Goodwill credit",
+      "spend": "Booking payment",
+      "refund": "Booking refund",
+      "expiry": "Expired credit",
+      "clear": "Balance cleared"
+    },
+    "topupState": {
+      "creating": "Checkout is being prepared.",
+      "pending": "Payment pending. Your balance updates after payment is verified.",
+      "review": "We’re checking this payment. Please check again before making another top-up.",
+      "failed": "Payment was unsuccessful. You can try again.",
+      "credited": "{{amount}} added to B-Wallet."
+    },
+    "errors": {
+      "WALLET_UNAVAILABLE": "Could not load B-Wallet. Please try again.",
+      "WALLET_DISABLED": "B-Wallet is currently unavailable.",
+      "WALLET_INVALID_TOPUP": "Enter an amount from KD 1 to KD 100, with up to three decimal places.",
+      "WALLET_CUSTOMER_UNAVAILABLE": "This customer’s wallet is unavailable.",
+      "WALLET_INVALID_CREDIT": "Enter a positive amount in KWD.",
+      "WALLET_TOPUP_PENDING": "Check your existing top-up before starting another.",
+      "WALLET_PROVIDER_UNAVAILABLE": "Could not verify payment. Please check its status again.",
+      "WALLET_FORBIDDEN": "You don’t have access to this wallet action."
+    }
   }
 }

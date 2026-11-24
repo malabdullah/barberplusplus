@@ -66,7 +66,7 @@ import AgentEditBooking from './pages/agent/AgentEditBooking';
 import AgentCustomers from './pages/agent/AgentCustomers';
 import AccountSessionNotice from './components/UI/AccountSessionNotice';
 import EnvironmentBanner from './components/EnvironmentBanner';
-import { customerFeaturesEnabled, isTest, subscriptionFeaturesEnabled, settlementFeaturesEnabled } from './lib/runtimeConfig';
+import { customerFeaturesEnabled, isTest, subscriptionFeaturesEnabled, settlementFeaturesEnabled, walletTestEnvironment } from './lib/runtimeConfig';
 import { CustomerFavouritesProvider } from './context/CustomerFavouritesContext';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import CustomerDocumentBoundary from './components/Customer/CustomerDocumentBoundary';
@@ -78,6 +78,8 @@ const CustomerSocialAuth = React.lazy(() => import('./pages/CustomerSocialAuth')
 const CustomerPassword = lazy(() => import('./pages/CustomerPassword'));
 const CustomerAuth = lazy(() => import('./pages/CustomerAuth'));
 const CustomerFavourites = lazy(() => import('./pages/CustomerFavourites'));
+const CustomerWallet = lazy(() => import('./pages/CustomerWallet'));
+const AdminWallet = lazy(() => import('./pages/admin/AdminWallet'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const SharedBooking = lazy(() => import('./pages/SharedBooking'));
 const CustomerBooking = lazy(() => import('./pages/CustomerBooking'));
@@ -178,6 +180,7 @@ function AppRoutes() {
       {customerFeaturesEnabled && <Route path="/customer/verify-email" element={<Suspense fallback={null}><CustomerEmailVerification /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/email-callback" element={<Suspense fallback={null}><CustomerEmailCallback /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/favourites" element={<Suspense fallback={null}><CustomerFavourites /></Suspense>} />}
+      {walletTestEnvironment && <Route path="/customer/wallet" element={<Suspense fallback={null}><CustomerWallet /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/account" element={<Suspense fallback={null}><CustomerAccount /></Suspense>} />}
       {customerFeaturesEnabled && <Route path="/customer/delete-account" element={<Suspense fallback={null}><CustomerDeleteAccount /></Suspense>} />}
       <Route path="/support" element={<ContactSupport />} />
@@ -243,6 +246,7 @@ function AppRoutes() {
         <Route path="services" element={<Services />} />
         <Route path="reports" element={<Suspense fallback={null}><Reports /></Suspense>} />
         <Route path="finances" element={<Suspense fallback={null}><Finances /></Suspense>} />
+        {walletTestEnvironment && <Route path="wallet" element={<Suspense fallback={null}><AdminWallet /></Suspense>} />}
         {settlementFeaturesEnabled && <Route path="settlements" element={<Suspense fallback={null}><Settlements /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="billing" element={<Suspense fallback={null}><SubscriptionBilling /></Suspense>} />}
         <Route path="barbers" element={<Barbers />} />
@@ -297,6 +301,7 @@ function AppRoutes() {
         <Route path="users/emails" element={<AccountEmails />} />
         <Route path="users/managers" element={<ManagersList />} />
         <Route path="users/barbers" element={<BarbersList />} />
+        {walletTestEnvironment && <Route path="wallet" element={<Suspense fallback={null}><AdminWallet /></Suspense>} />}
         {settlementFeaturesEnabled && <Route path="settlements" element={<Suspense fallback={null}><Settlements admin /></Suspense>} />}
         {settlementFeaturesEnabled && <Route path="settlements/reconciliation" element={<Suspense fallback={null}><SettlementReconciliation /></Suspense>} />}
         {subscriptionFeaturesEnabled && <Route path="subscriptions" element={<Suspense fallback={null}><SubscriptionBilling admin /></Suspense>} />}

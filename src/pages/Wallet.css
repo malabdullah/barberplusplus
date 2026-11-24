@@ -1,0 +1,13 @@
+.wallet-page { max-width: 760px; }
+.wallet-panel { margin-block: 1rem; }
+.wallet-panel h2 { font-size: 1.2rem; }
+.wallet-balance { font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 650; margin-block: .2rem .6rem; }
+.wallet-form { display: flex; align-items: end; gap: .8rem; flex-wrap: wrap; margin-block: .75rem; }
+.wallet-form > div { min-width: min(100%, 11rem); flex: 1 1 11rem; }
+.wallet-form input { width: 100%; }
+.wallet-form button { min-height: 44px; }
+.wallet-transactions { padding: 0; margin: .75rem 0; list-style: none; }
+.wallet-transactions li { padding-block: .7rem; display: flex; justify-content: space-between; gap: .55rem; }
+.wallet-transactions time { display: block; font-size: .875rem; opacity: .8; }
+.wallet-admin-panel { margin-block: 1rem; padding: 1rem; }
+.wallet-admin-panel .wallet-form input { min-width: 0; }

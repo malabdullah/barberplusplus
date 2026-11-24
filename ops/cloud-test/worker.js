@@ -8,7 +8,7 @@ const installAssets = new Map([
   ['/icon-512.png', 'image/png'],
   ['/site.webmanifest', 'application/manifest+json'],
 ]);
-const functions = new Set(['admin-accounts', 'customer-account-deletion', 'staff-reports', 'account-tools', 'admin-push', 'customer-announcements', 'booking-share', 'customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox', 'upayments-subscription']);
+const functions = new Set(['admin-accounts', 'customer-account-deletion', 'staff-reports', 'account-tools', 'admin-push', 'customer-announcements', 'booking-share', 'customer-auth', 'customer-booking', 'admin-password-reset', 'auth-rate-limiter', 'invite-barber', 'get-kuwait-governorates', 'cloud-test-inbox', 'upayments-subscription', 'b-wallet']);
 
 async function digest(value) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
@@ -50,12 +50,12 @@ export default {
       status:401, headers:{'WWW-Authenticate':'Basic realm="Barber++ Test", charset="UTF-8"','Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow, noarchive'},
     });
     let response;
-    const bookingReturn = url.pathname === '/book' && ['GET', 'HEAD'].includes(request.method)
+    const bookingReturn = ['/book', '/customer/wallet'].includes(url.pathname) && ['GET', 'HEAD'].includes(request.method)
       && /^return(?:[?]|$)/.test(url.searchParams.get('payment') || '');
     if (bookingReturn && url.search !== '?payment=return') {
       // UPayments appends its own query, even when the configured return URL
       // already has one. Browser storage and the server verify the payment.
-      response = new Response(null, {status:303,headers:{Location:`${env.APP_URL}/book?payment=return`}});
+      response = new Response(null, {status:303,headers:{Location:`${env.APP_URL}${url.pathname}?payment=return`}});
     } else if (url.pathname.startsWith('/test-api/') || url.pathname === '/test-inbox') {
       if (request.headers.get('origin') && request.headers.get('origin') !== env.APP_URL) return new Response('Forbidden', {status:403});
       const name = url.pathname === '/test-inbox' ? 'cloud-test-inbox' : url.pathname.slice('/test-api/'.length);

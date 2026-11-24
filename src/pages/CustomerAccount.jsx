@@ -15,6 +15,8 @@ import { GCC_COUNTRIES } from '../constants/countries';
 import { validatePhoneNumber } from '../utils/validation';
 import { shopWording } from '../utils/customerTerminology';
 import { usePublicNavigationBusy } from '../components/Public/PublicNavigationContext';
+import { walletTestEnvironment } from '../lib/runtimeConfig';
+import { walletRpc } from '../services/bWallet.service';
 import './CustomerBooking.css';
 import './CustomerAuth.css';
 import './CustomerAccount.css';
@@ -118,6 +120,13 @@ export default function CustomerAccount() {
   const now = Date.now();
   const appointments = bookings.filter(booking => isPastAppointment(booking, now) === showPast)
     .sort((a, b) => (appointmentDate(a) - appointmentDate(b)) * (showPast ? -1 : 1));
+  const [walletOwner, setWalletOwner] = useState(null);
+  useEffect(() => {
+    if (!walletTestEnvironment || !customer?.id) return;
+    let active = true;
+    walletRpc('status').then(status => { if (active && status.enabled) setWalletOwner(customer.id); }).catch(() => {});
+    return () => { active = false; };
+  }, [customer?.id]);
   const dateOptions = { timeZone: 'Asia/Kuwait' };
   if (!loading && !customer) return <Navigate to={signingOut ? '/book' : '/customer/sign-in'} state={{ returnTo: '/customer/account' }} replace />;
   return <div className="customer-booking ca-page" dir={arabic ? 'rtl' : 'ltr'}><main className="ca-main ca-account">
@@ -141,7 +150,7 @@ export default function CustomerAccount() {
             <div><dt>{tr('email.label')}</dt><dd><bdi>{customer.email || tr('notProvided')}</bdi></dd></div>
             <div><dt>{tr('phone')}</dt><dd><bdi>{customer.phone ? `${customer.countryCode} ${customer.phone}` : tr('notProvided')}</bdi></dd></div>
           </dl>}
-          <div className="ca-profile-actions"><Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/support?audience=customer">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link></div>
+          <div className="ca-profile-actions">{walletOwner && walletOwner === customer.id && <Link to="/customer/wallet">{t('bWallet.title')}<ChevronRight size={18} aria-hidden="true" /></Link>}<Link to="/customer/favourites">{t('customerFavourites.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/password">{t('customerPassword.title')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/sessions">{t('settings.activeSessions')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/customer/activity">{t('accountTools.activity')}<ChevronRight size={18} aria-hidden="true" /></Link><Link to="/support?audience=customer">{t('settings.contactSupport')}<ChevronRight size={18} aria-hidden="true" /></Link></div>
           <section className="ca-account-controls" aria-label={tr('account.actions')}>
             <CustomerSignOutButton pending={signingOut} disabled={busy} onClick={signOut} />
             <Link className="ca-delete-account-link" to="/customer/delete-account" reloadDocument><Trash2 size={18} aria-hidden="true" /><span>{t('customerDeletion.title')}</span></Link>

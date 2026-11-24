@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { subscriptionFeaturesEnabled, settlementFeaturesEnabled } from '../../lib/runtimeConfig';
+import { subscriptionFeaturesEnabled, settlementFeaturesEnabled, walletTestEnvironment } from '../../lib/runtimeConfig';
 import SignOutCard from '../UI/SignOutCard';
 import './Sidebar.css';
 import useSidebarAccessibility from '../../hooks/useSidebarAccessibility';
@@ -33,6 +33,7 @@ const navItems = [
     { path: '/admin/subscriptions/discounts', icon: Tag, labelKey: 'subscriptionDesign.discountCodes' },
   ] : []),
   ...(settlementFeaturesEnabled ? [{ path: '/admin/settlements', icon: Landmark, labelKey: 'settlements.title' }] : []),
+  ...(walletTestEnvironment ? [{ path: '/admin/wallet', icon: CreditCard, labelKey: 'bWallet.title' }] : []),
   { path: '/admin/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
