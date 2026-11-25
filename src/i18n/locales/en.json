@@ -21,7 +21,16 @@
     "forbidden": "You do not have permission to change this shop.",
     "adminOnly": "Only the admin can change manual booking permissions.",
     "stale": "The shop status has changed. Refresh before trying again.",
-    "bookingBlocked": "This shop is not accepting new bookings. Publish it or ask the admin about manual booking access."
+    "bookingBlocked": "This shop is not accepting new bookings. Publish it or ask the admin about manual booking access.",
+    "blockedTitle": "Before publishing:",
+    "blockers": {
+      "inactive": "This shop is inactive. Contact an admin to activate it.",
+      "shop_details": "Enter the shop name.",
+      "location": "Select a governorate and a city within it.",
+      "shop_hours": "Set valid shop working hours.",
+      "services": "Add at least one active service with a valid price and duration.",
+      "barber": "Activate at least one barber, assign services and approve hours that fit the shop’s opening hours."
+    }
   },
   "chair": {
     "title": "My Chair",

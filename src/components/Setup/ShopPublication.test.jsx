@@ -12,6 +12,20 @@ it('cannot publish incomplete setup', async () => {
   render(<ShopPublication branchId="shop" />);
   expect(await screen.findByRole('button', { name: 'shopPublication.publish' })).toBeDisabled();
 });
+it('names the actual publishing blockers without showing unrelated requirements', async () => {
+  api.manage.mockResolvedValue({ publication_state: 'draft', ready: false, blockers: ['inactive', 'location'] });
+  render(<ShopPublication branchId="shop" />);
+  expect(await screen.findByRole('status')).toHaveTextContent('shopPublication.blockers.inactive');
+  expect(screen.getByRole('status')).toHaveTextContent('shopPublication.blockers.location');
+  expect(screen.queryByText('shopPublication.blockers.barber')).toBeNull();
+  expect(screen.getByRole('button', { name: 'shopPublication.publish' })).toBeDisabled();
+});
+it('ignores unknown server reasons and falls back safely for older responses', async () => {
+  api.manage.mockResolvedValue({ publication_state: 'draft', ready: false, blockers: ['unknown'] });
+  render(<ShopPublication branchId="shop" />);
+  expect(await screen.findByText('shopPublication.notReady')).toBeVisible();
+  expect(screen.queryByRole('status')).toBeNull();
+});
 it('requires confirmation and uses the server state to publish', async () => {
   api.manage.mockResolvedValueOnce({ publication_state: 'draft', ready: true }).mockResolvedValueOnce({ publication_state: 'published', ready: true });
   const changed = vi.fn(); render(<ShopPublication branchId="shop" name="Owned shop" onChanged={changed} />);

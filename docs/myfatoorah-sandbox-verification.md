@@ -31,3 +31,21 @@ database access, native app deployment or production deployment was used.
 This verifies the initial subscription/extra-place sandbox integration. Booking
 payments, wallet funding, refunds and configured webhooks for MyFatoorah are not
 implemented by this phase. See [the runbook](myfatoorah-sandbox.md).
+
+## Shop publishing follow-up — 25 November 2026
+
+The owner's card sandbox shop was prepared as inactive. Its shop details,
+services and Jassim's approved hours were complete, but publishing correctly
+required an active shop. Corrected only that Test shop to active; it remains a
+draft for the owner to publish. No subscription, payment or publication was made.
+
+Publishing readiness now returns a list of safe reason codes for inactive shops,
+missing name/location, invalid shop hours, missing active services, and missing
+bookable barber setup. The website shows those requirements in English/Arabic
+and retains the disabled publish button and existing server permissions. Older
+responses retain the existing fallback message.
+
+Verification: seven read-only hosted readiness scenarios passed, including the
+complete owner shop. Full repository checks passed (368 Function tests, 571
+frontend tests, 85 operational tests and build). The fixture correction is not
+part of the migration; no fixture IDs or data changes are deployed with it.
