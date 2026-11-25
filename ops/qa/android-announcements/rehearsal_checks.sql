@@ -4,11 +4,12 @@ declare
  a uuid:='adab1125-0000-4000-8000-000000000003';d uuid:='adab1125-0000-4000-8000-000000000004';
  c uuid:='adab1125-0000-4000-8000-000000000005';t uuid:='adab1125-0000-4000-8000-000000000006';
  j uuid:='adab1125-0000-4000-8000-000000000007';other_j uuid:='adab1125-0000-4000-8000-000000000008';
- secret text:=repeat('a',64);token text:='synthetic-android-announcement-token';reply jsonb;lease jsonb;denied boolean;saved_binding text;before_other text;
+ secret text:=repeat('a',64);token text:='synthetic-android-announcement-token';reply jsonb;lease jsonb;denied boolean;saved_binding text;before_other text;payload jsonb;
 begin
  assert not(select enabled from qa.android_announcement_runtime),'new general runtime defaults off';
  assert not has_function_privilege('authenticated','qa.android_announcement_acceptance_worker(text,jsonb)','execute'),'private acceptance inaccessible';
  assert not has_table_privilege('service_role','qa.android_announcement_acceptance','select'),'scope not exposed';
+ assert has_function_privilege('service_role','qa.android_live_push_api(text,jsonb)','execute'),'existing service invoker retains registration access';
  insert into qa.users(id,admin)values(u,false),(a,true);insert into qa.sessions values(s,u);
  insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data)values(u,u||'@example.test',now(),'{"role":"customer"}'),(a,a||'@example.test',now(),'{"role":"admin"}');
  insert into auth.sessions(id,user_id)values(s,u);
@@ -17,10 +18,19 @@ begin
  assert private.android_live_push_owner(u,s),'deployed real Auth/session helper accepts synthetic customer';
  assert private.announcement_author_allowed(a),'deployed real MFA/author helper accepts synthetic admin';
  insert into qa.android_live_push_runtime(singleton,environment,api_url,project_id,package_name,registration_enabled,delivery_enabled,mode)
- values(true,'production','https://srv1073968.hstgr.cloud','barber-plus-plus-phone-prod','com.barberplusplus.customer',true,false,'capture');
+ values(true,'production','https://srv1073968.hstgr.cloud','barber-plus-plus-phone-prod','com.barberplusplus.customer',false,false,'capture');
  insert into qa.announcement_runtime(singleton,enabled,mode,api_url)values(true,false,'apns','https://srv1073968.hstgr.cloud');
- insert into qa.android_live_push_devices(id,secret_hash,account_id,session_id,token,token_hash,registration_version,registration_hash,permission,language)
- values(d,extensions.digest(secret,'sha256'),u,s,token,extensions.digest(token,'sha256'),1,extensions.digest('fixture','sha256'),true,'en');
+ payload:=jsonb_build_object('deviceId',d,'deviceSecret',secret,'user_id',u,'session_id',s,'version',1,'token',token,'projectId','barber-plus-plus-phone-prod','packageName','com.barberplusplus.customer','permission',true,'language','en');
+ perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+ denied:=false;begin perform qa.android_live_push_api('push-register',payload);exception when others then denied:=sqlerrm='PUSH_NOT_CONFIGURED';end;assert denied,'closed ordinary registration rejects unapproved installation';
+ perform qa.admin_push_worker('registration-configure',jsonb_build_object('userId',u,'deviceId',d,'secretHash',encode(extensions.digest(secret,'sha256'),'hex')));
+ denied:=false;begin perform qa.android_live_push_api('push-register',payload||jsonb_build_object('deviceId',other_j));exception when others then denied:=sqlerrm='PUSH_NOT_CONFIGURED';end;assert denied,'different installation rejected';
+ denied:=false;begin perform qa.android_live_push_api('push-register',payload||jsonb_build_object('deviceSecret',repeat('b',64)));exception when others then denied:=sqlerrm='PUSH_NOT_CONFIGURED';end;assert denied,'wrong installation capability rejected';
+ denied:=false;begin perform qa.android_live_push_api('push-register',payload||jsonb_build_object('session_id',other_j));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;assert denied,'unverified session rejected';
+ assert qa.android_live_push_api('push-register',payload)->>'success'='true','legitimate exact enrollment succeeds with ordinary registration closed';
+ assert(select device_id is null from qa.android_registration_acceptance),'one enrollment consumes scope';
+ assert not(select registration_enabled or delivery_enabled from qa.android_live_push_runtime),'general registration and delivery remain closed';
+ perform set_config('request.jwt.claims','{}',true);
  reply:=qa.customer_announcement_api('register',jsonb_build_object('client','android','user_id',u,'session_id',s,'deviceId',d,'deviceSecret',secret,'version',1,'initializeDefaults',true));
  assert reply->>'enabled'='true','register initializes preferences';saved_binding:=reply->>'recipientBinding';
  assert saved_binding~'^[0-9a-f]{64}$','frozen recipient binding';

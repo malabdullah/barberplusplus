@@ -5,8 +5,8 @@ ordinary Android delivery and public publishing are unchanged.
 
 ## Scope
 
-Two proposed migrations add the production Android announcement registry/queue
-and a separate one-installation acceptance worker. Existing APNs registration
+Three proposed migrations add the production Android announcement registry/queue,
+a separate one-installation acceptance worker and scoped fresh enrollment. Existing APNs registration
 and queue tables are retained. Customer preference, frozen recipient binding,
 session/ownership and token-version checks apply to Android announcements.
 
@@ -24,20 +24,40 @@ registration or scope changes invalidate it. Even HTTP 503 is terminal here.
 - Candidate dispatcher entry point type check passed with remote imports denied.
 - Changed Function files passed Deno lint. Vite build passed, with existing
   Recharts/chunk-size/import warnings.
-- Hosted `barber-test` (`qvkucvcjmojjbphlzlks`) rollback rehearsal passed twice
-  with 28 SQL assertions, genuine synthetic Auth users/sessions, a synthetic
+- Hosted `barber-test` (`qvkucvcjmojjbphlzlks`) rollback rehearsal passed repeatedly,
+  with 35 assertions in the final run, genuine synthetic Auth users/sessions, a synthetic
   admin MFA factor and the deployed customer-session/author helpers.
-- The exact two candidate migration bodies were bound to a separate temporary
+- The exact three candidate migration bodies were bound to a separate temporary
   namespace. Table shapes came from Test. No deployed Test function, runtime or
   transport was overwritten. The namespace and synthetic identities rolled back.
 - Isolation assertions cover a queued unrelated Android delivery and pending
   iOS delivery, unchanged general flags, expiry, stale binding/version, suspended
   account, opt-out, permission epoch, one lease, no retry/rearm and no iOS/general
-  worker delegation.
+  worker delegation. Scoped enrollment additionally rejects an unapproved device,
+  wrong capability and invalid session; it consumes its allowance after one
+  successful normal registration without opening ordinary registration.
+- An isolated hosted Test HTTP Function passed real synthetic password sign-in,
+  JWT verification, Test gateway, deployed device status and announcement
+  capability registration, then the shared captured dispatcher: HTTP 200,
+  claimed 1, captured 1, accepted 0, external provider calls 0. Missing JWT was
+  rejected with 401; missing Test gateway with 403. The synthetic device registry
+  fixture was prepared separately so existing owner-device allowlists and finite
+  Test registration counters stayed untouched. Fresh production-style enrollment
+  was checked separately in the rollback namespace, not claimed as one continuous
+  production HTTP test.
+- The QA Function was deleted. Its one disposable Auth account/session, customer
+  profile, device, announcement capability/preferences and push preferences were
+  removed; rollback namespace absence was verified. The protected temporary input
+  was removed and the coordinator retired its temporary gateway handoff.
+- Full application lint, Function lint/type checks, Function tests and frontend
+  tests passed. Four operations tests initially hit sandbox loopback-listener
+  denial; the separately permitted operations rerun passed all 84 tests.
+  Migration filenames, domain checks and build passed.
 
 Limits: iOS delegation and production runtime/credential binding are contract
-doubles in the namespace. Sender captures ran as handler tests, not an end-to-end
-deployed acceptance HTTP request. This does not establish real FCM receipt/tap,
+doubles in the namespace. The capture HTTP check uses the existing Test transport
+and a single synthetic job; queue isolation is separately proven by rollback SQL.
+This does not establish real FCM receipt/tap,
 current production credential validity or Compact registration. These are release
 gates, not claimed passes. Initial rehearsal harness parameter/schema mismatches
 were corrected before the two passing runs; failed attempts rolled back.
@@ -52,7 +72,7 @@ localhost runtime is required. The generator records both source SHA256 values.
    the existing live Android transport and current announcement/defaults schema.
    Verify backup/recovery and normal release-controller gates using the usual
    separately approved access window.
-2. Apply only these two migrations and deploy matching `customer-announcements`
+2. Apply only these three migrations and deploy matching `customer-announcements`
    and `admin-push-dispatch` Functions. No website/native UI update is required.
 3. Leave `ANDROID_PUSH_ENABLED`, `ANDROID_ANNOUNCEMENTS_ENABLED`, database general
    delivery and Android-announcement activation unchanged/off. New
@@ -106,3 +126,58 @@ logging settings and retention were not verified: no ephemeral-processing claim
 should rely on this application-only inspection. Session/activity/Auth request
 metadata is stored. Google provider metadata may retain a picture URL even
 though the Android account model does not fetch/display those picture bytes.
+
+## Scoped registration and discovered validator defect
+
+`20261125101118_android_registration_single_acceptance.sql` retains the existing
+registration validators and permits one account/installation/capability-hash
+tuple for ten minutes while ordinary registration and delivery stay false. The
+session is derived from the normal authenticated request and checked by the
+deployed session helper; no private session, FCM token or raw device secret is
+exported to configure the scope. Only the service role can configure/clear it.
+
+The real registration rehearsal exposed the existing PostgreSQL pattern
+`{20,4096}`, whose repetition bound exceeds PostgreSQL's supported maximum. The
+candidate separates token length (20–4096) from the allowed-character pattern.
+This fixes first registration without relaxing accepted token content/length.
+
+Build 12 currently has no intentionally exposed pre-registration enrollment
+identifier. The smallest proposed owner-consent path is a temporary read-only
+enrollment code in notification settings: random installation UUID plus a
+non-secret SHA256 capability fingerprint, with the verified account chosen
+through the coordinator. It must not expose a session, token or device secret.
+Configure only that code, then use normal Enable notifications. This native
+prerequisite must be completed/reviewed before a strict one-installation Live
+registration; do not inspect private app storage or enable broad registration.
+
+## Controller, interruption and recovery decision
+
+New tables/routines/RLS are outside automatic additive-only admission. Before
+any main merge, arrange a separately approved manual database window and pause
+the controller to avoid automatic rollout racing the three reviewed migrations.
+Verify the exact ordered hashes against both ledgers; do not rewrite prior
+migrations. Apply matching Function artifacts only after SQL verification, then
+reconcile/resume the controller using the reviewed receipt.
+
+The changed managed Functions are `customer-announcements` and
+`admin-push-dispatch`. The current backend helper drains and briefly stops the
+shared Functions runtime while replacing changed workers. Other Functions may
+therefore see a short availability gap; Auth, REST and the website are not
+intentionally stopped. Duration must be measured during the approved release;
+zero downtime is not promised. Stop/recover if readiness fails rather than
+restarting or retrying blindly.
+
+Before/after health checks: fresh original backup/restore receipt, accepted
+migration ledgers, pinned runtime/image identity, healthy Auth/REST/Realtime/
+Storage/Functions, own-domain HTTPS, current release/runtime commit, anonymous
+denials on private RPCs, unchanged iOS/defaults contract and all general Android
+flags still off. Verify configured scope expiry/recipient count before enabling
+only the temporary acceptance flag. Never test by draining general queues.
+
+If deployment fails, restore the prior two Function artifacts and previous
+compatible frontend artifact if it advanced, clear only registration/acceptance
+scope rows and set the temporary flag false. Retain additive SQL, registrations
+and customer writes. The patched normal registration API is backward compatible;
+do not drop new schema or reverse SQL automatically. Reconcile actual state and
+controller receipt before any retry. No Live health check or backup claim was
+made during this Test/source task.
