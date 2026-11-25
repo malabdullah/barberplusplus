@@ -4,22 +4,25 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import './ManagedBarbers.css';
 import MyAvailability from './barber/MyAvailability';
+import { setupReturn, setupActionUrl } from '../utils/shopSetup';
 
 export default function BarberSchedule() {
   const { barberId } = useParams();
   const [params] = useSearchParams();
-  const { barbers, loading } = useApp();
+  const { barbers, loading, branches, user } = useApp();
   const { t } = useTranslation();
   const location = useLocation();
+  const setup = setupReturn(location.search, branches, user?.id);
+  const navTo = path => setup ? setupActionUrl(path, setup.id, 'hours') : path;
   const barber = barbers.find(item => item.id === barberId);
   if (params.get('request')) return <Navigate replace to={`/dashboard/availability-requests/${encodeURIComponent(params.get('request'))}`} />;
   if (loading) return <p role="status">{t('common.loading')}</p>;
-  return <><Link to="/dashboard/barbers">{t('barbers.backToBarbers')}</Link>
+  return <><Link to={setup?.path || '/dashboard/barbers'}>{t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')}</Link>
     {location.state?.imageWarning && <p role="alert">{t('managerAudit.imageWarning')}</p>}
     {barber?.managerManaged && <nav className="managed-barber-tabs" aria-label={t('managedBarbers.manage')}>
-      <Link className="btn btn-secondary" to={`/dashboard/barbers/${barber.id}/edit`}>{t('profile.title')}</Link>
+      <Link className="btn btn-secondary" to={navTo(`/dashboard/barbers/${barber.id}/edit`)}>{t('profile.title')}</Link>
       <span className="btn btn-primary" aria-current="page">{t('availabilityCompact.title')}</span>
-      <Link className="btn btn-secondary" to={`/dashboard/barbers/${barber.id}/edit?tab=settings`}>{t('settings.title')}</Link>
+      <Link className="btn btn-secondary" to={navTo(`/dashboard/barbers/${barber.id}/edit?tab=settings`)}>{t('settings.title')}</Link>
     </nav>}
     {barber ? <MyAvailability targetBarber={barber} /> : <p role="alert">{t('barbers.barberNotFound')}</p>}</>;
 }

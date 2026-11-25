@@ -26,7 +26,7 @@
 .setup-service-list, .setup-team { margin-bottom: 20px; }
 .setup-invite { margin-block: 22px; }
 .setup-invite h3 { font-size: 18px; margin-bottom: 18px; }
-.setup-chair { margin-inline-start: 12px; }
+.setup-team-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 12px; }
 .setup-footer { justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-color); }
 .setup-readiness { display: grid; gap: 8px; padding-bottom: 22px; color: var(--text-secondary); }
 .setup-readiness strong { color: var(--text-primary); font-size: 22px; }
@@ -45,7 +45,7 @@
  .setup-row-actions .btn { flex: 1; }
  .setup-footer .btn { flex: 1; justify-content: center; }
  .setup-entry { align-items: flex-start; flex-direction: column; padding: 16px; }
- .setup-chair { display: flex; margin: 10px 0 0; }
+ .setup-team-actions .btn { flex: 1 1 auto; justify-content: center; }
 }
 .setup-pagination { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-block: 18px; font-size: 14px; color: var(--text-secondary); }
 
