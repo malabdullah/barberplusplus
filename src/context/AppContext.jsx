@@ -23,12 +23,21 @@ import i18n from '../i18n';
 import { BARBER_DEFAULT_SCHEDULE } from '../constants/time';
 import { resolveTheme } from '../utils/theme';
 import { getLogSessionId } from '../utils/sessionLogId';
+import CompleteBookingDialog from '../components/BookingPolicy/CompleteBookingDialog';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
+  const [completionRequest, setCompletionRequest] = useState(null);
+  const completionRef = useRef(null);
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const closeCompletion = useCallback(() => {
+    completionRef.current?.resolve(null);
+    completionRef.current = null;
+    setCompletionRequest(null);
+  }, []);
+  useEffect(() => { closeCompletion(); }, [user?.id, closeCompletion]);
   useEffect(() => { setTerminologyRole(userRole); i18n.emit('languageChanged', i18n.language); }, [userRole]);
   const [branches, setBranches] = useState([]);
   const [barbers, setBarbers] = useState([]);
@@ -941,6 +950,17 @@ export function AppProvider({ children }) {
   }, [selectedBranchId, services, bookings, barbers, user, userRole]);
 
   const updateBooking = useCallback(async (bookingId, updates) => {
+    if (updates.status === 'completed') {
+      if (completionRef.current) {
+        if (completionRef.current.id === bookingId) return completionRef.current.promise;
+        throw new Error('COMPLETION_BUSY');
+      }
+      let resolve;
+      const promise = new Promise(done => { resolve = done; });
+      completionRef.current = { id: bookingId, promise, resolve };
+      setCompletionRequest(bookingId);
+      return promise;
+    }
     try {
       const statusOnlyConfirmation = updates.status === 'confirmed' && Object.keys(updates).length === 1;
       const branch = statusOnlyConfirmation ? {} : { branchId: updates.branchId || bookings.find(booking => booking.id === bookingId)?.branchId };
@@ -1400,6 +1420,16 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={value}>
       {children}
+      {completionRequest && <CompleteBookingDialog key={completionRequest} bookingId={completionRequest} onClose={closeCompletion}
+        onConfirm={async (method, expectedDue) => {
+          const pending = completionRef.current;
+          const updated = await bookingsService.complete(completionRequest, method, expectedDue);
+          if (completionRef.current !== pending) return;
+          setBookings(previous => previous.map(booking => booking.id === updated.id ? updated : booking));
+          completionRef.current = null;
+          setCompletionRequest(null);
+          pending.resolve(updated);
+        }} />}
     </AppContext.Provider>
   );
 }

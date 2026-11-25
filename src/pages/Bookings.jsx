@@ -1,3 +1,4 @@
+import BookingCompletionPayment from '../components/BookingPolicy/BookingCompletionPayment';
 import BookingContact from '../components/BookingContact';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingServices } from '../utils/bookingServices';
@@ -233,6 +234,7 @@ const BookingDetails = memo(function BookingDetails({
           <button className="btn btn-secondary" onClick={onReschedule}>{t('chair.reschedule')}</button>
         )}
 
+      <BookingCompletionPayment booking={booking} />
       <div className="booking-status-change">
         <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select

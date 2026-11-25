@@ -1,0 +1,6 @@
+.complete-booking-form { display: grid; gap: var(--space-md); color: var(--text-primary); }
+.complete-booking-amount { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.complete-booking-amount span { color: var(--text-secondary); }
+.complete-booking-form [role="alert"] { color: var(--color-error, #db6464); }
+.complete-booking-form .confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-md); }
+@media (max-width: 400px) { .complete-booking-form .confirm-actions > button { flex: 1; } }

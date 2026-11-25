@@ -4159,5 +4159,28 @@
     "card": "Credit or debit card",
     "declined": "Payment declined. You can try again.",
     "cancelled": "Payment was cancelled. You can try again using the same checkout."
+  },
+  "bookingCompletion": {
+    "title": "Complete appointment",
+    "remaining": "Amount remaining",
+    "method": "Payment method",
+    "choose": "Select payment method",
+    "cash": "Cash",
+    "card": "Card (KNET / credit card)",
+    "transfer": "Bank transfer",
+    "other": "Other",
+    "unpaid": "Not paid yet",
+    "online": "Already paid online",
+    "noBalance": "No outstanding balance",
+    "saving": "Saving…",
+    "complete": "Complete appointment",
+    "error": "Could not complete this appointment. Please try again.",
+    "BOOKING_NOT_FINISHED": "This appointment has not finished yet.",
+    "COMPLETION_NOT_CONFIRMED": "Confirm this appointment before completing it.",
+    "COMPLETION_PAYMENT_CHANGED": "The balance changed. Review the updated amount and choose again.",
+    "COMPLETION_FORBIDDEN": "You no longer have access to this appointment.",
+    "overdueTitle": "Appointment needs a status update",
+    "recorded": "Payment already recorded",
+    "free": "Free appointment"
   }
 }

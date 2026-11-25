@@ -1,3 +1,4 @@
+import BookingCompletionPayment from '../../components/BookingPolicy/BookingCompletionPayment';
 import BookingContact from '../../components/BookingContact';
 import { useNotificationBooking } from '../../hooks/useNotificationBooking';
 import React, { useState, useMemo } from 'react';
@@ -255,6 +256,7 @@ function BookingDetails({ booking, onClose, onStatusChange, services, barberData
         </div>
       )}
 
+      <BookingCompletionPayment booking={booking} />
       <div className="booking-status-change">
         <span className="status-change-label">{t('bookings.changeStatus')}</span>
         <select

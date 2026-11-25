@@ -12,7 +12,7 @@ export function notificationCopy(notification, t) {
     barber: details.barberName || '', shop: details.shopName || '',
     date: details.date || '', time: details.time || '' };
   return {
-    title: t(`notifications.events.${notification.type}`),
+    title: t(details.completionOverdue ? 'bookingCompletion.overdueTitle' : `notifications.events.${notification.type}`),
     message: t(notification.entityType === 'booking' ? 'notifications.bookingDetails' : 'notifications.barberDetails', values),
   };
 }
