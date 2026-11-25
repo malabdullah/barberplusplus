@@ -17,7 +17,7 @@ vi.mock('../context/AppContext', () => ({ useApp: () => state }));
 vi.mock('../services/barberInvitations.service', () => ({ barberInvitationsService: api }));
 let i18n;
 beforeEach(async () => {
- state.reloadData = vi.fn().mockResolvedValue(); state.services = []; managedApi.createManaged.mockReset().mockResolvedValue({ id: 'managed' });
+ state.loading = false; state.reloadData = vi.fn().mockResolvedValue(); state.services = []; managedApi.createManaged.mockReset().mockResolvedValue({ id: 'managed' });
  state.selectedBranch = { id: 'shop', name: 'QA Shop' }; api.check.mockReset().mockResolvedValue({ kind: 'new' }); api.send.mockReset().mockResolvedValue({ delivered: true });
  i18n=i18next.createInstance(); await i18n.init({lng:'en',resources:{en:{translation:en}}});
 });
@@ -85,3 +85,5 @@ it('refuses a foreign wizard shop instead of adding a barber to the selected sho
  expect(screen.getByRole('alert')).toHaveTextContent(en.shopSetup.notFound);
  expect(screen.queryByLabelText(en.common.fullName)).toBeNull();expect(managedApi.createManaged).not.toHaveBeenCalled();
 });
+
+it('waits for workspace loading before judging the wizard shop',()=>{state.loading=true;state.branches=[];mount('/dashboard/barbers/new?mode=managed&setup=10000000-0000-4000-8000-000000000001');expect(screen.getByRole('status')).toHaveTextContent(en.common.loading);expect(screen.queryByRole('alert')).toBeNull();});

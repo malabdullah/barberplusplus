@@ -13,7 +13,7 @@ import './AddBranch.css';
 import './ManagedBarbers.css';
 export default function AddBarber() {
   const { t } = useTranslation();
-  const { selectedBranch: currentShop, branches = [], user, setSelectedBranchId, services = [], reloadData } = useApp(); const navigate = useNavigate();
+  const { selectedBranch: currentShop, branches = [], user, loading, setSelectedBranchId, services = [], reloadData } = useApp(); const navigate = useNavigate();
   const { search } = useLocation();
   const setup = setupReturn(search, branches, user?.id);
   const invalidSetup = new URLSearchParams(search).has('setup') && !setup;
@@ -45,6 +45,7 @@ export default function AddBarber() {
       setBusy(false);
     }
   }
+  if (loading) return <p role="status">{t('common.loading')}</p>;
   if (invalidSetup) return <div className="add-branch-page"><BackLink to="/dashboard/setup" label={t('shopSetup.back')} /><p role="alert">{t('shopSetup.notFound')}</p></div>;
   return <div className="add-branch-page invitation-form">
     {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} />}
