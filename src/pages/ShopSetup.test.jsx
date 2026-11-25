@@ -43,3 +43,15 @@ it('does not create a service if the selected shop changed before saving',async(
 it('paginates a long service catalog without losing setup progress',async()=>{
  const services=Array.from({length:11},(_,i)=>({id:'service-'+i,branchId:id,name:'Service '+i,duration:30,price:3,status:'active'}));api.get.mockResolvedValue({shop,services,barbers:[]});mount('/dashboard/setup?shop='+id+'&step=services');await screen.findByText('Service 0');expect(screen.queryByText('Service 8')).toBe(null);fireEvent.click(screen.getByRole('button',{name:en.common.next,exact:true}));expect(await screen.findByText('Service 8')).toBeVisible();expect(screen.queryByText('Service 0')).toBe(null);expect(screen.getByRole('button',{name:'Continue',exact:true})).toBeEnabled();
 });
+it('offers managed creation scoped to this shop while retaining invitation and My Chair',async()=>{
+ mount('/dashboard/setup?shop='+id+'&step=team');
+ expect(await screen.findByRole('link',{name:en.managedBarbers.add})).toHaveAttribute('href','/dashboard/barbers/new?mode=managed&setup='+id+'&setupStep=team');
+ expect(screen.getByRole('button',{name:en.barberInvitations.invite,exact:true})).toBeVisible();
+ expect(screen.getByRole('link',{name:en.shopSetup.myChair})).toBeVisible();
+});
+it('opens a managed barber schedule directly rather than looking for an approval request',async()=>{
+ api.get.mockResolvedValue({shop,services:[],barbers:[{id:'managed',branchId:id,name:'Managed QA',managerManaged:true,services:[],status:'inactive'}]});
+ mount('/dashboard/setup?shop='+id+'&step=hours');
+ expect(await screen.findByRole('link',{name:en.shopSetup.setHours})).toHaveAttribute('href','/dashboard/barbers/managed/schedule?setup='+id+'&setupStep=hours');
+ expect(screen.queryByRole('link',{name:en.shopSetup.reviewRequests})).toBeNull();
+});
