@@ -47,7 +47,7 @@ export default function AddBarber() {
   }
   if (invalidSetup) return <div className="add-branch-page"><BackLink to="/dashboard/setup" label={t('shopSetup.back')} /><p role="alert">{t('shopSetup.notFound')}</p></div>;
   return <div className="add-branch-page invitation-form">
-    <BackLink to={backTo} label={t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')} />
+    {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} />}
     <div className="add-branch-header"><h1>{t('barbers.addBarber')}</h1><p>{selectedBranch?.name}</p></div>
     <div role="tablist" aria-label={t('barbers.addBarber')} className="managed-barber-tabs">
       {['invite', 'managed'].map(value => <button key={value} role="tab" type="button" disabled={busy}

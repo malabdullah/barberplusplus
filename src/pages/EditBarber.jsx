@@ -51,7 +51,7 @@ export default function EditBarber() {
   if (!barber) {
     return (
       <div className="edit-branch-page">
-        <BackLink to={backTo} label={t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')} className="animate-fade-in" />
+        {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} className="animate-fade-in" />}
         <div className="not-found">
           <h2>{t('barbers.barberNotFound')}</h2>
           <Link to="/dashboard/barbers" className="btn btn-primary">
@@ -64,7 +64,7 @@ export default function EditBarber() {
 
   return (
     <div className="edit-branch-page">
-      <BackLink to={backTo} label={t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')} className="animate-fade-in" />
+      {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} className="animate-fade-in" />}
 
       <div className="edit-branch-header animate-fade-in-up">
         <h1>{t('barbers.editBarber')}</h1>
