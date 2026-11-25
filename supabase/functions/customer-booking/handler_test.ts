@@ -384,3 +384,14 @@ Deno.test('native wallet opt-in uses the existing gate, preserves legacy checkou
   assert((await call({action:'online-start',...selection,capability,walletFils:0,verification},true,true,'owner')).status === 200);
   assert(starts === 1);
 });
+
+Deno.test('website provider selection does not replace the native or legacy payment adapter', async () => {
+  const appUrl='https://app.example.test'; const ref='abcdefghijklmnopqrst'; const gate='test-gateway-secret-with-enough-characters';
+  const handler=make({environment:'cloud-test',appUrl,publicUrl:'https://'+ref+'.supabase.co',cloudTestProjectRef:ref,cloudAccessKey:gate,shopPaymentPolicy:true,
+    paymentPilot:{slots:async()=>({provider:'original-native'}),start:async()=>null,check:async()=>null},
+    websitePaymentPilot:{slots:async()=>({provider:'website-router'}),start:async()=>null,check:async()=>null}});
+  const call=(markers:Record<string,string>)=>handler(new Request(appUrl,{method:'POST',headers:{Origin:appUrl,'x-cloud-test-key':gate,...markers},body:JSON.stringify({action:'slots',...selection})}));
+  assert((await(await call({'x-barber-test-web':'1'})).json()).provider==='website-router');
+  assert((await(await call({'x-barber-native-wallet':'1'})).json()).provider==='original-native');
+  assert((await(await call({})).json()).provider===undefined);
+});

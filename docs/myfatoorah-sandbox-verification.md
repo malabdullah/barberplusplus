@@ -28,9 +28,8 @@ Validation passed:
 Existing bundle-size warnings remain. No real card, real charge, production
 database access, native app deployment or production deployment was used.
 
-This verifies the initial subscription/extra-place sandbox integration. Booking
-payments, wallet funding, refunds and configured webhooks for MyFatoorah are not
-implemented by this phase. See [the runbook](myfatoorah-sandbox.md).
+This initial section verifies subscriptions/extra places. See the booking pilot
+verification below and [the runbook](myfatoorah-sandbox.md) for the extended scope.
 
 ## Shop publishing follow-up — 25 November 2026
 
@@ -49,3 +48,35 @@ Verification: seven read-only hosted readiness scenarios passed, including the
 complete owner shop. Full repository checks passed (368 Function tests, 571
 frontend tests, 85 operational tests and build). The fixture correction is not
 part of the migration; no fixture IDs or data changes are deployed with it.
+
+
+## Booking payments — 25 November 2026
+
+| Scenario | Observed result |
+| --- | --- |
+| Complete guest KNET journey | Selected the shop, Jassim, Haircut, 26 November at 12:00; entered synthetic email and no phone; paid KD 5.000 using the official KNET sandbox card; returned to a confirmed booking marked Paid online (Test). |
+| Reload paid confirmation | Restored the same booking reference; no extra receipt. |
+| Incorrect card number | MyFatoorah stayed on its card form; no payment or booking was created. |
+| Mastercard/3DS denial | Returned to Barber++ with a retry message and Resume payment. Read-only database check confirmed no booking and no settlement receipt. |
+| Mastercard retry | Resumed the same invoice, completed successful 3DS authentication, returned to a confirmed 12:30 Haircut booking marked Paid online (Test). |
+| Actual financial records | Both KD 5.000 captures have exactly one confirmed booking and one settlement receipt each, using MyFatoorah source references. The synthetic shop rate is 5% (KD 0.250 commission and KD 4.750 shop amount per receipt). |
+| Hosted transactional tests | Slot hold blocks other writers; no booking before payment; bad capability/amount/provider evidence rejected; repeated capture preserved one receipt. All test writes rolled back. |
+| Manual approval / signed-in identity | Transactional SQL test proved request → staff approval → payment-due email → MyFatoorah checkout → confirmed paid booking. No charge before approval; wallet funds were not used. Synthetic accounts/sessions and schedule changes rolled back. |
+| Late capture | Expired hold did not create a booking or receivable; marked for refund review. |
+| Existing UPayments/B-Wallet | All 81 hosted regression assertions passed, rolled back. |
+| Native boundaries | Existing native adapter retained, including when the website adapter is supplied. No native source or app build changed. |
+
+The two actual successful sandbox bookings are retained for owner inspection.
+They use synthetic guest names/emails only; no real money was charged. Refunds
+are not automatically sent through MyFatoorah by this phase. Refund/reconciliation
+review is explicit; no MyFatoorah payment is passed to the UPayments refund worker.
+
+Final validation: complete repository checks passed with 380 Function tests,
+572 frontend tests and 85 operational tests, plus lint/type/migration/domain
+checks and build. The hosted approval suite also passed all combinations of
+pay-at-shop/online/both and auto-confirm on/off, and refuses online payment for a
+zero-price service. The owner shop's active/published state and Jassim's original
+auto-confirm setting were preserved. The two confirmation emails were processed
+by the existing Test mailbox capture flow. The misleading mobile-only guest
+receipt wording was corrected in both languages. No production access, main/dev
+merge, native code/build, real card or real payment was used.

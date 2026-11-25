@@ -53,5 +53,5 @@ begin
  assert not has_function_privilege('anon','public.myfatoorah_test_booking(text,uuid,jsonb)','execute');
  assert not has_function_privilege('authenticated','public.myfatoorah_test_booking(text,uuid,jsonb)','execute');
 end $$;
-select 'PASS: 22 booking/provider/hold/settlement/privilege assertions; all test writes rolled back' as result;
+select 'PASS: 24 booking/provider/hold/settlement/privilege assertions; all test writes rolled back' as result;
 rollback;

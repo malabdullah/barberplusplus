@@ -14,9 +14,11 @@ proration, discount validation, billing invoices and capacity use the existing
 Barber++ financial rules. The pilot discount `MYFTEST50` reduces one monthly
 subscription payment by 50% and is restricted to the dedicated fixtures.
 
-This first integration covers subscriptions and additional places. MyFatoorah
-customer booking payments, B-Wallet top-ups, refunds, webhook configuration and
-production activation are separate work. Their existing UPayments Test flows
+The integration also supports website booking payments at the allowlisted
+MyFatoorah Test shop: hosted KNET/card checkout, automatic confirmation after
+verified payment, and payment after staff approval. B-Wallet funding/split
+payments, MyFatoorah refunds, webhook configuration and production activation
+remain separate work. Their existing UPayments Test flows
 remain available on the preserved baseline. No MyFatoorah recurring charge is
 enabled by a saved renewal preference.
 
@@ -84,3 +86,43 @@ Official references: [Hosted payment page](https://docs.myfatoorah.com/docs/v3-h
 [Invoice details](https://docs.myfatoorah.com/reference/get-invoice-by-invoiceid),
 [Idempotency](https://docs.myfatoorah.com/docs/idempotency),
 [Test cards](https://docs.myfatoorah.com/docs/test-cards).
+
+
+## Website booking pilot — 25 November 2026
+
+The owner's **MyFatoorah Sandbox — card** shop is enabled for website booking
+payments, with Jassim Mohammad, Beard Trim and Haircut. Its manager can choose
+pay at shop, online, or both using the existing Test payment settings. It is
+currently published, with both methods and Jassim's auto-confirmation enabled.
+
+The server chooses the gateway by the private shop allowlist; a customer cannot
+switch another shop's provider. Only the authenticated Test website uses the
+MyFatoorah adapter. Native and legacy clients keep the previous adapter.
+
+The existing Test booking-attempt table is shared so every booking writer honors
+the same reservation locks. Each attempt has an explicit provider; MyFatoorah
+invoice IDs and creation claims are stored separately in the closed
+`myfatoorah_test` schema. UPayments cannot capture, inquire or refund those
+attempts. Settlement receipts have a MyFatoorah-specific source reference.
+
+The customer selects KNET or card on the hosted MyFatoorah invoice. No customer
+contact or card details are included in the provider create call. A browser
+return cannot confirm anything; the stored invoice and successful transaction
+are fetched server-side and checked against the exact KWD amount, identifiers,
+paid invoice and successful transaction. Duplicate checks preserve one booking
+and one receipt. Declined cards can retry the same invoice within the hold.
+Uncertain creation never blindly issues another invoice. Check payment status
+can recover without the provider return query. The existing authenticated Test
+sweep also performs bounded MyFatoorah inquiries; it never posts a second create
+or sends MyFatoorah refunds to UPayments.
+
+Unfulfilled/late paid captures and cancelled paid MyFatoorah bookings are flagged
+for refund review. Automatic MyFatoorah refunds are not implemented by this
+booking-payment pilot. Do not describe this as a complete production payment
+integration or release it to production.
+
+Apply the two `*_myfatoorah_booking_*.sql` migrations only to hosted Test.
+`ops/cloud-test/tests/myfatoorah-booking.sql` and
+`myfatoorah-booking-approval.sql` run transactionally and roll back their fixtures.
+The allowlist and synthetic settlement configuration are separately prepared
+Test data, not hardcoded into those migrations.
