@@ -57,6 +57,15 @@ do $$declare source text:=pg_get_functiondef('private.android_live_push_api(text
 end $$;
 create or replace function private.android_live_push_api(p_action text,p_data jsonb)returns jsonb
 language plpgsql security definer set search_path='' as $$declare result jsonb;begin
+ -- A lost successful response must not require a second enrollment. Exact
+ -- duplicates are read-only status checks; changed versions/tokens remain closed.
+ if p_action='push-register'and exists(select 1 from private.android_live_push_devices d join private.android_live_push_runtime r on r.singleton
+  where not r.registration_enabled and d.id=(p_data->>'deviceId')::uuid and d.account_id=(p_data->>'user_id')::uuid and d.session_id=(p_data->>'session_id')::uuid
+  and not d.detached and d.secret_hash=extensions.digest(p_data->>'deviceSecret','sha256')
+  and d.registration_version=(p_data->>'version')::bigint
+  and d.registration_hash=extensions.digest((p_data-array['user_id','session_id'])::text||p_action,'sha256'))then
+  return private.android_live_push_registration_api('push-status',p_data);
+ end if;
  result:=private.android_live_push_registration_api(p_action,p_data);
  if p_action='push-register'and result->>'success'='true'then
   update private.android_registration_acceptance set account_id=null,session_id=null,device_id=null,secret_hash=null,expires_at='-infinity'

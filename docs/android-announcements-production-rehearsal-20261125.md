@@ -25,7 +25,7 @@ registration or scope changes invalidate it. Even HTTP 503 is terminal here.
 - Changed Function files passed Deno lint. Vite build passed, with existing
   Recharts/chunk-size/import warnings.
 - Hosted `barber-test` (`qvkucvcjmojjbphlzlks`) rollback rehearsal passed repeatedly,
-  with 35 assertions in the final run, genuine synthetic Auth users/sessions, a synthetic
+  with 37 assertions in the final run, genuine synthetic Auth users/sessions, a synthetic
   admin MFA factor and the deployed customer-session/author helpers.
 - The exact three candidate migration bodies were bound to a separate temporary
   namespace. Table shapes came from Test. No deployed Test function, runtime or
@@ -135,6 +135,8 @@ tuple for ten minutes while ordinary registration and delivery stay false. The
 session is derived from the normal authenticated request and checked by the
 deployed session helper; no private session, FCM token or raw device secret is
 exported to configure the scope. Only the service role can configure/clear it.
+An exact retry after a lost successful response reads existing status without
+creating another enrollment; changed token/version/session still requires scope.
 
 The real registration rehearsal exposed the existing PostgreSQL pattern
 `{20,4096}`, whose repetition bound exceeds PostgreSQL's supported maximum. The

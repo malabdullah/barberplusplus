@@ -29,6 +29,8 @@ begin
  denied:=false;begin perform qa.android_live_push_api('push-register',payload||jsonb_build_object('session_id',other_j));exception when others then denied:=sqlerrm='AUTH_REQUIRED';end;assert denied,'unverified session rejected';
  assert qa.android_live_push_api('push-register',payload)->>'success'='true','legitimate exact enrollment succeeds with ordinary registration closed';
  assert(select device_id is null from qa.android_registration_acceptance),'one enrollment consumes scope';
+ assert qa.android_live_push_api('push-register',payload)->>'success'='true','lost-response duplicate reads existing status without reenrollment';
+ denied:=false;begin perform qa.android_live_push_api('push-register',payload||'{"version":2}');exception when others then denied:=sqlerrm='PUSH_NOT_CONFIGURED';end;assert denied,'changed registration cannot reuse consumed scope';
  assert not(select registration_enabled or delivery_enabled from qa.android_live_push_runtime),'general registration and delivery remain closed';
  perform set_config('request.jwt.claims','{}',true);
  reply:=qa.customer_announcement_api('register',jsonb_build_object('client','android','user_id',u,'session_id',s,'deviceId',d,'deviceSecret',secret,'version',1,'initializeDefaults',true));
