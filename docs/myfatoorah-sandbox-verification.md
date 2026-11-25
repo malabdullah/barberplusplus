@@ -80,3 +80,85 @@ auto-confirm setting were preserved. The two confirmation emails were processed
 by the existing Test mailbox capture flow. The misleading mobile-only guest
 receipt wording was corrected in both languages. No production access, main/dev
 merge, native code/build, real card or real payment was used.
+
+## UPayments scenario parity — 25 November 2026
+
+Adapted the UPayments subscription, extra-place, booking and B-Wallet scenarios
+to the MyFatoorah sandbox. **Pass** below means the named checks passed, not that
+all provider features are implemented. Database tests inject synthetic provider
+facts; they do not charge a card. Handler tests mock provider responses. Only
+rows marked **Browser** reached the real MyFatoorah sandbox.
+
+| Area / scenario | Evidence and result |
+| --- | --- |
+| Monthly subscription, 50% discount, KNET | **Browser pass, 24 Nov:** KD 30.000 became KD 15.000; one paid invoice and three places. |
+| Yearly quote and invalid frequencies/counts | **SQL pass:** canonical annual price; invalid frequency, zero, oversized and malformed capacity refused. |
+| Discount eligibility | **SQL pass:** unknown, disabled, expired and monthly-only codes on yearly quotes refused; fixed discount uses exact fils; zero-total gateway charge refused. |
+| Another manager's business | **SQL pass:** foreign reads do not expose an attempt and foreign writes fail. Missing/expired manager sessions refused. |
+| Browser directly changing payment records | **SQL pass:** direct table writes/capture and anonymous execution denied. |
+| Duplicate checkout clicks / requests | **SQL + handler pass:** repeated intent reuses the attempt; concurrent mocked starts issue one invoice; unresolved attempt prevents a second quote. This does not claim a real bank concurrency stress test. |
+| Connection lost during invoice creation | **Handler pass:** no automatic second provider invoice after an uncertain response. |
+| Provider rejects creation | **Handler pass:** no paid capacity or booking is issued. |
+| Forged amount, currency, invoice, payment or external reference | **Handler + SQL pass:** mismatched evidence cannot fulfil payment. Browser return fields are not proof of payment. |
+| Prorated extra place | **Browser pass, 24 Nov; expanded SQL pass:** card purchase applies paid capacity once. Half a monthly period quotes about KD 5.000 for one additional KD 10 place. |
+| Fourth barber before/after payment | **SQL pass:** activation refused with three paid places; succeeds only after verified capacity becomes four. |
+| Stale/tampered capacity quote | **SQL pass:** expired quote, changed amount and changed count refused. Subscription discount is not reused on the add-on. |
+| Capacity receipt, term and renewal preference | **SQL pass:** replay keeps one add-on invoice; original term dates/renewal choice remain; no extra discount redemption. |
+| Term changes during payment / term nearly over | **SQL + handler pass:** late stale capacity capture enters review without issuing capacity; near-expiry checkout refused. |
+| Invoice PDF | **Browser pass, 24 Nov:** actual paid capacity PDF downloaded and non-empty. |
+| Guest booking without phone | **Browser pass, 25 Nov:** synthetic email and no phone; KNET payment confirms the selected appointment. |
+| Signed-in customer; approval before payment | **SQL pass:** request → staff approval → payment-due email job → checkout → paid confirmation. No provider checkout before approval. Real approval-email link was not repeated through the browser in this pass. |
+| Pay at shop / online / both × auto-confirm on/off | **SQL pass:** all six combinations follow the configured method/approval rules. Online-only manual approval requires an authenticated customer. Zero-price service does not offer online checkout. |
+| Wrong card details / 3DS decline / retry | **Browser pass, 25 Nov:** invalid card stayed on provider form; denied Mastercard authentication created no booking/receipt; retry of the same invoice succeeded. |
+| KNET cancel and recheck | **Browser pass, this run:** returned with retry message and the same Resume payment URL. Rechecking preserved pending state; database confirmed no booking and zero settlement receipts. |
+| Pending / authorized / cancelled transaction | **Handler pass:** `INPROGRESS`, `AUTHORIZE`, `CANCELED` cannot fulfil. A later successful transaction on the same invoice can fulfil once. |
+| Inquiry timeout, HTTP error, malformed provider JSON | **Handler pass:** no capture and no new invoice. Sweep failure defers the next check. |
+| Unopened invoice / lost browser return | **Handler pass:** pending stays unpaid; stored invoice can recover without browser payment ID. Successful paid confirmation reload was also checked in the earlier browser run. |
+| Booking price, duration or policy tampering | **SQL pass:** submitted facts must match the server quote. Wrong shop and disabled payment gateway refused. |
+| Slot holds and duplicate bookings | **SQL pass:** hold blocks a competing attempt and another booking writer; replay preserves one capture/receipt. |
+| Shop/barber/service changes during payment | **SQL pass:** changed price/duration, disabled auto-confirm, inactive barber or paused shop cannot produce an invalid confirmed booking. |
+| Late successful capture | **SQL pass:** expired hold produces no booking or shop receivable; payment enters refund review. |
+| Paid booking cancellation | **SQL pass, safety boundary only:** MyFatoorah payment enters refund review; UPayments refund worker excludes it; no fabricated refund ledger entry. **Actual MyFatoorah refund remains missing.** |
+| Settlement accounting and captured emails | **Browser + SQL pass:** each actual KD 5 payment has one receipt, KD 0.250 commission and KD 4.750 shop amount under this synthetic policy. Confirmation email jobs use Test capture. |
+| Existing UPayments / B-Wallet regression | **Hosted SQL pass:** all 81 assertions still pass on a non-MyFatoorah Test pilot, including split funding, refunds, approvals and payment methods. This proves preservation, not MyFatoorah wallet support. |
+| English/Arabic, mobile, light/dark | Earlier sandbox browser pass retained; cancellation-specific English/Arabic copy and retry control verified by frontend tests. This pass does not claim another full cross-device sweep. |
+| Invalid JSON request | **Handler + hosted HTTP pass:** JSON `null` now returns HTTP 400 without a provider action. |
+
+Three issues found and fixed on Test:
+
+1. MyFatoorah reports a cancelled transaction as `CANCELED` while its invoice can
+   remain `PENDING`. The adapter now offers same-invoice retry instead of a vague
+   pending result. Subscription checkout also shows explicit cancellation copy.
+   This follows [MyFatoorah's payment-status contract](https://docs.myfatoorah.com/docs/get-payment-details).
+2. A SQL row alias conflicted with the sweep routine's PL/pgSQL record variable.
+   The scoped Test migration separates those aliases; paid-cancellation review
+   and background sweep selection now run successfully.
+3. A JSON `null` subscription request produced a server error. It now returns
+   the invalid-request response (400).
+
+Coverage totals for this pass:
+
+- 31 hosted subscription scenario groups, including the original 16 baseline
+  assertions; 17 additional hosted booking scenario groups.
+- Original 24 booking assertions plus approval/payment-method/late-capture suite
+  rerun successfully. All SQL fixture writes rolled back.
+- 53 focused MyFatoorah handler tests passed. Full repository checks passed:
+  **406 Function tests, 573 frontend tests, 85 operations tests**, lint, types,
+  migration names, domain checks and build. These totals overlap; do not add them.
+- 81 existing UPayments/B-Wallet assertions passed separately.
+- Actual KNET cancellation verified against the provider sandbox in an isolated
+  Chrome Guest session; existing owner sessions preserved. No real card/charge.
+
+### Scenarios that cannot yet pass as MyFatoorah features
+
+| Remaining capability | Current safe behavior / next work |
+| --- | --- |
+| Full/partial gateway refunds and settlement reversal | Refund review only. Implement provider refund submission, ambiguous-result recovery, verified completion and one-time ledger reversal before claiming parity. |
+| Signed MyFatoorah webhooks, duplicate/reordered webhook delivery | No MyFatoorah webhook fulfilment endpoint is enabled. Forged unsupported actions cannot fulfil. Configure signature validation and replay handling before testing actual callbacks. |
+| B-Wallet top-up, wallet-only and split MyFatoorah funding | Refused/hidden on MyFatoorah checkout. Existing UPayments wallet scenarios remain available and unchanged. |
+| Native checkout/return, native payment notification routes | Intentionally excluded; both native apps unchanged. |
+| Automatic recurring provider debit | Not implemented. Renewal preference is not permission or evidence of an automatic debit. |
+
+These are explicit gaps, not passing cases. MyFatoorah remains a Test integration
+on `codex/myfatoorah-sandbox`; no dev/main merge, production deployment or native
+app change is included.

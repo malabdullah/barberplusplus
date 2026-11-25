@@ -141,3 +141,57 @@ Deno.test('expired invoice only closes after matching API evidence', async () =>
   assertEquals(f.calls.some(c => c.action === 'failed'), true);
   assertEquals(f.captures, 0);
 });
+
+Deno.test('UPayments parity: simultaneous subscription starts create only one invoice',async()=>{
+ const f=fixture();await Promise.all([f.send({action:'start'}),f.send({action:'start'})]);
+ assertEquals(f.calls.filter(c=>c.options?.method==='POST').length,1);
+});
+Deno.test('UPayments parity: uncertain creation is held rather than charging again',async()=>{
+ const f=fixture();let creates=0;f.config.fetcher=()=>{creates++;throw Error('simulated connection loss');};
+ assertEquals((await f.send({action:'start'})).status,503);
+ assertEquals((await f.send({action:'start'})).status,200);assertEquals(creates,1);assertEquals(f.captures,0);
+});
+Deno.test('UPayments parity: explicit create rejection does not issue paid capacity',async()=>{
+ const f=fixture();f.config.fetcher=()=>Promise.resolve(Response.json({IsSuccess:false},{status:422}));
+ await f.send({action:'start'});assertEquals(f.calls.some(c=>c.action==='create-rejected'),true);assertEquals(f.captures,0);
+});
+Deno.test('UPayments parity: capacity creation uses exact prorated fils and cannot outlive the term',async()=>{
+ const f=fixture();const end=new Date(Date.now()+360000).toISOString();
+ f.config.manager=()=>Promise.resolve({attempt:{id,state:'creating',createdAt:new Date().toISOString(),quote:{kind:'capacity',totalFils:5001,periodEnd:end,paymentMethod:'CARD'}}});
+ assertEquals((await f.send({action:'start'})).status,200);
+ const body=JSON.parse(f.calls.find(c=>c.url).options.body);
+ assertEquals(body.Order.Amount,5.001);assertEquals(Date.parse(body.PaymentExpiry)<=Date.parse(end),true);
+});
+Deno.test('UPayments parity: a capacity term too close to expiry creates no invoice',async()=>{
+ const f=fixture();f.config.manager=()=>Promise.resolve({attempt:{id,state:'creating',createdAt:new Date().toISOString(),quote:{kind:'capacity',totalFils:5001,periodEnd:new Date(Date.now()+30000).toISOString()}}});
+ await f.send({action:'start'});assertEquals(f.calls.some(c=>c.url),false);assertEquals(f.calls.some(c=>c.action==='create-rejected'),true);
+});
+Deno.test('UPayments parity: cancelling a bank transaction keeps the subscription invoice retryable',async()=>{
+ const f=fixture();await f.send({action:'start'});const original=f.config.fetcher;
+ f.config.fetcher=async(...args:any[])=>{const r=await original(...args);const data=await r.json();data.Data.Invoice.Status='PENDING';data.Data.Transaction.Status='CANCELED';return Response.json(data);};
+ const result=await(await f.send({action:'check',paymentId:payment})).json();
+ assertEquals(result.attempt.state,'pending');assertEquals(result.attempt.paymentOutcome,'cancelled');assertEquals(f.captures,0);
+ assertEquals(f.calls.some(c=>c.action==='failed'),false);
+});
+for(const status of ['INPROGRESS','AUTHORIZE']) Deno.test('MyFatoorah '+status+' cannot activate a subscription',async()=>{
+ const f=fixture();await f.send({action:'start'});const original=f.config.fetcher;
+ f.config.fetcher=async(...args:any[])=>{const r=await original(...args);const data=await r.json();data.Data.Invoice.Status='PENDING';data.Data.Transaction.Status=status;return Response.json(data);};
+ assertEquals((await(await f.send({action:'check',paymentId:payment})).json()).attempt.state,'pending');assertEquals(f.captures,0);
+});
+for(const mode of ['network','http-error','invalid-json']) Deno.test('UPayments parity: subscription inquiry '+mode+' never fulfils',async()=>{
+ const f=fixture();await f.send({action:'start'});
+ f.config.fetcher=()=>{if(mode==='network')throw Error('simulated timeout');return Promise.resolve(mode==='invalid-json'?new Response('not JSON'):Response.json({IsSuccess:false},{status:503}));};
+ assertEquals((await f.send({action:'check',paymentId:payment})).status,503);assertEquals(f.captures,0);
+});
+Deno.test('UPayments parity: unconfigured, invalid-method and forged webhook requests cannot fulfil',async()=>{
+ const f=fixture({token:''});assertEquals((await f.send({action:'read'})).status,503);
+ const g=fixture();const handler=createHandler(g.config);
+ assertEquals((await handler(new Request(testSite+'/myfatoorah-subscription'))).status,405);
+ assertEquals((await handler(new Request(testSite+'/myfatoorah-subscription/webhook',{method:'POST',body:'{"status":"paid"}'}))).status,403);
+ assertEquals(g.captures,0);assertEquals(g.calls.length,0);
+});
+Deno.test('null or oversized subscription request bodies are invalid requests',async()=>{
+ const f=fixture();const handler=createHandler(f.config);
+ for(const raw of ['null','x'.repeat(9000)]) assertEquals((await handler(new Request(testSite+'/myfatoorah-subscription',{method:'POST',headers:{authorization:'Bearer test'},body:raw}))).status,400);
+ assertEquals(f.captures,0);
+});

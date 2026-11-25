@@ -4157,6 +4157,7 @@
     },
     "paymentMethod": "Payment method",
     "card": "Credit or debit card",
-    "declined": "Payment declined. You can try again."
+    "declined": "Payment declined. You can try again.",
+    "cancelled": "Payment was cancelled. You can try again using the same checkout."
   }
 }

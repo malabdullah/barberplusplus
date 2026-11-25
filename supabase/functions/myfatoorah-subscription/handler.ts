@@ -19,6 +19,11 @@ export function fils(value: unknown) {
   return match ? Number(match[1]) * 1000 + Number((match[2] || '').padEnd(3, '0')) : null;
 }
 
+export function transactionOutcome(transactions: Payload[]) {
+  const retryable = transactions.find(transaction => ['FAILED', 'CANCELED'].includes(transaction.Status));
+  return retryable?.Status === 'FAILED' ? 'declined' : retryable?.Status === 'CANCELED' ? 'cancelled' : null;
+}
+
 export function checkoutUrl(value: unknown) {
   const url = new URL(String(value));
   if (url.origin !== 'https://demo.myfatoorah.com' || url.username || url.password) {
@@ -107,7 +112,7 @@ export function createHandler(config: Config) {
           orderId: attempt.id, sessionId: reference.sessionId,
         });
       }
-      if (!paymentId) return { ...attempt, paymentOutcome: transactions.some((t: Payload) => t.Status === 'FAILED') ? 'declined' : null };
+      if (!paymentId) return { ...attempt, paymentOutcome: transactionOutcome(transactions) };
       if (typeof paymentId !== 'string' || !/^\d{1,100}$/.test(paymentId)) throw new Error('MYFATOORAH_PROVIDER_MISMATCH');
     }
     const response = await request('GET', 'payments/' + paymentId);
@@ -124,7 +129,7 @@ export function createHandler(config: Config) {
     }
     // A failed card attempt can still be retried at the same hosted invoice.
     // Keep the checkout pending instead of releasing it for a duplicate payment.
-    return { ...attempt, paymentOutcome: transaction.Status === 'FAILED' ? 'declined' : null };
+    return { ...attempt, paymentOutcome: transactionOutcome([transaction]) };
   }
 
   return async (req: Request) => {
@@ -136,7 +141,9 @@ export function createHandler(config: Config) {
       }
       const token = req.headers.get('authorization')?.match(/^Bearer ([\w.-]+)$/)?.[1];
       if (!token) return reply({ error: 'MYFATOORAH_FORBIDDEN' }, 401);
-      const { action, businessId, ...data } = await readBody(req);
+      const body = await readBody(req);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('MYFATOORAH_INVALID');
+      const { action, businessId, ...data } = body;
       if (!['read', 'quote', 'start', 'check'].includes(action) || typeof businessId !== 'string') {
         throw new Error('MYFATOORAH_INVALID');
       }

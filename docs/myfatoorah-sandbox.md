@@ -70,15 +70,26 @@ Do not deploy this branch or these provider migrations to production.
 ## Verification
 
 - `npm run check` and `npm run test:cloud-gateway`.
-- `ops/cloud-test/tests/myfatoorah-subscription.sql` uses the pristine dedicated
-  card fixture, performs 16 pricing/ownership/fulfilment/privilege assertions,
-  and rolls back all writes. It stops if that fixture already has a real attempt.
+- `ops/cloud-test/tests/myfatoorah-subscription.sql` creates disposable fixtures
+  inside a rollback transaction. Its 31 scenario groups include the original 16
+  pricing/ownership/fulfilment/privilege assertions and expanded UPayments parity
+  checks. It does not reset the owner's subscription or payment history.
+- `ops/cloud-test/tests/myfatoorah-booking-matrix.sql` adds 17 disposable,
+  rollback-only booking scenarios. Run the existing `myfatoorah-booking.sql`
+  and `myfatoorah-booking-approval.sql` suites alongside it.
 - Handler tests cover sandbox origin pinning, exact KWD, idempotent creation,
   foreign evidence rejection, successful capture, declined retry, return-loss
-  recovery and verified terminal invoices.
+  recovery, cancellation, transport failures and verified terminal invoices.
+  Pending invoices with `CANCELED` transactions remain retryable. They must not
+  be treated as paid or as terminal merely because the customer cancelled KNET.
 - Hosted browser: discounted KNET subscription, card/3-D Secure extra place,
   declined 3-D Secure without activation, PDF download, mobile, English/Arabic,
   light/dark. Private test references/results stay under `.cloud-test/`.
+
+The [verification report](myfatoorah-sandbox-verification.md#upayments-scenario-parity--25-november-2026)
+separates actual sandbox journeys, SQL contract tests, mocked provider checks and
+unimplemented refund/webhook/wallet scenarios. A passing guard is not evidence
+that the corresponding MyFatoorah payment feature exists.
 
 Official references: [Hosted payment page](https://docs.myfatoorah.com/docs/v3-hosted-payment-page),
 [Create payment](https://docs.myfatoorah.com/reference/create-payment),

@@ -36,3 +36,9 @@ it('does not show the pilot for an unallowlisted business', async () => {
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   expect(screen.queryByRole('region')).toBeNull();
 });
+it('shows a cancelled transaction as retryable on the same invoice', async () => {
+  fetch.mockResolvedValue(Response.json({ eligible: true, attempt: { id: 'attempt', state: 'pending', paymentOutcome: 'cancelled', checkoutUrl: 'https://demo.myfatoorah.com/KWT/ie/test', quote: { totalFils: 5000, count: 3, frequency: 'monthly' } } }));
+  open();
+  expect(await screen.findByText('Payment was cancelled. You can try again using the same checkout.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Return to MyFatoorah' })).toBeEnabled();
+});

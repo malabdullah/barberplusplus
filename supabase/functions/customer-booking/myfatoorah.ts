@@ -1,4 +1,4 @@
-import { checkoutUrl, fils } from '../myfatoorah-subscription/handler.ts';
+import { checkoutUrl, fils, transactionOutcome } from '../myfatoorah-subscription/handler.ts';
 import { pilotSite } from './upayments.ts';
 
 type Data = Record<string, any>;
@@ -47,7 +47,7 @@ export function myfatoorahBooking(config: Config) {
     const payment = transactions.find(t => t.Status === 'SUCCESS')?.PaymentId;
     if (!payment) {
       if (['EXPIRED', 'CANCELLED'].includes(data.Invoice.Status)) await call('failed', id);
-      return transactions.some(t => t.Status === 'FAILED');
+      return transactionOutcome(transactions) !== null;
     }
     if (typeof payment !== 'string' || !/^\d{1,100}$/.test(payment)) throw Error('UPAYMENTS_PROVIDER_MISMATCH');
     const verified = await request('GET', 'payments/' + payment);
