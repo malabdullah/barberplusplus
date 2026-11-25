@@ -27,6 +27,7 @@ type Dependencies = {
   emailManagement?: EmailManagementDependencies;
   nativeEmail?: NativeEmailDependencies;
   androidEnabled?: boolean;
+  androidPushEnrollmentScope?: string;
 };
 const patterns: Record<string, RegExp> = { '+965': /^[569]\d{7}$/, '+966': /^5\d{8}$/, '+971': /^5\d{8}$/, '+973': /^\d{8}$/, '+974': /^[3567]\d{7}$/, '+968': /^[79]\d{7}$/ };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

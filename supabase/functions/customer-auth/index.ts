@@ -19,6 +19,7 @@ Deno.serve(createCustomerAuthHandler({
   environment,appUrl,publicUrl:Deno.env.get('CUSTOMER_PUBLIC_API_URL') || Deno.env.get('CUSTOMER_BOOKING_TEST_API_URL') || '',secret:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
   productionEnabled:Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED')==='true',
   androidEnabled:Deno.env.get('ANDROID_CUSTOMER_ENABLED')==='true',
+  androidPushEnrollmentScope:Deno.env.get('ANDROID_PUSH_ENROLLMENT_SCOPE'),
   cloudTestProjectRef:Deno.env.get('CLOUD_TEST_PROJECT_REF'),cloudAccessKey:Deno.env.get('CLOUD_TEST_ACCESS_KEY'),
   rpc:async(action,data)=>{
     const androidPush=action.startsWith('android-push-');
