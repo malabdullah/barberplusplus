@@ -487,8 +487,8 @@ export function AppProvider({ children }) {
     try {
       const prefs = await notificationPreferencesService.get();
       const [notifs, count] = await Promise.all([
-        notificationsService.getAll({ limit: notificationLimit.current, preferences: prefs }),
-        notificationsService.getUnreadCount(prefs),
+        notificationsService.getAll({ limit: notificationLimit.current, preferences: prefs, userId }),
+        notificationsService.getUnreadCount(prefs, userId),
       ]);
       if (request !== notificationRequest.current || notificationSession.current !== userId) return;
       setNotifications(notifs);
