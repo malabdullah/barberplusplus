@@ -49,10 +49,8 @@ $$;
 do $$declare source text:=pg_get_functiondef('private.android_live_push_api(text,jsonb)'::regprocedure);old_guard text:='if not r.registration_enabled then raise exception''PUSH_NOT_CONFIGURED'';end if;';begin
  if position(old_guard in source)=0 then raise exception'ANDROID_REGISTRATION_CONTRACT_CHANGED';end if;
  source:=replace(source,old_guard,'if not r.registration_enabled and not private.android_registration_acceptance_allowed(p_data,r)then raise exception''PUSH_NOT_CONFIGURED'';end if;');
- -- PostgreSQL repetition bounds cannot exceed 255. Check the size separately.
- if position($old$coalesce(p_data->>'token','')!~'^[A-Za-z0-9_:-]{20,4096}$'$old$ in source)=0 then raise exception'ANDROID_TOKEN_CONTRACT_CHANGED';end if;
- source:=replace(source,$old$coalesce(p_data->>'token','')!~'^[A-Za-z0-9_:-]{20,4096}$'$old$,
-  $new$(length(coalesce(p_data->>'token',''))not between 20 and 4096 or coalesce(p_data->>'token','')!~'^[A-Za-z0-9_:-]+$')$new$);
+ -- Preserve the validator already corrected by 20261120154802.
+ if position($known$length(coalesce(p_data->>'token',''))not between 20 and 4096$known$ in source)=0 then raise exception'ANDROID_TOKEN_CONTRACT_CHANGED';end if;
  execute replace(source,'FUNCTION private.android_live_push_api(','FUNCTION private.android_live_push_registration_api(');
 end $$;
 create or replace function private.android_live_push_api(p_action text,p_data jsonb)returns jsonb

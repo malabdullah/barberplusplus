@@ -127,7 +127,7 @@ should rely on this application-only inspection. Session/activity/Auth request
 metadata is stored. Google provider metadata may retain a picture URL even
 though the Android account model does not fetch/display those picture bytes.
 
-## Scoped registration and discovered validator defect
+## Scoped registration and rehearsal baseline correction
 
 `20261125101118_android_registration_single_acceptance.sql` retains the existing
 registration validators and permits one account/installation/capability-hash
@@ -138,10 +138,13 @@ exported to configure the scope. Only the service role can configure/clear it.
 An exact retry after a lost successful response reads existing status without
 creating another enrollment; changed token/version/session still requires scope.
 
-The real registration rehearsal exposed the existing PostgreSQL pattern
-`{20,4096}`, whose repetition bound exceeds PostgreSQL's supported maximum. The
-candidate separates token length (20–4096) from the allowed-character pattern.
-This fixes first registration without relaxing accepted token content/length.
+The first namespace rehearsal loaded the original transport routine without its
+existing `20261120154802_android_live_fcm_token_validation.sql` correction. That
+omission misleadingly exposed the historical PostgreSQL `{20,4096}` defect, which
+is already fixed in the committed main baseline. Full CI caught the candidate's
+redundant patch. The harness now includes that corrective migration and the
+candidate preserves its separate token-length/alphabet checks. This task does
+not establish a new production token-validator defect or change those rules.
 
 Build 12 currently has no intentionally exposed pre-registration enrollment
 identifier. The smallest proposed owner-consent path is a temporary read-only

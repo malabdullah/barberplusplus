@@ -46,6 +46,8 @@ create view {schema}.customer_accounts as select * from private.customer_account
 base=(root/'supabase/migrations/20261120154434_android_live_fcm_transport.sql').read_text()
 base=base[base.index('create function private.android_live_push_api('):base.index('create function private.android_live_push_configure(')]
 setup+=base.replace('private.',schema+'.')
+correction=(root/'supabase/migrations/20261120154802_android_live_fcm_token_validation.sql').read_text()
+setup+=correction[correction.index('begin;')+len('begin;'):correction.rindex('commit;')].replace('private.',schema+'.')
 sql = setup
 for source in sources:
     raw=source.read_text().strip()
