@@ -34,6 +34,7 @@ type Dependencies = {
     approvalCheckout?: (id: string, capability: string, walletFils: number, identity: Body, language: string, native?: boolean) => Promise<unknown>;
     slots: (data: Body) => Promise<unknown>;
   };
+  websitePaymentPilot?: Dependencies['paymentPilot'];
 };
 type Proof = { purpose: string; id: string; name: string; phone: string; country_code: string; expires: number; user_id?: string; session_id?: string; code?: string; phone_verified?: boolean; email?: string; guest_contact?: 'email'; account_contact?: 'email'; language?: string };
 const encoder = new TextEncoder();
@@ -105,7 +106,7 @@ export function createCustomerBookingHandler(deps: Dependencies) {
       const nativeWallet = !testWebsite && deps.environment === 'cloud-test'
         && deps.shopPaymentPolicy === true && requestsNativeWallet(req);
       const paymentClient = testWebsite || nativeWallet;
-      const pilot = paymentClient ? deps.paymentPilot : undefined;
+      const pilot = testWebsite ? deps.websitePaymentPilot || deps.paymentPilot : nativeWallet ? deps.paymentPilot : undefined;
       const applyShopPolicy = paymentClient && deps.shopPaymentPolicy;
       const online = body.action === 'online-start';
       const requestApproval = body.action === 'online-request-approval';

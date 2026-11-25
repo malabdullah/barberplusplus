@@ -23,6 +23,7 @@ export function onlinePaymentLink(value) {
     const url = new URL(value);
     if (url.origin === 'https://sandbox.upayments.com' && !url.username && !url.password
         && /^[A-Za-z0-9_-]{10,90}$/.test(url.searchParams.get('session_id') || '')) return url.href;
+    if (url.origin === 'https://demo.myfatoorah.com' && !url.username && !url.password) return url.href;
   } catch { /* An invalid link stays on the status screen. */ }
   return '';
 }

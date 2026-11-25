@@ -6,6 +6,7 @@ import { confirmGooglePhone, startGoogleTestPhone } from './google-phone.ts';
 import { bookingMonth } from './statistics.ts';
 import { bookingRPC, recoveredServiceNames } from './native-compatibility.ts';
 import { bookingPaymentPilot, pilotProject, pilotSite } from './upayments.ts';
+import { myfatoorahBooking, bookingProviderRouter } from './myfatoorah.ts';
 
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const admin = createClient(Deno.env.get('SUPABASE_URL') || '', secret, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -39,11 +40,21 @@ const shopPaymentPolicy = cloudTest && Deno.env.get('SUPABASE_URL') === pilotPro
 const pilot = shopPaymentPolicy && sandboxToken && sandboxSecret ? bookingPaymentPilot({
     token: sandboxToken, secret: sandboxSecret,
     rpc: async (action, id, data) => {
+      if (action === 'sweep' && myfatoorah) await myfatoorah.sweep(String(data.secret || ''));
       const result = await admin.rpc('upayments_test_booking', { p_action: action, p_id: id, p_data: data });
       if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
       return result.data;
     },
   }) : undefined;
+const myfatoorahToken = Deno.env.get('MYFATOORAH_SANDBOX_TOKEN') || '';
+const myfatoorah = shopPaymentPolicy && myfatoorahToken ? myfatoorahBooking({
+  token: myfatoorahToken,
+  rpc: async (action, id, data) => {
+    const result = await admin.rpc('myfatoorah_test_booking', { p_action: action, p_id: id, p_data: data });
+    if (result.error) throw Error(`${result.error.code} ${result.error.message}`);
+    return result.data;
+  },
+}) : undefined;
 const web = createCustomerBookingHandler({
   environment: Deno.env.get('APP_ENV') || '',
   productionEnabled: Deno.env.get('CUSTOMER_ACCOUNTS_ENABLED') === 'true',
@@ -55,6 +66,7 @@ const web = createCustomerBookingHandler({
   phone,
   shopPaymentPolicy,
   paymentPilot: pilot,
+  websitePaymentPilot: pilot && myfatoorah ? bookingProviderRouter(pilot, myfatoorah) : undefined,
   checkoutPolicy: async () => {
     const result = await admin.rpc('customer_checkout_policy');
     if (result.error || !['standard', 'email_only'].includes(result.data)) throw Error('Checkout policy unavailable');

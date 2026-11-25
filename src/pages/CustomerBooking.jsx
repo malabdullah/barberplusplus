@@ -97,6 +97,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   const [payAtShopAllowed, setPayAtShopAllowed] = useState(true);
   const [paymentSelection, setPaymentMethod] = useState('shop');
   const [walletAvailable, setWalletAvailable] = useState(false);
+  const [approvalPaymentAvailable, setApprovalPaymentAvailable] = useState(false);
   const [balance, setBalance] = useState(null);
   const [splitAmount, setSplitAmount] = useState('');
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -313,7 +314,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
   useEffect(() => {
     if (!checkingAvailability || !date || receipt) return undefined;
     let active = true;
-    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setWalletAvailable(false); setPayAtShopAllowed(true); setSlotError(false);
+    setSlotsLoading(true); setSlots([]); setBookingPolicy(null); setConfirmationRequired(false); setOnlineAvailable(false); setWalletAvailable(false); setApprovalPaymentAvailable(false); setPayAtShopAllowed(true); setSlotError(false);
     customerBookingService.getSlots({ branchId, barberId, serviceIds: serviceKey.split(','), date, ...(packageOfferId ? { packageOfferId } : {}) })
       .then(async result => { if (active && !pageLeaving.current) {
         if (!packageOfferId && Number.isFinite(result.duration) && result.duration !== duration) { setTime(''); setError('PRICE_CHANGED'); await recoverUnavailableSelection(() => active, true); return; }
@@ -322,7 +323,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
           await recoverUnavailableSelection(() => active, true);
           return;
         }
-        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setPayAtShopAllowed(result.pay_at_shop !== false); setWalletAvailable(result.wallet_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
+        const available = draft?.bookingMode === 'time' ? result.slots.filter(slot => slot >= draft.rangeStart && slot <= draft.rangeEnd) : result.slots; setSlots(available); setPackageQuote(result.package_quote || null); setBookingPolicy(result.booking_policy || null); setConfirmationRequired(result.confirmation_required === true); setOnlineAvailable(result.online_payment === true); setPayAtShopAllowed(result.pay_at_shop !== false); setWalletAvailable(result.wallet_payment === true); setApprovalPaymentAvailable(result.approval_payment === true || result.wallet_payment === true); setTime(current => available.includes(current) ? current : ''); if (time && !available.includes(time)) { openPanel('time'); setError('SLOT_UNAVAILABLE'); } } })
       .catch(async failure => {
         if (!active || pageLeaving.current) return;
         setError(failure.message);
@@ -518,7 +519,7 @@ export function CustomerBookingCheckout({ initialDraft, scopedCatalog, cityMetad
     : paymentSelection;
   const payOnline = canPayOnline && (paymentMethod === 'online'
     || (paymentMethod === 'wallet' && fullWallet) || (paymentMethod === 'split' && splitWallet));
-  const canRequestOnlineApproval = walletTestEnvironment && walletAvailable && Boolean(customer && confirmationRequired && time)
+  const canRequestOnlineApproval = walletTestEnvironment && approvalPaymentAvailable && Boolean(customer && confirmationRequired && time)
     && Date.parse(`${date}T${time}:00+03:00`) > Date.now() + 8 * 60_000;
   const requestOnlineApproval = canRequestOnlineApproval && paymentMethod === 'after-approval';
   const paymentUnavailable = onlineOnly && !payOnline && !requestOnlineApproval;
