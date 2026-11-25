@@ -100,3 +100,14 @@ Deno.test('announcement first setup forwards only a typed register flag and trus
   ]) assert((await handle(request(body))).status === 400);
   assert(calls.length === 3);
 });
+
+Deno.test('Android status advertises its discriminator only after authenticated backend support',async()=>{
+ let forwarded:Record<string,unknown>={};
+ const handler=createCustomerAnnouncementsHandler({...runtime,identity:async()=>identity,rpc:async(_,data)=>{forwarded=data;return{client:'android',version:1,enabled:false,preferenceConfigured:false};}});
+ const response=await handler(request({action:'status',client:'android',deviceId:'ignored',deviceSecret:'ignored',user_id:'forged'}));
+ assert(response.status===200&&(await response.json()).client==='android');
+ assert(forwarded.client==='android'&&forwarded.user_id===identity.user_id&&!('deviceSecret'in forwarded));
+ for(const client of ['web',null,[],['android'],{}])assert((await handler(request({action:'status',client}))).status===400);
+ const registered=await handler(request({action:'register',client:'android',...device,initializeDefaults:true}));
+ assert(registered.status===200&&forwarded.client==='android'&&forwarded.deviceSecret===device.deviceSecret);
+});
