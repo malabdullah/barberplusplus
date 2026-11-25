@@ -1,4 +1,7 @@
 export type AnnouncementJob = {
+  client?: string;
+  projectId?: string;
+  packageName?: string;
   id: string;
   lease: string;
   campaignId: string;

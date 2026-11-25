@@ -1,6 +1,8 @@
 import { nativePushRuntime } from '../_shared/native-push-runtime.ts';
 import { type APNsConfiguration, type APNsCredential, apnsTokenSelector, hasAPNsCredential } from '../_shared/apns-credentials.ts';
 import { type AnnouncementJob, announcementPayload } from './delivery.ts';
+import { androidAnnouncementPayload } from './android.ts';
+import { type Credential, LIVE_TARGET, validCredential } from '../customer-android-push-dispatch/fcm.ts';
 type Configuration = APNsConfiguration & {
   announcementEnabled: boolean;
   deliveryMode: string;
@@ -12,11 +14,16 @@ type Configuration = APNsConfiguration & {
   privateKey: string;
   keyId: string;
   teamId: string;
+  androidAnnouncementsEnabled?: boolean;
+  android?: { apiUrl: string; projectId: string; packageName: string; enabled: boolean; mode: string; senderEmail: string; credential: Credential };
 };
 type Dependencies = {
   environment: string;
   appUrl: string;
   publicUrl: string;
+  androidEnabled?: boolean;
+  androidPushEnabled?: boolean;
+  androidAnnouncementsEnabled?: boolean;
   configuration: () => Promise<Configuration>;
   claim: () => Promise<AnnouncementJob[]>;
   continueWork: () => Promise<void>;
@@ -26,6 +33,8 @@ type Dependencies = {
     result: { status: number; reason: string; providerId: string },
   ) => Promise<void>;
   providerToken: (key: APNsCredential) => Promise<string>;
+  androidToken?: (credential: Credential, senderEmail: string) => Promise<string>;
+  sendAndroid?: (job: AnnouncementJob, jwt: string) => Promise<{ status: number; reason: string; providerId: string }>;
   send: (
     job: AnnouncementJob,
     jwt: string,
@@ -76,24 +85,49 @@ export function createAnnouncementDispatcher(deps: Dependencies) {
         !hasAPNsCredential(config)
       ) return reply(503, { error: 'DELIVERY_DISABLED' });
       const token = apnsTokenSelector(config, deps.providerToken);
+      const androidConfig = config.android;
+      const androidLive = deps.environment === 'production' && deps.androidEnabled === true && deps.androidPushEnabled === true
+        && deps.androidAnnouncementsEnabled === true && config.androidAnnouncementsEnabled === true
+        && config.deliveryMode === 'apns' && androidConfig?.enabled === true && androidConfig.mode === 'send'
+        && androidConfig.apiUrl === runtime.apiUrl && androidConfig.projectId === LIVE_TARGET.projectId
+        && androidConfig.packageName === LIVE_TARGET.packageName
+        && validCredential(androidConfig.credential, { ...LIVE_TARGET, senderEmail: androidConfig.senderEmail });
       const jobs = await deps.claim();
       let captured = 0, accepted = 0, other = 0;
       for (let index = 0; index < jobs.length; index += 5) {
         await Promise.all(
           jobs.slice(index, index + 5).map(async (job) => {
-            const valid = job.deliveryMode === config.deliveryMode &&
+            const android = job.client === 'android';
+            let payloadValid = false;
+            try {
+              const payload = android ? androidAnnouncementPayload(job) : announcementPayload(job);
+              payloadValid = new TextEncoder().encode(JSON.stringify(payload)).length <= 4096;
+            } catch { /* Invalid jobs are acknowledged without provider access. */ }
+            const valid = (!job.client || job.client === 'ios' || android) && payloadValid
+              && (!android || (deps.environment === 'cloud-test' && job.environment === 'cloud-test' && config.deliveryMode === 'capture' && config.androidAnnouncementsEnabled === true)
+                || (androidLive && job.environment === 'production'))
+              && job.deliveryMode === config.deliveryMode &&
               /^[0-9a-f]{64}$/.test(job.recipientBinding) &&
-              new TextEncoder().encode(JSON.stringify(announcementPayload(job)))
-                  .length <= 4096 &&
               await deps.validate(job);
-            const jwt = valid && config.deliveryMode === 'apns' && job.topic === config.topic
+            const jwt = valid && !android && config.deliveryMode === 'apns' && job.topic === config.topic
               ? await token(job.environment) : null;
-            const result = !valid
+            let result = !valid
               ? { status: 409, reason: 'NoLongerEligible', providerId: '' }
               : config.deliveryMode === 'capture'
               ? { status: 200, reason: 'Captured', providerId: '' }
               : jwt ? await deps.send(job, jwt, config)
               : { status: 503, reason: 'CredentialUnavailable', providerId: '' };
+            if (valid && androidLive && android && androidConfig && deps.androidToken && deps.sendAndroid) {
+              let access: string | null = null;
+              try { access = await deps.androidToken(androidConfig.credential, androidConfig.senderEmail); }
+              catch { result = { status: 503, reason: 'CredentialUnavailable', providerId: '' }; }
+              if (access) {
+                if (await deps.validate(job)) {
+                  try { result = await deps.sendAndroid(job, access); }
+                  catch { result = { status: 0, reason: 'TransportUnconfirmed', providerId: '' }; }
+                } else result = { status: 409, reason: 'NoLongerEligible', providerId: '' };
+              }
+            }
             await deps.finish(job, result);
             if (result.status === 200) {
               if (config.deliveryMode === 'capture') captured++;
