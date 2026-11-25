@@ -102,6 +102,28 @@ flags/runtimes off; new schema is additive and may remain inert. Do not drop
 registrations/history. If the single attempt is uncertain, stop and inspect its
 sanitized outcome; never rerun the campaign automatically.
 
+## Compact enrollment while general Android access is closed
+
+The original two-Function candidate cannot admit a fresh Android registration
+while `ANDROID_CUSTOMER_ENABLED` is false. Its companion change also updates
+`customer-auth`. Deploy the three reviewed migrations before the three Functions.
+Keep the existing Android customer and general delivery flags disabled.
+
+Before arming the one-time database grant, independently match the owner-supplied
+Apple address, authenticated customer and installation. Check for an existing
+registration and preserve the current preferences. With Compact ready, set
+`ANDROID_PUSH_ENROLLMENT_SCOPE` on the Functions runtime from a protected
+operator file. Its JSON contains `userId`, `deviceId`, `secretHash`,
+`startsAtMs` and `expiresAtMs`. The integer timestamps are Unix milliseconds.
+The interval must be active and at most ten minutes. Use the SHA-256 fingerprint
+from the app's enrollment code. Never include the raw device secret, session or
+FCM token. Keep the runtime scope and SQL grant windows aligned.
+
+Only authenticated `push-register` and `push-status` from the matching customer
+and installation can pass this extra HTTP gate. The existing database grant,
+session, token and version checks still apply. Clear the temporary runtime scope
+and database allowance afterward. A failed or uncertain send ends the attempt.
+
 ## Conditional privacy copy for the coordinator
 
 Publish only with the corresponding capability/activation, replacing the older

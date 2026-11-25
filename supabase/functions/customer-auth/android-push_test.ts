@@ -52,3 +52,32 @@ Deno.test('Live registration requires explicit activation and derives its owner 
  await rejects(()=>androidPushAction({...deps,androidEnabled:false},request(),live),'INVALID_REQUEST');
  await rejects(()=>androidPushAction(deps,request(),body),'INVALID_REQUEST');assert(h.calls.length===1);
 });
+
+Deno.test('closed Live transport admits only the time-bound authenticated installation for status and registration', async () => {
+  const h = harness();
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.deviceSecret));
+  const hash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const now = Date.now();
+  const scope = { userId: id, deviceId: id, secretHash: hash, startsAtMs: now - 1000, expiresAtMs: now + 60_000 };
+  const deps = { ...h.deps, environment: 'production', appUrl: 'https://www.barberplusplus.com',
+    publicUrl: 'https://srv1073968.hstgr.cloud', androidEnabled: false, androidPushEnrollmentScope: JSON.stringify(scope) };
+  const live = { ...body, projectId: 'barber-plus-plus-phone-prod', packageName: 'com.barberplusplus.customer' };
+  const send = (values = {}, settings = {}, req = request()) =>
+    androidPushAction({ ...deps, ...settings }, req, { ...live, ...values });
+  for (const raw of ['', '{', JSON.stringify({ ...scope, expiresAtMs: now - 1 }),
+    JSON.stringify({ ...scope, startsAtMs: now + 10000 }), JSON.stringify({ ...scope, expiresAtMs: now + 900000 })]) {
+    await rejects(() => send({}, { androidPushEnrollmentScope: raw }), 'INVALID_REQUEST');
+  }
+  for (const action of ['push-detach', 'push-preferences', 'bookings']) await rejects(() => send({ action }), 'INVALID_REQUEST');
+  await rejects(() => send({ deviceId: crypto.randomUUID() }), 'FORBIDDEN');
+  await rejects(() => send({ deviceSecret: 'b'.repeat(64) }), 'FORBIDDEN');
+  await rejects(() => send({ user_id: id }, { identity: () => Promise.resolve({user_id: crypto.randomUUID(), session_id: id}) }), 'FORBIDDEN');
+  await rejects(() => send({}, {}, new Request('https://test.invalid')), 'AUTH_REQUIRED');
+  await rejects(() => send({}, { appUrl: 'https://example.invalid' }), 'INVALID_REQUEST');
+  await rejects(() => send({ packageName: body.packageName }), 'INVALID_REQUEST');
+  assert(h.calls.length === 0);
+  await send({ action: 'push-status' });
+  await send({ user_id: 'untrusted' });
+  assert(h.calls.map(c => c.action).join(',') === 'android-push-status,android-push-register');
+  assert(h.calls[1].data.user_id === id && h.calls[1].data.session_id === id);
+});
