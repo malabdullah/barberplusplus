@@ -6,6 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import AddBarber from './AddBarber';
+import SetupReturnLink from '../components/Setup/SetupReturnLink';
 const state = vi.hoisted(() => ({ selectedBranch: { id: 'shop', name: 'QA Shop' } }));
 const managedApi = vi.hoisted(() => ({ createManaged: vi.fn(), update: vi.fn() }));
 vi.mock('../services/barbers.service', () => ({ barbersService: managedApi }));
@@ -22,7 +23,7 @@ beforeEach(async () => {
 });
 afterEach(cleanup);
 function Hours(){const {search}=useLocation();return <><h1>Managed hours</h1><p>{search}</p></>;}
-function mount(path='/dashboard/barbers/new') { return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[path]}><Routes><Route path="/dashboard/barbers/new" element={<AddBarber />} /><Route path="/dashboard/barbers/managed/schedule" element={<Hours/>} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>); }
+function mount(path='/dashboard/barbers/new') { return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[path]}><Routes><Route path="/dashboard/barbers/new" element={<><SetupReturnLink /><AddBarber /></>} /><Route path="/dashboard/barbers/managed/schedule" element={<Hours/>} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>); }
 const enter = () => fireEvent.change(screen.getByLabelText(en.common.email), { target: { value: 'qa@example.test' } });
 it('asks only for email and checks it before sending', async () => {
  mount(); enter(); fireEvent.click(screen.getByRole('button',{name:en.barberInvitations.send}));

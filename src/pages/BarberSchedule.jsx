@@ -17,7 +17,7 @@ export default function BarberSchedule() {
   const barber = barbers.find(item => item.id === barberId);
   if (params.get('request')) return <Navigate replace to={`/dashboard/availability-requests/${encodeURIComponent(params.get('request'))}`} />;
   if (loading) return <p role="status">{t('common.loading')}</p>;
-  return <><Link to={setup?.path || '/dashboard/barbers'}>{t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')}</Link>
+  return <>{!setup && <Link to="/dashboard/barbers">{t('barbers.backToBarbers')}</Link>}
     {location.state?.imageWarning && <p role="alert">{t('managerAudit.imageWarning')}</p>}
     {barber?.managerManaged && <nav className="managed-barber-tabs" aria-label={t('managedBarbers.manage')}>
       <Link className="btn btn-secondary" to={navTo(`/dashboard/barbers/${barber.id}/edit`)}>{t('profile.title')}</Link>
