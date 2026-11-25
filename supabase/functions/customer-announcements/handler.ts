@@ -62,6 +62,10 @@ export function createCustomerAnnouncementsHandler(deps: Dependencies) {
         !['status', 'register', 'preference'].includes(String(body.action))
       ) return reply(400, { error: 'INVALID_REQUEST' });
       const data: Record<string, unknown> = { ...identity };
+      if ('client' in body) {
+        if (typeof body.client !== 'string' || !['ios', 'android'].includes(body.client)) return reply(400, { error: 'INVALID_REQUEST' });
+        data.client = body.client;
+      }
       if ('initializeDefaults' in body) {
         if (
           body.action !== 'register' ||
