@@ -67,3 +67,13 @@ it('uses translated Arabic labels while submitting canonical city values', async
   fireEvent.click(screen.getByRole('button', { name: 'عرض الصالونات' }));
   expect(onApply).toHaveBeenCalledExactlyOnceWith(['Kuwait City']);
 });
+
+
+it('lets optional barber filtering return to all cities without retaining a pending city', () => {
+  const { onApply } = setup({ allowEmpty: true, actionLabel: 'Show barbers' });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Kuwait City' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Kuwait City' }));
+  expect(screen.getByText('All cities')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Show barbers' }));
+  expect(onApply).toHaveBeenCalledExactlyOnceWith([]);
+});

@@ -5,7 +5,7 @@ import './CitySelection.css';
 
 const normalize = value => String(value).normalize('NFKD').replace(/\p{M}/gu, '').replace(/\u0640/g, '').toLocaleLowerCase().trim();
 
-export default function CitySelection({ groups, selectedCities, cityName, governorateName, onApply, onEdit, actionLabel, disabled = false }) {
+export default function CitySelection({ groups, selectedCities, cityName, governorateName, onApply, onEdit, actionLabel, allowEmpty = false, disabled = false }) {
   const { t } = useTranslation();
   const tr = (key, values) => t(`bookingFinder.${key}`, values);
   const [groupKey, setGroupKey] = useState(() => groups.find(group => group.cities.includes(selectedCities[0]))?.key ?? '');
@@ -21,7 +21,7 @@ export default function CitySelection({ groups, selectedCities, cityName, govern
     setPending(current => current.includes(city) ? current.filter(value => value !== city) : [...current.filter(value => cities.includes(value)), city]);
   };
 
-  return <form className="cb-city-selection" onSubmit={event => { event.preventDefault(); if (selection.length && !disabled) onApply(selection); }}>
+  return <form className="cb-city-selection" onSubmit={event => { event.preventDefault(); if ((selection.length || allowEmpty) && !disabled) onApply(selection); }}>
     <div className="cb-location-field">
       <label className="cb-field-label" htmlFor="booking-governorate">{t('customerBooking.governorateLabel')}</label>
       <div className="cb-governorate-control">
@@ -49,8 +49,8 @@ export default function CitySelection({ groups, selectedCities, cityName, govern
       </div>
     </fieldset>
     <div className="cb-city-apply">
-      <p aria-live="polite" aria-atomic="true">{tr('selectedCityCount', { count: selection.length })}</p>
-      <button className="cb-primary" type="submit" disabled={disabled || !selection.length}>{actionLabel || tr('showShops')}</button>
+      <p aria-live="polite" aria-atomic="true">{allowEmpty && !selection.length ? tr('allCities') : tr('selectedCityCount', { count: selection.length })}</p>
+      <button className="cb-primary" type="submit" disabled={disabled || (!selection.length && !allowEmpty)}>{actionLabel || tr('showShops')}</button>
     </div>
   </form>;
 }
