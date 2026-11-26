@@ -1,3 +1,9 @@
+> **Versioned feature contract / historical phase record.** The original status,
+> approval limits and verification results below belong to their stated phase.
+> Read [the current handoff](handoff.md), [product/status inventory](../PRD.md)
+> and source matching the target release before using these details. Earlier
+> Test-only/pending wording is not today's deployment status or a new execution grant.
+
 # Account deletion after the reporting release
 
 This Test-only successor includes main `a155ca3456744d26dae6fc4d19193598f9cd00f0`

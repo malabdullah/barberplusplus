@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 > Updated successor for review (14 November 2026): see [final contract](customer-account-deletion-release.md). Earlier evidence below predates the production-compatible Apple additions and is not final release authorization.
 
 # Customer account deletion: production preparation

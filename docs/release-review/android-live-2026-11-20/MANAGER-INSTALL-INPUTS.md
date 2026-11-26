@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](../../handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Manager-only server installation contract — not executed
 
 The coordinator owns credential retrieval, private transport, installation and cleanup. Website must not read Keychain or receive the Google JSON. All values below are public configuration or parameter placeholders. No credential installation or activation is authorized by this document.

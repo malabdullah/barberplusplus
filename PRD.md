@@ -8,6 +8,7 @@
 | Production workflow | [45755911315](https://github.com/malabdullah/barberplusplus/actions/runs/45755911315), successful attempt 2 |
 | Hosted Test | https://barber-test.alabdullah-cs.workers.dev; Supabase `qvkucvcjmojjbphlzlks` |
 | Working rules | [AGENTS.md](AGENTS.md) |
+| New maintainer / agent | [Handoff](docs/handoff.md), [state snapshot](docs/handoff-state.md), [architecture](docs/architecture.md), [documentation index](docs/README.md) |
 | Full regression plan | [docs/testing/full-regression.md](docs/testing/full-regression.md), explicit request only |
 
 This replaces the January 2026 inventory, whose WhatsApp architecture, routes,
@@ -67,7 +68,7 @@ health check performed while editing this document.
 | Settlements | Separate platform-to-shop collection/commission/reconciliation ledger and manager visibility. Actual bank transfers occur outside Barber++. |
 | Subscriptions | Billing screens, pricing, capacity/access enforcement, renewal preferences, dated complimentary/manual access and discount-code administration; live gateway collection is postponed. |
 | Administration | Distinct Admin/Super Admin controls, user and account tools, location/configuration management, analytics, audit/security records and role/MFA boundaries. |
-| Notifications | Existing recipient-scoped notification lists/read state and supported booking notification infrastructure; this does not mean every native transport or audience is activated. |
+| Notifications | Recipient-scoped website notifications and supported booking infrastructure. Apps Manager confirmed on 26 November that general Android Live booking/announcement delivery is enabled for eligible opted-in customers; one real Compact build 15 announcement/tap opened Favourites and original preferences were restored. This is not all-device/full-regression proof or Play publication approval. |
 | 26 November additions | Completion payment-method selection with atomic receipt handling; unchanged confirmed-booking staff reminder 24 hours after appointment end; clearer publication blockers; recipient-scoped unread queries; managed-barber wizard action/return; Apple/Google signup for new invited barbers; branded standalone subscription invoice PDFs. |
 
 The Website release completion record confirms main `adb04de`, actual frontend
@@ -86,6 +87,7 @@ that release; synthetic provider acceptance is not end-to-end provider evidence.
 | UPayments / MyFatoorah | Sandbox subscription, extra-barber-capacity and booking payments, callback/refund experiments. No live payment gateway is enabled by this PRD. |
 | Shop payment choices | Pay at shop, online or both, including associated manual-approval payment journeys; remains part of payment pilots. Do not confuse this with released staff completion-method recording. |
 | Design previews | Synthetic `/design/*` subscription/billing previews are Test-only; they are not evidence of a real charge or entitlement. |
+| Native Test wallet scope | iOS Test 61/62 wallet work is separate from the Website pilot and retained local-only deltas require platform-owner reconciliation/approved transfer. Staged iOS 1.2.0 (34) is local/unuploaded and excludes wallet; none of this grants Live publication. See the native handoff through Apps Manager. |
 | Additional retained prototypes | Some review/report/provider experiments remain on isolated Test branches. Inventory the exact target before a run; retained schema alone is not a shipped feature. |
 
 The recorded 26 November release restored the prior hosted Test deployment after
@@ -100,7 +102,7 @@ flags and migrations before testing or promoting any Test work.
 | Optional private written visit reviews | Future release; existing production numeric ratings remain. Retained Test work must be reconciled and reviewed before exposure. |
 | Help Center and Feature Requests | Separately deferred; Contact Support does not implement these systems. |
 | Live online payment launch | Requires separate acceptance, credentials/configuration, reconciliation and production authorization. Sandbox success is not live availability. |
-| General Android activation/public publishing | Remains held in the 26 November Website handoff. Backend notification transport and a controlled device test do not authorize general activation or app-store publication. |
+| Android public publishing | Apps Manager reports Play 1.2.0 (15) production submission is in review following separate owner approval. Managed publishing is ON; public publication requires Google approval and a separate publish action. General Live notification delivery was separately enabled and verified on 26 November; backend activation and a controlled device test do not authorize store publication. |
 | Native customer/staff delivery | Separate coordinator-managed assignments and platform acceptance. This website PRD does not claim no native implementation exists, nor certify any store release. Obtain current platform status through Apps Manager. |
 | Broader finance/accounting scope | Automatic bank transfers, payroll/tax filing, inventory and complete accounting are outside the recorded manual-finance/settlement scope. |
 

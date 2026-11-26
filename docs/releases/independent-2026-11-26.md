@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](../handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Independent Website release — 26 November 2026
 
 Base: production/main `d5e3f1e`. Candidate branch: `codex/independent-release-20261126`.
