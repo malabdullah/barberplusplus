@@ -1,5 +1,10 @@
 # Production releases
 
+> **Maintained release procedure.** Initial cutover is a one-time historical
+> adoption checklist, not setup for a new developer checkout. Reconcile the accepted
+> private controller/ledger/runtime record before any release. Documentation Git
+> commits can be ahead of the running application; see [handoff](handoff.md).
+
 ## Initial cutover
 
 Do not enable automatic releases until all of these are evidenced for a concrete

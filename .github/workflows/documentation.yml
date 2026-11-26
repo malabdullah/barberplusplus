@@ -23,5 +23,9 @@ jobs:
           persist-credentials: false
       - name: Test documentation policy checker
         run: python3 -m unittest discover -s .github/scripts -p 'test_documentation_review.py'
+      - name: Test maintained handoff link checker
+        run: python3 -m unittest discover -s scripts -p 'test_handoff_docs.py'
+      - name: Verify maintained handoff and portable workflows
+        run: python3 scripts/verify-handoff-docs.py
       - name: Validate PR documentation declaration and changed files
         run: python3 .github/scripts/documentation_review.py

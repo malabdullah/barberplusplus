@@ -1,0 +1,6 @@
+interface:
+  display_name: "Full Regression Testing"
+  short_description: "Run a role-based regression plan only on request"
+  default_prompt: "Use $full-regression-testing to run the project’s full regression plan against its approved hosted Test version and report evidence, failures, and gaps."
+policy:
+  allow_implicit_invocation: false

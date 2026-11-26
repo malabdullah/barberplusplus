@@ -83,3 +83,18 @@ To exercise the CLI without GitHub, supply a synthetic PR event JSON through
 GITHUB_EVENT_PATH with immutable base/head SHAs and a body using the fields above.
 The checker reads Git's merge-base diff and fails closed if input/diff is missing.
 It does not call GitHub or start any application runtime.
+
+## Handoff continuity
+
+Review [the start guide](handoff.md), [state snapshot](handoff-state.md),
+[architecture](architecture.md) and [index](README.md) when ownership, workflow,
+contracts, environments or release/hold state changes. Preserve historical
+observations with clear notices; do not turn them into current deployment claims.
+Keep sensitive inventories/transfer acceptance in the private coordination area.
+
+The same documentation check also runs `scripts/verify-handoff-docs.py` and its
+focused tests. They validate maintained local links/anchors, historical-notice
+links and portable skill hashes/explicit-only policy. They do not certify private
+repository access, provider behavior, credentials, runtime health or a real
+machine migration. Owner approval and actual destination-specific access checks
+are separate from documentation readiness.

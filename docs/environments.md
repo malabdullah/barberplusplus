@@ -1,5 +1,9 @@
 # Barber++ environments
 
+> **Current target rule:** hosted Cloud Test is the default. Local runtime startup
+> is explicit-only. Main Git HEAD may contain documentation newer than the deployed
+> application; verify the runtime rather than assuming a deployment from a merge.
+
 ## Cloud Test
 
 The owner made this the default testing environment on 2026-10-31. Deploy each

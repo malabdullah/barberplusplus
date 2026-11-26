@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](../../handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Android Live backend candidate — Test review
 
 Prepared 20 November 2026 from released main `c6efbb63a2ef6643b1ff0485d22b6c6ff01ad364`. No settlement, billing-demo or other unreleased feature is included in this Live candidate. No dev/main push, production deployment, provider login, real email/push or personal-account change occurred in this pass.

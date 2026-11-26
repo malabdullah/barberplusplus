@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "provenance": "Owner-created workflow skills, reviewed portable copy on 26 November 2026; no automatic installation or invocation.",
+  "files": {
+    "full-regression-testing/SKILL.md": "a2f507018aa58851ae3a9401f9c6d60c9262773ae5ea377015c8fc9c972c0ac4",
+    "full-regression-testing/agents/openai.yaml": "8936813c15fc667ff65bfbd4576af06b9473767c52aa3aa5eac85ab711479ead",
+    "full-regression-testing/assets/plan-template.md": "73918d33f5dbd9f903f977ca93e36e717514ccf0988e512b5f7965da7d2e1894",
+    "full-regression-testing/assets/report-template.md": "21e3813ce1b08c852ec1820e7fa5e0ae6da8e155db02007eaaaa145c93311db9",
+    "project-delivery-workflow/SKILL.md": "78dd22d0a4ce744841b7ee5d3a9477f0c57b09d70eaa31754c48aac2acfe3437",
+    "project-delivery-workflow/agents/openai.yaml": "16971fbc919498574d0b79420e196ddad25d39a94b5b5809e8b7d57142c20b2b"
+  }
+}
