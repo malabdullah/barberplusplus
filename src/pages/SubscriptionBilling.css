@@ -79,3 +79,6 @@
   .manager-billing .subscription-summary-dates > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .manager-billing .subscription-summary-dates dd { text-align: end; }
 }
+
+.manager-billing-invoices-downloadable { list-style: none; padding-inline-start: 0; }
+.manager-billing-invoices-downloadable li {

@@ -1,3 +1,4 @@
+import SubscriptionInvoices from '../components/Subscriptions/SubscriptionInvoices';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -160,9 +161,7 @@ export default function SubscriptionBilling({ admin = false, codesOnly = false }
     <div><dt>{bp('billingFrequency')}</dt><dd>{bp(detail.frequency)}{detail.nextFrequency && <> · {fb('nextFrequency', { frequency: bp(detail.nextFrequency) })}</>}</dd></div>
     <div><dt>{fb('renewalPreference')}</dt><dd>{fb(detail.renewalRequested ? 'renewalRequested' : 'renewalStopped')}</dd></div>
   </dl>;
-  const invoices = detail && (detail.invoices.length
-    ? <ul className="manager-billing-invoices">{detail.invoices.map(invoice => <li key={invoice.id}>{date(invoice.created_at)} · <bdi>{money(invoice.total_fils)}</bdi> · {invoice.state}</li>)}</ul>
-    : <p className="subscription-empty">{fb('noInvoices')}</p>);
+  const invoices = detail && <SubscriptionInvoices key={detail.id} business={detail} date={date} money={money} />;
   const history = detail && (detail.history.length
     ? <ol className="subscription-history">{detail.history.map(entry => <li key={entry.id}>
       <div><strong>{fb(`actions.${entry.action}`)}</strong><time dateTime={entry.created_at}>{date(entry.created_at)}</time></div>

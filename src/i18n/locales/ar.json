@@ -3995,5 +3995,28 @@
     "overdueTitle": "موعد بحاجة إلى تحديث الحالة",
     "recorded": "تم تسجيل الدفع مسبقاً",
     "free": "موعد مجاني"
+  },
+  "subscriptionInvoice": {
+    "language": "ar",
+    "title": "فاتورة الاشتراك",
+    "download": "تنزيل PDF",
+    "downloadFailed": "تعذر تنزيل الفاتورة. يرجى المحاولة مرة أخرى.",
+    "paid": "مدفوعة",
+    "refunded": "مستردة",
+    "reference": "رقم الفاتورة",
+    "issuedOn": "تاريخ الإصدار",
+    "billingPeriod": "فترة الاشتراك",
+    "periodStart": "البداية",
+    "periodEnd": "النهاية",
+    "description": "الوصف",
+    "amount": "المبلغ",
+    "capacityLineItem": "أماكن إضافية للحلاقين (للمدة المتبقية)",
+    "lineItem": "اشتراك الصالون",
+    "billedTo": "صدرت إلى",
+    "discount": "الخصم",
+    "total": "إجمالي الفاتورة",
+    "test": "فاتورة تجريبية",
+    "testNote": "صدرت في البيئة التجريبية ولم يُحصّل أي مبلغ فعلي.",
+    "issuedNote": "صادرة إلكترونياً من Barber++."
   }
 }

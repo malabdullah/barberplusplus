@@ -3950,5 +3950,28 @@
     "overdueTitle": "Appointment needs a status update",
     "recorded": "Payment already recorded",
     "free": "Free appointment"
+  },
+  "subscriptionInvoice": {
+    "language": "en",
+    "title": "Subscription invoice",
+    "download": "Download PDF",
+    "downloadFailed": "Couldn’t download the invoice. Please try again.",
+    "paid": "Paid",
+    "refunded": "Refunded",
+    "reference": "Invoice number",
+    "issuedOn": "Issued on",
+    "billingPeriod": "Billing period",
+    "periodStart": "Starts",
+    "periodEnd": "Ends",
+    "description": "Description",
+    "amount": "Amount",
+    "capacityLineItem": "Additional barber places (prorated)",
+    "lineItem": "Shop subscription",
+    "billedTo": "Billed to",
+    "discount": "Discount",
+    "total": "Invoice total",
+    "test": "TEST INVOICE",
+    "testNote": "Issued in the Barber++ Test environment. No real payment was collected.",
+    "issuedNote": "Issued electronically by Barber++."
   }
 }

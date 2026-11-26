@@ -79,10 +79,14 @@ begin
  perform pg_temp.check_completion((select count(*)=1 from private.shop_finance_entries where booking_id=bid),'fully recorded payment not duplicated');
  bid:=pg_temp.completion_fixture(shop,worker,customer,service,now_kw-interval'22 days');
  perform set_config('request.jwt.claims','{}',true);
- -- Fixture-only provider state, inside this rollback transaction. No gateway call.
- perform set_config('barber.b_wallet_operation',bid::text,true);
- update public.bookings set online_payment_state='paid' where id=bid;
- perform set_config('barber.b_wallet_operation','',true);
+ -- A platform-held receipt uses the released settlement schema only.
+ -- Synthetic fixture inside this rollback transaction; no gateway or wallet.
+ insert into private.settlement_rates(id,shop_id,rate_bps,created_by,reason)
+ values(bid,shop,0,manager,'Completion receipt fixture');
+ insert into private.settlement_agreements(id,shop_id,fee_bearer,created_by,reason)
+ values(bid,shop,'platform',manager,'Completion receipt fixture');
+ insert into private.settlement_receipts(shop_id,booking_id,amount_fils,commission_bps,commission_fils,rate_id,agreement_id,fee_bearer,source_ref,collected_at,created_by)
+ values(shop,bid,5000,0,0,bid,bid,'platform','completion-qa:'||bid,now(),manager);
  perform set_config('request.jwt.claims',manager_claim,true);
  perform pg_temp.check_completion((public.staff_booking_completion('read',bid)->>'onlinePaid')::boolean,'online payment recognized');
  perform public.staff_booking_completion('complete',bid,'cash',0);
