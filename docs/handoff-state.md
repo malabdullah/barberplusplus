@@ -9,8 +9,8 @@ Update it after a verified release, hold/ownership change or handoff. Follow
 
 | Component | Last verified/reported state | How to refresh |
 |---|---|---|
-| Website running production | Public runtime `adb04de12851e90d87d703ba6021e0d3850c9091`; unchanged by documentation activation | Read approved public runtime; reconcile accepted GitHub artifact/image and controller receipt through the backend owner |
-| Website documentation | Main `8e77bb24dd380bef8c1f722d8ced494f181a894a`, dev `657357fbbe27d74f9ef7b169c89ac45edbd7f8f4` before this handoff update; identical file trees | Fetch/read current refs; documentation commits need not be deployed app versions |
+| Website running production | Runtime `63c90e40ba07e89d406586455f98cca56a040177`; city-picker redesign deployed, actual task/container image and public booking smoke verified on 26 November | Read approved public runtime; reconcile accepted GitHub artifact/image and controller receipt through the backend owner |
+| Website documentation | Main `63c90e40ba07e89d406586455f98cca56a040177`, dev `99993cf7f48b36478f9b736b862ca387e336b822` before this production-record update; identical file trees | Fetch/read current refs; documentation commits need not be deployed app versions |
 | Website PR enforcement | Main requires application, browser, database, dependency-review, secret-scan and documentation-review; dev requires documentation-review | Read GitHub branch protection/rulesets and PR results; preserve concurrent changes |
 | Hosted Test | Isolated Worker/Supabase `qvkucvcjmojjbphlzlks`, retaining separate feature pilots | Read gated runtime and approved backend/migration identities; ask Website/Apps Manager for the current overlay and owner |
 | iOS | Apps Manager/iOS report public 1.1.0 (33); staged 1.2.0 (34) is local/unuploaded and excludes wallet; installed Test 0.2.0 (62) has separately retained local-only deltas | Read native PRD/handoff and actual distribution receipts through Apps Manager |
@@ -48,6 +48,11 @@ no public document should contain secret values or the private inventory itself.
 
 ## Known limitations and decision ownership
 
+- The [city-picker release](releases/city-picker-2026-11-26.md) passed its
+  anonymous Live booking smoke. The existing Super Admin session in the shared
+  in-app browser received a customer-discovery rejection; the unchanged shared
+  token/role boundary is a separate follow-up, not evidence of a public outage.
+  Owner sessions were preserved. No payment pilot or native change was released.
 - This documentation pass is not a fresh all-feature acceptance, security audit,
   backup restore, real provider login, push send or deployment health campaign.
 - A native repository clone alone does not reproduce installed iOS Test 62, Android Play 15/Test 38/Test 41 or every staged artifact: reconcile the platform-owned local-only source/build manifests before retiring the original Mac. No clean-machine build, custody transfer or signing transfer was performed for documentation acceptance. Checkpoint recovery on another machine is unverified unless its platform owner supplies an existing receiving-side proof; a source hash alone is insufficient.
