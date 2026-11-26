@@ -80,7 +80,7 @@ export default function ShopSetup() {
     finally { if (currentId.current === scope) setBusy(false); }
   };
   const editMember = (barber, returnStep = 'team') => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=profile' : '/dashboard/barbers/' + barber.id + '/edit', id, returnStep);
-  const reviewMember = barber => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=hours' : '/dashboard/availability-requests?barber=' + barber.id, id, 'hours');
+  const reviewMember = barber => setupActionUrl(barber.managerChair ? '/dashboard/my-chair?view=hours' : barber.managerManaged ? '/dashboard/barbers/' + barber.id + '/schedule' : '/dashboard/availability-requests?barber=' + barber.id, id, 'hours');
   const memberName = barber => i18n.language === 'ar' && barber.nameAr || barber.name;
   const pager = items.length > 8 && <nav className="setup-pagination" aria-label={tr('pages')}><button type="button" className="btn btn-secondary" disabled={busy || currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('common.previous')}</button><span>{tr('page', { page: currentPage + 1, count: pageCount })}</span><button type="button" className="btn btn-secondary" disabled={busy || currentPage + 1 === pageCount} onClick={() => setPage(currentPage + 1)}>{t('common.next')}</button></nav>;
   const continueButton = (next, enabled = true) => <button type="button" className="btn btn-primary" disabled={busy || loading || Boolean(error) || !enabled} onClick={() => go(next)}>{tr('continue')}<ArrowRight size={17} className="setup-next-icon" aria-hidden="true" /></button>;
@@ -115,13 +115,16 @@ export default function ShopSetup() {
             <div className="setup-team">{visibleBarbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.assigned(barber) ? 'servicesAssigned' : 'assignServices')}</span></div><Link className="btn btn-secondary" to={editMember(barber)}>{tr('assignServices')}</Link></div>)}</div>
             {pager}
             {inviteOpen ? <div className="setup-invite"><h3>{t('barberInvitations.invite')}</h3><InviteBarberForm branch={shop} onSent={result => { setNotice(t('barberInvitations.' + (result.delivered ? 'sent' : 'deliveryFailed'))); setInviteOpen(false); reload(); }} /></div> : <button className="btn btn-primary" onClick={() => setInviteOpen(true)}><Plus size={17} aria-hidden="true" />{t('barberInvitations.invite')}</button>}
-            {(!managerChair || managerChair.branchId === id) && <Link className="btn btn-ghost setup-chair" to={setupActionUrl('/dashboard/my-chair?view=profile', id, 'team')}>{tr('myChair')}</Link>}
+            <div className="setup-team-actions">
+              <Link className="btn btn-secondary" to={setupActionUrl('/dashboard/barbers/new?mode=managed', id, 'team')}>{t('managedBarbers.add')}</Link>
+              {(!managerChair || managerChair.branchId === id) && <Link className="btn btn-ghost" to={setupActionUrl('/dashboard/my-chair?view=profile', id, 'team')}>{tr('myChair')}</Link>}
+            </div>
             <PendingInvitations branchId={id} reloadKey={revision} />
             <div className="setup-footer">{continueButton('hours', progress.complete.team)}</div>
           </>}
           {step === 'hours' && <>
             {!progress.barbers.length && <Link className="btn btn-primary" to={shopSetupUrl(id, 'team')}>{t('barberInvitations.invite')}</Link>}
-            {visibleBarbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.hours(barber) ? 'hoursApproved' : 'hoursNeeded')}</span>{barber.status !== 'active' && <span>{tr('inactiveBarber')}</span>}</div><div className="setup-row-actions"><Link className="btn btn-secondary" to={reviewMember(barber)}>{tr(barber.managerChair ? 'setHours' : 'reviewRequests')}</Link>{barber.status !== 'active' && <Link className="btn btn-ghost" to={editMember(barber, 'hours')}>{tr('activateBarber')}</Link>}</div></div>)}
+            {visibleBarbers.map(barber => <div className="setup-row" key={barber.id}><div><strong>{memberName(barber)}</strong><span>{tr(progress.hours(barber) ? 'hoursApproved' : 'hoursNeeded')}</span>{barber.status !== 'active' && <span>{tr('inactiveBarber')}</span>}</div><div className="setup-row-actions"><Link className="btn btn-secondary" to={reviewMember(barber)}>{tr(barber.managerChair || barber.managerManaged ? 'setHours' : 'reviewRequests')}</Link>{barber.status !== 'active' && <Link className="btn btn-ghost" to={editMember(barber, 'hours')}>{tr('activateBarber')}</Link>}</div></div>)}
             {pager}
             <div className="setup-footer">{continueButton('review')}</div>
           </>}

@@ -29,8 +29,10 @@ const applyPreferences = (query, preferences) => {
 };
 
 export const notificationsService = {
-  getAll: async ({ limit = 50, offset = 0, unreadOnly = false, preferences } = {}) => {
+  getAll: async ({ limit = 50, offset = 0, unreadOnly = false, preferences, userId } = {}) => {
+    if (!userId) return [];
     let query = supabase.from('notifications').select('*')
+      .eq('recipient_user_id', userId)
       .order('created_at', { ascending: false }).order('id', { ascending: false })
       .range(offset, offset + limit - 1);
     if (unreadOnly) query = query.eq('is_read', false);
@@ -38,9 +40,10 @@ export const notificationsService = {
     if (error) throw error;
     return (data || []).map(toFrontend);
   },
-  getUnreadCount: async preferences => {
+  getUnreadCount: async (preferences, userId) => {
+    if (!userId) return 0;
     const { count, error } = await applyPreferences(supabase.from('notifications')
-      .select('*', { count: 'exact', head: true }).eq('is_read', false), preferences);
+      .select('*', { count: 'exact', head: true }).eq('recipient_user_id', userId).eq('is_read', false), preferences);
     if (error) throw error;
     return count || 0;
   },

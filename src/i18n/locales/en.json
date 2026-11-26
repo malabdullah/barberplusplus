@@ -21,7 +21,16 @@
     "forbidden": "You do not have permission to change this shop.",
     "adminOnly": "Only the admin can change manual booking permissions.",
     "stale": "The shop status has changed. Refresh before trying again.",
-    "bookingBlocked": "This shop is not accepting new bookings. Publish it or ask the admin about manual booking access."
+    "bookingBlocked": "This shop is not accepting new bookings. Publish it or ask the admin about manual booking access.",
+    "blockedTitle": "Before publishing:",
+    "blockers": {
+      "inactive": "This shop is inactive. Contact an admin to activate it.",
+      "shop_details": "Enter the shop name.",
+      "location": "Select a governorate and a city within it.",
+      "shop_hours": "Set valid shop working hours.",
+      "services": "Add at least one active service with a valid price and duration.",
+      "barber": "Activate at least one barber, assign services and approve hours that fit the shop’s opening hours."
+    }
   },
   "chair": {
     "title": "My Chair",
@@ -3918,5 +3927,51 @@
     "title": "Service durations",
     "reset": "Use shop default",
     "invalid": "Enter a whole number from 5 to 480 minutes."
+  },
+  "bookingCompletion": {
+    "title": "Complete appointment",
+    "remaining": "Amount remaining",
+    "method": "Payment method",
+    "choose": "Select payment method",
+    "cash": "Cash",
+    "card": "Card (KNET / credit card)",
+    "transfer": "Bank transfer",
+    "other": "Other",
+    "unpaid": "Not paid yet",
+    "online": "Already paid online",
+    "noBalance": "No outstanding balance",
+    "saving": "Saving…",
+    "complete": "Complete appointment",
+    "error": "Could not complete this appointment. Please try again.",
+    "BOOKING_NOT_FINISHED": "This appointment has not finished yet.",
+    "COMPLETION_NOT_CONFIRMED": "Confirm this appointment before completing it.",
+    "COMPLETION_PAYMENT_CHANGED": "The balance changed. Review the updated amount and choose again.",
+    "COMPLETION_FORBIDDEN": "You no longer have access to this appointment.",
+    "overdueTitle": "Appointment needs a status update",
+    "recorded": "Payment already recorded",
+    "free": "Free appointment"
+  },
+  "subscriptionInvoice": {
+    "language": "en",
+    "title": "Subscription invoice",
+    "download": "Download PDF",
+    "downloadFailed": "Couldn’t download the invoice. Please try again.",
+    "paid": "Paid",
+    "refunded": "Refunded",
+    "reference": "Invoice number",
+    "issuedOn": "Issued on",
+    "billingPeriod": "Billing period",
+    "periodStart": "Starts",
+    "periodEnd": "Ends",
+    "description": "Description",
+    "amount": "Amount",
+    "capacityLineItem": "Additional barber places (prorated)",
+    "lineItem": "Shop subscription",
+    "billedTo": "Billed to",
+    "discount": "Discount",
+    "total": "Invoice total",
+    "test": "TEST INVOICE",
+    "testNote": "Issued in the Barber++ Test environment. No real payment was collected.",
+    "issuedNote": "Issued electronically by Barber++."
   }
 }

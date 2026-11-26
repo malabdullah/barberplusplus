@@ -15,12 +15,18 @@ describe('dashboard notification persistence', () => {
   it('returns the saved database ID and filters full counts using the same preferences', async () => {
     query.data = [{ id: 'database-id', is_read: false, metadata: {} }];
     const prefs = { ...notificationPreferencesService.DEFAULT_PREFERENCES, bookingUpdates: false };
-    expect((await notificationsService.getAll({ preferences: prefs }))[0].id).toBe('database-id');
+    expect((await notificationsService.getAll({ preferences: prefs, userId: 'own-user' }))[0].id).toBe('database-id');
     const historyFilter = query.or.mock.calls[0][0];
-    expect(await notificationsService.getUnreadCount(prefs)).toBe(81);
+    expect(await notificationsService.getUnreadCount(prefs, 'own-user')).toBe(81);
+    expect(query.eq).toHaveBeenCalledWith('recipient_user_id', 'own-user');
     expect(query.or.mock.calls[1][0]).toBe(historyFilter);
     expect(historyFilter).not.toContain('type.eq.booking_updated');
     expect(historyFilter).not.toContain('type.eq.booking_reassigned');
+  });
+  it('does not issue an unscoped query without a signed-in recipient', async () => {
+    expect(await notificationsService.getAll()).toEqual([]);
+    expect(await notificationsService.getUnreadCount()).toBe(0);
+    expect(db.from).not.toHaveBeenCalled();
   });
   it('applies enable cutoffs and does not expose disabled categories in a badge', () => {
     const filter = preferenceFilter({ ...notificationPreferencesService.DEFAULT_PREFERENCES, newBookings: false, bookingUpdatesEnabledAt: '2026-11-02T10:00:00Z' });

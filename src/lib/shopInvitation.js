@@ -8,7 +8,8 @@ export function readShopInvitation() {
   return null;
 }
 export function rememberShopInvitation(value) {
-  if (valid(value)) try { sessionStorage.setItem(KEY, JSON.stringify(value)); } catch { /* The original URL remains resumable. */ }
+  if (valid(value)) try { sessionStorage.setItem(KEY, JSON.stringify(value)); return true; } catch { /* The original URL remains resumable. */ }
+  return false;
 }
 export function clearShopInvitation() { try { sessionStorage.removeItem(KEY); } catch { /* Optional storage. */ } }
 export function hasShopInvitation() {

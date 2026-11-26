@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { rpc, settings } = vi.hoisted(() => ({ rpc: vi.fn(), settings: { user: { id: 'manager' }, theme: 'light', language: 'en' } }));
 vi.mock('../services/subscriptionBilling.service', async importOriginal => ({ ...(await importOriginal()), subscriptionRpc: rpc }));
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }));
+vi.mock('../lib/runtimeConfig', () => ({ isTest: false }));
 vi.mock('../context/AppContext', () => ({ useApp: () => settings }));
 import '../i18n';
 import i18next from 'i18next';

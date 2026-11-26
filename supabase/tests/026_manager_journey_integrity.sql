@@ -32,7 +32,8 @@ select is(current_setting('journey.saved')::jsonb->'service_snapshot'->0->>'name
 select is((public.staff_customer_lookup('+965','59979701')->>'id')::uuid,(current_setting('journey.saved')::jsonb->>'customer_id')::uuid,'exact lookup resolves canonical ID');
 select throws_ok($$select public.staff_save_booking(null,current_setting('journey.input')::jsonb||'{"time":"04:00","customer_phone":"59979702"}')$$,'P0001','SLOT_UNAVAILABLE','invalid slot rolls back contact and appointment together');
 select throws_ok($$insert into public.services(branch_id,name,duration,price) values('ee070000-0000-4000-8000-000000000101','Bad',0,-1)$$,'P0001','INVALID_SERVICE','invalid service is rejected at write boundary');
-select throws_ok($$update public.bookings set status='completed' where id=(current_setting('journey.saved')::jsonb->>'id')::uuid$$,'P0001','BOOKING_NOT_FINISHED','future appointment cannot be completed');
+select throws_ok($$select public.staff_booking_completion('complete',(current_setting('journey.saved')::jsonb->>'id')::uuid,'cash',3125)$$,'P0001','BOOKING_NOT_FINISHED','future appointment cannot be completed');
+select throws_ok($$update public.bookings set status='completed' where id=(current_setting('journey.saved')::jsonb->>'id')::uuid$$,'P0001','COMPLETION_METHOD_REQUIRED','direct completion cannot bypass the payment-aware flow');
 select throws_ok($$delete from public.services where id='ee070000-0000-4000-8000-000000000201'$$,'P0001','SERVICE_HAS_HISTORY','hard deletion cannot destroy service history');
 select lives_ok($$select public.archive_service('ee070000-0000-4000-8000-000000000201')$$,'used service can be archived');
 update public.services set name='Renamed haircut' where id='ee070000-0000-4000-8000-000000000201';

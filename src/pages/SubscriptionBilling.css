@@ -79,3 +79,7 @@
   .manager-billing .subscription-summary-dates > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .manager-billing .subscription-summary-dates dd { text-align: end; }
 }
+
+.manager-billing-invoices-downloadable { list-style: none; padding-inline-start: 0; }
+.manager-billing-invoices-downloadable li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-block-end: 1px solid var(--billing-border); padding-block: 12px; }
+.manager-billing-invoices-downloadable li > span { min-width: 0; overflow-wrap: anywhere; }

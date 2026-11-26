@@ -2744,6 +2744,53 @@ CREATE OR REPLACE FUNCTION "public"."shop_settlements"("p_action" "text", "p_dat
     SET "search_path" TO ''
     AS $$select settlement_api.dispatch(p_action,p_data,false);$$;
 ALTER FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."staff_booking_completion"("p_action" "text", "p_booking_id" "uuid", "p_method" "text" DEFAULT NULL::"text", "p_expected_due" bigint DEFAULT NULL::bigint) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    SET "statement_timeout" TO '15s'
+    AS $$
+declare actor uuid:=auth.uid(); staff text:=private.live_staff_role(); b public.bookings%rowtype;
+ shop uuid; paid bigint; due bigint; online_paid boolean; chosen text; received bigint:=0;
+ last_method text;
+begin
+ if actor is null or staff is null or staff not in('manager','barber') or nullif(auth.jwt()->>'session_id','') is null then
+  raise exception 'COMPLETION_FORBIDDEN' using errcode='42501';end if;
+ if p_action is null or p_action not in('read','complete') then raise exception 'COMPLETION_INVALID';end if;
+ select b0.branch_id into shop from public.bookings b0 where b0.id=p_booking_id and
+  (staff='manager' and exists(select 1 from public.branches s where s.id=b0.branch_id and s.manager_id=actor)
+   or staff='barber' and exists(select 1 from public.barbers r where r.id=b0.barber_id and r.branch_id=b0.branch_id and r.user_id=actor));
+ if not found then raise exception 'COMPLETION_FORBIDDEN' using errcode='42501';end if;
+ -- Same lock order as manager_finances: shop, then appointment.
+ perform 1 from public.branches where id=shop for update;
+ select * into b from public.bookings where id=p_booking_id for update;
+ if b.id is null or not(staff='manager' and exists(select 1 from public.branches s where s.id=b.branch_id and s.manager_id=actor)
+  or staff='barber' and exists(select 1 from public.barbers r where r.id=b.barber_id and r.branch_id=b.branch_id and r.user_id=actor)) then
+  raise exception 'COMPLETION_FORBIDDEN' using errcode='42501';end if;
+ if b.status not in('confirmed','completed') then raise exception 'COMPLETION_NOT_CONFIRMED';end if;
+ if b.date+b.time+b.duration*interval'1 minute'>clock_timestamp() at time zone'Asia/Kuwait' then raise exception 'BOOKING_NOT_FINISHED';end if;
+ if coalesce(to_jsonb(b)->>'online_payment_state','') in('pending_approval','awaiting_payment') then raise exception 'COMPLETION_NOT_CONFIRMED';end if;
+ select coalesce(sum(e.signed_fils),0) into paid from private.shop_finance_entries e where e.booking_id=b.id;
+ online_paid:=coalesce(to_jsonb(b)->>'online_payment_state','')='paid' or
+  (b.price>0 and coalesce((select sum(r.amount_fils) from private.settlement_receipts r where r.booking_id=b.id),0)>=round(b.price*1000)::bigint);
+ due:=case when online_paid then 0 else greatest(0,round(b.price*1000)::bigint-paid) end;
+ select method into last_method from private.booking_completion_payments where booking_id=b.id order by completed_at desc,id limit 1;
+ if p_action='read' then return jsonb_build_object('status',b.status,'onlinePaid',online_paid,'dueFils',due::text,
+  'paidFils',case when online_paid then round(b.price*1000)::bigint else paid end::text,'method',last_method);end if;
+ -- Retried/concurrent completion is harmless, including a lost HTTP response.
+ if b.status='completed' then return jsonb_build_object('id',b.id);end if;
+ if p_expected_due is distinct from due then raise exception 'COMPLETION_PAYMENT_CHANGED';end if;
+ if due>0 and (p_method is null or p_method not in('cash','card','transfer','other','unpaid')) then raise exception 'COMPLETION_METHOD_REQUIRED';end if;
+ chosen:=case when online_paid then 'online' when b.price=0 then 'free' when due=0 then 'recorded' else p_method end;
+ if due>0 and chosen<>'unpaid' then
+  received:=due;
+  insert into private.shop_finance_entries(id,shop_id,booking_id,kind,amount_fils,signed_fils,occurred_on,method,reference,created_by)
+   values(gen_random_uuid(),b.branch_id,b.id,'receipt',due,due,(clock_timestamp() at time zone'Asia/Kuwait')::date,chosen,'Booking completion',actor);
+ end if;
+ insert into private.booking_completion_payments(booking_id,method,received_fils,completed_by) values(b.id,chosen,received,actor);
+ update public.bookings set status='completed',modified_by_type=staff,modified_by_user_id=actor where id=b.id;
+ return jsonb_build_object('id',b.id);
+end $$;
+ALTER FUNCTION "public"."staff_booking_completion"("p_action" "text", "p_booking_id" "uuid", "p_method" "text", "p_expected_due" bigint) OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -3563,7 +3610,9 @@ CREATE OR REPLACE TRIGGER "notify_barber_change" AFTER UPDATE ON "public"."barbe
 CREATE OR REPLACE TRIGGER "notify_booking_change" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."notify_booking_change"();
 CREATE OR REPLACE TRIGGER "prevent_personal_self_booking" BEFORE INSERT OR UPDATE OF "customer_id", "barber_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."prevent_personal_self_booking"();
 CREATE OR REPLACE TRIGGER "provision_booking_public_link" AFTER INSERT ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."provision_booking_public_link"();
+CREATE OR REPLACE TRIGGER "queue_booking_completion_reminder" AFTER INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."queue_booking_completion_reminder"();
 CREATE OR REPLACE TRIGGER "require_barber_invitation" BEFORE INSERT ON "public"."barbers" FOR EACH ROW EXECUTE FUNCTION "private"."require_barber_invitation"();
+CREATE OR REPLACE TRIGGER "require_completion_payment" BEFORE INSERT OR UPDATE ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."require_completion_payment"();
 CREATE OR REPLACE TRIGGER "services_updated_at" BEFORE UPDATE ON "public"."services" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 CREATE OR REPLACE TRIGGER "settlement_booking_history" BEFORE UPDATE OF "branch_id" ON "public"."bookings" FOR EACH ROW EXECUTE FUNCTION "private"."guard_settlement_history"();
 CREATE OR REPLACE TRIGGER "settlement_shop_history" BEFORE DELETE ON "public"."branches" FOR EACH ROW EXECUTE FUNCTION "private"."guard_settlement_history"();
@@ -4067,6 +4116,8 @@ REVOKE ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_reviews"("p_page" integer) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."shop_settlements"("p_action" "text", "p_data" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."staff_booking_completion"("p_action" "text", "p_booking_id" "uuid", "p_method" "text", "p_expected_due" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."staff_booking_completion"("p_action" "text", "p_booking_id" "uuid", "p_method" "text", "p_expected_due" bigint) TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."staff_can_read_customer"("p_id" "uuid") TO "service_role";
