@@ -9,7 +9,7 @@ import { readBookingDraft, readBookingReceipt, readBookingReturnDraft, saveBooki
 import { getKuwaitDate, addBookingDays } from '../../utils/customerBooking';
 import { bookingCityGroups } from '../../utils/bookingCityGroups';
 import { shopWording } from '../../utils/customerTerminology';
-import CityPicker from './CityPicker';
+import CitySelection from './CitySelection';
 import BookingImage from './BookingImage';
 import CatalogRating from './CatalogRating';
 import FavouriteButton from './FavouriteButton';
@@ -54,16 +54,11 @@ export default function BookingFinder({ checkout: Checkout }) {
   const governorateName = group => t(`customerBooking.governorates.${group.key}`, { defaultValue: arabic && group.nameAr ? group.nameAr : group.name });
   const params = { mode: mode || 'shop', city: draft.city, branchId: mode === 'shop' ? draft.branchId : '',
     date: draft.date, rangeStart: draft.rangeStart, rangeEnd: draft.rangeEnd };
-  const changeLocation = city => {
-    const id = governorateIdForCity(city);
-    const currentGovernorate = draft.locationGovernorateId ?? governorateIdForCity(selectedCities[0]);
-    const cities = !city ? [] : selectedCities.includes(city)
-      ? selectedCities.filter(value => value !== city)
-      : id && id === currentGovernorate ? [...selectedCities, city] : [city];
+  const applyLocation = cities => {
     requestVersion.current++;
     setLoading(false); setError(''); setQuery('');
     setStage(mode === 'barber' || cities.length ? 'results' : 'city');
-    patch({ city: cities[0] ?? '', locationCities: cities, locationGovernorateId: cities.length > 1 ? currentGovernorate : cities.length ? governorateIdForCity(cities[0]) : null,
+    patch({ city: cities[0] ?? '', locationCities: cities, locationGovernorateId: cities.length ? governorateIdForCity(cities[0]) : null,
       branchId: '', barberId: '', serviceIds: [], packageOfferId: '', packageOffer: null, time: '' });
   };
   const resetPage = () => { setCursor(null); setHistory([]); setNext(null); };
@@ -140,7 +135,7 @@ export default function BookingFinder({ checkout: Checkout }) {
     // The selected city array lives in the draft and changes only when the filter changes.
   }, [mode, stage, catalog, draft.city, draft.locationCities, draft.locationGovernorateId, draft.branchId, draft.date, draft.rangeStart, draft.rangeEnd, query, cursor, authLoading, customer?.id, favouriteKey, retry]);
   useEffect(() => {
-    if (catalog || ['city', 'results'].includes(stage) && document.activeElement?.id === 'booking-city') return;
+    if (catalog || ['city', 'results'].includes(stage) && document.activeElement?.closest('.cb-city-selection')) return;
     heading.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [mode, stage, catalog]);
@@ -164,7 +159,7 @@ export default function BookingFinder({ checkout: Checkout }) {
         <p className="cb-helper">{tr('rangeHint')}</p><p className="cb-helper">{t('customerBooking.kuwaitTime')}</p><button className="cb-primary" type="submit" disabled={!validRange}>{tr('chooseCity')}<ArrowRight size={18} /></button>
       </form>}
       {['city','results'].includes(stage) && <>
-        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p> : <div className="bf-city"><CityPicker groups={groups} selectedCities={selectedCities} cityName={cityName} governorateName={governorateName} onChange={changeLocation} />{mode === 'barber' && selectedCities.length > 0 && <button className="cb-text-button" type="button" onClick={() => changeLocation('')}>{tr('allCities')}</button>}</div>}
+        {filterError ? <p className="cb-alert" role="alert">{tr('failed')} <button className="cb-text-button" type="button" onClick={() => setRetry(value => value + 1)}>{t('customerBooking.retry')}</button></p> : <div className="bf-city"><CitySelection key={selectedCities.join('|')} groups={groups} selectedCities={selectedCities} cityName={cityName} governorateName={governorateName} onApply={applyLocation} allowEmpty={mode === 'barber'} onEdit={() => { requestVersion.current++; setLoading(false); setStage('city'); }} actionLabel={tr(mode === 'shop' ? 'showShops' : 'showBarbers')} />{mode === 'barber' && selectedCities.length > 0 && <button className="cb-text-button" type="button" onClick={() => applyLocation([])}>{tr('allCities')}</button>}</div>}
         {stage === 'results' && <section aria-label={tr(kind === 'shop' ? 'shops' : 'barbers')}>
           {mode === 'shop' && draft.branchId && <button type="button" className="cb-text-button" onClick={() => { patch({ branchId: '', barberId: '' }); setQuery(''); }}>{tr('changeShop')}</button>}
           <label className="cb-field-label" htmlFor="finder-search">{tr(mode === 'shop' && !draft.branchId ? 'searchShops' : 'searchBarbers')}</label><div className="cb-search"><Search size={22} aria-hidden="true" /><input id="finder-search" type="search" value={query} maxLength={120} onChange={event => { setQuery(event.target.value); resetPage(); }} autoComplete="off" /></div>
