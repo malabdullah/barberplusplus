@@ -16,6 +16,16 @@ role model and feature list no longer described the current product. Earlier
 versions remain in Git history. This is a dated reconciliation of existing code,
 feature documents and release evidence, not a new deployment or test result.
 
+## Test-only update — 26 November 2026: booking city selection
+
+The customer booking finder now has a separate governorate selector, searchable
+city checkboxes and an explicit Show shops / Show barbers action. Multiple cities
+must remain in one governorate. Changes stay pending until applied; changing
+governorate clears pending cities and hides prior results. The three booking
+entry methods, location API, customer accounts and payment pilots are unchanged.
+This frontend redesign is under owner review on hosted Test; it is not released
+to production. No native-app implementation is included.
+
 ## 1. Product and roles
 
 Barber++ connects customers with shops and barbers and supports appointment,

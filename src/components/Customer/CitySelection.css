@@ -1,0 +1,29 @@
+.cb-city-selection { display: grid; gap: 28px; max-width: 40rem; }
+.cb-location-field { min-width: 0; }
+.cb-governorate-control { position: relative; }
+.cb-governorate-control select { appearance: none; width: 100%; min-height: 48px; padding: 12px 16px; padding-inline-end: 44px; color: var(--booking-text); background: var(--booking-surface); border: 1px solid var(--booking-control); border-radius: 8px; font: inherit; cursor: pointer; }
+.cb-governorate-control > svg { position: absolute; inset-inline-end: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--booking-muted); }
+.cb-city-choices { padding: 0; margin: 0; min-width: 0; border: 0; }
+.cb-city-choices legend { padding-inline: 0; }
+.cb-city-search { display: flex; align-items: center; gap: 12px; padding-inline: 16px; border: 1px solid var(--booking-control); border-radius: 8px; color: var(--booking-muted); background: var(--booking-surface); }
+.cb-city-search > svg { flex: none; }
+.cb-city-search input { width: 100%; min-width: 0; min-height: 48px; padding: 12px 0; border: 0; border-radius: 0; background: transparent; color: var(--booking-text); font: inherit; outline: none; }
+.cb-city-search:focus-within { outline: 2px solid var(--booking-link); outline-offset: 3px; }
+.cb-city-search input:focus-visible { outline: none; }
+.cb-city-search input::placeholder { color: var(--booking-muted); opacity: 1; }
+.cb-city-checklist { margin-block-start: 12px; max-height: min(360px, 42dvh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.cb-city-check-row { position: relative; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 12px 4px; color: var(--booking-text); cursor: pointer; border-block-end: 1px solid var(--booking-divider); }
+.cb-city-check-row:last-child { border-block-end: 0; }
+.cb-city-check-row input { position: absolute; inset-inline-start: 4px; width: 22px; height: 22px; margin: 0; opacity: 0; cursor: pointer; }
+.cb-city-check-row > svg { flex: none; color: var(--booking-control); }
+.cb-city-check-row > .cb-city-tick { color: var(--booking-surface); fill: var(--booking-link); }
+.cb-city-check-row span { font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
+.cb-city-check-row:has(input:focus-visible) { outline: 2px solid var(--booking-link); outline-offset: -2px; border-radius: 4px; }
+.cb-city-check-row input:focus-visible { outline: none; }
+.cb-city-apply p { margin: 0 0 16px; color: var(--booking-muted); font-size: .9375rem; }
+.cb-city-apply > button { width: 100%; min-height: 48px; font-size: 1rem; font-weight: 600; }
+.cb-city-no-matches { padding: 16px 4px; margin: 0; color: var(--booking-muted); }
+.cb-city-choices:disabled { opacity: .6; }
+@media (max-width: 480px) {
+  .cb-city-selection { gap: 24px; }
+}
