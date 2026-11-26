@@ -102,7 +102,7 @@ flags and migrations before testing or promoting any Test work.
 | Optional private written visit reviews | Future release; existing production numeric ratings remain. Retained Test work must be reconciled and reviewed before exposure. |
 | Help Center and Feature Requests | Separately deferred; Contact Support does not implement these systems. |
 | Live online payment launch | Requires separate acceptance, credentials/configuration, reconciliation and production authorization. Sandbox success is not live availability. |
-| Android public publishing | Play 1.2.0 (15) production submission/public rollout remains held. Managed publishing is off, so approval after submission would publish automatically. General Live notification delivery was separately enabled and verified on 26 November; backend activation and a controlled device test do not authorize store publication. |
+| Android public publishing | Apps Manager reports Play 1.2.0 (15) production submission is in review following separate owner approval. Managed publishing is ON; public publication requires Google approval and a separate publish action. General Live notification delivery was separately enabled and verified on 26 November; backend activation and a controlled device test do not authorize store publication. |
 | Native customer/staff delivery | Separate coordinator-managed assignments and platform acceptance. This website PRD does not claim no native implementation exists, nor certify any store release. Obtain current platform status through Apps Manager. |
 | Broader finance/accounting scope | Automatic bank transfers, payroll/tax filing, inventory and complete accounting are outside the recorded manual-finance/settlement scope. |
 
