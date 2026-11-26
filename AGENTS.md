@@ -164,6 +164,18 @@ not prove a feature is live. Use release receipts and actual deployment evidence
 keep uncertainty and real-provider testing gaps explicit. Never infer native
 activation or app-store publication from a website/backend release.
 
+Every PR must complete the `Documentation review` fields in
+`.github/pull_request_template.md`: PRD and AGENTS updated/unchanged decisions,
+specific reasons, feature status and production evidence where relevant. The
+`documentation-review` workflow checks declarations against the changed files;
+human review still verifies accuracy and completeness. Update product/business/
+permission/status changes in PRD.md and working-rule changes here. A simple bug
+fix may explain why neither document needs changing. Follow
+`docs/documentation-policy.md` for enforcement activation; a workflow pushed on
+a feature branch is not yet an enforced required check on main. Native PRD
+maintenance is assigned through Apps Manager, with shared contracts referenced
+and platform implementation/Test/submission/publication statuses kept distinct.
+
 ## Commit & Pull Request Guidelines
 
 History uses concise, imperative, category-prefixed subjects such as `Fix: ...`, `Feature: ...`, `Refactor: ...`, `Security: ...`, and `Docs: ...`. Keep commits focused. PRs should explain the user-visible change, list validation performed, link related issues, and include screenshots for UI changes. Call out migrations, new environment variables, security implications, and deployment steps explicitly.
