@@ -9,7 +9,7 @@ import sys
 
 
 FIELDS = ('PRD', 'PRD reason', 'AGENTS', 'AGENTS reason', 'Feature status', 'Release evidence')
-PLACEHOLDER = re.compile(r'\b(?:TODO|TBD|REPLACE|SELECT)\b|\.{3}|…', re.I)
+PLACEHOLDER = re.compile(r'^(?:TODO|TBD|REPLACE|SELECT)\b|^(?:\.{3}|…)$', re.I)
 
 
 def meaningful(value):

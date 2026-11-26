@@ -52,6 +52,11 @@ class DocumentationPolicyTests(unittest.TestCase):
         self.assertTrue(review(declaration().replace('Existing product behavior and feature status remain unchanged.', 'REPLACE with a reason here.'), {}))
         self.assertTrue(review(declaration('SELECT updated OR unchanged'), {}))
 
+    def test_ordinary_words_in_a_specific_reason_are_allowed(self):
+        body = declaration().replace('Existing product behavior and feature status remain unchanged.',
+                                     'Fixed how users select a date; existing booking requirements are unchanged.')
+        self.assertEqual(review(body, {'src/calendar.jsx': 'M'}), [])
+
     def test_comments_examples_and_duplicate_fields_do_not_satisfy_policy(self):
         self.assertTrue(review('<!--\n' + declaration() + '-->', {}))
         self.assertTrue(review('```markdown\n' + declaration() + '```', {}))
