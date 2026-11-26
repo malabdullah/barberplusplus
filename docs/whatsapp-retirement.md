@@ -1,3 +1,8 @@
+> **Retirement record.** WhatsApp functionality is retired; native-app statements
+> below describe the original change's scope, not today's native implementation.
+> See [current product status](../PRD.md) and [handoff](handoff.md). The cleanup and
+> preservation instructions do not grant new deletion or deployment authority.
+
 # WhatsApp retirement and production release
 
 The development change removes WhatsApp screens, delivery workers and integration

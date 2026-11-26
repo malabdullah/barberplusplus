@@ -9,6 +9,9 @@ Do not run the explicit-only full regression campaign unless requested.
 
 ## Documentation review
 
+Review the handoff/state snapshot, architecture and contract pointers when affected,
+as well as PRD.md and AGENTS.md. Historical phase evidence must stay clearly marked.
+
 Replace every placeholder below. Keep these field names; the documentation check
 validates them. Use `updated` or `unchanged` for each document.
 

@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Android announcements: production candidate rehearsal
 
 25 November 2026. Source candidate only. Main, production, native binaries,

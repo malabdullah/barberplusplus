@@ -8,6 +8,7 @@
 | Production workflow | [45755911315](https://github.com/malabdullah/barberplusplus/actions/runs/45755911315), successful attempt 2 |
 | Hosted Test | https://barber-test.alabdullah-cs.workers.dev; Supabase `qvkucvcjmojjbphlzlks` |
 | Working rules | [AGENTS.md](AGENTS.md) |
+| New maintainer / agent | [Handoff](docs/handoff.md), [state snapshot](docs/handoff-state.md), [architecture](docs/architecture.md), [documentation index](docs/README.md) |
 | Full regression plan | [docs/testing/full-regression.md](docs/testing/full-regression.md), explicit request only |
 
 This replaces the January 2026 inventory, whose WhatsApp architecture, routes,
@@ -86,6 +87,7 @@ that release; synthetic provider acceptance is not end-to-end provider evidence.
 | UPayments / MyFatoorah | Sandbox subscription, extra-barber-capacity and booking payments, callback/refund experiments. No live payment gateway is enabled by this PRD. |
 | Shop payment choices | Pay at shop, online or both, including associated manual-approval payment journeys; remains part of payment pilots. Do not confuse this with released staff completion-method recording. |
 | Design previews | Synthetic `/design/*` subscription/billing previews are Test-only; they are not evidence of a real charge or entitlement. |
+| Native Test wallet scope | iOS Test 61/62 wallet work is separate from the Website pilot and retained local-only deltas require platform-owner reconciliation/approved transfer. Staged iOS 1.2.0 (34) is local/unuploaded and excludes wallet; none of this grants Live publication. See the native handoff through Apps Manager. |
 | Additional retained prototypes | Some review/report/provider experiments remain on isolated Test branches. Inventory the exact target before a run; retained schema alone is not a shipped feature. |
 
 The recorded 26 November release restored the prior hosted Test deployment after
