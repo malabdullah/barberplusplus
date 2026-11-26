@@ -3,3 +3,5 @@
 .shop-publication p { margin-block: 12px 0; color: var(--text-secondary); overflow-wrap: anywhere; }
 .shop-publication .shop-publication-row + .shop-publication-row { margin-top: 22px; }
 .shop-publication .error-banner { color: var(--error-color, #c0392b); }
+.shop-publication-blockers ul { margin-block: 8px 0; padding-inline-start: 22px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.shop-publication-blockers li + li { margin-block-start: 6px; }

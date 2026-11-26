@@ -3,6 +3,12 @@ import { notificationCopy, notificationDestination } from './dashboardNotificati
 import { getAddedByConfig } from '../constants/addedByTypes';
 
 describe('dashboard notification navigation and copy', () => {
+  it('localizes overdue completion reminders while retaining booking navigation', () => {
+    const t = vi.fn(key => key);
+    const n = { type: 'booking_status_changed', entityType: 'booking', entityId: 'appointment', metadata: { dashboardEvent: true, completionOverdue: true } };
+    expect(notificationCopy(n, t).title).toBe('bookingCompletion.overdueTitle');
+    expect(notificationDestination(n, 'barber')).toBe('/barber/bookings?booking=appointment');
+  });
   it('uses the correct manager and barber routes', () => {
     const notification = { entityType: 'booking', entityId: 'booking-1' };
     expect(notificationDestination(notification, 'manager')).toBe('/dashboard/bookings?booking=booking-1');

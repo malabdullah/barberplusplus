@@ -16,6 +16,8 @@ import './Signup.css';
 const social = {
   socialProviders: customerAuthService.socialProviders,
   startSocial: async provider => {
+    const invite = readShopInvitation();
+    if (!invite || !rememberShopInvitation(invite)) throw new Error('SOCIAL_FAILED');
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: appConfig.appUrl + '/accept-invite' } });
     if (error) throw error;
   },
@@ -37,11 +39,15 @@ export default function JoinShop() {
     let active = true;
     const load = async () => {
       try {
-        const url = new URL(window.location.href); const code = url.searchParams.get('code');
-        if (url.searchParams.has('error')) throw new Error('SOCIAL_FAILED');
+        const url = new URL(window.location.href); const code = url.searchParams.has('error') ? null : url.searchParams.get('code');
+        if (url.searchParams.has('error')) {
+          window.history.replaceState(null, '', '/accept-invite?invitation=' + invite.id + '#token=' + invite.token);
+          if (active) setError('SOCIAL_FAILED');
+        }
         if (code) {
           oauth.current ||= supabase.auth.exchangeCodeForSession(code);
-          const result = await oauth.current; if (result.error) throw new Error('SOCIAL_FAILED');
+          const result = await oauth.current;
+          if (result.error && active) setError('SOCIAL_FAILED');
           window.history.replaceState(null, '', '/accept-invite?invitation=' + invite.id + '#token=' + invite.token);
         }
         const { data } = await supabase.auth.getSession(); const result = await api.resolve(invite);
@@ -95,14 +101,16 @@ export default function JoinShop() {
       <p className="invitation-email" dir="ltr">{details.email}</p>
       {wrongSession ? <div className="invitation-result"><p>{tr('wrongAccount')}</p><button className="cb-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await supabase.auth.signOut({ scope: 'local' }); setSession(null); setDetails(await api.resolve(invite)); } catch (e) { setError('UNAVAILABLE'); } finally { setBusy(false); } }}>{tr('switchAccount')}</button></div>
       : details.kind === 'customer' && !details.signed_in ? <>
-        <p>{tr('existingSignIn')}</p><CustomerSocialButtons authService={social} disabled={busy} />
+        <p>{tr('existingSignIn')}</p><CustomerSocialButtons authService={social} disabled={busy} onBusyChange={setBusy} />
         <form onSubmit={signIn}><fieldset className="cb-details-fields" disabled={busy}>{passwordField('password', t('auth.password'))}<button type="submit" className="cb-primary ca-submit" disabled={busy}>{t('auth.signIn')}</button></fieldset></form>
-      </> : <form onSubmit={accept}><fieldset className="cb-details-fields" disabled={busy}>
+      </> : <>
+      {details.kind === 'new' && !session && <CustomerSocialButtons authService={social} disabled={busy} onBusyChange={setBusy} />}
+      <form onSubmit={accept}><fieldset className="cb-details-fields" disabled={busy}>
         <div className="ca-field"><label className="cb-field-label" htmlFor="join-name">{t('common.fullName')}</label><input id="join-name" className="cb-input" name="name" value={form.name} onChange={update} autoComplete="name" minLength={2} maxLength={120} readOnly={Boolean(details.name)} required /></div>
         <div className="ca-field"><label className="cb-field-label" htmlFor="join-phone">{t('auth.phoneNumber')}</label><div className="signup-phone-wrapper"><select className="cb-input signup-country-select" aria-label={t('managerOnboarding.countryCode')} name="countryCode" value={form.countryCode} onChange={update} disabled={Boolean(details.phone)}>{GCC_COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.label}</option>)}</select><input id="join-phone" className="cb-input signup-phone-input" type="tel" dir="ltr" name="phone" autoComplete="tel-national" value={form.phone} onChange={update} maxLength={20} readOnly={Boolean(details.phone)} required /></div></div>
         {details.kind === 'new' && <>{passwordField('password', t('auth.password'))}{passwordField('confirmPassword', t('auth.confirmPassword'))}<p className="cb-helper ca-password-hint">{t('customerAuth.passwordRules')}</p></>}
         <button type="submit" className="cb-primary ca-submit" disabled={busy}>{tr(busy ? 'joining' : 'accept')}</button>
-      </fieldset></form>}
+      </fieldset></form></>}
     </>}
   </CustomerAuthLayout>;
 }

@@ -82,6 +82,18 @@ const staffPayload = data => ({
 });
 
 export const bookingsService = {
+  completionPayment: async (id) => {
+    const { data, error } = await supabase.rpc('staff_booking_completion', { p_action: 'read', p_booking_id: id });
+    if (error) throw error;
+    return data;
+  },
+  complete: async (id, method, expectedDue) => {
+    const { error } = await supabase.rpc('staff_booking_completion', {
+      p_action: 'complete', p_booking_id: id, p_method: method, p_expected_due: expectedDue,
+    });
+    if (error) throw error;
+    return bookingsService.getById(id);
+  },
   /**
    * Get all bookings, optionally filtered
    * @param {object} filters - { branchId, barberId, date, status }
@@ -157,6 +169,7 @@ export const bookingsService = {
    * @returns {Promise<object | null>}
    */
   update: async (id, bookingData) => {
+    if (bookingData.status === 'completed') throw new Error('COMPLETION_METHOD_REQUIRED');
     // Confirmation is atomic: a stale screen must not revive a cancelled request.
     if (bookingData.status === 'confirmed' && Object.keys(bookingData).every(key => ['status', 'modifiedByType', 'modifiedByUserId'].includes(key))) {
       const { data, error } = await supabase.rpc('confirm_pending_booking', { p_booking_id: id });

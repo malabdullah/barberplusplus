@@ -1,11 +1,12 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18next from 'i18next';
 import en from '../i18n/locales/en.json';
 import AddBarber from './AddBarber';
+import SetupReturnLink from '../components/Setup/SetupReturnLink';
 const state = vi.hoisted(() => ({ selectedBranch: { id: 'shop', name: 'QA Shop' } }));
 const managedApi = vi.hoisted(() => ({ createManaged: vi.fn(), update: vi.fn() }));
 vi.mock('../services/barbers.service', () => ({ barbersService: managedApi }));
@@ -16,12 +17,13 @@ vi.mock('../context/AppContext', () => ({ useApp: () => state }));
 vi.mock('../services/barberInvitations.service', () => ({ barberInvitationsService: api }));
 let i18n;
 beforeEach(async () => {
- state.reloadData = vi.fn().mockResolvedValue(); state.services = []; managedApi.createManaged.mockReset().mockResolvedValue({ id: 'managed' });
+ state.loading = false; state.reloadData = vi.fn().mockResolvedValue(); state.services = []; managedApi.createManaged.mockReset().mockResolvedValue({ id: 'managed' });
  state.selectedBranch = { id: 'shop', name: 'QA Shop' }; api.check.mockReset().mockResolvedValue({ kind: 'new' }); api.send.mockReset().mockResolvedValue({ delivered: true });
  i18n=i18next.createInstance(); await i18n.init({lng:'en',resources:{en:{translation:en}}});
 });
 afterEach(cleanup);
-function mount() { return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={['/dashboard/barbers/new']}><Routes><Route path="/dashboard/barbers/new" element={<AddBarber />} /><Route path="/dashboard/barbers/managed/schedule" element={<h1>Managed hours</h1>} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>); }
+function Hours(){const {search}=useLocation();return <><h1>Managed hours</h1><p>{search}</p></>;}
+function mount(path='/dashboard/barbers/new') { return render(<I18nextProvider i18n={i18n}><MemoryRouter initialEntries={[path]}><Routes><Route path="/dashboard/barbers/new" element={<><SetupReturnLink /><AddBarber /></>} /><Route path="/dashboard/barbers/managed/schedule" element={<Hours/>} /><Route path="/dashboard/barbers" element={<h1>Barber list</h1>} /></Routes></MemoryRouter></I18nextProvider>); }
 const enter = () => fireEvent.change(screen.getByLabelText(en.common.email), { target: { value: 'qa@example.test' } });
 it('asks only for email and checks it before sending', async () => {
  mount(); enter(); fireEvent.click(screen.getByRole('button',{name:en.barberInvitations.send}));
@@ -65,3 +67,23 @@ it('rejects short names and invalid optional phones without making a request',as
  fireEvent.click(screen.getByRole('button',{name:en.barbers.addBarber}));
  expect(screen.getByRole('alert')).toHaveTextContent(en.validation.invalidPhone);expect(managedApi.createManaged).not.toHaveBeenCalled();
 });
+it('opens managed mode from setup and keeps the return path through hours',async()=>{
+ const id='10000000-0000-4000-8000-000000000001';
+ state.user={id:'manager'};state.branches=[{id,managerId:'manager',name:'Setup shop'}];state.selectedBranch=state.branches[0];state.setSelectedBranchId=vi.fn();
+ mount('/dashboard/barbers/new?mode=managed&setup='+id+'&setupStep=team');
+ expect(screen.getByRole('tab',{name:en.managedBarbers.add})).toHaveAttribute('aria-selected','true');
+ expect(screen.getByRole('link',{name:en.shopSetup.back})).toHaveAttribute('href','/dashboard/setup?shop='+id+'&step=team');
+ fireEvent.change(screen.getByLabelText(en.common.fullName),{target:{value:'Wizard managed'}});
+ fireEvent.click(screen.getByRole('button',{name:en.barbers.addBarber}));
+ await screen.findByRole('heading',{name:'Managed hours'});
+ expect(managedApi.createManaged).toHaveBeenCalledWith(id,expect.objectContaining({name:'Wizard managed'}));
+ expect(screen.getByText('?setup='+id+'&setupStep=hours')).toBeVisible();
+});
+it('refuses a foreign wizard shop instead of adding a barber to the selected shop',()=>{
+ state.user={id:'manager'};state.branches=[];
+ mount('/dashboard/barbers/new?mode=managed&setup=10000000-0000-4000-8000-000000000002');
+ expect(screen.getByRole('alert')).toHaveTextContent(en.shopSetup.notFound);
+ expect(screen.queryByLabelText(en.common.fullName)).toBeNull();expect(managedApi.createManaged).not.toHaveBeenCalled();
+});
+
+it('waits for workspace loading before judging the wizard shop',()=>{state.loading=true;state.branches=[];mount('/dashboard/barbers/new?mode=managed&setup=10000000-0000-4000-8000-000000000001');expect(screen.getByRole('status')).toHaveTextContent(en.common.loading);expect(screen.queryByRole('alert')).toBeNull();});

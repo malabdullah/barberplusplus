@@ -29,13 +29,18 @@ export default function ShopPublication({ branchId, name, admin = false, onChang
     } finally { if (scope.current === id) setBusy(false); }
   }
   const state = data?.publication_state;
+  const blockers = [...new Set((Array.isArray(data?.blockers) ? data.blockers : [])
+    .filter(reason => ['inactive', 'shop_details', 'location', 'shop_hours', 'services', 'barber'].includes(reason)))];
   const action = admin ? data?.paused_manual_booking_allowed ? 'block-manual' : 'allow-manual' : state === 'published' ? 'pause' : 'publish';
   return <section className="shop-publication" aria-label={tr(admin ? 'permissions' : 'title')} aria-busy={busy}>
     <div className="shop-publication-row">
       <strong>{state ? tr(state) : t('common.loading')}</strong>
       {data && (!admin || state === 'paused') && <button type="button" className={'btn ' + (action === 'publish' ? 'btn-primary' : 'btn-secondary')} disabled={busy || action === 'publish' && !data.ready} onClick={() => setConfirm(action)}>{tr(action)}</button>}
     </div>
-    {!admin && data && action === 'publish' && !data.ready && <p>{tr('notReady')}</p>}
+    {!admin && data && action === 'publish' && !data.ready && (blockers.length ? <div className="shop-publication-blockers" role="status">
+      <p>{tr('blockedTitle')}</p>
+      <ul>{blockers.map(reason => <li key={reason}>{tr('blockers.' + reason)}</li>)}</ul>
+    </div> : <p>{tr('notReady')}</p>)}
     {!admin && state === 'paused' && <p>{tr(data.paused_manual_booking_allowed ? 'manualAllowed' : 'manualBlocked')}</p>}
     {error && <div><p className="error-banner" role="alert">{error}</p><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setRevision(value => value + 1)}>{t('common.refresh')}</button></div>}
     <Modal isOpen={Boolean(confirm)} onClose={() => { if (!busy) setConfirm(null); }} title={confirm ? tr(confirm) : ''}>

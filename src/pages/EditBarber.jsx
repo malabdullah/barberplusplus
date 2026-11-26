@@ -7,7 +7,7 @@ import BackLink from '../components/UI/BackLink';
 import { logErrorDev } from '../utils/security';
 import { getErrorMessage } from '../utils/errorMessages';
 import './AddBranch.css';
-import { setupReturn } from '../utils/shopSetup';
+import { setupReturn, setupActionUrl } from '../utils/shopSetup';
 import AutoConfirmBookings from '../components/BookingPolicy/AutoConfirmBookings';
 import InviteBarberForm from '../components/Invitations/InviteBarberForm';
 import './ManagedBarbers.css';
@@ -20,6 +20,7 @@ export default function EditBarber() {
   const { search } = useLocation();
   const setup = setupReturn(search, branches, user?.id);
   const backTo = setup?.path || '/dashboard/barbers';
+  const navTo = path => setup ? setupActionUrl(path, setup.id, new URLSearchParams(search).get('setupStep') || 'team') : path;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [invitationNotice, setInvitationNotice] = useState('');
@@ -50,7 +51,7 @@ export default function EditBarber() {
   if (!barber) {
     return (
       <div className="edit-branch-page">
-        <BackLink to={backTo} label={t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')} className="animate-fade-in" />
+        {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} className="animate-fade-in" />}
         <div className="not-found">
           <h2>{t('barbers.barberNotFound')}</h2>
           <Link to="/dashboard/barbers" className="btn btn-primary">
@@ -63,7 +64,7 @@ export default function EditBarber() {
 
   return (
     <div className="edit-branch-page">
-      <BackLink to={backTo} label={t(setup ? 'shopSetup.back' : 'barbers.backToBarbers')} className="animate-fade-in" />
+      {!setup && <BackLink to={backTo} label={t('barbers.backToBarbers')} className="animate-fade-in" />}
 
       <div className="edit-branch-header animate-fade-in-up">
         <h1>{t('barbers.editBarber')}</h1>
@@ -71,9 +72,9 @@ export default function EditBarber() {
       </div>
 
       {barber.managerManaged && <nav className="managed-barber-tabs" aria-label={t('managedBarbers.manage')}>
-        <Link className={`btn ${tab === 'profile' ? 'btn-primary' : 'btn-secondary'}`} to="?tab=profile">{t('profile.title')}</Link>
-        <Link className="btn btn-secondary" to={`/dashboard/barbers/${barber.id}/schedule`}>{t('availabilityCompact.title')}</Link>
-        <Link className={`btn ${tab === 'settings' ? 'btn-primary' : 'btn-secondary'}`} to="?tab=settings">{t('settings.title')}</Link>
+        <Link className={`btn ${tab === 'profile' ? 'btn-primary' : 'btn-secondary'}`} to={navTo(`/dashboard/barbers/${barber.id}/edit?tab=profile`)}>{t('profile.title')}</Link>
+        <Link className="btn btn-secondary" to={navTo(`/dashboard/barbers/${barber.id}/schedule`)}>{t('availabilityCompact.title')}</Link>
+        <Link className={`btn ${tab === 'settings' ? 'btn-primary' : 'btn-secondary'}`} to={navTo(`/dashboard/barbers/${barber.id}/edit?tab=settings`)}>{t('settings.title')}</Link>
       </nav>}
       <div className="edit-branch-form-container animate-fade-in-up stagger-1">
         {errorMessage && <p className="error-banner" role="alert">{errorMessage}</p>}
