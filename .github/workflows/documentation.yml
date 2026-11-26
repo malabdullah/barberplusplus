@@ -1,0 +1,27 @@
+name: Documentation review
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  documentation-review:
+    name: documentation-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test documentation policy checker
+        run: python3 -m unittest discover -s .github/scripts -p 'test_documentation_review.py'
+      - name: Validate PR documentation declaration and changed files
+        run: python3 .github/scripts/documentation_review.py
