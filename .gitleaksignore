@@ -46,3 +46,7 @@ b380a488d49a8bd43b0e57353d483bc00a081e2f:scripts/staging-live-backup-format.mjs:
 # Current report references the structured receipt instead of duplicating them.
 1d2e01a97fb9240bf6fa3935b04d05b383f275f8:docs/release-review/android-live-2026-11-20/REPORT.md:generic-api-key:55
 1d2e01a97fb9240bf6fa3935b04d05b383f275f8:docs/release-review/android-live-2026-11-20/REPORT.md:generic-api-key:57
+
+# Verified English-prose false positive in original handoff commit; wording corrected.
+# Exact immutable fingerprint only; no credential or future-commit exemption.
+ce5dcb9a7aba7188d14ef25c08254933956e0923:docs/handoff.md:generic-api-key:107

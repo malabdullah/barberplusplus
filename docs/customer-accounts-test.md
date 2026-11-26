@@ -1,3 +1,9 @@
+> **Versioned feature contract / historical phase record.** The original status,
+> approval limits and verification results below belong to their stated phase.
+> Read [the current handoff](handoff.md), [product/status inventory](../PRD.md)
+> and source matching the target release before using these details. Earlier
+> Test-only/pending wording is not today's deployment status or a new execution grant.
+
 # Customer accounts in local Test
 
 These changes are approved for dev and run only in the owned `barber-local-test` environment. They are not deployed to the live website. Existing phone accounts and bookings are preserved; use a fresh email address for testing.

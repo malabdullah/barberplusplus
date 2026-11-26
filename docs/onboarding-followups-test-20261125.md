@@ -1,3 +1,9 @@
+> **Versioned feature contract / historical phase record.** The original status,
+> approval limits and verification results below belong to their stated phase.
+> Read [the current handoff](handoff.md), [product/status inventory](../PRD.md)
+> and source matching the target release before using these details. Earlier
+> Test-only/pending wording is not today's deployment status or a new execution grant.
+
 # Manager onboarding follow-ups — hosted Test
 
 Scope: separate `codex/manager-onboarding-followups-test-20261125` worktree/branch, based on the current Test booking-completion source. Main and production are excluded. Existing B-Wallet, UPayments and MyFatoorah Test pilots are preserved, not promoted.

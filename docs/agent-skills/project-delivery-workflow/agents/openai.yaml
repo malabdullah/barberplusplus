@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Delivery Workflow"
+  short_description: "GitHub, hosted Test, backups, and approved releases"
+  default_prompt: "Use $project-delivery-workflow to set up or follow this project’s delivery process, verify changes on hosted Test, and prepare production releases for my approval."

@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Live booking app links: prepared update
 
 Prepared on verified main `20fa7885a48ce7adf04241da955bb96ea3cf5f9e`.

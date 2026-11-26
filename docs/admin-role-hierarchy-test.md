@@ -1,3 +1,9 @@
+> **Versioned feature contract / historical phase record.** The original status,
+> approval limits and verification results below belong to their stated phase.
+> Read [the current handoff](handoff.md), [product/status inventory](../PRD.md)
+> and source matching the target release before using these details. Earlier
+> Test-only/pending wording is not today's deployment status or a new execution grant.
+
 # Super Admin and Admin — hosted Test acceptance
 
 Date: 15 November 2026. Deployed application source: `2d959892c9ab331cb7b578f98087002f45d1932d`.

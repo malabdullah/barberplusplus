@@ -1,5 +1,20 @@
 # Repository Guidelines
 
+## Replacement-agent intake
+
+Read `docs/handoff.md`, `docs/handoff-state.md`, `docs/README.md` and the root
+PRD before implementation. They identify current authority, architecture, contract
+owners, release evidence, held work and historical records. Inspect actual source
+and runtime identities; a dated snapshot or latest Git HEAD is not a live release.
+Preserve dirty work and task ownership. Onboarding itself authorizes no deployment,
+localhost/Docker startup, provider flow, secret export or full regression campaign.
+Portable workflow copies and migration instructions live in `docs/agent-portability.md`
+and `docs/agent-skills/`; another agent can read these without personal skill
+installation or chat history. Owner-approved private access/coordination is still
+required. Review handoff/state/index/contracts alongside PRD when relevant changes
+are delivered. Run `python3 scripts/verify-handoff-docs.py`; the documentation PR
+workflow also validates maintained links and explicit-only portable skill policy.
+
 ## Native app coordination
 
 Owner instruction updated 2026-11-24: the Barber++ Apps Manager chat is the sole manager

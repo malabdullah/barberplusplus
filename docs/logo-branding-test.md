@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 # Approved logo rollout — 31 October 2026
 
 The approved B-with-++ identity is deployed on

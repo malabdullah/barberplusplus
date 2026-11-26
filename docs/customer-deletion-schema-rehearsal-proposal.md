@@ -1,3 +1,8 @@
+> **Historical preparation/evidence — not a current execution instruction.**
+> Preserve the original record below. Read [the handoff](handoff.md) and the current PRD,
+> runbooks, target identity and approved release receipt before acting. A candidate,
+> old approval or preparation checklist does not establish current production state.
+
 > **Superseded on 13 November 2026; no extraction performed.** The approved
 > rehearsal rebuilt the platform from exact official images plus committed main
 > migrations. All selected production metadata matched and all 47 database suites

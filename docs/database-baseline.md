@@ -1,3 +1,9 @@
+> **Historical initial-adoption checklist.** The 28 October audit below is not
+> the current production ledger state. Later releases initialized and advanced
+> migration history; obtain the latest accepted ledger/fingerprint receipt.
+> Never rerun baseline CREATE statements or initialize history from this old audit.
+> See [handoff](handoff.md) and [current release procedures](deployment-runbook.md).
+
 # Existing production database adoption
 
 Local Test replays the committed baseline and subsequent migrations, using
