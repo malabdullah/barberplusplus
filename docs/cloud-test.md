@@ -1,5 +1,11 @@
 # Cloud Test
 
+> **Maintained hosted Test guide with dated history.** Initial branch labels,
+> service versions and fixture counts below describe their observation dates.
+> Confirm the current gated runtime, backend/migration identity and feature overlay
+> through the owner/coordinator; do not rebuild or overwrite shared Test from an
+> old snapshot merely to onboard. See [handoff](handoff.md).
+
 The owner made this the default testing environment on 2026-10-31. Every app,
 database and Functions change must be deployed and verified here before it is
 reported ready. Use the localhost website or local Docker Test runtime only

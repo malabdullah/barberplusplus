@@ -68,7 +68,7 @@ health check performed while editing this document.
 | Settlements | Separate platform-to-shop collection/commission/reconciliation ledger and manager visibility. Actual bank transfers occur outside Barber++. |
 | Subscriptions | Billing screens, pricing, capacity/access enforcement, renewal preferences, dated complimentary/manual access and discount-code administration; live gateway collection is postponed. |
 | Administration | Distinct Admin/Super Admin controls, user and account tools, location/configuration management, analytics, audit/security records and role/MFA boundaries. |
-| Notifications | Existing recipient-scoped notification lists/read state and supported booking notification infrastructure; this does not mean every native transport or audience is activated. |
+| Notifications | Recipient-scoped website notifications and supported booking infrastructure. Apps Manager confirmed on 26 November that general Android Live booking/announcement delivery is enabled for eligible opted-in customers; one real Compact build 15 announcement/tap opened Favourites and original preferences were restored. This is not all-device/full-regression proof or Play publication approval. |
 | 26 November additions | Completion payment-method selection with atomic receipt handling; unchanged confirmed-booking staff reminder 24 hours after appointment end; clearer publication blockers; recipient-scoped unread queries; managed-barber wizard action/return; Apple/Google signup for new invited barbers; branded standalone subscription invoice PDFs. |
 
 The Website release completion record confirms main `adb04de`, actual frontend
@@ -102,7 +102,7 @@ flags and migrations before testing or promoting any Test work.
 | Optional private written visit reviews | Future release; existing production numeric ratings remain. Retained Test work must be reconciled and reviewed before exposure. |
 | Help Center and Feature Requests | Separately deferred; Contact Support does not implement these systems. |
 | Live online payment launch | Requires separate acceptance, credentials/configuration, reconciliation and production authorization. Sandbox success is not live availability. |
-| General Android activation/public publishing | Remains held in the 26 November Website handoff. Backend notification transport and a controlled device test do not authorize general activation or app-store publication. |
+| Android public publishing | Play 1.2.0 (15) production submission/public rollout remains held. Managed publishing is off, so approval after submission would publish automatically. General Live notification delivery was separately enabled and verified on 26 November; backend activation and a controlled device test do not authorize store publication. |
 | Native customer/staff delivery | Separate coordinator-managed assignments and platform acceptance. This website PRD does not claim no native implementation exists, nor certify any store release. Obtain current platform status through Apps Manager. |
 | Broader finance/accounting scope | Automatic bank transfers, payroll/tax filing, inventory and complete accounting are outside the recorded manual-finance/settlement scope. |
 

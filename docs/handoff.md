@@ -104,10 +104,12 @@ repository. If the old machine is unavailable, the owner/coordinator must provid
 its approved independent access/recovery route; the repository cannot recreate keys.
 
 Before an actual move, agree destination identity, authorized systems, secure
-transport/storage, recovery-key custody, expiry/revocation and acceptance with the
-owner. Transfer references or narrowly scoped secrets through approved private
+transport and storage, a custodian for recovery material, expiry dates, revocation
+steps and acceptance with the owner. Transfer references or narrowly scoped secrets through approved private
 means, never public Git or chat. Preserve encrypted backup recovery access and
-native signing/provider ownership. A documentation handoff is not evidence that
+native signing/provider ownership. Reconcile local-only iOS staged/Test deltas and
+Android Play 15/Test 38/Test 41 source/artifacts with their platform custodians;
+a clean repository clone alone does not reproduce those checkpoints. A documentation handoff is not evidence that
 credentials have been transferred or a disaster restore has been rehearsed.
 
 ## 5. Normal work and testing

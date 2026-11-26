@@ -1,5 +1,10 @@
 # Production backup and restoration
 
+> **Current operating policy:** the nightly encrypted off-host cycle at 03:15 Kuwait
+> and isolated restore verification described under **Current daily policy** apply.
+> The older audit and continuous/15-minute design below are historical. A timer or
+> this policy is not evidence of today's successful backup; obtain the original receipt.
+
 Production backups are separate from disposable local Test and retired workloads.
 The permanent-discard policy for n8n/Ollama/old Test does not apply to production
 Supabase or Dokploy's own database.
