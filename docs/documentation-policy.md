@@ -43,26 +43,35 @@ Release evidence: not applicable
 
 ## Activation and required-check enforcement
 
-This branch prepares the workflow; pushing it does not activate enforcement on
-main/dev. The owner requested commit/push only, with no merge or deployment.
-Do not merge into main to install this gate without release authorization: main
-starts the production workflow even for a documentation change.
+Workflow installation and required-check activation are separate operations.
+Introduce these files through a reviewed documentation-only PR, verify both a
+missing-declaration failure and a corrected-declaration success on GitHub, then
+require `documentation-review` from GitHub Actions (app ID 15368). Record the PR,
+commit and branch-rule read-back as activation evidence. A branch containing this
+workflow alone is not proof of enforcement.
 
-After an authorized workflow introduction, run the check on an actual PR and
-verify both a missing declaration failure and a valid declaration success. Add
-`documentation-review` from GitHub Actions (app ID 15368) to main's required
-checks, preserving existing `application`, `browser`, `database`,
-`dependency-review`, `secret-scan`, strict/up-to-date behavior and other controls.
-Re-read current settings immediately before updating; do not overwrite concurrent
-requirements or remove protections. Confirm the read-back and an actual blocked
-merge state. GitHub requires a recent check result to select a new required check.
+Preserve main's existing `application`, `browser`, `database`, `dependency-review`
+and `secret-scan` requirements, strict/up-to-date behavior and other controls.
+Re-read settings immediately before updating and preserve concurrent changes.
+Require the documentation check for dev integration as well; preserve any existing
+rules. Verify a PR with a missing declaration reports a failed required check,
+then edit its body and observe a successful result. Close disposable verification
+PRs without merging their fixture content.
 
-Inspection on 26 November 2026 found main protected with those five checks and
-dev unprotected. Do not claim this new check blocks merges until the branch rule
-is updated and verified. Dev protection is a separate repository-policy decision;
-the workflow still reports on dev PRs after introduction but reporting alone does
-not prevent direct pushes or merges. No protection settings were changed merely
-by preparing these files.
+Owner instruction on 26 November authorizes documentation activation without
+any deployment or full regression. Main normally triggers production delivery.
+For this documentation-only installation, verify the exact file allowlist,
+coordinate the merge window, temporarily disable production-triggering workflows
+only for the merge, and use `[skip ci]` on the final merge commit to suppress
+push-triggered release runs. Keep normal required pre-merge PR checks intact.
+Restore each workflow to its original state afterward and verify no release
+artifacts or production workflow run were created for that merge. Do not use this
+procedure for application, database, dependency or deployment changes. It does
+not authorize deploying a documentation-only commit or a blanket future bypass.
+
+A passing declaration still requires human review. Where a PR changes the checker
+or its workflow, reviewers must inspect the policy implementation itself. Do not
+weaken branch protections or falsify check results to install the gate.
 
 Local focused verification:
 
