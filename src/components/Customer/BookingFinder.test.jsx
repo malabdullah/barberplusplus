@@ -32,7 +32,7 @@ it('collects date and start range before displaying cities and carries the range
  expect(screen.queryByLabelText('Cities')).not.toBeInTheDocument();
  fireEvent.change(screen.getByLabelText('From'),{target:{value:'10:00'}});fireEvent.change(screen.getByLabelText('To'),{target:{value:'11:00'}});
  fireEvent.click(screen.getByRole('button',{name:'Choose cities'}));
- fireEvent.focus(screen.getByLabelText('Cities'));fireEvent.click(await screen.findByRole('option',{name:'Sharq',exact:true}));
+ fireEvent.click(await screen.findByRole('checkbox',{name:'Sharq',exact:true}));fireEvent.click(screen.getByRole('button',{name:'Show barbers'}));
  fireEvent.click(await screen.findByRole('button',{name:/Omar/}));
  await screen.findByText('Checkout: barber');expect(props.initialDraft).toMatchObject({bookingMode:'time',city:'Sharq',date:getKuwaitDate(),rangeStart:'10:00',rangeEnd:'11:00',barberId:'barber',panel:'services'});
  expect(service.search).toHaveBeenCalledWith(expect.objectContaining({mode:'time',city:'Sharq',rangeStart:'10:00',rangeEnd:'11:00'}));
@@ -91,12 +91,10 @@ it('combines cities from one governorate and resets the shop and cursor when loc
   service.search.mockResolvedValue({ items: [{ id: 'shop', name: 'Example shop', city: 'Mirqab' }], kind: 'shop', nextCursor: { id: 'page' } });
   await open();
   fireEvent.click(screen.getByRole('button', { name: /Choose a shop/ }));
-  const picker = screen.getByRole('combobox', { name: 'Cities' });
-  act(() => picker.focus());
-  fireEvent.click(await screen.findByRole('option', { name: 'Kuwait City', exact: true }));
-  expect(picker).toHaveFocus();
-  expect(picker).toHaveAttribute('aria-expanded', 'true');
-  fireEvent.click(screen.getByRole('option', { name: 'Mirqab', exact: true }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Kuwait City', exact: true }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Mirqab', exact: true }));
+  expect(service.search).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Show shops' }));
   await waitFor(() => expect(service.search).toHaveBeenLastCalledWith(expect.objectContaining({
     mode: 'shop', city: undefined, cities: ['Kuwait City', 'Mirqab'], governorateId: 1, cursor: null,
   })));
@@ -104,7 +102,10 @@ it('combines cities from one governorate and resets the shop and cursor when loc
   await waitFor(() => expect(readBookingDraft().branchId).toBe('shop'));
   fireEvent.click(await screen.findByRole('button', { name: 'Next' }));
   await waitFor(() => expect(service.search).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: { id: 'page' } })));
-  fireEvent.click(screen.getByRole('option', { name: 'Rumaithiya', exact: true }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'Governorate' }), { target: { value: 'Hawalli' } });
+  expect(screen.queryByRole('button', { name: /Example shop/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Rumaithiya', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show shops' }));
   await waitFor(() => expect(service.search).toHaveBeenLastCalledWith(expect.objectContaining({
     city: 'Rumaithiya', branchId: '', cursor: null,
   })));
