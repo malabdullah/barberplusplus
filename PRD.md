@@ -2,10 +2,10 @@
 
 | Document field | Value |
 |---|---|
-| Last reconciled | 26 November 2026, Asia/Kuwait |
+| Last reconciled | 27 November 2026, Asia/Kuwait |
 | Scope | Website product requirements, environment status and shared backend boundaries |
-| Production evidence baseline | `63c90e40ba07e89d406586455f98cca56a040177`, actual frontend image and public booking flow verified on 26 November |
-| Production workflow | [45810385554](https://github.com/malabdullah/barberplusplus/actions/runs/45810385554), successful attempt 1 |
+| Production evidence baseline | `dd9ba1617f9872259fdf3932f52d38bb62531f30`, public runtime and delivered audit code verified on 27 November |
+| Production workflow | [45993257003](https://github.com/malabdullah/barberplusplus/actions/runs/45993257003), successful attempt 1 |
 | Hosted Test | https://barber-test.alabdullah-cs.workers.dev; Supabase `qvkucvcjmojjbphlzlks` |
 | Working rules | [AGENTS.md](AGENTS.md) |
 | New maintainer / agent | [Handoff](docs/handoff.md), [state snapshot](docs/handoff-state.md), [architecture](docs/architecture.md), [documentation index](docs/README.md) |
@@ -15,6 +15,10 @@ This replaces the January 2026 inventory, whose WhatsApp architecture, routes,
 role model and feature list no longer described the current product. Earlier
 versions remain in Git history. This is a dated reconciliation of existing code,
 feature documents and release evidence, not a new deployment or test result.
+
+## 27 November · Admin location audit history
+
+The production website records the numeric location ID for new governorate and area audit events. [Release verification](docs/releases/admin-location-audit-2026-11-27.md)
 
 ## Production update — 26 November 2026: booking city selection
 
@@ -291,7 +295,7 @@ a separate owner-triggered campaign, not a requirement on every website edit.
 
 The [full regression plan](docs/testing/full-regression.md) has 65 initial
 scenario groups across customer, barber, manager, admin, shared and conditional
-capabilities. It is a plan, not completed automation or a pass certificate.
+capabilities. The 27 November hosted website run closed with 311 applicable variants passed and nine excluded. [Closure and case matrix](docs/testing/runs/20261127T051710Z-all-roles/README.md)
 Expand version-relevant variants and report PASS, FAIL, BLOCKED, NOT RUN and
 NOT APPLICABLE with evidence, target identity and verified fixture cleanup.
 Do not claim exhaustive possible-case coverage or real-provider acceptance from

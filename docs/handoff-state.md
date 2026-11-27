@@ -1,6 +1,6 @@
 # Handoff state and unfinished work
 
-Snapshot: 26 November 2026, Asia/Kuwait. This is a dated orientation record,
+Website and regression snapshot updated 27 November 2026, Asia/Kuwait. Native and infrastructure status below is dated 26 November. This is a dated orientation record,
 not a live deployment dashboard or approval to resume another agent's work.
 Update it after a verified release, hold/ownership change or handoff. Follow
 [handoff](handoff.md) to refresh actual identities before acting.
@@ -9,15 +9,15 @@ Update it after a verified release, hold/ownership change or handoff. Follow
 
 | Component | Last verified/reported state | How to refresh |
 |---|---|---|
-| Website running production | Runtime `63c90e40ba07e89d406586455f98cca56a040177`; city-picker redesign deployed, actual task/container image and public booking smoke verified on 26 November | Read approved public runtime; reconcile accepted GitHub artifact/image and controller receipt through the backend owner |
-| Website documentation | Main `63c90e40ba07e89d406586455f98cca56a040177`, dev `99993cf7f48b36478f9b736b862ca387e336b822` before this production-record update; identical file trees | Fetch/read current refs; documentation commits need not be deployed app versions |
+| Website running production | Runtime `dd9ba16`; delivered Admin location audit code and website health verified on 27 November | [Production verification](releases/admin-location-audit-2026-11-27.md) |
+| Website documentation | Release records cover the 26 November city picker and the 27 November location audit fix | [Release index](releases/README.md) |
 | Website PR enforcement | Main requires application, browser, database, dependency-review, secret-scan and documentation-review; dev requires documentation-review | Read GitHub branch protection/rulesets and PR results; preserve concurrent changes |
 | Hosted Test | Isolated Worker/Supabase `qvkucvcjmojjbphlzlks`, retaining separate feature pilots | Read gated runtime and approved backend/migration identities; ask Website/Apps Manager for the current overlay and owner |
 | iOS | Apps Manager/iOS report public 1.1.0 (33); staged 1.2.0 (34) is local/unuploaded and excludes wallet; installed Test 0.2.0 (62) has separately retained local-only deltas | Read native PRD/handoff and actual distribution receipts through Apps Manager |
 | Android | Apps Manager reports Play 1.2.0 (15) installed/internal and production submission now in Google Play review. Managed publishing is ON, so public publication requires approval and a separate publish action. General Live delivery is enabled and one Compact delivery/tap was verified. Play 15 source and consolidated Test 38 checkpoint are local-only; Test 41 is not reproducible from a clean clone | Read native PRD/handoff and current Apps Manager receipt; do not infer a rollout |
 | Native documentation | Separate PRD/AGENTS/templates/checkers merged into main/dev; real missing-declaration FAIL and corrected PASS verified | Native repos and coordinator receipt; private-repository plan currently blocks mandatory protected-branch enforcement |
 | Backups | Nightly encrypted off-host cycle at 03:15 Kuwait with isolated restoration verification; last success not freshly inspected by this documentation task | Original private successful receipt and backup/recovery runbook, not this policy table |
-| Full regression | Plan exists; not executed by documentation/activation/handoff work | Run report bound to exact version only after an explicit full-run request |
+| Full regression | Closed 27 November on hosted Test. All 311 applicable website variants passed, nine excluded; refunds outside scope. The Admin browser retest passed after MFA. | [Closure and evidence](testing/runs/20261127T051710Z-all-roles/README.md) |
 
 Documentation activation evidence: Website [PR 178](https://github.com/malabdullah/barberplusplus/pull/178)
 and [PR 179](https://github.com/malabdullah/barberplusplus/pull/179). Native
