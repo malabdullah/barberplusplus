@@ -7,6 +7,11 @@ import { getToday, getWeekStart, getWeekEnd } from '../utils/dateHelpers';
  * Requires admin role for all operations
  */
 
+function auditTargetId(log) {
+  const location = log.target_entity_type === 'governorate' || log.target_entity_type === 'area';
+  return log.target_entity_id ?? (location ? log.metadata?.locationId ?? null : null);
+}
+
 // Helper: Get date range for analytics periods
 const getDateRange = (period) => {
   const now = new Date();
@@ -509,7 +514,7 @@ export const adminService = {
           actionType: log.action_type,
           targetUserId: log.target_user_id,
           targetEntityType: log.target_entity_type,
-          targetEntityId: log.target_entity_id,
+          targetEntityId: auditTargetId(log),
           oldValues: log.old_values,
           newValues: log.new_values,
           ipAddress: log.ip_address,
@@ -543,6 +548,8 @@ export const adminService = {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Location primary keys are integers. The shared target_entity_id column stores UUIDs.
+      const location = targetEntityType === 'governorate' || targetEntityType === 'area';
       const { data, error } = await supabase
         .from('audit_logs')
         .insert({
@@ -550,11 +557,11 @@ export const adminService = {
           action_type: actionType,
           target_user_id: targetUserId,
           target_entity_type: targetEntityType,
-          target_entity_id: targetEntityId,
+          target_entity_id: location ? null : targetEntityId,
           old_values: oldValues,
           new_values: newValues,
           user_agent: navigator.userAgent,
-          metadata,
+          metadata: location ? { ...metadata, locationId: targetEntityId } : metadata,
         })
         .select()
         .single();
@@ -679,7 +686,7 @@ export const adminService = {
           actionType: log.action_type,
           targetUserId: log.target_user_id,
           targetEntityType: log.target_entity_type,
-          targetEntityId: log.target_entity_id,
+          targetEntityId: auditTargetId(log),
           ipAddress: log.ip_address,
           userAgent: log.user_agent,
           metadata: log.metadata,
@@ -805,7 +812,7 @@ export const adminService = {
         actionType: log.action_type,
         targetUserId: log.target_user_id,
         targetEntityType: log.target_entity_type,
-        targetEntityId: log.target_entity_id,
+        targetEntityId: auditTargetId(log),
         oldValues: log.old_values,
         newValues: log.new_values,
         ipAddress: log.ip_address,
