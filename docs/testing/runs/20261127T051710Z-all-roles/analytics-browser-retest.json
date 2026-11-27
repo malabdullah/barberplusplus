@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-11-27T12:41:35+00:00",
+  "target": "hosted Test",
+  "frontend": "01be4ba36e6797aa4bb3238633188740741e7ad1",
+  "role": "ordinary Admin",
+  "dashboardReadyAfterMfa": true,
+  "populated": {
+    "day": "2026-11-27",
+    "bookings": 13,
+    "completed": 4,
+    "revenueFils": 4000,
+    "statusChart": "visible",
+    "matchedHostedResponse": true
+  },
+  "empty": {
+    "day": "2088-02-17",
+    "bookings": 0,
+    "revenueFils": 0,
+    "statusChart": "No data for selected period",
+    "method": "Changed only the browser booking-read date bounds. Hosted API returned HTTP 200 and an empty array."
+  },
+  "isolatedSessionLogoutHttp": 204
+}

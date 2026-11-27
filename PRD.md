@@ -2,10 +2,10 @@
 
 | Document field | Value |
 |---|---|
-| Last reconciled | 26 November 2026, Asia/Kuwait |
+| Last reconciled | 27 November 2026, Asia/Kuwait |
 | Scope | Website product requirements, environment status and shared backend boundaries |
-| Production evidence baseline | `adb04de12851e90d87d703ba6021e0d3850c9091`, verified by the Website release record on 26 November |
-| Production workflow | [45755911315](https://github.com/malabdullah/barberplusplus/actions/runs/45755911315), successful attempt 2 |
+| Production evidence baseline | `dd9ba1617f9872259fdf3932f52d38bb62531f30`, public runtime and delivered audit code verified on 27 November |
+| Production workflow | [45993257003](https://github.com/malabdullah/barberplusplus/actions/runs/45993257003), successful attempt 1 |
 | Hosted Test | https://barber-test.alabdullah-cs.workers.dev; Supabase `qvkucvcjmojjbphlzlks` |
 | Working rules | [AGENTS.md](AGENTS.md) |
 | New maintainer / agent | [Handoff](docs/handoff.md), [state snapshot](docs/handoff-state.md), [architecture](docs/architecture.md), [documentation index](docs/README.md) |
@@ -16,15 +16,23 @@ role model and feature list no longer described the current product. Earlier
 versions remain in Git history. This is a dated reconciliation of existing code,
 feature documents and release evidence, not a new deployment or test result.
 
-## Test-only update — 26 November 2026: booking city selection
+## 27 November · Admin location audit history
+
+The production website records the numeric location ID for new governorate and area audit events. [Release verification](docs/releases/admin-location-audit-2026-11-27.md)
+
+## Production update — 26 November 2026: booking city selection
 
 The customer booking finder now has a separate governorate selector, searchable
 city checkboxes and an explicit Show shops / Show barbers action. Multiple cities
 must remain in one governorate. Changes stay pending until applied; changing
 governorate clears pending cities and hides prior results. The three booking
 entry methods, location API, customer accounts and payment pilots are unchanged.
-This frontend redesign is under owner review on hosted Test; it is not released
-to production. No native-app implementation is included.
+The owner-approved frontend redesign is deployed and verified in production.
+The public anonymous browser flow passed for Sharq and Rumaithiya, including
+clearing selections when switching governorates. Production currently exposes
+one available city per governorate; multiple cities in one governorate were
+verified on hosted Test. No native-app implementation is included. See the
+[version-bound release record](docs/releases/city-picker-2026-11-26.md).
 
 ## 1. Product and roles
 
@@ -287,7 +295,7 @@ a separate owner-triggered campaign, not a requirement on every website edit.
 
 The [full regression plan](docs/testing/full-regression.md) has 65 initial
 scenario groups across customer, barber, manager, admin, shared and conditional
-capabilities. It is a plan, not completed automation or a pass certificate.
+capabilities. The 27 November hosted website run closed with 311 applicable variants passed and nine excluded. [Closure and case matrix](docs/testing/runs/20261127T051710Z-all-roles/README.md)
 Expand version-relevant variants and report PASS, FAIL, BLOCKED, NOT RUN and
 NOT APPLICABLE with evidence, target identity and verified fixture cleanup.
 Do not claim exhaustive possible-case coverage or real-provider acceptance from
