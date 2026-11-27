@@ -1,6 +1,6 @@
 # Barber++ full functional regression plan
 
-Status: PLAN ONLY — no scenarios have been executed by creating this document.
+Latest completed hosted Test run: [27 November 2026 closure and case matrix](runs/20261127T051710Z-all-roles/README.md). All 311 applicable variants passed. Nine were excluded.
 Created: 26 November 2026. Invocation: explicit owner request only, using
 `$full-regression-testing`. Do not add this full campaign to pushes, PRs,
 scheduled jobs or ordinary fixes. Existing focused CI remains unchanged.
@@ -114,7 +114,7 @@ absence/disabled flags can justify NOT APPLICABLE; missing access/tools is BLOCK
 | A02 | S | Search/filter/list managers, barbers, branches and users; inspect details and empty results. | Authorized data, counts and paging agree with fixtures; no misleading empty/error states. |
 | A03 | C | Execute one permitted user/status change on disposable account; attempt forbidden role escalation. | Approved change persists and is auditable; escalation rejected by backend. |
 | A04 | C | Create/revoke disposable admin invitation if permitted; try replay/expiry/wrong recipient. | Only eligible recipient gains permitted role; invalid/replayed invitations cannot grant access. |
-| A05 | S | Inspect platform analytics and date filters using known fixture aggregates. | Totals/date scope and empty states agree with recorded inclusion rules. |
+| A05 | S | After ordinary Admin MFA, wait for the dashboard sidebar and the four loaded analytics metrics. Compare Today with the hosted booking response, then request an empty day in the isolated browser and inspect the booking-status chart. | Totals/date scope and empty states agree with recorded inclusion rules. |
 | A06 | C | Change reversible test-only location/global configuration within granted scope; restore it. | Validation and role limits enforced; affected UI updates; original configuration restored and verified. |
 | A07 | S | Inspect activity/security/audit records from run-owned changes. | Correct actor, action and timestamps; no password/token leakage or unauthorized log mutation. |
 | A08 | C | Attempt protected configuration/privilege changes with customer, barber, manager and ordinary Admin sessions. | Exact role boundary enforced server-side; no hidden-control bypass or privilege escalation. |
